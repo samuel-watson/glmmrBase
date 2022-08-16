@@ -1,11 +1,33 @@
 Package: glmmrBase
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
+Title: Base package for specification of generalised linear mixed models in R
+Version: 0.1.1
 Date: 2022-08-16
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
-Imports: Rcpp (>= 1.0.7)
-LinkingTo: Rcpp, RcppArmadillo
+Author@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
+                  role = c("aut", "cre")),
+             person("Yi", "Pan", email = "ypan1988@gmail.com",
+                  role = c("aut")))
+Maintainer: Sam Watson <S.I.Watson@bham.ac.uk>
+Description: Design analysis tools for any study design that can be represented or modelled as a generalised linear mixed model including cluster randomised trials, cohort studies, spatial and spatio-temporal epidemiological models, and split-plot designs. 
+License: GPL (>= 2)
+Imports: 
+    methods,
+    Rcpp (>= 1.0.7),
+    RcppParallel (>= 5.0.1)
+LinkingTo: 
+    Rcpp (>= 0.12.0),
+    RcppArmadillo,
+    RcppParallel (>= 5.0.1)
+RoxygenNote: 7.1.2
+NeedsCompilation: yes
+Author: Sam Watson [aut, cre],
+        Yi Pan [aut]
+URL: https://github.com/samuel-watson/glmmr
+BugReports: https://github.com/samuel-watson/glmmr/issues
+Suggests: 
+    testthat
+Biarch: true
+Depends: 
+    R (>= 3.4.0)
+SystemRequirements: GNU make
+Encoding: UTF-8
