@@ -11,24 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// genBlockD
-arma::mat genBlockD(size_t N_dim, size_t N_func, const arma::uvec& func_def, const arma::uvec& N_var_func, const arma::umat& col_id, const arma::uvec& N_par, const arma::mat& cov_data, const arma::vec& gamma);
-RcppExport SEXP _glmmrBase_genBlockD(SEXP N_dimSEXP, SEXP N_funcSEXP, SEXP func_defSEXP, SEXP N_var_funcSEXP, SEXP col_idSEXP, SEXP N_parSEXP, SEXP cov_dataSEXP, SEXP gammaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< size_t >::type N_dim(N_dimSEXP);
-    Rcpp::traits::input_parameter< size_t >::type N_func(N_funcSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type func_def(func_defSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type N_var_func(N_var_funcSEXP);
-    Rcpp::traits::input_parameter< const arma::umat& >::type col_id(col_idSEXP);
-    Rcpp::traits::input_parameter< const arma::uvec& >::type N_par(N_parSEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type cov_data(cov_dataSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type gamma(gammaSEXP);
-    rcpp_result_gen = Rcpp::wrap(genBlockD(N_dim, N_func, func_def, N_var_func, col_id, N_par, cov_data, gamma));
-    return rcpp_result_gen;
-END_RCPP
-}
 // genD
 arma::field<arma::mat> genD(const arma::uword& B, const arma::uvec& N_dim, const arma::uvec& N_func, const arma::umat& func_def, const arma::umat& N_var_func, const arma::ucube& col_id, const arma::umat& N_par, const arma::uword& sum_N_par, const arma::cube& cov_data, const arma::vec& gamma);
 RcppExport SEXP _glmmrBase_genD(SEXP BSEXP, SEXP N_dimSEXP, SEXP N_funcSEXP, SEXP func_defSEXP, SEXP N_var_funcSEXP, SEXP col_idSEXP, SEXP N_parSEXP, SEXP sum_N_parSEXP, SEXP cov_dataSEXP, SEXP gammaSEXP) {
@@ -75,7 +57,6 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_glmmrBase_genBlockD", (DL_FUNC) &_glmmrBase_genBlockD, 8},
     {"_glmmrBase_genD", (DL_FUNC) &_glmmrBase_genD, 10},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_blockMat", (DL_FUNC) &_glmmrBase_blockMat, 1},
