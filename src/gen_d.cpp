@@ -1,6 +1,6 @@
 #include <cmath>  
 #include <RcppArmadillo.h>
-#include "glmmr.h"
+#include "../inst/include/glmmr.h"
 using namespace Rcpp;
 using namespace arma;
 
@@ -156,22 +156,6 @@ arma::field<arma::mat> genD(const arma::uword &B,
   return(DBlocks);
 }
 
-inline arma::vec mod_inv_func(arma::vec mu,
-                              std::string link){
-  //arma::uword n = mu.n_elem;
-  if(link=="logit"){
-    mu = exp(mu) / (1+exp(mu));
-  }
-  if(link=="log"){
-    mu = exp(mu);
-  }
-  if(link=="probit"){
-    mu = gaussian_cdf_vec(mu);
-  }
-  
-  return mu;
-}
-
 // [[Rcpp::export]]
 arma::vec gen_dhdmu(const arma::vec &xb,
                     std::string family,
@@ -179,31 +163,70 @@ arma::vec gen_dhdmu(const arma::vec &xb,
   
   arma::vec wdiag(xb.n_elem, fill::value(1));
   arma::vec p(xb.n_elem, fill::zeros);
+  const static std::unordered_map<std::string,int> string_to_case{
+    {"poissonlog",1},
+    {"poissonidentity",2},
+    {"binomiallogit",3},
+    {"binomiallog",4},
+    {"binomialidentity",5},
+    {"binomialprobit",6},
+    {"gaussianidentity",7},
+    {"gaussianlog",8}
+  };
   
-  if(family=="poisson"){
-    if(link=="log"){
-      wdiag = 1/exp(xb);
-    } else if(link =="identity"){
-      wdiag = exp(xb);
-    }
-  } else if(family=="binomial"){
+  switch (string_to_case.at(family+link)){
+  case 1:
+    wdiag = 1/exp(xb);
+    break;
+  case 2:
+    wdiag = exp(xb);
+    break;
+  case 3:
     p = mod_inv_func(xb,"logit");
-    if(link=="logit"){
-      wdiag = 1/(p % (1-p));
-    } else if(link=="log"){
-      wdiag = (1-p)/p;
-    } else if(link=="identity"){
-      wdiag = p % (1-p);
-    } else if(link=="probit"){
-      p = mod_inv_func(xb,"probit");
-      arma::vec p2(xb.n_elem,fill::zeros);
-      wdiag = (p % (1-p))/gaussian_pdf_vec(xb);
-    }
-  } else if(link=="gaussian"){
-    // if identity do nothin
-    if(link=="log"){
-      wdiag = 1/exp(xb);
-    }
-  } // for gamma- inverse do nothing
+    wdiag = 1/(p % (1-p));
+    break;
+  case 4:
+    p = mod_inv_func(xb,"logit");
+    wdiag = (1-p)/p;
+    break;
+  case 5:
+    p = mod_inv_func(xb,"logit");
+    wdiag = p % (1-p);
+    break;
+  case 6:
+    p = mod_inv_func(xb,"probit");
+    wdiag = (p % (1-p))/gaussian_pdf_vec(xb);
+    break;
+  case 7:
+    break;
+  case 8:
+    wdiag = 1/exp(xb);
+  }
+  
+  // if(family=="poisson"){
+  //   if(link=="log"){
+  //     wdiag = 1/exp(xb);
+  //   } else if(link =="identity"){
+  //     wdiag = exp(xb);
+  //   }
+  // } else if(family=="binomial"){
+  //   p = mod_inv_func(xb,"logit");
+  //   if(link=="logit"){
+  //     wdiag = 1/(p % (1-p));
+  //   } else if(link=="log"){
+  //     wdiag = (1-p)/p;
+  //   } else if(link=="identity"){
+  //     wdiag = p % (1-p);
+  //   } else if(link=="probit"){
+  //     p = mod_inv_func(xb,"probit");
+  //     arma::vec p2(xb.n_elem,fill::zeros);
+  //     wdiag = (p % (1-p))/gaussian_pdf_vec(xb);
+  //   }
+  // } else if(link=="gaussian"){
+  //   // if identity do nothin
+  //   if(link=="log"){
+  //     wdiag = 1/exp(xb);
+  //   }
+  // } // for gamma- inverse do nothing
   return wdiag;
 }

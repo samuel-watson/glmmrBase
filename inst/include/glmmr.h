@@ -35,6 +35,22 @@ inline arma::vec gaussian_pdf_vec(const arma::vec& v){
   return res;
 }
 
+inline arma::vec mod_inv_func(arma::vec mu,
+                              std::string link){
+  //arma::uword n = mu.n_elem;
+  if(link=="logit"){
+    mu = exp(mu) / (1+exp(mu));
+  }
+  if(link=="log"){
+    mu = exp(mu);
+  }
+  if(link=="probit"){
+    mu = gaussian_cdf_vec(mu);
+  }
+  
+  return mu;
+}
+
 // extern arma::mat genBlockD(size_t N_dim,
 //                            size_t N_func,
 //                            const arma::uvec &func_def,

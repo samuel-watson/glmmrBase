@@ -1,5 +1,4 @@
 #include <RcppArmadillo.h>
-#include "glmmr.h"
 using namespace Rcpp;
 using namespace arma;
 
