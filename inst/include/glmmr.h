@@ -35,6 +35,14 @@ inline arma::vec gaussian_pdf_vec(const arma::vec& v){
   return res;
 }
 
+inline double log_mv_gaussian_pdf(const arma::vec& u,
+                                  const arma::mat& D,
+                                  const double& logdetD){
+  arma::uword Q = u.n_elem;
+  return (-0.5*Q*log(2*arma::datum::pi)-
+          0.5*logdetD - 0.5*arma::as_scalar(u.t()*D*u));
+}
+
 inline arma::vec mod_inv_func(arma::vec mu,
                               std::string link){
   //arma::uword n = mu.n_elem;
@@ -108,33 +116,71 @@ public:
             }
             dist= pow(dist,0.5);
             
-            if(func_def_(k)==1){
+            int mcase = (int)func_def_(k);
+            switch (mcase){
+            case 1:
               if(dist==0){
                 val = val*pow(gamma_(gamma_idx),2);
               } else {
                 val = 0;
               }
-            } else if(func_def_(k)==2){
-              val = val*exp(-1*dist/gamma_(gamma_idx));//fexp(dist,gamma(gamma_idx));
-            }else if(func_def_(k)==3){
+              break;
+            case 2:
+              val = val*exp(-1*dist/gamma_(gamma_idx));
+              break;
+            case 3:
               val = val*pow(gamma_(gamma_idx),dist);
-            } else if(func_def_(k)==4){
+              break;
+            case 4:
               val = val*gamma_(gamma_idx)*exp(-1*pow(dist,2)/pow(gamma_(gamma_idx+1),2));
-            } else if(func_def_(k)==5){
-              double xr = pow(2*gamma_(gamma_idx+1),0.5)*dist/gamma_(gamma_idx);
-              double ans = 1;
-              if(xr!=0){
-                if(gamma_(gamma_idx+1) == 0.5){
-                  ans = exp(-xr);
-                } else {
-                  double cte = pow(2,-1*(gamma_(gamma_idx+1)-1))/R::gammafn(gamma_(gamma_idx+1));
-                  ans = cte*pow(xr, gamma_(gamma_idx+1))*R::bessel_k(xr,gamma_(gamma_idx+1),1);
+              break;
+            case 5:
+              {
+                double xr = pow(2*gamma_(gamma_idx+1),0.5)*dist/gamma_(gamma_idx);
+                double ans = 1;
+                if(xr!=0){
+                  if(gamma_(gamma_idx+1) == 0.5){
+                    ans = exp(-xr);
+                  } else {
+                    double cte = pow(2,-1*(gamma_(gamma_idx+1)-1))/R::gammafn(gamma_(gamma_idx+1));
+                    ans = cte*pow(xr, gamma_(gamma_idx+1))*R::bessel_k(xr,gamma_(gamma_idx+1),1);
+                  }
                 }
+                val = val*ans;
+                break;
               }
-              val = val*ans;
-            } else if(func_def_(k)==6){
+            case 6:
               val = val* R::bessel_k(dist/gamma_(gamma_idx),1,1);
             }
+            
+            // if(func_def_(k)==1){
+            //   if(dist==0){
+            //     val = val*pow(gamma_(gamma_idx),2);
+            //   } else {
+            //     val = 0;
+            //   }
+            // } else if(func_def_(k)==2){
+            //   val = val*exp(-1*dist/gamma_(gamma_idx));//fexp(dist,gamma(gamma_idx));
+            // }else if(func_def_(k)==3){
+            //   val = val*pow(gamma_(gamma_idx),dist);
+            // } else if(func_def_(k)==4){
+            //   val = val*gamma_(gamma_idx)*exp(-1*pow(dist,2)/pow(gamma_(gamma_idx+1),2));
+            // } else if(func_def_(k)==5){
+            //   double xr = pow(2*gamma_(gamma_idx+1),0.5)*dist/gamma_(gamma_idx);
+            //   double ans = 1;
+            //   if(xr!=0){
+            //     if(gamma_(gamma_idx+1) == 0.5){
+            //       ans = exp(-xr);
+            //     } else {
+            //       double cte = pow(2,-1*(gamma_(gamma_idx+1)-1))/R::gammafn(gamma_(gamma_idx+1));
+            //       ans = cte*pow(xr, gamma_(gamma_idx+1))*R::bessel_k(xr,gamma_(gamma_idx+1),1);
+            //     }
+            //   }
+            //   val = val*ans;
+            // } else if(func_def_(k)==6){
+            //   val = val* R::bessel_k(dist/gamma_(gamma_idx),1,1);
+            // }
+            
             gamma_idx += N_par_(k);      
           }
           
