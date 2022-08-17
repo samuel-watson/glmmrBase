@@ -36,6 +36,8 @@ where each slice the respective column indexes of `cov_data` for each function i
 \item{N_par}{Matrix of integers of same size as `func_def` with each column specifying the number
 of parameters in the function in each block}
 
+\item{sum_N_par}{Total number of parameters}
+
 \item{cov_data}{3D array (cube) holding the data for the covariance matrix where each of the B slices
 is the data required for each block}
 

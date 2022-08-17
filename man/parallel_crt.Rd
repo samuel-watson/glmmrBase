@@ -14,7 +14,7 @@ parallel_crt(
   cac = NULL,
   iac = NULL,
   var = 1,
-  family = gaussian()
+  family = stats::gaussian()
 )
 }
 \arguments{
@@ -26,6 +26,8 @@ parallel_crt(
 
 \item{ratio}{Numeric value indicating the proportion of clusters assigned to treatment. Default is 0.5.}
 
+\item{beta}{Vector of beta parameters to initialise the design, defaults to all zeros.}
+
 \item{icc}{Intraclass correlation coefficient. User may specify
 more than one value, see details.}
 
@@ -36,8 +38,6 @@ more than one value, see details.}
 \item{var}{Assumed overall variance of the model, used to calculate the other covariance, see details}
 
 \item{family}{a \link[stats]{family} object}
-
-\item{beta.}{Vector of beta parameters to initialise the design, defaults to all zeros.}
 }
 \value{
 A Model object with MeanFunction and Covariance objects, or
@@ -88,11 +88,11 @@ des <- parallel_crt(J=6,M=10,t=3,icc=0.05)
 # same design but with a cohort of individuals
 des <- parallel_crt(J=6,M=10,t=3,icc=0.05, iac = 0.1)
 # same design, but with two clusters per sequence and specifying the initial parameters
-des <- parallel_crte(J=6,M=10,t=3,beta = c(rnorm(3,0,0.1),-0.1),icc=0.05, iac = 0.1)
+des <- parallel_crt(J=6,M=10,t=3,beta = c(rnorm(3,0,0.1),-0.1),icc=0.05, iac = 0.1)
 # specifying multiple values of the variance parameters will return a design space 
 # with all designs with all the combinations of the variance parameter
 des <- parallel_crt(J=6,M=10,t=3,icc=c(0.01,0.05), cac = c(0.5,0.7,0.9), iac = 0.1)
 }
 \seealso{
-\link[glmmr]{Model}, \link[glmmr]{ModelSpace}
+\link[glmmrBase]{Model}
 }

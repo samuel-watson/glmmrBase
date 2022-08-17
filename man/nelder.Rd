@@ -42,5 +42,5 @@ grid cell.
 }
 \examples{
 nelder(~(j(4) * t(5)) > i(5))
-nelder(~person(5) * time(10)))
+nelder(~person(5) * time(10))
 }

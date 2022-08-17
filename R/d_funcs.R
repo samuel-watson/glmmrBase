@@ -1,10 +1,11 @@
-###
-# first order derivative functions
-
+#' Identity function
+#' @param x List with named vector data
 didentity <- function(x){
   return(x$data)
 }
 
+#' Exponential function
+#' @param x List with named elements `data`, a vector of covariate values, and `pars`, a vector of two parameters
 dfexp <- function(x){
   m <- as.matrix(x$data) %*% matrix(x$pars[2:length(x$pars)],ncol=1)
   X <- matrix(exp(m),ncol=1)
@@ -14,14 +15,16 @@ dfexp <- function(x){
   return(X)
 }
 
+#' Factor function
+#' @param x List with named elements `data`, a vector of covariate values, and `pars`, a vector of two parameters
 dfactor <- function(x){
-  matrix(model.matrix(~factor(a)-1,data.frame(a=x$data)),nrow=length(x$data))
+  matrix(model.matrix(~factor(a)-1,data = data.frame(a=x$data)),nrow=length(x$data))
 }
 
-dar1 <- function(x){
-  
-}
-
-dlog <- function(x){
-  
-}
+# dar1 <- function(x){
+# 
+# }
+# 
+# dlog <- function(x){
+# 
+# }

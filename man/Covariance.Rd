@@ -58,7 +58,7 @@ will require two parameters to be specified, so it is recommended against.
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.25,0.7),
                       data= df)
 
@@ -67,10 +67,10 @@ cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.15,0.8),
                       data= df)
-cov$parameters <- list(list(0.01,0.1))
+cov$parameters <- c(0.25,0.1)
 cov$check(verbose=FALSE)
 
 ## ------------------------------------------------
@@ -78,8 +78,8 @@ cov$check(verbose=FALSE)
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
 
 ## ------------------------------------------------
@@ -87,8 +87,8 @@ Covariance$new(formula = ~(1|gr(j)*ar1(t)),
 ## ------------------------------------------------
 
 df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)                     
 
@@ -97,10 +97,10 @@ cov$subset(1:100)
 ## ------------------------------------------------
 
 df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
-cov$sampleD(list(list(0.01,0.1)))
+cov$sampleD(c(0.01,0.1))
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -126,6 +126,7 @@ cov$sampleD(list(list(0.01,0.1)))
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
 \item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
+\item \href{#method-Covariance-get_D_data}{\code{Covariance$get_D_data()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -171,7 +172,7 @@ A Covariance object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.25,0.7),
                       data= df)
 }
@@ -202,10 +203,10 @@ NULL
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.15,0.8),
                       data= df)
-cov$parameters <- list(list(0.01,0.1))
+cov$parameters <- c(0.25,0.1)
 cov$check(verbose=FALSE)
 }
 \if{html}{\out{</div>}}
@@ -232,8 +233,8 @@ Show details of Covariance object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
 }
 \if{html}{\out{</div>}}
@@ -260,8 +261,8 @@ Keep specified indices and removes the rest
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)                     
 }
@@ -295,15 +296,28 @@ matrix
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                      parameters = list(list(0.05,0.8)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                      parameters = c(0.05,0.8),
                       data= df)
-cov$sampleD(list(list(0.01,0.1)))
+cov$sampleD(c(0.01,0.1))
 }
 \if{html}{\out{</div>}}
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-get_D_data"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-get_D_data}{}}}
+\subsection{Method \code{get_D_data()}}{
+Returns the list specifying the covariance matrix D
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_D_data()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Covariance-clone"></a>}}

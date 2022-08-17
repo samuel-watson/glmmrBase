@@ -74,7 +74,7 @@ Model <- R6::R6Class("Model",
                     #'   formula = ~ factor(t) + int - 1,
                     #'   data=df,
                     #'   parameters = c(rep(0,5),0.6),
-                    #'   family = gaussian()
+                    #'   family = stats::gaussian()
                     #' )
                     #' cov1 <- Covariance$new(
                     #'   data = df,
@@ -89,7 +89,7 @@ Model <- R6::R6Class("Model",
                     #' 
                     #' #alternatively we can pass the data directly to Model
                     #' #here we will specify a cohort study
-                    #' df <- nelder(~ind(20) > t(6))
+                    #' df <- nelder(~ind(20) * t(6))
                     #' df$int <- 0
                     #' df[df$t > 3, 'int'] <- 1
                     #' 
@@ -99,10 +99,10 @@ Model <- R6::R6Class("Model",
                     #'   formula = ~ (1|ar1(t)*gr(ind)),
                     #'   parameters = c(0.8,1)),
                     #' mean.function = list(
-                    #'   formula = ~int + factor(t),
+                    #'   formula = ~factor(t) + int - 1,
                     #'   data=df,
                     #'   parameters = rep(0,7),
-                    #'   family = poisson()))
+                    #'   family = stats::poisson()))
                     #'                   
                     #' #an example of a spatial grid with two time points
                     #' df <- nelder(~ (x(10)*y(10))*t(2))
@@ -112,7 +112,7 @@ Model <- R6::R6Class("Model",
                     #'                          mean.function = list(data=df,
                     #'                                               formula = ~ 1,
                     #'                                               parameters = c(0.5),
-                    #'                                               family=poisson())) 
+                    #'                                               family=stats::poisson())) 
                     initialize = function(covariance,
                                           mean.function,
                                           var_par = NULL,
@@ -201,7 +201,7 @@ Model <- R6::R6Class("Model",
                     #'   formula = ~ factor(t) + int - 1,
                     #'   data=df,
                     #'   parameters = c(rep(0,5),0.6),
-                    #'   family = gaussian()
+                    #'   family = stats::gaussian()
                     #' )
                     #' cov1 <- Covariance$new(
                     #'   data = df,
@@ -280,7 +280,7 @@ Model <- R6::R6Class("Model",
                     #'     formula = ~ factor(t) + int - 1,
                     #'     data=df,
                     #'     parameters = c(rep(0,5),0.6),
-                    #'     family = binomial())
+                    #'     family = stats::binomial())
                     #' )
                     #' ysim <- des$sim_data()
                     sim_data = function(type = "y"){
@@ -344,7 +344,7 @@ Model <- R6::R6Class("Model",
                     #'@param verbose Logical indicating whether to report if any updates are made, defaults to TRUE
                     #'@return Linked objects are updated by nothing is returned
                     #'@examples
-                    #'df <- nelder(~(cl(10)*t(5)) > ind(10))
+                    #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                     #' df$int <- 0
                     #' df[df$cl > 5, 'int'] <- 1
                     #' des <- Model$new(
@@ -356,7 +356,7 @@ Model <- R6::R6Class("Model",
                     #'     formula = ~ factor(t) + int - 1,
                     #'     data=df,
                     #'     parameters = c(rep(0,5),0.6),
-                    #'     family = binomial())
+                    #'     family = stats::binomial())
                     #' )
                     #' des$check() #does nothing
                     #' des$covariance$parameters <- c(0.1,0.9)

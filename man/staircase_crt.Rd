@@ -12,13 +12,15 @@ staircase_crt(
   cac = NULL,
   iac = NULL,
   var = 1,
-  family = gaussian()
+  family = stats::gaussian()
 )
 }
 \arguments{
 \item{J}{Integer indicating the number of sequences such that there are J time periods}
 
 \item{M}{Integer. The number of individual observations per cluster-period, assumed equal across all clusters}
+
+\item{beta}{Vector of beta parameters to initialise the design, defaults to all zeros.}
 
 \item{icc}{Intraclass correlation coefficient. User may specify
 more than one value, see details.}
@@ -30,10 +32,6 @@ more than one value, see details.}
 \item{var}{Assumed overall variance of the model, used to calculate the other covariance, see details}
 
 \item{family}{a \link[stats]{family} object}
-
-\item{nper}{Integer. The number of clusters per sequence, default is one.}
-
-\item{beta.}{Vector of beta parameters to initialise the design, defaults to all zeros.}
 }
 \value{
 A Model object with MeanFunction and Covariance objects, or
@@ -93,5 +91,5 @@ des <- staircase_crt(6,10,beta = c(rnorm(7,0,0.1),-0.1),icc=0.05, iac = 0.1)
 des <- staircase_crt(6,10,icc=c(0.01,0.05), cac = c(0.5,0.7,0.9), iac = 0.1)
 }
 \seealso{
-\link[glmmr]{Model}, \link[glmmr]{ModelSpace}
+\link[glmmrBase]{Model}
 }

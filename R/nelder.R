@@ -78,7 +78,7 @@ nest_df <- function(df1,df2){
 #' @return A list with the first member being the data frame 
 #' @examples 
 #' nelder(~(j(4) * t(5)) > i(5))
-#' nelder(~person(5) * time(10)))
+#' nelder(~person(5) * time(10))
 #' @export
 nelder <- function(formula){
   if(formula[[1]]=="~")formula <- formula[[2]]

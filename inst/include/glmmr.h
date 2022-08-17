@@ -59,26 +59,6 @@ inline arma::vec mod_inv_func(arma::vec mu,
   return mu;
 }
 
-// extern arma::mat genBlockD(size_t N_dim,
-//                            size_t N_func,
-//                            const arma::uvec &func_def,
-//                            const arma::uvec &N_var_func,
-//                            const arma::umat &col_id,
-//                            const arma::uvec &N_par,
-//                            const arma::mat &cov_data,
-//                            const arma::vec &gamma);
-// 
-// extern arma::field<arma::mat> genD(const arma::uword &B,
-//                                    const arma::uvec &N_dim,
-//                                    const arma::uvec &N_func,
-//                                    const arma::umat &func_def,
-//                                    const arma::umat &N_var_func,
-//                                    const arma::ucube &col_id,
-//                                    const arma::umat &N_par,
-//                                    const arma::uword &sum_N_par,
-//                                    const arma::cube &cov_data,
-//                                    const arma::vec &gamma);
-
 class DSubMatrix {
   size_t N_dim_;
   size_t N_func_;
@@ -152,34 +132,6 @@ public:
             case 6:
               val = val* R::bessel_k(dist/gamma_(gamma_idx),1,1);
             }
-            
-            // if(func_def_(k)==1){
-            //   if(dist==0){
-            //     val = val*pow(gamma_(gamma_idx),2);
-            //   } else {
-            //     val = 0;
-            //   }
-            // } else if(func_def_(k)==2){
-            //   val = val*exp(-1*dist/gamma_(gamma_idx));//fexp(dist,gamma(gamma_idx));
-            // }else if(func_def_(k)==3){
-            //   val = val*pow(gamma_(gamma_idx),dist);
-            // } else if(func_def_(k)==4){
-            //   val = val*gamma_(gamma_idx)*exp(-1*pow(dist,2)/pow(gamma_(gamma_idx+1),2));
-            // } else if(func_def_(k)==5){
-            //   double xr = pow(2*gamma_(gamma_idx+1),0.5)*dist/gamma_(gamma_idx);
-            //   double ans = 1;
-            //   if(xr!=0){
-            //     if(gamma_(gamma_idx+1) == 0.5){
-            //       ans = exp(-xr);
-            //     } else {
-            //       double cte = pow(2,-1*(gamma_(gamma_idx+1)-1))/R::gammafn(gamma_(gamma_idx+1));
-            //       ans = cte*pow(xr, gamma_(gamma_idx+1))*R::bessel_k(xr,gamma_(gamma_idx+1),1);
-            //     }
-            //   }
-            //   val = val*ans;
-            // } else if(func_def_(k)==6){
-            //   val = val* R::bessel_k(dist/gamma_(gamma_idx),1,1);
-            // }
             
             gamma_idx += N_par_(k);      
           }
@@ -306,31 +258,6 @@ inline arma::vec dhdmu(const arma::vec &xb,
     wdiag = 1/exp(xb);
   }
   
-  // if(family=="poisson"){
-  //   if(link=="log"){
-  //     wdiag = 1/exp(xb);
-  //   } else if(link =="identity"){
-  //     wdiag = exp(xb);
-  //   }
-  // } else if(family=="binomial"){
-  //   p = mod_inv_func(xb,"logit");
-  //   if(link=="logit"){
-  //     wdiag = 1/(p % (1-p));
-  //   } else if(link=="log"){
-  //     wdiag = (1-p)/p;
-  //   } else if(link=="identity"){
-  //     wdiag = p % (1-p);
-  //   } else if(link=="probit"){
-  //     p = mod_inv_func(xb,"probit");
-  //     arma::vec p2(xb.n_elem,fill::zeros);
-  //     wdiag = (p % (1-p))/gaussian_pdf_vec(xb);
-  //   }
-  // } else if(link=="gaussian"){
-  //   // if identity do nothin
-  //   if(link=="log"){
-  //     wdiag = 1/exp(xb);
-  //   }
-  // } // for gamma- inverse do nothing
   return wdiag;
 }
 

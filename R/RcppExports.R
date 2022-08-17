@@ -15,6 +15,7 @@
 #' where each slice the respective column indexes of `cov_data` for each function in the block
 #' @param N_par Matrix of integers of same size as `func_def` with each column specifying the number
 #' of parameters in the function in each block
+#' @param sum_N_par Total number of parameters
 #' @param cov_data 3D array (cube) holding the data for the covariance matrix where each of the B slices
 #' is the data required for each block
 #' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
@@ -24,6 +25,12 @@ genD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_pa
     .Call(`_glmmrBase_genD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma)
 }
 
+#' Generates the derivative of the link function with respect to the mean
+#' 
+#' @param xb Vector with mean function value evaluated at fitted model parameters
+#' @param family String declaring model family
+#' @param link String declaring model link function
+#' @return Vector of derivative values
 gen_dhdmu <- function(xb, family, link) {
     .Call(`_glmmrBase_gen_dhdmu`, xb, family, link)
 }

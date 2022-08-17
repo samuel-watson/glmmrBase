@@ -42,7 +42,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           #' mf1$n()
                           n=function(){
@@ -61,7 +61,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           #' mf1$parameters <- c(0,0)
                           #' mf1$check()
@@ -104,7 +104,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           initialize = function(formula,
                                                 data,
@@ -169,7 +169,7 @@ and the parameters should also be in this order"))
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           #' mf1$colnames(c("cluster","time","individual","treatment"))
                           #' mf1$colnames()
@@ -195,7 +195,7 @@ and the parameters should also be in this order"))
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           #' mf1$subset_rows(1:20) 
                           subset_rows = function(index){
@@ -217,7 +217,7 @@ and the parameters should also be in this order"))
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = binomial()
+                          #'                         family = stats::binomial()
                           #'                         )
                           #' mf1$subset_cols(1:2) 
                           subset_cols = function(index){

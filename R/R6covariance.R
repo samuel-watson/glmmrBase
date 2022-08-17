@@ -69,7 +69,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return A Covariance object
                         #' @examples 
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                         #'                       parameters = c(0.25,0.7),
                         #'                       data= df)
                         initialize = function(formula=NULL,
@@ -92,10 +92,10 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return NULL
                         #' @examples 
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                        #'                       parameters = list(list(0.05,0.8)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #'                       parameters = c(0.15,0.8),
                         #'                       data= df)
-                        #' cov$parameters <- list(list(0.01,0.1))
+                        #' cov$parameters <- c(0.25,0.1)
                         #' cov$check(verbose=FALSE)
                         check = function(verbose=TRUE){
                           new_hash <- private$hash_do()
@@ -114,8 +114,8 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param ... ignored
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                        #'                       parameters = list(list(0.05,0.8)),
+                        #' Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
                           # MAKE CLEARER ABOUT FUNCTIONS AND PARAMETERS?
@@ -131,8 +131,8 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param index vector of indices to keep
                         #' @examples 
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
-                        #' cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                        #'                       parameters = list(list(0.05,0.8)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         #' cov$subset(1:100)                     
                         subset = function(index){
@@ -148,10 +148,10 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return matrix 
                         #' @examples 
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
-                        #' cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
-                        #'                       parameters = list(list(0.05,0.8)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
-                        #' cov$sampleD(list(list(0.01,0.1)))
+                        #' cov$sampleD(c(0.01,0.1))
                         sampleD = function(parameters){
                           return(private$genD(update = FALSE,
                                               new_pars = parameters))

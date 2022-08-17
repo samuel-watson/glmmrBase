@@ -46,7 +46,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$n()
 
@@ -60,7 +60,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$parameters <- c(0,0)
 mf1$check()
@@ -75,7 +75,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 
 ## ------------------------------------------------
@@ -88,7 +88,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$colnames(c("cluster","time","individual","treatment"))
 mf1$colnames()
@@ -103,7 +103,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$subset_rows(1:20) 
 
@@ -117,7 +117,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$subset_cols(1:2) 
 }
@@ -184,7 +184,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$n()
 }
@@ -222,7 +222,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$parameters <- c(0,0)
 mf1$check()
@@ -282,7 +282,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 }
 \if{html}{\out{</div>}}
@@ -332,7 +332,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$colnames(c("cluster","time","individual","treatment"))
 mf1$colnames()
@@ -372,7 +372,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$subset_rows(1:20) 
 }
@@ -411,7 +411,7 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = binomial()
+                        family = stats::binomial()
                         )
 mf1$subset_cols(1:2) 
 }

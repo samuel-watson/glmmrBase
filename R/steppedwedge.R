@@ -11,7 +11,7 @@
 #' @param J Integer indicating the number of sequences such that there are J+1 time periods
 #' @param M Integer. The number of individual observations per cluster-period, assumed equal across all clusters
 #' @param nper Integer. The number of clusters per sequence, default is one.
-#' @param beta. Vector of beta parameters to initialise the design, defaults to all zeros.
+#' @param beta Vector of beta parameters to initialise the design, defaults to all zeros.
 #' @param icc Intraclass correlation coefficient. User may specify
 #' more than one value, see details.
 #' @param cac Cluster autocorrelation coefficient, optional and user may specify more than one value, see details
@@ -60,7 +60,9 @@
 #' des <- stepped_wedge(6,10,icc=c(0.01,0.05), cac = c(0.5,0.7,0.9), iac = 0.1)
 #' @return A Model object with MeanFunction and Covariance objects, or
 #' a ModelSpace holding several such Model objects.
-#' @seealso \link[glmmr]{Model}, \link[glmmr]{ModelSpace}
+#' @seealso \link[glmmrBase]{Model}
+#' @importFrom methods is 
+#' @importFrom stats model.matrix family formula
 #' @export
 stepped_wedge <- function(J,
                           M,
@@ -70,7 +72,7 @@ stepped_wedge <- function(J,
                           cac = NULL,
                           iac = NULL,
                           var = 1,
-                          family = gaussian()){
+                          family = stats::gaussian()){
   if(missing(icc))stop("icc must be set as a minimum")
   
   ndesigns <- length(icc) * ifelse(!is.null(cac[1]),length(cac),1) *
@@ -141,69 +143,70 @@ stepped_wedge <- function(J,
     var_par = sigma
   )
   
-  if(ndesigns>1){
-    ds1 <- ModelSpace$new(d1)
-    if(is.null(cac))cac <- NA
-    if(is.null(iac))iac <- NA
-    dsvalues <- expand.grid(icc=icc,cac=cac,iac=iac)
-    print(dsvalues)
-    
-    for(i in 1:(ndesigns-1)){
-      # assign(paste0("d",i+1),
-      #        Model$new(
-      #          covariance = d1$covariance$clone(deep=TRUE),
-      #          mean.function = d1$mean_function$clone(),
-      #          var_par = 1
-      #        ))
-      
-      if(!is.null(dsvalues$cac[i+1]) && !is.na(dsvalues$cac[i+1])){
-        wp_var <- dsvalues$icc[i+1]*var*(1-dsvalues$cac[i+1])
-        bp_var <- dsvalues$icc[i+1]*var*dsvalues$cac[i+1]
-      } else {
-        bp_var <- dsvalues$icc[i+1]*var
-      }
-      if(!is.null(dsvalues$iac[i+1]) && !is.na(dsvalues$iac[i+1])){
-        ind_var <- var*(1-dsvalues$icc[i+1])*dsvalues$iac[i+1]
-        sigma <- var*(1-dsvalues$icc[i+1])*(1-dsvalues$iac[i+1])
-      } else {
-        sigma <- var*(1-dsvalues$icc[i+1])
-      }
-      
-      if(is.null(dsvalues$cac[i+1]) || is.na(dsvalues$cac[i+1])){
-        if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
-          f1 <- "~(1|gr(J))"
-          pars <- c(sqrt(bp_var))
-        } else {
-          f1 <- "~(1|gr(J)) + (1|gr(ind))"
-          pars <- c(sqrt(bp_var),sqrt(ind_var))
-        }
-      } else {
-        if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
-          f1 <- "~ (1|gr(J)) + (1|gr(J*t))"
-          pars <- c(sqrt(bp_var),sqrt(wp_var))
-        } else {
-          f1 <- "~ (1|gr(J)) + (1|gr(J*t)) + (1|gr(ind))"
-          pars <- c(sqrt(bp_var),sqrt(wp_var),sqrt(ind_var))
-        }
-      }
-      
- 
-      
-      ds1$add(
-        Model$new(
-          covariance = Covariance$new(
-            data=df,
-            formula = f1,
-            parameters = pars
-          ),
-          mean.function = d1$mean_function$clone(),
-          var_par = 1
-        )
-      )
-      
-    }
-    return(invisible(ds1))
-  } else {
-    return(invisible(d1))
-  }
+  # if(ndesigns>1&requireNamespace(glmmrOptim)){
+  #   ds1 <- ModelSpace$new(d1)
+  #   if(is.null(cac))cac <- NA
+  #   if(is.null(iac))iac <- NA
+  #   dsvalues <- expand.grid(icc=icc,cac=cac,iac=iac)
+  #   print(dsvalues)
+  #   
+  #   for(i in 1:(ndesigns-1)){
+  #     # assign(paste0("d",i+1),
+  #     #        Model$new(
+  #     #          covariance = d1$covariance$clone(deep=TRUE),
+  #     #          mean.function = d1$mean_function$clone(),
+  #     #          var_par = 1
+  #     #        ))
+  #     
+  #     if(!is.null(dsvalues$cac[i+1]) && !is.na(dsvalues$cac[i+1])){
+  #       wp_var <- dsvalues$icc[i+1]*var*(1-dsvalues$cac[i+1])
+  #       bp_var <- dsvalues$icc[i+1]*var*dsvalues$cac[i+1]
+  #     } else {
+  #       bp_var <- dsvalues$icc[i+1]*var
+  #     }
+  #     if(!is.null(dsvalues$iac[i+1]) && !is.na(dsvalues$iac[i+1])){
+  #       ind_var <- var*(1-dsvalues$icc[i+1])*dsvalues$iac[i+1]
+  #       sigma <- var*(1-dsvalues$icc[i+1])*(1-dsvalues$iac[i+1])
+  #     } else {
+  #       sigma <- var*(1-dsvalues$icc[i+1])
+  #     }
+  #     
+  #     if(is.null(dsvalues$cac[i+1]) || is.na(dsvalues$cac[i+1])){
+  #       if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
+  #         f1 <- "~(1|gr(J))"
+  #         pars <- c(sqrt(bp_var))
+  #       } else {
+  #         f1 <- "~(1|gr(J)) + (1|gr(ind))"
+  #         pars <- c(sqrt(bp_var),sqrt(ind_var))
+  #       }
+  #     } else {
+  #       if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
+  #         f1 <- "~ (1|gr(J)) + (1|gr(J*t))"
+  #         pars <- c(sqrt(bp_var),sqrt(wp_var))
+  #       } else {
+  #         f1 <- "~ (1|gr(J)) + (1|gr(J*t)) + (1|gr(ind))"
+  #         pars <- c(sqrt(bp_var),sqrt(wp_var),sqrt(ind_var))
+  #       }
+  #     }
+  #     
+  # 
+  #     
+  #     ds1$add(
+  #       Model$new(
+  #         covariance = Covariance$new(
+  #           data=df,
+  #           formula = f1,
+  #           parameters = pars
+  #         ),
+  #         mean.function = d1$mean_function$clone(),
+  #         var_par = 1
+  #       )
+  #     )
+  #     
+  #   }
+  #   return(invisible(ds1))
+  # } else {
+  #   return(invisible(d1))
+  # }
+  return(invisible(d1))
 }

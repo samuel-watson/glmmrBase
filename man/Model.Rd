@@ -9,7 +9,7 @@ A GLMM Model
 A GLMM Model
 }
 \details{
-An R6 class representing a GLMM and study design
+An R6 class representing a GLMM model
 
 
 For the generalised linear mixed model 
@@ -18,13 +18,12 @@ For the generalised linear mixed model
 \deqn{\mu = h^-1(X\beta + Z\gamma)}
 \deqn{\gamma \sim MVN(0,D)}
 
-where h is the link function. A Model in comprised of a \link[glmmr]{MeanFunction} object, which defines the family F, 
-link function h, and fixed effects design matrix X, and a \link[glmmr]{Covariance} object, which defines Z and D. The class provides
+where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
+link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
 methods for analysis and simulation with these models.
 
-This class provides methods for: data simulation (`sim_data()` and `fitted()`), model fitting using Markov Chain 
-Monte Carlo Maximum Likelihood (MCML) methods (`MCML()`), design analysis via simulation including power (`analysis()`),
-deletion diagnostics (`dfbeta()`), and permutation tests including p-values and confidence intervals (`permutation()`).
+This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
+in related packages.
 
 The class by default calculates the covariance matrix of the observations as:
 
@@ -63,7 +62,7 @@ mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
   data=df,
   parameters = c(rep(0,5),0.6),
-  family = gaussian()
+  family = stats::gaussian()
 )
 cov1 <- Covariance$new(
   data = df,
@@ -78,7 +77,7 @@ des <- Model$new(
 
 #alternatively we can pass the data directly to Model
 #here we will specify a cohort study
-df <- nelder(~ind(20) > t(6))
+df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
 
@@ -88,10 +87,10 @@ covariance = list(
   formula = ~ (1|ar1(t)*gr(ind)),
   parameters = c(0.8,1)),
 mean.function = list(
-  formula = ~int + factor(t),
+  formula = ~factor(t) + int - 1,
   data=df,
   parameters = rep(0,7),
-  family = poisson()))
+  family = stats::poisson()))
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -101,7 +100,7 @@ spt_design <- Model$new(covariance = list(data=df,
                          mean.function = list(data=df,
                                               formula = ~ 1,
                                               parameters = c(0.5),
-                                              family=poisson())) 
+                                              family=stats::poisson())) 
 
 ## ------------------------------------------------
 ## Method `Model$n_cluster`
@@ -115,7 +114,7 @@ mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
   data=df,
   parameters = c(rep(0,5),0.6),
-  family = gaussian()
+  family = stats::gaussian()
 )
 cov1 <- Covariance$new(
   data = df,
@@ -162,7 +161,7 @@ des <- Model$new(
     formula = ~ factor(t) + int - 1,
     data=df,
     parameters = c(rep(0,5),0.6),
-    family = binomial())
+    family = stats::binomial())
 )
 ysim <- des$sim_data()
 
@@ -182,21 +181,13 @@ des <- Model$new(
     formula = ~ factor(t) + int - 1,
     data=df,
     parameters = c(rep(0,5),0.6),
-    family = binomial())
+    family = stats::binomial())
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
 des$check() #updates 
 des$mean_function$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
-}
-\references{
-Braun and Feng
-McCullagh
-Stan
-McCullagh and Nelder
-Approx GLMMs paper
-Watson confidence interval
 }
 \seealso{
 \link[glmmr]{nelder}, \link[glmmr]{MeanFunction}, \link[glmmr]{Covariance}
@@ -303,7 +294,7 @@ mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
   data=df,
   parameters = c(rep(0,5),0.6),
-  family = gaussian()
+  family = stats::gaussian()
 )
 cov1 <- Covariance$new(
   data = df,
@@ -318,7 +309,7 @@ des <- Model$new(
 
 #alternatively we can pass the data directly to Model
 #here we will specify a cohort study
-df <- nelder(~ind(20) > t(6))
+df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
 
@@ -328,10 +319,10 @@ covariance = list(
   formula = ~ (1|ar1(t)*gr(ind)),
   parameters = c(0.8,1)),
 mean.function = list(
-  formula = ~int + factor(t),
+  formula = ~factor(t) + int - 1,
   data=df,
   parameters = rep(0,7),
-  family = poisson()))
+  family = stats::poisson()))
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -341,7 +332,7 @@ spt_design <- Model$new(covariance = list(data=df,
                          mean.function = list(data=df,
                                               formula = ~ 1,
                                               parameters = c(0.5),
-                                              family=poisson())) 
+                                              family=stats::poisson())) 
 }
 \if{html}{\out{</div>}}
 
@@ -411,7 +402,7 @@ mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
   data=df,
   parameters = c(rep(0,5),0.6),
-  family = gaussian()
+  family = stats::gaussian()
 )
 cov1 <- Covariance$new(
   data = df,
@@ -533,7 +524,7 @@ des <- Model$new(
     formula = ~ factor(t) + int - 1,
     data=df,
     parameters = c(rep(0,5),0.6),
-    family = binomial())
+    family = stats::binomial())
 )
 ysim <- des$sim_data()
 }
@@ -578,7 +569,7 @@ des <- Model$new(
     formula = ~ factor(t) + int - 1,
     data=df,
     parameters = c(rep(0,5),0.6),
-    family = binomial())
+    family = stats::binomial())
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
