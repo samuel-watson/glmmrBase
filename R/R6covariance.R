@@ -155,6 +155,12 @@ Covariance <- R6::R6Class("Covariance",
                         sampleD = function(parameters){
                           return(private$genD(update = FALSE,
                                               new_pars = parameters))
+                        },
+                        #' @description 
+                        #' Returns the list specifying the covariance matrix D
+                        #' @return A list
+                        get_D_data = function(){
+                          return(private$D_data)
                         }
                       ),
                       private = list(

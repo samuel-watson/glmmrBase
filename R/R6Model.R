@@ -1,6 +1,6 @@
 #' A GLMM Model 
 #' 
-#' An R6 class representing a GLMM and study design
+#' An R6 class representing a GLMM model
 #' @details
 #' For the generalised linear mixed model 
 #' 
@@ -8,13 +8,12 @@
 #' \deqn{\mu = h^-1(X\beta + Z\gamma)}
 #' \deqn{\gamma \sim MVN(0,D)}
 #' 
-#' where h is the link function. A Model in comprised of a \link[glmmr]{MeanFunction} object, which defines the family F, 
-#' link function h, and fixed effects design matrix X, and a \link[glmmr]{Covariance} object, which defines Z and D. The class provides
+#' where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
+#' link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
 #' methods for analysis and simulation with these models.
 #' 
-#' This class provides methods for: data simulation (`sim_data()` and `fitted()`), model fitting using Markov Chain 
-#' Monte Carlo Maximum Likelihood (MCML) methods (`MCML()`), design analysis via simulation including power (`analysis()`),
-#' deletion diagnostics (`dfbeta()`), and permutation tests including p-values and confidence intervals (`permutation()`).
+#' This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
+#' in related packages.
 #' 
 #' The class by default calculates the covariance matrix of the observations as:
 #' 
@@ -24,13 +23,6 @@
 #' to, for individual _i_ \eqn{\phi a_i v(\mu_i)[h'(\mu_i)]^2} (see Table 2.1 in McCullagh 
 #' and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
 #' the memory requirements can be prohibitive.
-#' @references 
-#' Braun and Feng
-#' McCullagh
-#' Stan
-#' McCullagh and Nelder
-#' Approx GLMMs paper
-#' Watson confidence interval
 #' @importFrom Matrix Matrix
 #' @export 
 Model <- R6::R6Class("Model",
