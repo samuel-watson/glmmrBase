@@ -146,20 +146,20 @@ to identify where to replace allocation when randomiser is used.}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-n}{\code{MeanFunction$n()}}
-\item \href{#method-check}{\code{MeanFunction$check()}}
-\item \href{#method-new}{\code{MeanFunction$new()}}
-\item \href{#method-print}{\code{MeanFunction$print()}}
-\item \href{#method-colnames}{\code{MeanFunction$colnames()}}
-\item \href{#method-subset_rows}{\code{MeanFunction$subset_rows()}}
-\item \href{#method-subset_cols}{\code{MeanFunction$subset_cols()}}
-\item \href{#method-rerandomise}{\code{MeanFunction$rerandomise()}}
-\item \href{#method-clone}{\code{MeanFunction$clone()}}
+\item \href{#method-MeanFunction-n}{\code{MeanFunction$n()}}
+\item \href{#method-MeanFunction-check}{\code{MeanFunction$check()}}
+\item \href{#method-MeanFunction-new}{\code{MeanFunction$new()}}
+\item \href{#method-MeanFunction-print}{\code{MeanFunction$print()}}
+\item \href{#method-MeanFunction-colnames}{\code{MeanFunction$colnames()}}
+\item \href{#method-MeanFunction-subset_rows}{\code{MeanFunction$subset_rows()}}
+\item \href{#method-MeanFunction-subset_cols}{\code{MeanFunction$subset_cols()}}
+\item \href{#method-MeanFunction-rerandomise}{\code{MeanFunction$rerandomise()}}
+\item \href{#method-MeanFunction-clone}{\code{MeanFunction$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-n"></a>}}
-\if{latex}{\out{\hypertarget{method-n}{}}}
+\if{html}{\out{<a id="method-MeanFunction-n"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-n}{}}}
 \subsection{Method \code{n()}}{
 Returns the number of observations
 \subsection{Usage}{
@@ -194,8 +194,8 @@ mf1$n()
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check"></a>}}
-\if{latex}{\out{\hypertarget{method-check}{}}}
+\if{html}{\out{<a id="method-MeanFunction-check"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-check}{}}}
 \subsection{Method \code{check()}}{
 Checks if any changes have been made and updates
 
@@ -233,8 +233,8 @@ mf1$check()
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-MeanFunction-new"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new MeanFunction object
 \subsection{Usage}{
@@ -291,8 +291,8 @@ mf1 <- MeanFunction$new(formula = ~ int ,
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-print"></a>}}
-\if{latex}{\out{\hypertarget{method-print}{}}}
+\if{html}{\out{<a id="method-MeanFunction-print"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-print}{}}}
 \subsection{Method \code{print()}}{
 Prints details about the object
 \subsection{Usage}{
@@ -308,8 +308,8 @@ Prints details about the object
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-colnames"></a>}}
-\if{latex}{\out{\hypertarget{method-colnames}{}}}
+\if{html}{\out{<a id="method-MeanFunction-colnames"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-colnames}{}}}
 \subsection{Method \code{colnames()}}{
 Returns or replaces the column names of the data in the object
 \subsection{Usage}{
@@ -343,8 +343,8 @@ mf1$colnames()
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-subset_rows"></a>}}
-\if{latex}{\out{\hypertarget{method-subset_rows}{}}}
+\if{html}{\out{<a id="method-MeanFunction-subset_rows"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-subset_rows}{}}}
 \subsection{Method \code{subset_rows()}}{
 Keeps a subset of the data and removes the rest
 
@@ -382,8 +382,8 @@ mf1$subset_rows(1:20)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-subset_cols"></a>}}
-\if{latex}{\out{\hypertarget{method-subset_cols}{}}}
+\if{html}{\out{<a id="method-MeanFunction-subset_cols"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-subset_cols}{}}}
 \subsection{Method \code{subset_cols()}}{
 Keeps a subset of the columns of X 
 
@@ -421,8 +421,8 @@ mf1$subset_cols(1:2)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-rerandomise"></a>}}
-\if{latex}{\out{\hypertarget{method-rerandomise}{}}}
+\if{html}{\out{<a id="method-MeanFunction-rerandomise"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-rerandomise}{}}}
 \subsection{Method \code{rerandomise()}}{
 Generates a new random allocation
 
@@ -444,8 +444,8 @@ Nothing is returned, the X matrix is updated
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-MeanFunction-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

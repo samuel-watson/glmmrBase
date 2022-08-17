@@ -378,6 +378,9 @@ Model <- R6::R6Class("Model",
                         private$generate()
                       }
                     },
+                    #' @description 
+                    #' Generates the information matrix
+                    #' @return A PxP matrix
                     information_matrix = function(){
                       Matrix::crossprod(self$mean_function$X,solve(self$Sigma))%*%self$mean_function$X
                     }

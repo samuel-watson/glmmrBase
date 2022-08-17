@@ -220,22 +220,22 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-fitted}{\code{Model$fitted()}}
-\item \href{#method-new}{\code{Model$new()}}
-\item \href{#method-print}{\code{Model$print()}}
-\item \href{#method-n}{\code{Model$n()}}
-\item \href{#method-n_cluster}{\code{Model$n_cluster()}}
-\item \href{#method-subset_rows}{\code{Model$subset_rows()}}
-\item \href{#method-subset_cols}{\code{Model$subset_cols()}}
-\item \href{#method-sim_data}{\code{Model$sim_data()}}
-\item \href{#method-check}{\code{Model$check()}}
-\item \href{#method-information_matrix}{\code{Model$information_matrix()}}
-\item \href{#method-clone}{\code{Model$clone()}}
+\item \href{#method-Model-fitted}{\code{Model$fitted()}}
+\item \href{#method-Model-new}{\code{Model$new()}}
+\item \href{#method-Model-print}{\code{Model$print()}}
+\item \href{#method-Model-n}{\code{Model$n()}}
+\item \href{#method-Model-n_cluster}{\code{Model$n_cluster()}}
+\item \href{#method-Model-subset_rows}{\code{Model$subset_rows()}}
+\item \href{#method-Model-subset_cols}{\code{Model$subset_cols()}}
+\item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
+\item \href{#method-Model-check}{\code{Model$check()}}
+\item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
+\item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-fitted"></a>}}
-\if{latex}{\out{\hypertarget{method-fitted}{}}}
+\if{html}{\out{<a id="method-Model-fitted"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
 Return predicted values based on the currently stored parameter values in `mean_function`
 \subsection{Usage}{
@@ -255,8 +255,8 @@ A \link[Matrix]{Matrix} class object containing the predicted values
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-Model-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new Model object
 \subsection{Usage}{
@@ -349,8 +349,8 @@ spt_design <- Model$new(covariance = list(data=df,
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-print"></a>}}
-\if{latex}{\out{\hypertarget{method-print}{}}}
+\if{html}{\out{<a id="method-Model-print"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-print}{}}}
 \subsection{Method \code{print()}}{
 Print method for `Model` class
 \subsection{Usage}{
@@ -366,8 +366,8 @@ Print method for `Model` class
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-n"></a>}}
-\if{latex}{\out{\hypertarget{method-n}{}}}
+\if{html}{\out{<a id="method-Model-n"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-n}{}}}
 \subsection{Method \code{n()}}{
 Returns the number of observations in the model
 \subsection{Usage}{
@@ -383,8 +383,8 @@ Returns the number of observations in the model
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-n_cluster"></a>}}
-\if{latex}{\out{\hypertarget{method-n_cluster}{}}}
+\if{html}{\out{<a id="method-Model-n_cluster"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-n_cluster}{}}}
 \subsection{Method \code{n_cluster()}}{
 Returns the number of clusters at each level
 \subsection{Usage}{
@@ -431,8 +431,8 @@ des$n_cluster() ## returns two levels of 10 and 50
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-subset_rows"></a>}}
-\if{latex}{\out{\hypertarget{method-subset_rows}{}}}
+\if{html}{\out{<a id="method-Model-subset_rows"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-subset_rows}{}}}
 \subsection{Method \code{subset_rows()}}{
 Subsets the design keeping specified observations only
 
@@ -465,8 +465,8 @@ des$subset_rows(ids_to_keep)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-subset_cols"></a>}}
-\if{latex}{\out{\hypertarget{method-subset_cols}{}}}
+\if{html}{\out{<a id="method-Model-subset_cols"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-subset_cols}{}}}
 \subsection{Method \code{subset_cols()}}{
 Subsets the columns of the design 
 
@@ -497,8 +497,8 @@ des$subset_cols(c(2:8,10))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-sim_data"></a>}}
-\if{latex}{\out{\hypertarget{method-sim_data}{}}}
+\if{html}{\out{<a id="method-Model-sim_data"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sim_data}{}}}
 \subsection{Method \code{sim_data()}}{
 Generates a realisation of the design
 
@@ -543,8 +543,8 @@ ysim <- des$sim_data()
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check"></a>}}
-\if{latex}{\out{\hypertarget{method-check}{}}}
+\if{html}{\out{<a id="method-Model-check"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-check}{}}}
 \subsection{Method \code{check()}}{
 Checks for any changes in linked objects and updates.
 
@@ -592,17 +592,21 @@ des$check() #updates
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-information_matrix"></a>}}
-\if{latex}{\out{\hypertarget{method-information_matrix}{}}}
+\if{html}{\out{<a id="method-Model-information_matrix"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-information_matrix}{}}}
 \subsection{Method \code{information_matrix()}}{
+Generates the information matrix
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+A PxP matrix
+}
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-Model-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{

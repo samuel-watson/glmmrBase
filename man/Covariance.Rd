@@ -120,18 +120,18 @@ cov$sampleD(list(list(0.01,0.1)))
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-n}{\code{Covariance$n()}}
-\item \href{#method-new}{\code{Covariance$new()}}
-\item \href{#method-check}{\code{Covariance$check()}}
-\item \href{#method-print}{\code{Covariance$print()}}
-\item \href{#method-subset}{\code{Covariance$subset()}}
-\item \href{#method-sampleD}{\code{Covariance$sampleD()}}
-\item \href{#method-clone}{\code{Covariance$clone()}}
+\item \href{#method-Covariance-n}{\code{Covariance$n()}}
+\item \href{#method-Covariance-new}{\code{Covariance$new()}}
+\item \href{#method-Covariance-check}{\code{Covariance$check()}}
+\item \href{#method-Covariance-print}{\code{Covariance$print()}}
+\item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
+\item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
+\item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-n"></a>}}
-\if{latex}{\out{\hypertarget{method-n}{}}}
+\if{html}{\out{<a id="method-Covariance-n"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-n}{}}}
 \subsection{Method \code{n()}}{
 Return the size of the design
 \subsection{Usage}{
@@ -143,8 +143,8 @@ Scalar
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-new"></a>}}
-\if{latex}{\out{\hypertarget{method-new}{}}}
+\if{html}{\out{<a id="method-Covariance-new"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new Covariance object
 \subsection{Usage}{
@@ -181,8 +181,8 @@ cov <- Covariance$new(formula = ~(1|gr(j)*ar1(t)),
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-check"></a>}}
-\if{latex}{\out{\hypertarget{method-check}{}}}
+\if{html}{\out{<a id="method-Covariance-check"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-check}{}}}
 \subsection{Method \code{check()}}{
 Check if anything has changed and update matrices if so.
 \subsection{Usage}{
@@ -214,8 +214,8 @@ cov$check(verbose=FALSE)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-print"></a>}}
-\if{latex}{\out{\hypertarget{method-print}{}}}
+\if{html}{\out{<a id="method-Covariance-print"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-print}{}}}
 \subsection{Method \code{print()}}{
 Show details of Covariance object
 \subsection{Usage}{
@@ -242,8 +242,8 @@ Covariance$new(formula = ~(1|gr(j)*ar1(t)),
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-subset"></a>}}
-\if{latex}{\out{\hypertarget{method-subset}{}}}
+\if{html}{\out{<a id="method-Covariance-subset"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-subset}{}}}
 \subsection{Method \code{subset()}}{
 Keep specified indices and removes the rest
 \subsection{Usage}{
@@ -271,8 +271,8 @@ cov$subset(1:100)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-sampleD"></a>}}
-\if{latex}{\out{\hypertarget{method-sampleD}{}}}
+\if{html}{\out{<a id="method-Covariance-sampleD"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-sampleD}{}}}
 \subsection{Method \code{sampleD()}}{
 Generate a new D matrix
 
@@ -306,8 +306,8 @@ cov$sampleD(list(list(0.01,0.1)))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-clone"></a>}}
-\if{latex}{\out{\hypertarget{method-clone}{}}}
+\if{html}{\out{<a id="method-Covariance-clone"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-clone}{}}}
 \subsection{Method \code{clone()}}{
 The objects of this class are cloneable with this method.
 \subsection{Usage}{
