@@ -25,6 +25,80 @@ genD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_pa
     .Call(`_glmmrBase_genD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma)
 }
 
+#' Generates the cholesky decomposition covariance matrix of the random effects
+#' 
+#' Generates the covariance matrix of the random effects from a sparse representation
+#' @param B Integer specifying the number of blocks in the matrix
+#' @param N_dim Vector of integers, which each value specifying the dimension of each block
+#' @param N_func Vector of integers specifying the number of functions in the covariance function 
+#' for each block.
+#' @param func_def Matrix of integers where each column specifies the function definition for each function in each block. 
+#' @param N_var_func Matrix of integers of same size as `func_def` with each column specying the number 
+#' of variables in the argument to each function in each block
+#' @param col_id 3D array (cube) of integers of dimension length(func_def) x max(N_var_func) x B 
+#' where each slice the respective column indexes of `cov_data` for each function in the block
+#' @param N_par Matrix of integers of same size as `func_def` with each column specifying the number
+#' of parameters in the function in each block
+#' @param sum_N_par Total number of parameters
+#' @param cov_data 3D array (cube) holding the data for the covariance matrix where each of the B slices
+#' is the data required for each block
+#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
+#' specified by `func_def`
+#' @return A lower triangular matrix matrix
+genCholD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma) {
+    .Call(`_glmmrBase_genCholD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma)
+}
+
+#' Returns log likelihood for a set of observatios
+#' 
+#' Generates the covariance matrix of the random effects from a sparse representation
+#' @param B Integer specifying the number of blocks in the matrix
+#' @param N_dim Vector of integers, which each value specifying the dimension of each block
+#' @param N_func Vector of integers specifying the number of functions in the covariance function 
+#' for each block.
+#' @param func_def Matrix of integers where each column specifies the function definition for each function in each block. 
+#' @param N_var_func Matrix of integers of same size as `func_def` with each column specying the number 
+#' of variables in the argument to each function in each block
+#' @param col_id 3D array (cube) of integers of dimension length(func_def) x max(N_var_func) x B 
+#' where each slice the respective column indexes of `cov_data` for each function in the block
+#' @param N_par Matrix of integers of same size as `func_def` with each column specifying the number
+#' of parameters in the function in each block
+#' @param sum_N_par Total number of parameters
+#' @param cov_data 3D array (cube) holding the data for the covariance matrix where each of the B slices
+#' is the data required for each block
+#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
+#' specified by `func_def`
+#' @param u A realisation of the random effects
+#' @return A lower triangular matrix matrix
+loglikD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u) {
+    .Call(`_glmmrBase_loglikD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u)
+}
+
+#' Returns log likelihood for a set of observatios
+#' 
+#' Generates the covariance matrix of the random effects from a sparse representation
+#' @param B Integer specifying the number of blocks in the matrix
+#' @param N_dim Vector of integers, which each value specifying the dimension of each block
+#' @param N_func Vector of integers specifying the number of functions in the covariance function 
+#' for each block.
+#' @param func_def Matrix of integers where each column specifies the function definition for each function in each block. 
+#' @param N_var_func Matrix of integers of same size as `func_def` with each column specying the number 
+#' of variables in the argument to each function in each block
+#' @param col_id 3D array (cube) of integers of dimension length(func_def) x max(N_var_func) x B 
+#' where each slice the respective column indexes of `cov_data` for each function in the block
+#' @param N_par Matrix of integers of same size as `func_def` with each column specifying the number
+#' of parameters in the function in each block
+#' @param sum_N_par Total number of parameters
+#' @param cov_data 3D array (cube) holding the data for the covariance matrix where each of the B slices
+#' is the data required for each block
+#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
+#' specified by `func_def`
+#' @param u A realisation of the random effects
+#' @return A lower triangular matrix matrix
+loggradD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u) {
+    .Call(`_glmmrBase_loggradD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u)
+}
+
 #' Generates the derivative of the link function with respect to the mean
 #' 
 #' @param xb Vector with mean function value evaluated at fitted model parameters

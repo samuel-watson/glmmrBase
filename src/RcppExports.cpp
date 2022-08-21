@@ -31,6 +31,68 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// genCholD
+arma::field<arma::mat> genCholD(const arma::uword& B, const arma::uvec& N_dim, const arma::uvec& N_func, const arma::umat& func_def, const arma::umat& N_var_func, const arma::ucube& col_id, const arma::umat& N_par, const arma::uword& sum_N_par, const arma::cube& cov_data, const arma::vec& gamma);
+RcppExport SEXP _glmmrBase_genCholD(SEXP BSEXP, SEXP N_dimSEXP, SEXP N_funcSEXP, SEXP func_defSEXP, SEXP N_var_funcSEXP, SEXP col_idSEXP, SEXP N_parSEXP, SEXP sum_N_parSEXP, SEXP cov_dataSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::uword& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_dim(N_dimSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_func(N_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type func_def(func_defSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_var_func(N_var_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::ucube& >::type col_id(col_idSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_par(N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::uword& >::type sum_N_par(sum_N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type cov_data(cov_dataSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(genCholD(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// loglikD
+double loglikD(const arma::uword& B, const arma::uvec& N_dim, const arma::uvec& N_func, const arma::umat& func_def, const arma::umat& N_var_func, const arma::ucube& col_id, const arma::umat& N_par, const arma::uword& sum_N_par, const arma::cube& cov_data, const arma::vec& gamma, const arma::vec& u);
+RcppExport SEXP _glmmrBase_loglikD(SEXP BSEXP, SEXP N_dimSEXP, SEXP N_funcSEXP, SEXP func_defSEXP, SEXP N_var_funcSEXP, SEXP col_idSEXP, SEXP N_parSEXP, SEXP sum_N_parSEXP, SEXP cov_dataSEXP, SEXP gammaSEXP, SEXP uSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::uword& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_dim(N_dimSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_func(N_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type func_def(func_defSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_var_func(N_var_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::ucube& >::type col_id(col_idSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_par(N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::uword& >::type sum_N_par(sum_N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type cov_data(cov_dataSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type u(uSEXP);
+    rcpp_result_gen = Rcpp::wrap(loglikD(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u));
+    return rcpp_result_gen;
+END_RCPP
+}
+// loggradD
+arma::rowvec loggradD(const arma::uword& B, const arma::uvec& N_dim, const arma::uvec& N_func, const arma::umat& func_def, const arma::umat& N_var_func, const arma::ucube& col_id, const arma::umat& N_par, const arma::uword& sum_N_par, const arma::cube& cov_data, const arma::vec& gamma, const arma::vec& u);
+RcppExport SEXP _glmmrBase_loggradD(SEXP BSEXP, SEXP N_dimSEXP, SEXP N_funcSEXP, SEXP func_defSEXP, SEXP N_var_funcSEXP, SEXP col_idSEXP, SEXP N_parSEXP, SEXP sum_N_parSEXP, SEXP cov_dataSEXP, SEXP gammaSEXP, SEXP uSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::uword& >::type B(BSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_dim(N_dimSEXP);
+    Rcpp::traits::input_parameter< const arma::uvec& >::type N_func(N_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type func_def(func_defSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_var_func(N_var_funcSEXP);
+    Rcpp::traits::input_parameter< const arma::ucube& >::type col_id(col_idSEXP);
+    Rcpp::traits::input_parameter< const arma::umat& >::type N_par(N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::uword& >::type sum_N_par(sum_N_parSEXP);
+    Rcpp::traits::input_parameter< const arma::cube& >::type cov_data(cov_dataSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type u(uSEXP);
+    rcpp_result_gen = Rcpp::wrap(loggradD(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u));
+    return rcpp_result_gen;
+END_RCPP
+}
 // gen_dhdmu
 arma::vec gen_dhdmu(const arma::vec& xb, std::string family, std::string link);
 RcppExport SEXP _glmmrBase_gen_dhdmu(SEXP xbSEXP, SEXP familySEXP, SEXP linkSEXP) {
@@ -58,6 +120,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_genD", (DL_FUNC) &_glmmrBase_genD, 10},
+    {"_glmmrBase_genCholD", (DL_FUNC) &_glmmrBase_genCholD, 10},
+    {"_glmmrBase_loglikD", (DL_FUNC) &_glmmrBase_loglikD, 11},
+    {"_glmmrBase_loggradD", (DL_FUNC) &_glmmrBase_loggradD, 11},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_blockMat", (DL_FUNC) &_glmmrBase_blockMat, 1},
     {NULL, NULL, 0}
