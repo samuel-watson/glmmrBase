@@ -161,6 +161,17 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return A list
                         get_D_data = function(){
                           return(private$D_data)
+                        },
+                        #' @description 
+                        #' Returns the Cholesky decomposition of the covariance matrix D
+                        #' @return A list of matrices
+                        get_chol_D = function(parameters=NULL){
+                          if(is.null(parameters)){
+                            L = do.call(genCholD,append(private$D_data,list(gamma=self$parameters)))
+                          } else {
+                            L = do.call(genCholD,append(private$D_data,list(gamma=parameters)))
+                          }
+                          return(L)
                         }
                       ),
                       private = list(
