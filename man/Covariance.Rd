@@ -127,6 +127,7 @@ cov$sampleD(c(0.01,0.1))
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
 \item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
 \item \href{#method-Covariance-get_D_data}{\code{Covariance$get_D_data()}}
+\item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -317,6 +318,19 @@ Returns the list specifying the covariance matrix D
 
 \subsection{Returns}{
 A list
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-get_chol_D"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-get_chol_D}{}}}
+\subsection{Method \code{get_chol_D()}}{
+Returns the Cholesky decomposition of the covariance matrix D
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D(parameters = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of matrices
 }
 }
 \if{html}{\out{<hr>}}
