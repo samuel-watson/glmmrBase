@@ -3,6 +3,7 @@
 
 #include <cmath> 
 #include <RcppArmadillo.h>
+#include <xsimd/xsimd.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -10,8 +11,42 @@
 
 using namespace Rcpp;
 using namespace arma;
+using namespace xsimd;
 
+// [[Rcpp::plugins(cpp14)]]
+// [[Rcpp::depends(RcppXsimd)]]
 // [[Rcpp::depends(RcppArmadillo)]]
+
+
+// credit for this code: http://coliru.stacked-crooked.com/a/6f5750c20d456da9
+inline double inner_sum_AVX(double *li, double *lj, int n) {
+  __m256d s4;
+  int i;
+  double s;
+  
+  s4 = _mm256_set1_pd(0.0);
+  for (i = 0; i < (n & (-4)); i+=4) {
+    __m256d li4, lj4;
+    li4 = _mm256_loadu_pd(&li[i]);
+    lj4 = _mm256_loadu_pd(&lj[i]);
+    s4 = _mm256_add_pd(_mm256_mul_pd(li4, lj4), s4);
+  }
+  double out[4];
+  _mm256_storeu_pd(out, s4);
+  s = out[0] + out[1] + out[2] + out[3];
+  for(;i<n; i++) {
+    s += li[i]*lj[i];
+  }
+  return s;
+}
+
+inline double inner_sum(double *li, double *lj, int n) {
+  double s = 0;
+  for (int i = 0; i < n; i++) {
+    s += li[i]*lj[i];
+  }
+  return s;
+}
 
 inline double gaussian_cdf(double x){
   return R::pnorm(x, 0, 1, true, false);
@@ -59,18 +94,15 @@ inline arma::vec mod_inv_func(arma::vec mu,
   return mu;
 }
 
-inline arma::vec forward_sub(const arma::mat &L,
+inline arma::vec forward_sub(const arma::mat &U,
                              const arma::vec &u){
-  arma::vec z(u.size());
-  for(arma::uword i=0; i<u.size(); i++){
-    double lsum = 0;
-    if(i > 0){
-      for(arma::uword k=0; k<i; k++){
-        lsum += L(i,k)*z(k);
-      }
-    }
-    z(i) = (u(i) - lsum)/L(i,i);
+  int n = (int)u.size();
+  double *y = (double*)std::calloc(n, sizeof(double));
+  for(int i=0; i<n; i++){
+    double lsum = inner_sum_AVX(const_cast<double*>(U.colptr(i)),&y[0],i);
+    y[i] = (u(i) - lsum)/U(i,i);
   }
+  arma::vec z(y,n,false,true);
   return z;
 }
 
@@ -80,7 +112,7 @@ inline arma::vec forward_back_sub(const arma::mat &L,
   arma::uword n = u.size();
   arma::vec z = forward_sub(L,u);
   arma::vec y(n);
-  
+
   y(n-1) = z(n-1)/U(n-1,n-1);
   for(arma::uword i=n-1; i>0; i--){
     double lsum = 0;
@@ -91,7 +123,6 @@ inline arma::vec forward_back_sub(const arma::mat &L,
   }
   return y;
 }
-
 
 class DSubMatrix {
   size_t N_dim_;
@@ -139,19 +170,16 @@ public:
   double get_val(arma::uword i, arma::uword j){
     double val = 1;
     if(i==j){
-      size_t gamma_idx_ii = 0;
       for(arma::uword k=0;k<N_func_;k++){
         if(func_def_(k)==1){
-          val = val*pow(gamma_(gamma_idx_ii),2);
+          val = val*pow(gamma_(N_par_(k)),2.0);
         }
-        gamma_idx_ii += N_par_(k); 
       }
     } else {
-      size_t gamma_idx = 0;
       for(arma::uword k=0;k<N_func_;k++){
         double dist = 0;
         for(arma::uword p=0; p<N_var_func_(k); p++){
-          dist += pow(cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1),2);
+          dist += pow(cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1),2.0);
         }
         dist= pow(dist,0.5);
         
@@ -159,65 +187,61 @@ public:
         switch (mcase){
         case 1:
           if(dist==0){
-            val = val*pow(gamma_(gamma_idx),2);
+            val = val*pow(gamma_(N_par_(k)),2.0);
           } else {
             val = 0;
           }
           break;
         case 2:
-          val = val*exp(-1*dist/gamma_(gamma_idx));
+          val = val*exp(-1*dist/gamma_(N_par_(k)));
           break;
         case 3:
-          val = val*pow(gamma_(gamma_idx),dist);
+          val = val*pow(gamma_(N_par_(k)),dist);
           break;
         case 4:
-          val = val*gamma_(gamma_idx)*exp(-1*pow(dist,2)/pow(gamma_(gamma_idx+1),2));
+          val = val*gamma_(N_par_(k))*exp(-1*pow(dist,2.0)/pow(gamma_(N_par_(k)+1),2.0));
           break;
         case 5:
           {
-            double xr = pow(2*gamma_(gamma_idx+1),0.5)*dist/gamma_(gamma_idx);
+            double xr = pow(2*gamma_(N_par_(k)+1),0.5)*dist/gamma_(N_par_(k));
             double ans = 1;
             if(xr!=0){
-              if(gamma_(gamma_idx+1) == 0.5){
+              if(gamma_(N_par_(k)+1) == 0.5){
                 ans = exp(-xr);
               } else {
-                double cte = pow(2,-1*(gamma_(gamma_idx+1)-1))/R::gammafn(gamma_(gamma_idx+1));
-                ans = cte*pow(xr, gamma_(gamma_idx+1))*R::bessel_k(xr,gamma_(gamma_idx+1),1);
+                double cte = pow(2.0,-1*(gamma_(N_par_(k)+1)-1))/R::gammafn(gamma_(N_par_(k)+1));
+                ans = cte*pow(xr, gamma_(N_par_(k)+1))*R::bessel_k(xr,gamma_(N_par_(k)+1),1);
               }
             }
             val = val*ans;
             break;
           }
         case 6:
-          val = val* R::bessel_k(dist/gamma_(gamma_idx),1,1);
+          val = val* R::bessel_k(dist/gamma_(N_par_(k)),1,1);
         }
-        
-        gamma_idx += N_par_(k);      
       }
     }
     
     return val;
   }
   
-  arma::mat genCholSubD(){
-    arma::mat L(N_dim_,N_dim_,fill::zeros);
-    for(arma::uword i=0; i< N_dim_; i++){
-      double sum = 0;
-      for(arma::uword k=0; k<i; k++){
-        sum += pow(L(i,k),2);
-      }
-      L(i,i) = sqrt(get_val(i,i) - sum);
-      
-      for(arma::uword j=i+1; j<N_dim_; j++){
-        sum=0;
-        for(arma::uword k =0; k<i; k++){
-          sum += L(i,k) * L(j,k);
-        }
-        L(j,i) = ((1.0 / L(i,i)) * (get_val(j,i) - sum));
+  arma::mat genCholSubD(bool upper = false) {
+    int n = (int)N_dim_;
+    double *L = (double*)std::calloc(n * n, sizeof(double));
+    
+    for (int j = 0; j <n; j++) {
+      double s = inner_sum_AVX(&L[j * n], &L[j * n], j);
+      L[j * n + j] = sqrt(get_val(j,j) - s);
+      //#pragma omp parallel for schedule(static, 8)
+      for (int i = j+1; i <n; i++) {
+        double s = inner_sum_AVX(&L[j * n], &L[i * n], j);
+        L[i * n + j] = (1.0 / L[j * n + j] * (get_val(j,i) - s));
       }
     }
-    return L;
+    arma::mat M(L,n,n,false,true);
+    if(upper) return M; else return M.t();
   }
+  
 };
 
 class DMatrix {
@@ -252,7 +276,8 @@ public:
   arma::vec gamma_;
   
   arma::mat gen_block_mat(arma::uword b,
-                          bool chol = false){
+                          bool chol = false,
+                          bool upper = false){
     arma::mat bblock;
     DSubMatrix *dblock;
     arma::uvec N_par_col0 = N_par_.col(0);
@@ -262,21 +287,22 @@ public:
                             func_def_.row(b).t(),
                             N_var_func_.row(b).t(),
                             col_id_.slice(b),
-                            N_par_.row(b).t(),
+                            N_par_.row(b).t() - min(N_par_.row(b)),
                             cov_data_.slice(b),
                             gamma_.subvec(min(N_par_.row(b)),glim-1));
     if(!chol){
       bblock = dblock->genSubD();
     } else {
-      bblock = dblock->genCholSubD();
+      bblock = dblock->genCholSubD(upper);
     }
     delete dblock;
     return bblock;
   }
   
   void get_block(arma::uword b,
-                 bool chol = false){
-    DBlocks_[b] = gen_block_mat(b,chol);
+                 bool chol = false,
+                 bool upper = false){
+    DBlocks_[b] = gen_block_mat(b,chol,upper);
   }
   
   arma::field<arma::mat> genD(){
@@ -293,10 +319,10 @@ public:
     return DBlocks_;
   }
   
-  void gen_blocks_byfunc(){
+  void gen_blocks_byfunc(bool upper = true){
     for(arma::uword b=0;b<B_;b++){
       bool chol = !all(func_def_.row(b)==1);
-      get_block(b,chol);
+      get_block(b,chol,upper);
     }
   }
   
@@ -313,7 +339,7 @@ public:
         arma::vec loglvec(DBlocks_[b].n_rows);
         for(arma::uword k=0; k<DBlocks_[b].n_rows; k++){
           loglvec(k) = -0.5*log(DBlocks_[b](k,k)) -0.5*log(2*arma::datum::pi) -
-            0.5*pow(u(begin+k),2)/DBlocks_[b](k,k);
+            0.5*pow(u(begin+k),2.0)/DBlocks_[b](k,k);
         }
         loglV(b) = sum(loglvec);
       } else {
