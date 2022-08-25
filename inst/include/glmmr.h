@@ -3,7 +3,7 @@
 
 #include <cmath> 
 #include <RcppArmadillo.h>
-#include <xsimd/xsimd.hpp>
+//#include <xsimd/xsimd.hpp>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -11,34 +11,36 @@
 
 using namespace Rcpp;
 using namespace arma;
-using namespace xsimd;
+//using namespace xsimd;
 
 // [[Rcpp::plugins(cpp14)]]
 // [[Rcpp::depends(RcppXsimd)]]
 // [[Rcpp::depends(RcppArmadillo)]]
 
-
-// credit for this code: http://coliru.stacked-crooked.com/a/6f5750c20d456da9
-inline double inner_sum_AVX(double *li, double *lj, int n) {
-  __m256d s4;
-  int i;
-  double s;
-  
-  s4 = _mm256_set1_pd(0.0);
-  for (i = 0; i < (n & (-4)); i+=4) {
-    __m256d li4, lj4;
-    li4 = _mm256_loadu_pd(&li[i]);
-    lj4 = _mm256_loadu_pd(&lj[i]);
-    s4 = _mm256_add_pd(_mm256_mul_pd(li4, lj4), s4);
-  }
-  double out[4];
-  _mm256_storeu_pd(out, s4);
-  s = out[0] + out[1] + out[2] + out[3];
-  for(;i<n; i++) {
-    s += li[i]*lj[i];
-  }
-  return s;
-}
+// // I may have to remove this code if this ever goes to CRAN because
+// // it requires non-portable compiler flags. If so, switch inner_sum_AVX
+// // for inner_sum below
+// // credit for this code: http://coliru.stacked-crooked.com/a/6f5750c20d456da9
+// inline double inner_sum_AVX(double *li, double *lj, int n) {
+//   __m256d s4;
+//   int i;
+//   double s;
+//   
+//   s4 = _mm256_set1_pd(0.0);
+//   for (i = 0; i < (n & (-4)); i+=4) {
+//     __m256d li4, lj4;
+//     li4 = _mm256_loadu_pd(&li[i]);
+//     lj4 = _mm256_loadu_pd(&lj[i]);
+//     s4 = _mm256_add_pd(_mm256_mul_pd(li4, lj4), s4);
+//   }
+//   double out[4];
+//   _mm256_storeu_pd(out, s4);
+//   s = out[0] + out[1] + out[2] + out[3];
+//   for(;i<n; i++) {
+//     s += li[i]*lj[i];
+//   }
+//   return s;
+// }
 
 inline double inner_sum(double *li, double *lj, int n) {
   double s = 0;
@@ -80,14 +82,19 @@ inline double log_mv_gaussian_pdf(const arma::vec& u,
 
 inline arma::vec mod_inv_func(arma::vec mu,
                               std::string link){
-  //arma::uword n = mu.n_elem;
-  if(link=="logit"){
+  const static std::unordered_map<std::string,int> string_to_case{
+    {"logit",1},
+    {"log",2},
+    {"probit",3}
+  };
+  switch (string_to_case.at(link)){
+  case 1:
     mu = exp(mu) / (1+exp(mu));
-  }
-  if(link=="log"){
+    break;
+  case 2:
     mu = exp(mu);
-  }
-  if(link=="probit"){
+    break;
+  case 3:
     mu = gaussian_cdf_vec(mu);
   }
   
@@ -99,30 +106,42 @@ inline arma::vec forward_sub(const arma::mat &U,
   int n = (int)u.size();
   double *y = (double*)std::calloc(n, sizeof(double));
   for(int i=0; i<n; i++){
-    double lsum = inner_sum_AVX(const_cast<double*>(U.colptr(i)),&y[0],i);
+    double lsum = inner_sum(const_cast<double*>(U.colptr(i)),&y[0],i);
     y[i] = (u(i) - lsum)/U(i,i);
   }
   arma::vec z(y,n,false,true);
   return z;
 }
 
-inline arma::vec forward_back_sub(const arma::mat &L,
-                                  const arma::mat &U,
-                                  const arma::vec &u){
-  arma::uword n = u.size();
-  arma::vec z = forward_sub(L,u);
-  arma::vec y(n);
+// inline arma::vec forward_sub(double* U,
+//                             double* u,
+//                             int n){
+//   double *y = (double*)std::calloc(n, sizeof(double));
+//   for(int i=0; i<n; i++){
+//     double lsum = inner_sum_AVX(&U[i*n],&y[0],i);
+//     y[i] = (u[i] - lsum)/U[i*n + i];
+//   }
+//   arma::vec z(y,n,false,true);
+//   return z;
+// }
 
-  y(n-1) = z(n-1)/U(n-1,n-1);
-  for(arma::uword i=n-1; i>0; i--){
-    double lsum = 0;
-    for(arma::uword k=i; k<n; k++){
-      lsum += U(i-1,k)*y(k);
-    }
-    y(i-1) = (z(i-1) - lsum)/U(i-1,i-1);
-  }
-  return y;
-}
+// inline arma::vec forward_back_sub(const arma::mat &L,
+//                                   const arma::mat &U,
+//                                   const arma::vec &u){
+//   arma::uword n = u.size();
+//   arma::vec z = forward_sub(L,u);
+//   arma::vec y(n);
+// 
+//   y(n-1) = z(n-1)/U(n-1,n-1);
+//   for(arma::uword i=n-1; i>0; i--){
+//     double lsum = 0;
+//     for(arma::uword k=i; k<n; k++){
+//       lsum += U(i-1,k)*y(k);
+//     }
+//     y(i-1) = (z(i-1) - lsum)/U(i-1,i-1);
+//   }
+//   return y;
+// }
 
 class DSubMatrix {
   size_t N_dim_;
@@ -172,14 +191,15 @@ public:
     if(i==j){
       for(arma::uword k=0;k<N_func_;k++){
         if(func_def_(k)==1){
-          val = val*pow(gamma_(N_par_(k)),2.0);
+          val = val*gamma_(N_par_(k))*gamma_(N_par_(k));
         }
       }
     } else {
       for(arma::uword k=0;k<N_func_;k++){
         double dist = 0;
         for(arma::uword p=0; p<N_var_func_(k); p++){
-          dist += pow(cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1),2.0);
+          double diff = cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1);
+          dist += diff*diff;
         }
         dist= pow(dist,0.5);
         
@@ -187,7 +207,7 @@ public:
         switch (mcase){
         case 1:
           if(dist==0){
-            val = val*pow(gamma_(N_par_(k)),2.0);
+            val = val*gamma_(N_par_(k))*gamma_(N_par_(k));
           } else {
             val = 0;
           }
@@ -199,11 +219,11 @@ public:
           val = val*pow(gamma_(N_par_(k)),dist);
           break;
         case 4:
-          val = val*gamma_(N_par_(k))*exp(-1*pow(dist,2.0)/pow(gamma_(N_par_(k)+1),2.0));
+          val = val*gamma_(N_par_(k))*exp(-1*pow(dist,2.0)/(gamma_(N_par_(k)+1)*gamma_(N_par_(k)+1)));
           break;
         case 5:
           {
-            double xr = pow(2*gamma_(N_par_(k)+1),0.5)*dist/gamma_(N_par_(k));
+            double xr = sqrt(2*gamma_(N_par_(k)+1))*dist/gamma_(N_par_(k));
             double ans = 1;
             if(xr!=0){
               if(gamma_(N_par_(k)+1) == 0.5){
@@ -230,11 +250,11 @@ public:
     double *L = (double*)std::calloc(n * n, sizeof(double));
     
     for (int j = 0; j <n; j++) {
-      double s = inner_sum_AVX(&L[j * n], &L[j * n], j);
+      double s = inner_sum(&L[j * n], &L[j * n], j);
       L[j * n + j] = sqrt(get_val(j,j) - s);
       //#pragma omp parallel for schedule(static, 8)
       for (int i = j+1; i <n; i++) {
-        double s = inner_sum_AVX(&L[j * n], &L[i * n], j);
+        double s = inner_sum(&L[j * n], &L[i * n], j);
         L[i * n + j] = (1.0 / L[j * n + j] * (get_val(j,i) - s));
       }
     }
@@ -326,53 +346,50 @@ public:
     }
   }
   
-  double loglik(const arma::vec &u){
+  double loglik(const arma::vec &u){ // const arma::vec &u#include <xsimd/xsimd.hpp>
     arma::vec loglV(B_);
     double logdetD;
-    //arma::uword ndim_idx = 0;
-#pragma omp parallel for
+//#pragma omp parallel for
     for(arma::uword b=0;b<B_;b++){
       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
+      int n = (int)DBlocks_[b].n_rows;
       if(all(func_def_.row(b)==1)){
-        //arma::mat matB = gen_block_mat(b);
-        arma::vec loglvec(DBlocks_[b].n_rows);
+        arma::vec loglvec(n);
         for(arma::uword k=0; k<DBlocks_[b].n_rows; k++){
           loglvec(k) = -0.5*log(DBlocks_[b](k,k)) -0.5*log(2*arma::datum::pi) -
             0.5*pow(u(begin+k),2.0)/DBlocks_[b](k,k);
         }
         loglV(b) = sum(loglvec);
       } else {
-        //arma::mat matB = gen_block_mat(b,true);
         logdetD = 2*sum(log(DBlocks_[b].diag()));
-        arma::vec zquad(u.n_rows);
+        arma::vec zquad(n);
         double quadform;
-        zquad  = forward_sub(DBlocks_[b],u.subvec(begin,end));
+        zquad  = forward_sub(DBlocks_[b],u.subvec(begin,end)); //forward_sub(const_cast<double*>(DBlocks_[b].memptr()),&u[begin],n);//u.subvec(begin,end)
         quadform = arma::dot(zquad,zquad);
         loglV(b) = (-0.5*N_dim_(b) * log(2*arma::datum::pi) - 0.5*logdetD - 0.5*quadform);
     }
-      //ndim_idx += N_dim_(b);
   }
     return arma::as_scalar(sum(loglV));
   }
   
-  arma::rowvec log_gradient(const arma::vec &u){
-    arma::uword n = u.size();
-    arma::mat loglM(B_,n,fill::zeros);
-#pragma omp parallel for
-    for(arma::uword b=0;b<B_;b++){
-      arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
-      arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
-      if(all(func_def_.row(b)==1)){
-        loglM.row(b).cols(begin,end) = -(0.5/DBlocks_[b](0,0))*arma::trans(u.subvec(begin,end));
-      } else {
-        arma::vec zquad(n);
-        zquad  = forward_back_sub(DBlocks_[b],arma::trans(DBlocks_[b]),u.subvec(begin,end));
-        loglM.row(b).cols(begin,end) = -0.5*zquad.t();
-      }
-    }
-    return sum(loglM);
-  }
+//   arma::rowvec log_gradient(const arma::vec &u){
+//     arma::uword n = u.size();
+//     arma::mat loglM(B_,n,fill::zeros);
+// #pragma omp parallel for
+//     for(arma::uword b=0;b<B_;b++){
+//       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
+//       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
+//       if(all(func_def_.row(b)==1)){
+//         loglM.row(b).cols(begin,end) = -(0.5/DBlocks_[b](0,0))*arma::trans(u.subvec(begin,end));
+//       } else {
+//         arma::vec zquad(n);
+//         zquad  = forward_back_sub(DBlocks_[b],arma::trans(DBlocks_[b]),u.subvec(begin,end));
+//         loglM.row(b).cols(begin,end) = -0.5*zquad.t();
+//       }
+//     }
+//     return sum(loglM);
+//   }
   
   double logdet(){
     double logdetD = 0;
