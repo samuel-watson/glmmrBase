@@ -85,7 +85,8 @@ inline arma::vec mod_inv_func(arma::vec mu,
   const static std::unordered_map<std::string,int> string_to_case{
     {"logit",1},
     {"log",2},
-    {"probit",3}
+    {"probit",3},
+    {"identity",4}
   };
   switch (string_to_case.at(link)){
   case 1:
@@ -96,8 +97,10 @@ inline arma::vec mod_inv_func(arma::vec mu,
     break;
   case 3:
     mu = gaussian_cdf_vec(mu);
+    break;
+  case 4:
+    break;
   }
-  
   return mu;
 }
 
