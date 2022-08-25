@@ -349,6 +349,11 @@ public:
     }
   }
   
+  void update_parameters(const arma::vec &gamma){
+    gamma_ = gamma;
+    gen_blocks_byfunc();
+  }
+  
   double loglik(const arma::vec &u){ // const arma::vec &u#include <xsimd/xsimd.hpp>
     arma::vec loglV(B_);
     double logdetD;
