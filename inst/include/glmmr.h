@@ -151,6 +151,7 @@ class DSubMatrix {
   arma::umat col_id_;
   arma::uvec N_par_;
   arma::mat cov_data_;
+  arma::vec eff_range_;
   arma::vec gamma_;
 public:
   DSubMatrix(size_t N_dim,
@@ -160,10 +161,11 @@ public:
              const arma::umat &col_id,
              const arma::uvec &N_par,
              const arma::mat &cov_data,
+             const arma::vec &eff_range,
              const arma::vec &gamma):
   N_dim_(N_dim), N_func_(N_func), func_def_(func_def),
   N_var_func_(N_var_func), col_id_(col_id), N_par_(N_par),
-  cov_data_(cov_data), gamma_(gamma) {}
+  cov_data_(cov_data), eff_range_(eff_range), gamma_(gamma) {}
   
   arma::mat genSubD(){
     arma::mat D_(N_dim_,N_dim_,fill::zeros);
@@ -238,6 +240,79 @@ public:
           }
         case 6:
           val = val* R::bessel_k(dist/gamma_(N_par_(k)),1,1);
+          break;
+        case 7:
+          //wend 0
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              val = val*pow((1-pdist),gamma_(N_par_(k)));
+            }
+            break;
+          }
+        case 8:
+          // wend 1
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              val = val*(1+(1+gamma_(N_par_(k)))*pdist)*pow((1-pdist),gamma_(N_par_(k))+1.0);
+            }
+            break;
+          }
+        case 9:
+          // wend 2
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              val = val*(1+(gamma_(N_par_(k))+2)*pdist + 0.333*((gamma_(N_par_(k))+2)*(gamma_(N_par_(k))+2)-1)*pdist*pdist)*pow((1-pdist),gamma_(N_par_(k))+2.0);
+            }
+            break;
+          }
+        case 10:
+          //prodwm
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              double wm = (pow(2.0,1-gamma_(N_par_(k)))/R::gammafn(gamma_(N_par_(k))))*pow(pdist,gamma_(N_par_(k)))*R::bessel_k(pdist,gamma_(N_par_(k)),1);
+              double poly = (1+(11/2)*pdist + (117/12)*pdist*pdist)*pow(1-pdist,(11/2));
+              val = val*wm*poly;
+            }
+            break;
+          }
+        case 11:
+          //prodcb
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              double cauc = pow((1+pow(pdist,gamma_(N_par_(k)))),-3);
+              double boh = (1-pdist)*cos(arma::datum::pi*pdist)*(1/arma::datum::pi)*sin(arma::datum::pi*pdist);
+              val = val*cauc*boh;
+            }
+            break;
+          }
+        case 12:
+          //prodek
+          {
+            double pdist = dist/eff_range_(k);
+            if(pdist >= 1){
+              val = 0;
+            } else {
+              double pexp = exp(-1.0*pow(pdist,gamma_(N_par_(k))));
+              double kan = (1-pdist)*sin(2*arma::datum::pi*pdist)/(2*arma::datum::pi*pdist) + (1/arma::datum::pi)*(1-cos(2*arma::datum::pi*pdist))/(2*arma::datum::pi*pdist);
+              val = val*pexp*kan;
+            }
+            break;
+          }
         }
       }
     }
@@ -267,21 +342,21 @@ public:
 class DMatrix {
   arma::field<arma::mat> DBlocks_;
 public:
-  DMatrix(const arma::uword &B,
-          const arma::uvec &N_dim,
-          const arma::uvec &N_func,
-          const arma::umat &func_def,
-          const arma::umat &N_var_func,
-          const arma::ucube &col_id,
-          const arma::umat &N_par,
-          const arma::uword &sum_N_par,
-          const arma::cube &cov_data,
+  DMatrix(Rcpp::List D_data,
           const arma::vec &gamma):
-  B_(B), N_dim_(N_dim), N_func_(N_func),
-  func_def_(func_def), N_var_func_(N_var_func),
-  col_id_(col_id), N_par_(N_par), sum_N_par_(sum_N_par),
-  cov_data_(cov_data), gamma_(gamma) {
+  gamma_(gamma) {
+    B_ = as<arma::uword>(D_data["B"]);
+    N_dim_ = as<arma::uvec>(D_data["N_dim"]);
+    N_func_ = as<arma::uvec>(D_data["N_func"]);
+    func_def_ = as<arma::umat>(D_data["func_def"]);
+    N_var_func_ = as<arma::umat>(D_data["N_var_func"]);
+    eff_range_ = as<arma::mat>(D_data["eff_range"]);
+    col_id_ = as<arma::ucube>(D_data["col_id"]);
+    N_par_ = as<arma::umat>(D_data["N_par"]);
+    cov_data_ = as<arma::cube>(D_data["cov_data"]);
     DBlocks_ = arma::field<arma::mat>(B_);
+    Q_ = gamma_.size();
+    update_parameters(gamma);
   }
   
   arma::uword B_;
@@ -289,11 +364,12 @@ public:
   arma::uvec N_func_;
   arma::umat func_def_;
   arma::umat N_var_func_;
+  arma::mat eff_range_;
   arma::ucube col_id_;
   arma::umat N_par_;
-  arma::uword sum_N_par_;
   arma::cube cov_data_;
   arma::vec gamma_;
+  int Q_;
   
   arma::mat gen_block_mat(arma::uword b,
                           bool chol = false,
@@ -309,6 +385,7 @@ public:
                             col_id_.slice(b),
                             N_par_.row(b).t() - min(N_par_.row(b)),
                             cov_data_.slice(b),
+                            eff_range_.row(b).t(),
                             gamma_.subvec(min(N_par_.row(b)),glim-1));
     if(!chol){
       bblock = dblock->genSubD();
@@ -317,6 +394,11 @@ public:
     }
     delete dblock;
     return bblock;
+  }
+  
+  void update_parameters(const arma::vec &gamma){
+    gamma_ = gamma;
+    gen_blocks_byfunc();
   }
   
   void get_block(arma::uword b,
@@ -349,7 +431,7 @@ public:
   double loglik(const arma::vec &u){ // const arma::vec &u#include <xsimd/xsimd.hpp>
     arma::vec loglV(B_);
     double logdetD;
-//#pragma omp parallel for
+    //#pragma omp parallel for
     for(arma::uword b=0;b<B_;b++){
       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
@@ -368,33 +450,14 @@ public:
         zquad  = forward_sub(DBlocks_[b],u.subvec(begin,end)); //forward_sub(const_cast<double*>(DBlocks_[b].memptr()),&u[begin],n);//u.subvec(begin,end)
         quadform = arma::dot(zquad,zquad);
         loglV(b) = (-0.5*N_dim_(b) * log(2*arma::datum::pi) - 0.5*logdetD - 0.5*quadform);
+      }
     }
-  }
     return arma::as_scalar(sum(loglV));
   }
-  
-//   arma::rowvec log_gradient(const arma::vec &u){
-//     arma::uword n = u.size();
-//     arma::mat loglM(B_,n,fill::zeros);
-// #pragma omp parallel for
-//     for(arma::uword b=0;b<B_;b++){
-//       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
-//       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
-//       if(all(func_def_.row(b)==1)){
-//         loglM.row(b).cols(begin,end) = -(0.5/DBlocks_[b](0,0))*arma::trans(u.subvec(begin,end));
-//       } else {
-//         arma::vec zquad(n);
-//         zquad  = forward_back_sub(DBlocks_[b],arma::trans(DBlocks_[b]),u.subvec(begin,end));
-//         loglM.row(b).cols(begin,end) = -0.5*zquad.t();
-//       }
-//     }
-//     return sum(loglM);
-//   }
   
   double logdet(){
     double logdetD = 0;
     for(arma::uword b=0;b<B_;b++){
-      //get_block(b,true);
       logdetD += 2*sum(log(DBlocks_[b].diag()));
     }
     return logdetD;
@@ -404,6 +467,153 @@ public:
     return B_;
   }
 };
+
+// class DMatrix {
+//   arma::field<arma::mat> DBlocks_;
+// public:
+//   DMatrix(const arma::uword &B,
+//           const arma::uvec &N_dim,
+//           const arma::uvec &N_func,
+//           const arma::umat &func_def,
+//           const arma::umat &N_var_func,
+//           const arma::ucube &col_id,
+//           const arma::umat &N_par,
+//           const arma::cube &cov_data,
+//           const arma::vec &gamma):
+//   B_(B), N_dim_(N_dim), N_func_(N_func),
+//   func_def_(func_def), N_var_func_(N_var_func),
+//   col_id_(col_id), N_par_(N_par), 
+//   cov_data_(cov_data), gamma_(gamma) {
+//     DBlocks_ = arma::field<arma::mat>(B_);
+//     Q_ = gamma_.size();
+//     update_parameters(gamma);
+//   }
+//   
+//   arma::uword B_;
+//   arma::uvec N_dim_;
+//   arma::uvec N_func_;
+//   arma::umat func_def_;
+//   arma::umat N_var_func_;
+//   arma::ucube col_id_;
+//   arma::umat N_par_;
+//   arma::cube cov_data_;
+//   arma::vec gamma_;
+//   int Q_;
+//   
+//   arma::mat gen_block_mat(arma::uword b,
+//                           bool chol = false,
+//                           bool upper = false){
+//     arma::mat bblock;
+//     DSubMatrix *dblock;
+//     arma::uvec N_par_col0 = N_par_.col(0);
+//     arma::uword glim = (b == B_-1 || max(N_par_.row(b)) >= max(N_par_col0)) ?  gamma_.size() : min(N_par_col0(arma::find(N_par_col0 > max(N_par_.row(b)))));
+//     dblock = new DSubMatrix(N_dim_(b),
+//                             N_func_(b),
+//                             func_def_.row(b).t(),
+//                             N_var_func_.row(b).t(),
+//                             col_id_.slice(b),
+//                             N_par_.row(b).t() - min(N_par_.row(b)),
+//                             cov_data_.slice(b),
+//                             gamma_.subvec(min(N_par_.row(b)),glim-1));
+//     if(!chol){
+//       bblock = dblock->genSubD();
+//     } else {
+//       bblock = dblock->genCholSubD(upper);
+//     }
+//     delete dblock;
+//     return bblock;
+//   }
+//   
+//   void update_parameters(const arma::vec &gamma){
+//     gamma_ = gamma;
+//     gen_blocks_byfunc();
+//   }
+//   
+//   void get_block(arma::uword b,
+//                  bool chol = false,
+//                  bool upper = false){
+//     DBlocks_[b] = gen_block_mat(b,chol,upper);
+//   }
+//   
+//   arma::field<arma::mat> genD(){
+//     for(arma::uword b=0;b<B_;b++){
+//       get_block(b);
+//     }
+//     return(DBlocks_);
+//   }
+//   
+//   arma::field<arma::mat> genCholD(){
+//     for(arma::uword b=0;b<B_;b++){
+//       get_block(b,true);
+//     }
+//     return DBlocks_;
+//   }
+//   
+//   void gen_blocks_byfunc(bool upper = true){
+//     for(arma::uword b=0;b<B_;b++){
+//       bool chol = !all(func_def_.row(b)==1);
+//       get_block(b,chol,upper);
+//     }
+//   }
+//   
+//   double loglik(const arma::vec &u){ // const arma::vec &u#include <xsimd/xsimd.hpp>
+//     arma::vec loglV(B_);
+//     double logdetD;
+// //#pragma omp parallel for
+//     for(arma::uword b=0;b<B_;b++){
+//       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
+//       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
+//       int n = (int)DBlocks_[b].n_rows;
+//       if(all(func_def_.row(b)==1)){
+//         arma::vec loglvec(n);
+//         for(arma::uword k=0; k<DBlocks_[b].n_rows; k++){
+//           loglvec(k) = -0.5*log(DBlocks_[b](k,k)) -0.5*log(2*arma::datum::pi) -
+//             0.5*pow(u(begin+k),2.0)/DBlocks_[b](k,k);
+//         }
+//         loglV(b) = sum(loglvec);
+//       } else {
+//         logdetD = 2*sum(log(DBlocks_[b].diag()));
+//         arma::vec zquad(n);
+//         double quadform;
+//         zquad  = forward_sub(DBlocks_[b],u.subvec(begin,end)); //forward_sub(const_cast<double*>(DBlocks_[b].memptr()),&u[begin],n);//u.subvec(begin,end)
+//         quadform = arma::dot(zquad,zquad);
+//         loglV(b) = (-0.5*N_dim_(b) * log(2*arma::datum::pi) - 0.5*logdetD - 0.5*quadform);
+//     }
+//   }
+//     return arma::as_scalar(sum(loglV));
+//   }
+//   
+// //   arma::rowvec log_gradient(const arma::vec &u){
+// //     arma::uword n = u.size();
+// //     arma::mat loglM(B_,n,fill::zeros);
+// // #pragma omp parallel for
+// //     for(arma::uword b=0;b<B_;b++){
+// //       arma::uword begin = b==0 ? 0 : sum(N_dim_.subvec(0,b-1));
+// //       arma::uword end = sum(N_dim_.subvec(0,b)) - 1;
+// //       if(all(func_def_.row(b)==1)){
+// //         loglM.row(b).cols(begin,end) = -(0.5/DBlocks_[b](0,0))*arma::trans(u.subvec(begin,end));
+// //       } else {
+// //         arma::vec zquad(n);
+// //         zquad  = forward_back_sub(DBlocks_[b],arma::trans(DBlocks_[b]),u.subvec(begin,end));
+// //         loglM.row(b).cols(begin,end) = -0.5*zquad.t();
+// //       }
+// //     }
+// //     return sum(loglM);
+// //   }
+//   
+//   double logdet(){
+//     double logdetD = 0;
+//     for(arma::uword b=0;b<B_;b++){
+//       //get_block(b,true);
+//       logdetD += 2*sum(log(DBlocks_[b].diag()));
+//     }
+//     return logdetD;
+//   }
+//   
+//   arma::uword B(){
+//     return B_;
+//   }
+// };
 
 
 inline arma::vec dhdmu(const arma::vec &xb,

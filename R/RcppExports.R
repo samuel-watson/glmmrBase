@@ -21,8 +21,8 @@
 #' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
 #' specified by `func_def`
 #' @return A symmetric positive definite covariance matrix
-genD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma) {
-    .Call(`_glmmrBase_genD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma)
+genD <- function(D_data, gamma) {
+    .Call(`_glmmrBase_genD`, D_data, gamma)
 }
 
 #' Generates the cholesky decomposition covariance matrix of the random effects
@@ -45,8 +45,8 @@ genD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_pa
 #' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
 #' specified by `func_def`
 #' @return A lower triangular matrix matrix
-genCholD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma) {
-    .Call(`_glmmrBase_genCholD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma)
+genCholD <- function(D_data, gamma) {
+    .Call(`_glmmrBase_genCholD`, D_data, gamma)
 }
 
 #' Returns log likelihood for a set of observatios
@@ -70,8 +70,8 @@ genCholD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_
 #' specified by `func_def`
 #' @param u A realisation of the random effects
 #' @return A lower triangular matrix matrix
-loglikD <- function(B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u) {
-    .Call(`_glmmrBase_loglikD`, B, N_dim, N_func, func_def, N_var_func, col_id, N_par, sum_N_par, cov_data, gamma, u)
+loglikD <- function(D_data, gamma, u) {
+    .Call(`_glmmrBase_loglikD`, D_data, gamma, u)
 }
 
 #' Generates the derivative of the link function with respect to the mean

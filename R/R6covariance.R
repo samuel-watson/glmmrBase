@@ -14,10 +14,13 @@ Covariance <- R6::R6Class("Covariance",
                       public = list(
                         #' @field data Data frame with data required to build covariance
                         data=NULL,
-                        #' @field formula Covariance function formula. See `help(Covariance$new())` for details.
+                        #' @field formula Covariance function formula. 
                         formula = NULL,
-                        #' @field parameters List of lists holding the model parameters. See `help(Covariance$new())` for details.
+                        #' @field parameters Model parameters specified in order of the functions in the formula.
                         parameters = NULL,
+                        #' @field eff_range The effective range of covariance functions, specified in order of the functions in the formula. Only 
+                        #' the functions with compact support require effective range parameters. 
+                        eff_range = NULL,
                         #' @field Z Design matrix
                         Z = NULL,
                         #' @field D Covariance matrix of the random effects
@@ -75,6 +78,7 @@ Covariance <- R6::R6Class("Covariance",
                         initialize = function(formula=NULL,
                                               data = NULL,
                                               parameters= NULL,
+                                              eff_range = NULL,
                                               verbose=TRUE){
                           if(any(is.null(data),is.null(formula),is.null(parameters))){
                             cat("not all attributes set. call check() when all attributes set.")
@@ -82,7 +86,7 @@ Covariance <- R6::R6Class("Covariance",
                             self$data = data
                             self$formula = as.formula(formula, env=.GlobalEnv)
                             self$parameters = parameters
-
+                            self$eff_range = eff_range
                             private$cov_form()
                           }
                         },
@@ -167,9 +171,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return A list of matrices
                         get_chol_D = function(parameters=NULL){
                           if(is.null(parameters)){
-                            L = do.call(genCholD,append(private$D_data,list(gamma=self$parameters)))
+                            L = do.call(genCholD,list(private$D_data,gamma=self$parameters))#append(private$D_data,list(gamma=self$parameters))
                           } else {
-                            L = do.call(genCholD,append(private$D_data,list(gamma=parameters)))
+                            L = do.call(genCholD,list(private$D_data,gamma=parameters))
                           }
                           return(L)
                         }
@@ -256,7 +260,8 @@ Covariance <- R6::R6Class("Covariance",
                           }
                           
                           fl <- rev(flistvars)
-                          fnames <- c("gr","fexp","ar1","sqexp","matern","bessel")
+                          fnames <- c("gr","fexp","ar1","sqexp","matern","bessel","wend0","wend1","wend2","prodwm",
+                                      "prodcb","prodek")
                           fnpar <- c(1,1,1,2,2,1)
                           parcount <- 0
                           Funclist <- list()
@@ -273,6 +278,18 @@ Covariance <- R6::R6Class("Covariance",
                           }
                           D_data$N_var_func <- matrix(0,ncol=max(D_data$N_func),nrow=D_data$B)
                           for(b in 1:D_data$B)D_data$N_var_func[b,1:D_data$N_func[b]] <- nvar[[b]]
+                          D_data$eff_range <- matrix(0,ncol=max(D_data$N_func),nrow=D_data$B)
+                          nfcount <- 1
+                          if(!is.null(self$eff_range)){
+                            for(b in 1:D_data$B){
+                              for(k in 1:D_data$N_func[b]){
+                                if(D_data$func_def[b,k]%in%7:12){
+                                  D_data$eff_range[b,k] <- self$eff_range[nfcount]
+                                }
+                              }
+                              nfcount <- nfcount + 1
+                            }
+                          }
                           D_data$col_id <- array(0,dim=c(max(D_data$N_func),max(D_data$N_var_func),D_data$B))
                           for(b in 1:D_data$B){
                             for(k in 1:D_data$N_func[b]){
@@ -283,49 +300,52 @@ Covariance <- R6::R6Class("Covariance",
                           }
                           D_data$N_par <- matrix(0,nrow=D_data$B,ncol=max(D_data$N_func))
                           for(b in 1:D_data$B)for(k in 1:D_data$N_func[b])D_data$N_par[b,k] <- fnpar[D_data$func_def[b,k]]
-                          D_data$sum_N_par <- sum(D_data$N_par)
+                          #D_data$sum_N_par <- sum(D_data$N_par)
                           D_data$N_par <- matrix(cumsum(t(D_data$N_par))-1,nrow=D_data$B,ncol=max(D_data$N_func))
                           D_data$cov_data <- array(0,dim=c(max(D_data$N_dim),max(rowSums(D_data$N_var_func)),D_data$B))
                           for(b in 1:D_data$B) D_data$cov_data[1:D_data$N_dim[b],1:ncol(Distlist[[b]]),b] <- Distlist[[b]]
                           #split group blocks further
                           for(b in 1:D_data$B){
-                            if(any(D_data$func_def[b,] == 1)&!all(D_data$func_def[b,] == 1)){
+                            if(any(D_data$func_def[b,1:D_data$N_func[b]] == 1)&!all(D_data$func_def[b,1:D_data$N_func[b]] == 1)){
                               col1 <- which(D_data$func_def[b,]==1)
-                              colid1 <- which(D_data$col_id[,col1,b]==1)
-                              tabgr <- table(D_data$cov_data[,colid1,b])
-                              ids <- D_data$cov_data[,colid1,b]
+                              colid1 <- D_data$col_id[col1,1:D_data$N_var_func[col1,b],b]
+                              tabgr <- as.data.frame(table(D_data$cov_data[1:D_data$N_dim[b],colid1,b]))
+                              ids <- D_data$cov_data[1:D_data$N_dim[b],colid1,b,drop=FALSE]
                               D_data$N_dim <- D_data$N_dim[-b]
-                              D_data$N_dim <- append(D_data$N_dim,tabgr,b-1)
+                              D_data$N_dim <- append(D_data$N_dim,tabgr$Freq,b-1)
                               nf <- D_data$N_func[b]
                               D_data$N_func <- D_data$N_func[-b]
-                              D_data$N_func <- append(D_data$N_func,rep(nf,length(tabgr)),b-1)
+                              D_data$N_func <- append(D_data$N_func,rep(nf,nrow(tabgr)),b-1)
                               nf <- D_data$N_var_func[b,]
-                              D_data$N_var_func <- rbind(D_data$N_var_func[-b,],t(matrix(nf,ncol=length(tabgr),nrow=length(nf))))
+                              D_data$N_var_func <- rbind(D_data$N_var_func[-b,],t(matrix(nf,ncol=nrow(tabgr),nrow=length(nf))))
+                              nf <- D_data$eff_range[b,]
+                              D_data$eff_range <- rbind(D_data$eff_range[-b,],t(matrix(nf,ncol=nrow(tabgr),nrow=length(nf))))
                               nf <- D_data$func_def[b,]
-                              D_data$func_def <- rbind(D_data$func_def[-b,],t(matrix(nf,ncol=length(tabgr),nrow=length(nf))))
+                              D_data$func_def <- rbind(D_data$func_def[-b,],t(matrix(nf,ncol=nrow(tabgr),nrow=length(nf))))
                               nf <- D_data$N_par[b,]
-                              D_data$N_par <- rbind(D_data$N_par[-b,],t(matrix(nf,ncol=length(tabgr),nrow=length(nf))))
-                              colidnew <- array(D_data$col_id[,,b],dim = c(dim(D_data$col_id)[1:2],length(tabgr)))
+                              D_data$N_par <- rbind(D_data$N_par[-b,],t(matrix(nf,ncol=nrow(tabgr),nrow=length(nf))))
+                              colidnew <- array(D_data$col_id[,,b],dim = c(dim(D_data$col_id)[1:2],nrow(tabgr)))
                               if(D_data$B==1){
-                                D_data$col_id <- array(D_data$col_id[,,b],dim = c(dim(D_data$col_id)[1:2],length(tabgr)))
+                                D_data$col_id <- array(D_data$col_id[,,b],dim = c(dim(D_data$col_id)[1:2],nrow(tabgr)))
                               } else {
                                 if(b==1){
-                                  D_data$col_id <- array(c(rep(D_data$col_id[,,b],length(tabgr)),D_data$col_id[,,2:D_data$B]),dim = c(dim(D_data$col_id)[1:2],length(tabgr)+D_data$B-1))
+                                  D_data$col_id <- array(c(rep(D_data$col_id[,,b],nrow(tabgr)),D_data$col_id[,,2:D_data$B]),dim = c(dim(D_data$col_id)[1:2],nrow(tabgr)+D_data$B-1))
                                 } else if(b>1&b<D_data$B){
-                                  D_data$col_id <- array(c(D_data$col_id[,,1:(b-1)],rep(D_data$col_id[,,b],length(tabgr)),D_data$col_id[,,(b+1):D_data$B]),dim = c(dim(D_data$col_id)[1:2],length(tabgr)+D_data$B-1))
+                                  D_data$col_id <- array(c(D_data$col_id[,,1:(b-1)],rep(D_data$col_id[,,b],nrow(tabgr)),D_data$col_id[,,(b+1):D_data$B]),dim = c(dim(D_data$col_id)[1:2],nrow(tabgr)+D_data$B-1))
                                 } else if(b==D_data$B){
-                                  D_data$col_id <- array(c(D_data$col_id[,,1:(b-1)],rep(D_data$col_id[,,b],length(tabgr))),dim = c(dim(D_data$col_id)[1:2],length(tabgr)+D_data$B-1))
+                                  D_data$col_id <- array(c(D_data$col_id[,,1:(b-1)],rep(D_data$col_id[,,b],nrow(tabgr))),dim = c(dim(D_data$col_id)[1:2],nrow(tabgr)+D_data$B-1))
                                 }
                               }
-                              cov_datanew <- array(0,dim=c(max(D_data$N_dim),max(rowSums(D_data$N_var_func)),D_data$B+ length(tabgr)-1))
+                              cov_datanew <- array(0,dim=c(max(D_data$N_dim),max(rowSums(D_data$N_var_func)),D_data$B+ nrow(tabgr)-1))
                               iter <- 0
                               for(i in 1:D_data$B){
                                 iter <- iter + 1
                                 if(i == b){
-                                  idx <- cumsum(tabgr)-tabgr[1]+1
+                                  #idx <- cumsum(tabgr$Freq)-tabgr[1,'Freq']+1
                                   idsu <- unique(ids)
-                                  for(j in 1:length(tabgr)){
-                                    cov_datanew[1:tabgr[j],,iter] <- Distlist[[i]][which(ids == idsu[j]),]
+                                  idx <- match(ids,idsu)
+                                  for(j in 1:nrow(tabgr)){
+                                    cov_datanew[1:tabgr[j,'Freq'],,iter] <- D_data$cov_data[,,b][which(idx==j),]#[which(ids == idsu[j]),]
                                     iter <- iter + 1
                                   }
                                 } else {
@@ -333,7 +353,7 @@ Covariance <- R6::R6Class("Covariance",
                                 }
                               }
                               D_data$cov_data <- cov_datanew
-                              D_data$B <- D_data$B + length(tabgr) -1
+                              D_data$B <- D_data$B + nrow(tabgr) -1
                             }
                           }
                           
@@ -352,7 +372,7 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         genD = function(update=TRUE,
                                         new_pars=NULL){
-                          D <- do.call(genD,append(private$D_data,list(gamma=self$parameters)))
+                          D <- do.call(genD,list(private$D_data,gamma=self$parameters))#append(private$D_data,list(gamma=self$parameters))
                           D <- blockMat(D)
                           if(update){
                             self$D <- Matrix::Matrix(D)

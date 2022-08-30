@@ -125,12 +125,15 @@ Model <- R6::R6Class("Model",
                           stop("covariance should be Covariance class or list of appropriate arguments")
                         }
                       } else if(is(covariance,"list")){
+                        if(is.null(covariance$eff_range))covariance$eff_range = NULL
                         self$covariance <- Covariance$new(
                           formula= covariance$formula,
                           data = covariance$data,
                           parameters = covariance$parameters,
+                          eff_range = covariance$eff_range,
                           verbose = verbose
                         )
+                        
                       }
 
                       if(is(mean.function,"R6")){
