@@ -85,7 +85,8 @@ inline arma::vec mod_inv_func(arma::vec mu,
   const static std::unordered_map<std::string,int> string_to_case{
     {"logit",1},
     {"log",2},
-    {"probit",3}
+    {"probit",3},
+    {"identity",4}
   };
   switch (string_to_case.at(link)){
   case 1:
@@ -96,8 +97,10 @@ inline arma::vec mod_inv_func(arma::vec mu,
     break;
   case 3:
     mu = gaussian_cdf_vec(mu);
+    break;
+  case 4:
+    break;
   }
-  
   return mu;
 }
 
@@ -426,6 +429,11 @@ public:
       bool chol = !all(func_def_.row(b)==1);
       get_block(b,chol,upper);
     }
+  }
+  
+  void update_parameters(const arma::vec &gamma){
+    gamma_ = gamma;
+    gen_blocks_byfunc();
   }
   
   double loglik(const arma::vec &u){ // const arma::vec &u#include <xsimd/xsimd.hpp>
