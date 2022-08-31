@@ -262,7 +262,7 @@ Covariance <- R6::R6Class("Covariance",
                           fl <- rev(flistvars)
                           fnames <- c("gr","fexp0","ar1","sqexp","matern","bessel","wend0","wend1","wend2","prodwm",
                                       "prodcb","prodek","fexp","sqexp0")
-                          fnpar <- c(1,1,1,2,2,1,1,1,1,1,1,1,2,1)
+                          fnpar <- c(1,1,1,2,2,1,2,2,2,2,2,2,2,1)
                           parcount <- 0
                           Funclist <- list()
                           Distlist <- rev(Distlist)
