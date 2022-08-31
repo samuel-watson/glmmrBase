@@ -193,136 +193,127 @@ public:
   
   double get_val(arma::uword i, arma::uword j){
     double val = 1;
-    if(i==j){
-      for(arma::uword k=0;k<N_func_;k++){
-        if(func_def_(k)==1){
-          val = val*gamma_(N_par_(k))*gamma_(N_par_(k));
-        }
+    for(arma::uword k=0;k<N_func_;k++){
+      double dist = 0;
+      for(arma::uword p=0; p<N_var_func_(k); p++){
+        double diff = cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1);
+        dist += diff*diff;
       }
-    } else {
-      for(arma::uword k=0;k<N_func_;k++){
-        double dist = 0;
-        for(arma::uword p=0; p<N_var_func_(k); p++){
-          double diff = cov_data_(i,col_id_(k,p)-1) - cov_data_(j,col_id_(k,p)-1);
-          dist += diff*diff;
+      dist= pow(dist,0.5);
+      
+      int mcase = (int)func_def_(k);
+      switch (mcase){
+      case 1:
+        if(dist==0){
+          val = val*gamma_(N_par_(k))*gamma_(N_par_(k));
+        } else {
+          val = 0;
         }
-        dist= pow(dist,0.5);
-        
-        int mcase = (int)func_def_(k);
-        switch (mcase){
-        case 1:
-          if(dist==0){
-            val = val*gamma_(N_par_(k))*gamma_(N_par_(k));
-          } else {
+        break;
+      case 2:
+        val = val*exp(-1*dist/gamma_(N_par_(k)));
+        break;
+      case 3:
+        val = val*pow(gamma_(N_par_(k)),dist);
+        break;
+      case 4:
+        val = val*gamma_(N_par_(k))*exp(-1*dist*dist/(gamma_(N_par_(k)+1)*gamma_(N_par_(k)+1)));
+        break;
+      case 5:
+        {
+          double xr = sqrt(2*gamma_(N_par_(k)+1))*dist/gamma_(N_par_(k));
+          double ans = 1;
+          if(xr!=0){
+            if(gamma_(N_par_(k)+1) == 0.5){
+              ans = exp(-xr);
+            } else {
+              double cte = pow(2.0,-1*(gamma_(N_par_(k)+1)-1))/R::gammafn(gamma_(N_par_(k)+1));
+              ans = cte*pow(xr, gamma_(N_par_(k)+1))*R::bessel_k(xr,gamma_(N_par_(k)+1),1);
+            }
+          }
+          val = val*ans;
+          break;
+        }
+      case 6:
+        val = val* R::bessel_k(dist/gamma_(N_par_(k)),1,1);
+        break;
+      case 7:
+        //wend 0
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
             val = 0;
+          } else {
+            val = val*pow((1-pdist),gamma_(N_par_(k)));
           }
-          break;
-        case 2:
-          val = val*exp(-1*dist/gamma_(N_par_(k)));
-          break;
-        case 3:
-          val = val*pow(gamma_(N_par_(k)),dist);
-          break;
-        case 4:
-          val = val*gamma_(N_par_(k))*exp(-1*dist*dist/(gamma_(N_par_(k)+1)*gamma_(N_par_(k)+1)));
-          break;
-        case 5:
-          {
-            double xr = sqrt(2*gamma_(N_par_(k)+1))*dist/gamma_(N_par_(k));
-            double ans = 1;
-            if(xr!=0){
-              if(gamma_(N_par_(k)+1) == 0.5){
-                ans = exp(-xr);
-              } else {
-                double cte = pow(2.0,-1*(gamma_(N_par_(k)+1)-1))/R::gammafn(gamma_(N_par_(k)+1));
-                ans = cte*pow(xr, gamma_(N_par_(k)+1))*R::bessel_k(xr,gamma_(N_par_(k)+1),1);
-              }
-            }
-            val = val*ans;
-            break;
-          }
-        case 6:
-          val = val* R::bessel_k(dist/gamma_(N_par_(k)),1,1);
-          break;
-        case 7:
-          //wend 0
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              val = val*pow((1-pdist),gamma_(N_par_(k)));
-            }
-            break;
-          }
-        case 8:
-          // wend 1
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              val = val*(1+(1+gamma_(N_par_(k)))*pdist)*pow((1-pdist),gamma_(N_par_(k))+1.0);
-            }
-            break;
-          }
-        case 9:
-          // wend 2
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              val = val*(1+(gamma_(N_par_(k))+2)*pdist + 0.333*((gamma_(N_par_(k))+2)*(gamma_(N_par_(k))+2)-1)*pdist*pdist)*pow((1-pdist),gamma_(N_par_(k))+2.0);
-            }
-            break;
-          }
-        case 10:
-          //prodwm
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              double wm = (pow(2.0,1-gamma_(N_par_(k)))/R::gammafn(gamma_(N_par_(k))))*pow(pdist,gamma_(N_par_(k)))*R::bessel_k(pdist,gamma_(N_par_(k)),1);
-              double poly = (1+(11/2)*pdist + (117/12)*pdist*pdist)*pow(1-pdist,(11/2));
-              val = val*wm*poly;
-            }
-            break;
-          }
-        case 11:
-          //prodcb
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              double cauc = pow((1+pow(pdist,gamma_(N_par_(k)))),-3);
-              double boh = (1-pdist)*cos(arma::datum::pi*pdist)*(1/arma::datum::pi)*sin(arma::datum::pi*pdist);
-              val = val*cauc*boh;
-            }
-            break;
-          }
-        case 12:
-          //prodek
-          {
-            double pdist = dist/eff_range_(k);
-            if(pdist >= 1){
-              val = 0;
-            } else {
-              double pexp = exp(-1.0*pow(pdist,gamma_(N_par_(k))));
-              double kan = (1-pdist)*sin(2*arma::datum::pi*pdist)/(2*arma::datum::pi*pdist) + (1/arma::datum::pi)*(1-cos(2*arma::datum::pi*pdist))/(2*arma::datum::pi*pdist);
-              val = val*pexp*kan;
-            }
-            break;
-          }
-        case 13:
-          val = val*gamma_(N_par_(k))*exp(-1*dist/gamma_(N_par_(k)+1));
-          break;
-        case 14:
-          val = val*exp(-1*dist*dist/(gamma_(N_par_(k))*gamma_(N_par_(k))));
           break;
         }
+      case 8:
+        // wend 1
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
+            val = 0;
+          } else {
+            val = val*(1+(1+gamma_(N_par_(k)))*pdist)*pow((1-pdist),gamma_(N_par_(k))+1.0);
+          }
+          break;
+        }
+      case 9:
+        // wend 2
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
+            val = 0;
+          } else {
+            val = val*(1+(gamma_(N_par_(k))+2)*pdist + 0.333*((gamma_(N_par_(k))+2)*(gamma_(N_par_(k))+2)-1)*pdist*pdist)*pow((1-pdist),gamma_(N_par_(k))+2.0);
+          }
+          break;
+        }
+      case 10:
+        //prodwm
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
+            val = 0;
+          } else {
+            double wm = (pow(2.0,1-gamma_(N_par_(k)))/R::gammafn(gamma_(N_par_(k))))*pow(pdist,gamma_(N_par_(k)))*R::bessel_k(pdist,gamma_(N_par_(k)),1);
+            double poly = (1+(11/2)*pdist + (117/12)*pdist*pdist)*pow(1-pdist,(11/2));
+            val = val*wm*poly;
+          }
+          break;
+        }
+      case 11:
+        //prodcb
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
+            val = 0;
+          } else {
+            double cauc = pow((1+pow(pdist,gamma_(N_par_(k)))),-3);
+            double boh = (1-pdist)*cos(arma::datum::pi*pdist)*(1/arma::datum::pi)*sin(arma::datum::pi*pdist);
+            val = val*cauc*boh;
+          }
+          break;
+        }
+      case 12:
+        //prodek
+        {
+          double pdist = dist/eff_range_(k);
+          if(pdist >= 1){
+            val = 0;
+          } else {
+            double pexp = exp(-1.0*pow(pdist,gamma_(N_par_(k))));
+            double kan = (1-pdist)*sin(2*arma::datum::pi*pdist)/(2*arma::datum::pi*pdist) + (1/arma::datum::pi)*(1-cos(2*arma::datum::pi*pdist))/(2*arma::datum::pi*pdist);
+            val = val*pexp*kan;
+          }
+          break;
+        }
+      case 13:
+        val = val*gamma_(N_par_(k))*exp(-1*dist/gamma_(N_par_(k)+1));
+        break;
+      case 14:
+        val = val*exp(-1*dist*dist/(gamma_(N_par_(k))*gamma_(N_par_(k))));
       }
     }
     

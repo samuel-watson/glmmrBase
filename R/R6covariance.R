@@ -299,9 +299,16 @@ Covariance <- R6::R6Class("Covariance",
                             }
                           }
                           D_data$N_par <- matrix(0,nrow=D_data$B,ncol=max(D_data$N_func))
-                          for(b in 1:D_data$B)for(k in 1:D_data$N_func[b])D_data$N_par[b,k] <- fnpar[D_data$func_def[b,k]]
+                          parcount <- 0
+                          for(b in 1:D_data$B){
+                            for(k in 1:D_data$N_func[b]){
+                              D_data$N_par[b,k] <- parcount
+                              parcount <- parcount + fnpar[D_data$func_def[b,k]]
+                            }
+                          }
+                          #for(b in 1:D_data$B)for(k in 1:D_data$N_func[b])D_data$N_par[b,k] <- fnpar[D_data$func_def[b,k]]
                           #D_data$sum_N_par <- sum(D_data$N_par)
-                          D_data$N_par <- matrix(cumsum(t(D_data$N_par))-1,nrow=D_data$B,ncol=max(D_data$N_func))
+                          #D_data$N_par <- matrix(cumsum(t(D_data$N_par))-1,nrow=D_data$B,ncol=max(D_data$N_func))
                           D_data$cov_data <- array(0,dim=c(max(D_data$N_dim),max(rowSums(D_data$N_var_func)),D_data$B))
                           for(b in 1:D_data$B) D_data$cov_data[1:D_data$N_dim[b],1:ncol(Distlist[[b]]),b] <- Distlist[[b]]
                           #split group blocks further
