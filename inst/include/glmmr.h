@@ -224,7 +224,7 @@ public:
           val = val*pow(gamma_(N_par_(k)),dist);
           break;
         case 4:
-          val = val*gamma_(N_par_(k))*exp(-1*pow(dist,2.0)/(gamma_(N_par_(k)+1)*gamma_(N_par_(k)+1)));
+          val = val*gamma_(N_par_(k))*exp(-1*dist*dist/(gamma_(N_par_(k)+1)*gamma_(N_par_(k)+1)));
           break;
         case 5:
           {
@@ -316,6 +316,12 @@ public:
             }
             break;
           }
+        case 13:
+          val = val*gamma_(N_par_(k))*exp(-1*dist/gamma_(N_par_(k)+1));
+          break;
+        case 14:
+          val = val*exp(-1*dist*dist/(gamma_(N_par_(k))*gamma_(N_par_(k))));
+          break;
         }
       }
     }
