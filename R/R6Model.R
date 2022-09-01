@@ -96,8 +96,8 @@ Model <- R6::R6Class("Model",
                     #' des <- Model$new(
                     #' covariance = list(
                     #'   data=df,
-                    #'   formula = ~ (1|ar1(t)*gr(ind)),
-                    #'   parameters = c(0.8,1)),
+                    #'   formula = ~ (1|gr(ind)*ar1(t)),
+                    #'   parameters = c(0.25,0.8)),
                     #' mean.function = list(
                     #'   formula = ~factor(t) + int - 1,
                     #'   data=df,
@@ -287,7 +287,9 @@ Model <- R6::R6Class("Model",
                     #' )
                     #' ysim <- des$sim_data()
                     sim_data = function(type = "y"){
-                      re <- MASS::mvrnorm(n=1,mu=rep(0,nrow(self$covariance$D)),Sigma = self$covariance$D)
+                      z <- stats::rnorm(nrow(self$covariance$D))
+                      L <- blockMat(self$covariance$get_chol_D())
+                      re <- L%*%matrix(z,ncol=1)
                       mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + as.matrix(self$covariance$Z%*%re)
                       
                       f <- self$mean_function$family

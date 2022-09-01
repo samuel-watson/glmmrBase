@@ -84,8 +84,8 @@ df[df$t > 3, 'int'] <- 1
 des <- Model$new(
 covariance = list(
   data=df,
-  formula = ~ (1|ar1(t)*gr(ind)),
-  parameters = c(0.8,1)),
+  formula = ~ (1|gr(ind)*ar1(t)),
+  parameters = c(0.25,0.8)),
 mean.function = list(
   formula = ~factor(t) + int - 1,
   data=df,
@@ -316,8 +316,8 @@ df[df$t > 3, 'int'] <- 1
 des <- Model$new(
 covariance = list(
   data=df,
-  formula = ~ (1|ar1(t)*gr(ind)),
-  parameters = c(0.8,1)),
+  formula = ~ (1|gr(ind)*ar1(t)),
+  parameters = c(0.25,0.8)),
 mean.function = list(
   formula = ~factor(t) + int - 1,
   data=df,

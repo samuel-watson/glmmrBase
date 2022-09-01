@@ -30,7 +30,7 @@ Covariance functions on the right side of the vertical bar are multiplied
 together, i.e. \code{(1|f(j)*g(t))}. 
 
 There are several common functions included for a named variable in data \code{x}.
-A non-exhaustive list (see \url[glmmrBase]{https://github.com/samuel-watson/glmmrBase/blob/master/README.md} for a full list):
+A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
 * \code{gr(x)}: Indicator function (1 parameter)   
 * \code{fexp(x)}: Exponential function (2 parameters)
 * \code{ar1(x)}: AR1 function (1 parameter)
