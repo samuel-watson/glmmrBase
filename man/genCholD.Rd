@@ -4,20 +4,12 @@
 \alias{genCholD}
 \title{Generates the cholesky decomposition covariance matrix of the random effects}
 \usage{
-genCholD(
-  B,
-  N_dim,
-  N_func,
-  func_def,
-  N_var_func,
-  col_id,
-  N_par,
-  sum_N_par,
-  cov_data,
-  gamma
-)
+genCholD(D_data, gamma)
 }
 \arguments{
+\item{gamma}{Vector of covariance parameters specified in order they appear column wise in the functions 
+specified by `func_def`}
+
 \item{B}{Integer specifying the number of blocks in the matrix}
 
 \item{N_dim}{Vector of integers, which each value specifying the dimension of each block}
@@ -40,9 +32,6 @@ of parameters in the function in each block}
 
 \item{cov_data}{3D array (cube) holding the data for the covariance matrix where each of the B slices
 is the data required for each block}
-
-\item{gamma}{Vector of covariance parameters specified in order they appear column wise in the functions 
-specified by `func_def`}
 }
 \value{
 A lower triangular matrix matrix

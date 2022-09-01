@@ -25,15 +25,12 @@ A covariance function is specified as an additive formula made up of
 components with structure \code{(1|f(j))}. The left side of the vertical bar 
 specifies the covariates in the model that have a random effects structure. 
 The right side of the vertical bar specify the covariance function `f` for 
-that term using variable named in the data `j`. If there are multiple 
-covariates on the left side, it is assumed their random effects are 
-correlated, e.g. \code{(1+x|f(j))}. Additive functions are assumed to be 
-independent, for example, \code{(1|f(j))+(x|f(j))} would create random effects 
-with zero correlation for the intercept and the parameter on covariate \code{x}. 
+that term using variable named in the data `j`. 
 Covariance functions on the right side of the vertical bar are multiplied 
 together, i.e. \code{(1|f(j)*g(t))}. 
 
-There are several common functions included for a named variable in data \code{x}:
+There are several common functions included for a named variable in data \code{x}.
+A non-exhaustive list (see \url[glmmrBase]{https://github.com/samuel-watson/glmmrBase/blob/master/README.md} for a full list):
 * \code{gr(x)}: Indicator function (1 parameter)   
 * \code{fexp(x)}: Exponential function (2 parameters)
 * \code{ar1(x)}: AR1 function (1 parameter)
@@ -107,9 +104,12 @@ cov$sampleD(c(0.01,0.1))
 \describe{
 \item{\code{data}}{Data frame with data required to build covariance}
 
-\item{\code{formula}}{Covariance function formula. See `help(Covariance$new())` for details.}
+\item{\code{formula}}{Covariance function formula.}
 
-\item{\code{parameters}}{List of lists holding the model parameters. See `help(Covariance$new())` for details.}
+\item{\code{parameters}}{Model parameters specified in order of the functions in the formula.}
+
+\item{\code{eff_range}}{The effective range of covariance functions, specified in order of the functions in the formula. Only 
+the functions with compact support require effective range parameters.}
 
 \item{\code{Z}}{Design matrix}
 
@@ -150,7 +150,13 @@ Scalar
 \subsection{Method \code{new()}}{
 Create a new Covariance object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(formula = NULL, data = NULL, parameters = NULL, verbose = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(
+  formula = NULL,
+  data = NULL,
+  parameters = NULL,
+  eff_range = NULL,
+  verbose = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -160,8 +166,11 @@ Create a new Covariance object
 
 \item{\code{data}}{Data frame with data required for constructing the covariance.}
 
-\item{\code{parameters}}{List of lists with parameter values for the functions in the model
+\item{\code{parameters}}{Vector with parameter values for the functions in the model
 formula. See Details.}
+
+\item{\code{eff_range}}{(Optional) Vector with the effective range parameter for covariance
+functions that require it, i.e. those with compact support.}
 
 \item{\code{verbose}}{Logical whether to provide detailed output.}
 }
@@ -287,7 +296,7 @@ model. This function will return a matrix D for a given set of parameters.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{parameters}}{list of lists, see initialize()}
+\item{\code{parameters}}{list of lists, see `initialize()`}
 }
 \if{html}{\out{</div>}}
 }
@@ -329,6 +338,15 @@ Returns the Cholesky decomposition of the covariance matrix D
 \if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D(parameters = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{parameters}}{(Optional) Vector of parameters, if specified then the Cholesky
+factor is calculated with these parameter values rather than the ones stored in the
+object.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 A list of matrices
 }

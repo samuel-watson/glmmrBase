@@ -35,8 +35,10 @@ Covariance <- R6::R6Class("Covariance",
                         #' Create a new Covariance object
                         #' @param formula Formula describing the covariance function. See Details
                         #' @param data Data frame with data required for constructing the covariance.
-                        #' @param parameters List of lists with parameter values for the functions in the model
+                        #' @param parameters Vector with parameter values for the functions in the model
                         #' formula. See Details.
+                        #' @param eff_range (Optional) Vector with the effective range parameter for covariance
+                        #' functions that require it, i.e. those with compact support.
                         #' @param verbose Logical whether to provide detailed output.
                         #' @details 
                         #' **Intitialisation**
@@ -44,15 +46,12 @@ Covariance <- R6::R6Class("Covariance",
                         #' components with structure \code{(1|f(j))}. The left side of the vertical bar 
                         #' specifies the covariates in the model that have a random effects structure. 
                         #' The right side of the vertical bar specify the covariance function `f` for 
-                        #' that term using variable named in the data `j`. If there are multiple 
-                        #' covariates on the left side, it is assumed their random effects are 
-                        #' correlated, e.g. \code{(1+x|f(j))}. Additive functions are assumed to be 
-                        #' independent, for example, \code{(1|f(j))+(x|f(j))} would create random effects 
-                        #' with zero correlation for the intercept and the parameter on covariate \code{x}. 
+                        #' that term using variable named in the data `j`. 
                         #' Covariance functions on the right side of the vertical bar are multiplied 
                         #' together, i.e. \code{(1|f(j)*g(t))}. 
                         #' 
-                        #' There are several common functions included for a named variable in data \code{x}:
+                        #' There are several common functions included for a named variable in data \code{x}.
+                        #' A non-exhaustive list (see \url[glmmrBase]{https://github.com/samuel-watson/glmmrBase/blob/master/README.md} for a full list):
                         #' * \code{gr(x)}: Indicator function (1 parameter)   
                         #' * \code{fexp(x)}: Exponential function (2 parameters)
                         #' * \code{ar1(x)}: AR1 function (1 parameter)
@@ -148,7 +147,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' 
                         #' D is the covariance matrix of the random effects terms in the generalised linear mixed
                         #' model. This function will return a matrix D for a given set of parameters.
-                        #' @param parameters list of lists, see initialize()
+                        #' @param parameters list of lists, see `initialize()`
                         #' @return matrix 
                         #' @examples 
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
@@ -168,6 +167,9 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         #' @description 
                         #' Returns the Cholesky decomposition of the covariance matrix D
+                        #' @param parameters (Optional) Vector of parameters, if specified then the Cholesky
+                        #' factor is calculated with these parameter values rather than the ones stored in the
+                        #' object.
                         #' @return A list of matrices
                         get_chol_D = function(parameters=NULL){
                           if(is.null(parameters)){
