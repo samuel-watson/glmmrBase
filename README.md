@@ -53,7 +53,7 @@ implemented covariance functions
 | Squared Exponential | $\theta_1 \text{exp}(- (\vert x_i - x_{i'}\vert / \theta_2)^2)$ | $\theta_1,\theta_2 > 0$ | `sqexp(x)` |
 | | $\text{exp}(-( \vert x_i - x_{i'}\vert/\theta_1)^2 )$ | $\theta_1 > 0$ | `sqexp0(x)` |
 | Autoregressive order 1 | $\theta_1^{\vert x_i - x_{i'} \vert}$ | $0 < \theta_1 < 1$ | `ar1(x)` |
-| Bessel | $K_{\theta_1}(x)$ & $\theta_1$ > 0 | `bessel(x)` |
+| Bessel | $K_{\theta_1}(x)$ | $\theta_1$ > 0 | `bessel(x)` |
 | Matern | $\frac{2^{1-\theta_1}}{\Gamma(\theta_1)}\left( \sqrt{2\theta_1}\frac{x}{\theta_2} \right)^{\theta_1} K_{\theta_1}\left(\sqrt{2\theta_1}\frac{x}{\theta_2})\right)$ | $\theta_1,\theta_2 > 0$ | `matern(x)` |
 | Compactly supported* | || |
 | Wendland 0 | $\theta_1(1-y)^{\theta_2}, 0 \leq y \leq 1; 0, y \geq 1$ | $\theta_1>0, \theta_2 \geq (d+1)/2$ | `wend0(x)` |
