@@ -8,7 +8,8 @@
 #' 
 #' where h is the link function, this class defines Z and D. The covariance is defined by a covariance function, data, and parameters.
 #' A new instance can be generated with $new(). The class will generate the 
-#' relevant matrices Z and D automatically.  
+#' relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+#' detailed guide on model specification.
 #' @export
 Covariance <- R6::R6Class("Covariance",
                       public = list(

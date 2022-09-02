@@ -22,7 +22,10 @@
 #' where _W_ is a diagonal matrix with the WLS iterated weights for each observation equal
 #' to, for individual _i_ \eqn{\phi a_i v(\mu_i)[h'(\mu_i)]^2} (see Table 2.1 in McCullagh 
 #' and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
-#' the memory requirements can be prohibitive.
+#' the memory requirements can be prohibitive. 
+#' 
+#' See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+#' detailed guide on model specification.
 #' @importFrom Matrix Matrix
 #' @export 
 Model <- R6::R6Class("Model",

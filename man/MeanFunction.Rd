@@ -18,7 +18,8 @@ For the generalised linear mixed model
 this class defines the family F, link function h, and fixed effects design matrix X. 
 The mean function is defined by a model formula, data, and parameters.
 A new instance can be generated with $new(). The class will generate the 
-relevant matrix X automatically.
+relevant matrix X automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+detailed guide on model specification.
 
 
 Specification of the mean function follows standard model formulae in R. 
