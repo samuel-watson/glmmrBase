@@ -193,14 +193,14 @@ des$mean_function$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
 }
 \seealso{
-\link[glmmr]{nelder}, \link[glmmr]{MeanFunction}, \link[glmmr]{Covariance}
+\link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{covariance}}{A \link[glmmr]{Covariance} object defining the random effects covariance.}
+\item{\code{covariance}}{A \link[glmmrBase]{Covariance} object defining the random effects covariance.}
 
-\item{\code{mean_function}}{A \link[glmmr]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
+\item{\code{mean_function}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
 
 \item{\code{exp_condition}}{A vector indicting the unique experimental conditions for each observation, see Details.}
 
@@ -266,10 +266,10 @@ Create a new Model object
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{covariance}}{Either a \link[glmmr]{Covariance} object, or an equivalent list of arguments
+\item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
 that can be passed to `Covariance` to create a new object.}
 
-\item{\code{mean.function}}{Either a \link[glmmr]{MeanFunction} object, or an equivalent list of arguments
+\item{\code{mean.function}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
 that can be passed to `MeanFunction` to create a new object.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}

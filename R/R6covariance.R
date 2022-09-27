@@ -81,7 +81,7 @@ Covariance <- R6::R6Class("Covariance",
                                               eff_range = NULL,
                                               verbose=TRUE){
                           if(any(is.null(data),is.null(formula),is.null(parameters))){
-                            cat("not all attributes set. call check() when all attributes set.")
+                            message("not all attributes set. call check() when all attributes set.")
                           } else {
                             self$data = data
                             self$formula = as.formula(formula, env=.GlobalEnv)

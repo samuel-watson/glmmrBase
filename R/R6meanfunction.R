@@ -82,11 +82,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' where `int` is the name of the variable indicating the treatment.
                           #' 
                           #' One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
-                          #' by first-order approximation. Available functions are the same as for the covariance functions 
-                          #' see \link[glmmr]{Covariance}. The user can add additional functions by specifying a new function that takes as 
-                          #' an input a named list with elements data and pars, and outputs a matrix with the linearised components. 
-                          #' The function name must begin with `d`, e.g. the function to provide a first order approximation to
-                          #' the exponential function (see \link[glmmr]{fexp}) is named `dfexp`.
+                          #' by first-order approximation. 
                           #' @param formula A \link[stats]{formula} object that describes the mean function, see Details
                           #' @param data A data frame containing the covariates in the model, named in the model formula
                           #' @param family A family object expressing the distribution and link function of the model, see \link[stats]{family}

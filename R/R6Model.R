@@ -30,9 +30,9 @@
 #' @export 
 Model <- R6::R6Class("Model",
                   public = list(
-                    #' @field covariance A \link[glmmr]{Covariance} object defining the random effects covariance.
+                    #' @field covariance A \link[glmmrBase]{Covariance} object defining the random effects covariance.
                     covariance = NULL,
-                    #' @field mean_function A \link[glmmr]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.
+                    #' @field mean_function A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.
                     mean_function = NULL,
                     #' @field exp_condition A vector indicting the unique experimental conditions for each observation, see Details.
                     exp_condition = NULL,
@@ -55,9 +55,9 @@ Model <- R6::R6Class("Model",
                     },
                     #' @description 
                     #' Create a new Model object
-                    #' @param covariance Either a \link[glmmr]{Covariance} object, or an equivalent list of arguments
+                    #' @param covariance Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
                     #' that can be passed to `Covariance` to create a new object.
-                    #' @param mean.function Either a \link[glmmr]{MeanFunction} object, or an equivalent list of arguments
+                    #' @param mean.function Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
                     #' that can be passed to `MeanFunction` to create a new object.
                     #' @param var_par Scale parameter required for some distributions, including Gaussian. Default is NULL.
                     #' @param verbose Logical indicating whether to provide detailed output
@@ -65,7 +65,7 @@ Model <- R6::R6Class("Model",
                     #' very large designs with thousands of observations or more, the covariance matrix will be too big to 
                     #' fit in memory, so this option will prevent sigma being created.
                     #' @return A new Model class object
-                    #' @seealso \link[glmmr]{nelder}, \link[glmmr]{MeanFunction}, \link[glmmr]{Covariance}
+                    #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
                     #' @examples 
                     #' #create a data frame describing a cross-sectional parallel cluster
                     #' #randomised trial
