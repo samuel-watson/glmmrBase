@@ -256,7 +256,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(length(flistvars[[i]]$lhs)>0){
                               ZlistNew <- list()
                               for(j in 1:length(flistvars[[i]]$lhs)){
-                                ZlistNew[[j]] <- Zlist[[i]]*df[,flistvars[[i]]$lhs[j]]
+                                ZlistNew[[j]] <- Zlist[[i]]*self$data[,flistvars[[i]]$lhs[j]]
                               }
                               Zlist[[i]] <- Reduce(cbind,ZlistNew)
                             }
