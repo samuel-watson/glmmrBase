@@ -191,6 +191,32 @@ des$covariance$parameters <- c(0.1,0.9)
 des$check() #updates 
 des$mean_function$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
+
+## ------------------------------------------------
+## Method `Model$power`
+## ------------------------------------------------
+
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+
+mf1 <- MeanFunction$new(
+  formula = ~ factor(t) + int - 1,
+  data=df,
+  parameters = c(rep(0,5),0.6),
+  family = gaussian()
+)
+cov1 <- Covariance$new(
+  data = df,
+  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+  parameters = c(0.25,0.1)
+)
+des <- Design$new(
+  covariance = cov1,
+  mean.function = mf1,
+  var_par = 1
+)
+des$power() #power of 0.90 for the int parameter
 }
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
@@ -224,6 +250,7 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
 \item \href{#method-Model-check}{\code{Model$check()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
+\item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -597,6 +624,62 @@ Generates the information matrix
 \subsection{Returns}{
 A PxP matrix
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-power"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-power}{}}}
+\subsection{Method \code{power()}}{
+Estimates the power of the design described by the model using the square root
+of the relevant element of the GLS variance matrix:
+
+ \deqn{(X^T\Sigma^{-1}X)^{-1}}
+ 
+Note that this is equivalent to using the "design effect" for many
+models.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$power(alpha = 0.05)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{alpha}}{Numeric between zero and one indicating the type I error rate. 
+Default of 0.05.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame describing the parameters, their values, expected standard
+errors and estimated power.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+
+mf1 <- MeanFunction$new(
+  formula = ~ factor(t) + int - 1,
+  data=df,
+  parameters = c(rep(0,5),0.6),
+  family = gaussian()
+)
+cov1 <- Covariance$new(
+  data = df,
+  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+  parameters = c(0.25,0.1)
+)
+des <- Design$new(
+  covariance = cov1,
+  mean.function = mf1,
+  var_par = 1
+)
+des$power() #power of 0.90 for the int parameter
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-clone"></a>}}

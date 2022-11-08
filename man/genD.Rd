@@ -4,18 +4,21 @@
 \alias{genD}
 \title{Generates the covariance matrix of the random effects}
 \usage{
-genD(D_data, gamma)
+genD(cov, data, eff_range, gamma)
 }
 \arguments{
-\item{D_data}{Named list specifying the covariance matrix D. Usually the return from the member function `get_D_data()` of the 
-covariance class}
+\item{cov}{An integer matrix with columns of block identifier, dimension of block, function definition, number of variables
+in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.}
 
-\item{gamma}{Vector of covariance parameters specified in order they appear column wise in the functions 
-specified by `func_def`}
+\item{data}{Vector of data. Created by flattening the matrices in column-major order of the data used in each block.}
+
+\item{eff_range}{Vector of values with the effective range parameters of the covariance functions, where required.}
+
+\item{gamma}{Vector of parameters used to generate the matrix D.}
 }
 \value{
 A symmetric positive definite covariance matrix
 }
 \description{
-Generates the covariance matrix of the random effects from a sparse representation
+Generates the covariance matrix of the random effects from a sparse representation. Used internally in the Covariance class.
 }
