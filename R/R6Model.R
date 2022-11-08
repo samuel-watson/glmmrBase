@@ -383,6 +383,53 @@ Model <- R6::R6Class("Model",
                     #' @return A PxP matrix
                     information_matrix = function(){
                       Matrix::crossprod(self$mean_function$X,solve(self$Sigma))%*%self$mean_function$X
+                    },
+                    #' @description 
+                    #' Estimates the power of the design described by the model using the square root
+                    #' of the relevant element of the GLS variance matrix:
+                    #' 
+                    #'  \deqn{(X^T\Sigma^{-1}X)^{-1}}
+                    #'  
+                    #' Note that this is equivalent to using the "design effect" for many
+                    #' models.
+                    #' @param alpha Numeric between zero and one indicating the type I error rate. 
+                    #' Default of 0.05.
+                    #' @return A data frame describing the parameters, their values, expected standard
+                    #' errors and estimated power.
+                    #' @examples 
+                    #' df <- nelder(~(cl(10)*t(5)) > ind(10))
+                    #' df$int <- 0
+                    #' df[df$cl > 5, 'int'] <- 1
+                    #' 
+                    #' mf1 <- MeanFunction$new(
+                    #'   formula = ~ factor(t) + int - 1,
+                    #'   data=df,
+                    #'   parameters = c(rep(0,5),0.6),
+                    #'   family = gaussian()
+                    #' )
+                    #' cov1 <- Covariance$new(
+                    #'   data = df,
+                    #'   formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+                    #'   parameters = c(0.25,0.1)
+                    #' )
+                    #' des <- Design$new(
+                    #'   covariance = cov1,
+                    #'   mean.function = mf1,
+                    #'   var_par = 1
+                    #' )
+                    #' des$power() #power of 0.90 for the int parameter
+                    power = function(alpha=0.05){
+                      self$check(verbose=FALSE)
+                      M <- self$information_matrix()
+                      v0 <- solve(M)
+                      v0 <- as.vector(sqrt(diag(v0)))
+                      pwr <- pnorm(self$mean_function$parameters/v0 - qnorm(1-alpha/2))
+                      res <- data.frame(Parameter = colnames(self$mean_function$X),
+                                        Value = self$mean_function$parameters,
+                                        SE = v0,
+                                        Power = pwr)
+                      print(res)
+                      return(invisible(res))
                     }
                   ),
                   private = list(

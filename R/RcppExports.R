@@ -9,8 +9,8 @@
 #' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
 #' specified by `func_def`
 #' @return A symmetric positive definite covariance matrix
-genD <- function(D_data, gamma) {
-    .Call(`_glmmrBase_genD`, D_data, gamma)
+genD <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_genD`, cov, data, eff_range, gamma)
 }
 
 #' Generates the cholesky decomposition covariance matrix of the random effects
@@ -21,21 +21,8 @@ genD <- function(D_data, gamma) {
 #' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
 #' specified by `func_def`
 #' @return A lower triangular matrix matrix
-genCholD <- function(D_data, gamma) {
-    .Call(`_glmmrBase_genCholD`, D_data, gamma)
-}
-
-#' Returns log likelihood for a set of observations
-#' 
-#' Generates the covariance matrix of the random effects from a sparse representation
-#' @param D_data Named list specifying the covariance matrix D. Usually the return from the member function `get_D_data()` of the 
-#' covariance class
-#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
-#' specified by `func_def`
-#' @param u A realisation of the random effects
-#' @return A lower triangular matrix matrix
-loglikD <- function(D_data, gamma, u) {
-    .Call(`_glmmrBase_loglikD`, D_data, gamma, u)
+genCholD <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_genCholD`, cov, data, eff_range, gamma)
 }
 
 #' Generates the derivative of the link function with respect to the mean
@@ -46,15 +33,5 @@ loglikD <- function(D_data, gamma, u) {
 #' @return Vector of derivative values
 gen_dhdmu <- function(xb, family, link) {
     .Call(`_glmmrBase_gen_dhdmu`, xb, family, link)
-}
-
-#' Combines a field of matrices into a block diagonal matrix
-#' 
-#' Combines a field of matrices into a block diagonal matrix. Used on
-#' the output of `genD`
-#' @param matfield A field of matrices
-#' @return A block diagonal matrix
-blockMat <- function(matfield) {
-    .Call(`_glmmrBase_blockMat`, matfield)
 }
 
