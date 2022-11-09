@@ -275,8 +275,8 @@ Covariance <- R6::R6Class("Covariance",
                           B <- length(flist)
                           
                           N_dim <- unlist(rev(flistcount))
-                          N_func <- sum(unlist(lapply(fl,function(x)length(x$funs))))
-                          D_data$cov <- rbind(rep(1:B,N_func),rep(N_dim,N_func),rep(0,B*N_func),rep(0,B*N_func),rep(0,B*N_func))
+                          N_func <- unlist(lapply(fl,function(x)length(x$funs)))
+                          D_data$cov <- rbind(rep(1:B,N_func),rep(N_dim,N_func),rep(0,sum(N_func)),rep(0,sum(N_func)),rep(0,sum(N_func)))
                           D_data$data <- c()
                           fvar <- lapply(rev(flistvars),function(x)x$groups)
                           for(b in 1:B){
@@ -285,7 +285,6 @@ Covariance <- R6::R6Class("Covariance",
                             D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]]
                           }
                           D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
-                          
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
                           
                           # split into sub blocks

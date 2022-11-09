@@ -39,6 +39,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sample_re
+Eigen::VectorXd sample_re(const Eigen::ArrayXXi& cov, const Eigen::ArrayXd& data, const Eigen::ArrayXd& eff_range, const Eigen::VectorXd& gamma);
+RcppExport SEXP _glmmrBase_sample_re(SEXP covSEXP, SEXP dataSEXP, SEXP eff_rangeSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::ArrayXXi& >::type cov(covSEXP);
+    Rcpp::traits::input_parameter< const Eigen::ArrayXd& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< const Eigen::ArrayXd& >::type eff_range(eff_rangeSEXP);
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_re(cov, data, eff_range, gamma));
+    return rcpp_result_gen;
+END_RCPP
+}
 // gen_dhdmu
 Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb, std::string family, std::string link);
 RcppExport SEXP _glmmrBase_gen_dhdmu(SEXP xbSEXP, SEXP familySEXP, SEXP linkSEXP) {
@@ -56,6 +70,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_genD", (DL_FUNC) &_glmmrBase_genD, 4},
     {"_glmmrBase_genCholD", (DL_FUNC) &_glmmrBase_genCholD, 4},
+    {"_glmmrBase_sample_re", (DL_FUNC) &_glmmrBase_sample_re, 4},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {NULL, NULL, 0}
 };

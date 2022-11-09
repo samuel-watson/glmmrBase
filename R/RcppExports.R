@@ -27,6 +27,19 @@ genCholD <- function(cov, data, eff_range, gamma) {
     .Call(`_glmmrBase_genCholD`, cov, data, eff_range, gamma)
 }
 
+#' Generates a sample of random effects
+#' 
+#' Generates a sample of random effects from the specified covariance matrix.
+#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
+#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
+#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
+#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
+#' @param gamma Vector of parameters used to generate the matrix D. 
+#' @return A lower triangular matrix
+sample_re <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_sample_re`, cov, data, eff_range, gamma)
+}
+
 #' Generates the derivative of the link function with respect to the mean. Used internally in the Model function class.
 #' 
 #' @param xb Vector with mean function value evaluated at fitted model parameters

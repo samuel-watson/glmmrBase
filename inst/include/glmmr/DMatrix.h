@@ -22,19 +22,37 @@
 namespace glmmr {
 
 class DSubMatrix {
+public:
   int B_;
   int n_;
   DData* data_;
-  const Eigen::VectorXd &gamma_;
+  Eigen::VectorXd gamma_;
   
-public:
   DSubMatrix(int B,
              DData* data,
-             const Eigen::VectorXd &gamma) :
+             Eigen::VectorXd &gamma) :
   B_(B), data_(data), gamma_(gamma) {
     data_->subdata(B_);
     n_ = data_->n_dim();
-    
+  }
+  
+  DSubMatrix(int B,
+             DData* data,
+             Eigen::ArrayXd &gamma) :
+  B_(B), data_(data), gamma_(gamma.size()) {
+    gamma_ = gamma.matrix();
+    data_->subdata(B_);
+    n_ = data_->n_dim();
+  }
+  
+  DSubMatrix(int B,
+             DData* data,
+             const std::vector<double> &gamma) :
+    B_(B), data_(data), gamma_(gamma.size()) {
+    std::vector<double> par2 = gamma;
+    gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
+    data_->subdata(B_);
+    n_ = data_->n_dim();
   }
   
   // generate and return the submatrix D
@@ -228,16 +246,31 @@ public:
 };
 
 class DMatrix {
+  public:
+  
   Eigen::VectorXd gamma_;
   DData* data_;
   
-public:
   DMatrix(DData* data,
           const Eigen::VectorXd& gamma) :
   gamma_(gamma),
-  data_(data)
+  data_(data) {}
+  
+  DMatrix(DData* data,
+          const Eigen::ArrayXd& gamma) :
+    gamma_(gamma.size()),
+    data_(data) 
   {
-    update_parameters(gamma);
+    gamma_ = gamma.matrix();  
+  }
+  
+  DMatrix(DData* data,
+          const std::vector<double>& gamma) :
+    gamma_(gamma.size()),
+    data_(data) 
+  {
+    std::vector<double> par2 = gamma;
+    gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
   }
   
   Eigen::MatrixXd gen_block_mat(int b,
@@ -266,9 +299,34 @@ public:
     gamma_ = gamma;
   }
   
+  void update_parameters(const Eigen::ArrayXd& gamma)
+  {
+    gamma_ = gamma.matrix();
+  }
+  
+  void update_parameters(const std::vector<double>& gamma)
+  {
+    std::vector<double> par2 = gamma;
+    gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size()); 
+  }
+  
   int B()
   {
     return data_->B_;
+  }
+  
+  Eigen::VectorXd sim_re(){
+    Eigen::VectorXd samps(data_->N());
+    int idx = 0;
+    for(int i=0; i< data_->B_; i++){
+      data_->subdata(i);
+      Eigen::MatrixXd L = gen_block_mat(i,true,true);
+      Rcpp::NumericVector z = Rcpp::rnorm(data_->n_dim());
+      Eigen::Map<Eigen::VectorXd> Z(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(z));
+      samps.segment(idx,data_->n_dim()) = L*Z;
+      idx += data_->n_dim();
+    }
+    return samps;
   }
   
   Eigen::MatrixXd genD(int b,

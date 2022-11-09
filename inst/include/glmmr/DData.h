@@ -22,8 +22,8 @@ namespace glmmr {
       Eigen::ArrayXd subeff_range_;
       int b_;
       int B_;
-      int parstart_;
-      int parsize_;
+      int matstart_;
+      int matsize_;
       
       DData(Eigen::ArrayXXi cov,
             Eigen::ArrayXd data,
@@ -64,15 +64,33 @@ namespace glmmr {
         subdata_ = data_.segment(dstart,dend-dstart);
         b_ = b;
         
-        parstart_ = 0;
-        parsize_ = 0; 
-        for(int i = 0; i < end; i++){
-          if(i < start){
-            parstart_ += cov_(i,4);
-          } else {
-           parsize_ += cov_(i,4); 
+        matstart_ = 0;
+        matsize_ = 0;
+        int btr = B_;
+        for(int i = 0; i < cov_.rows(); i++){
+          if(cov_(i,0) != b && btr != cov_(i,0)){
+            matstart_ += cov_(i,1);
+            btr = cov_(i,0);
+          } else if(cov_(i,0) == b && btr != cov_(i,0)){
+            matsize_ += cov_(i,1);
+            btr = cov_(i,0);
+          } else if(cov_(i,0) > b){
+            break;
           }
         }
+        
+      }
+      
+      int N(){
+        int N_ = 0;
+        int btr = B_;
+        for(int i = 0; i < cov_.rows(); i++){
+          if(btr != cov_(i,0)){
+            N_ += cov_(i,1);
+            btr = cov_(i,0);
+          } 
+        }
+        return N_;
       }
       
       int n_dim(){
@@ -110,86 +128,18 @@ namespace glmmr {
       int par_index(int k){
         return subcov_(k,4);
       }
+      
+      int n_cov_pars(){
+        Eigen::Index maxIndex;
+        int maxVal = cov_.col(4).maxCoeff(&maxIndex);
+        int fdef = cov_(maxIndex,2);
+        //check if 1 or 2 parameters (perhaps this could be improved!)
+        bool onepar = (fdef == 1 || fdef == 2 || fdef == 3 || fdef == 6 || fdef ==14);
+        maxVal += onepar ? 1 : 2;
+        return maxVal;
+      }
   };
 }
-// 
-// namespace glmmr {
-// class DData {
-// public:
-//   int B_;
-//   Eigen::VectorXi N_dim_;
-//   Eigen::VectorXi N_func_;
-//   Eigen::MatrixXi func_def_;
-//   Eigen::MatrixXi N_var_func_;
-//   Eigen::MatrixXd eff_range_;
-//   std::vector<Eigen::MatrixXi> col_id_;
-//   Eigen::MatrixXi N_par_;
-//   std::vector<Eigen::MatrixXd> cov_data_;
-//   Eigen::VectorXd gamma_;
-//   
-//   DData(int B,
-//         Eigen::VectorXi N_dim,
-//         Eigen::VectorXi N_func,
-//         Eigen::MatrixXi func_def,
-//         Eigen::MatrixXi N_var_func,
-//         Eigen::MatrixXd eff_range,
-//         std::vector<Eigen::MatrixXi> col_id,
-//         Eigen::MatrixXi N_par,
-//         std::vector<Eigen::MatrixXd> cov_data) :
-//     B_(B), N_dim_(N_dim), N_func_(N_func),
-//     func_def_(func_def), N_var_func_(N_var_func),
-//     eff_range_(eff_range), col_id_(col_id),
-//     N_par_(N_par), cov_data_(cov_data) {}
-//   
-//   DData(int B,
-//         Eigen::VectorXi N_dim,
-//         Eigen::VectorXi N_func,
-//         Eigen::MatrixXi func_def,
-//         Eigen::MatrixXi N_var_func,
-//         Eigen::MatrixXd eff_range,
-//         Eigen::MatrixXi col_id,
-//         Eigen::MatrixXi N_par,
-//         Eigen::MatrixXd cov_data) : B_(B), N_dim_(N_dim), N_func_(N_func),
-//         func_def_(func_def), N_var_func_(N_var_func),
-//         eff_range_(eff_range), N_par_(N_par) {
-//     int max_N_func = N_func_.maxCoeff();
-//     int max_N_dim = N_dim_.maxCoeff();
-//     int iter1 = 0;
-//     int iter2 = 0;
-//     for (int i = 0; i < B_; i++) {
-//       col_id_.push_back(col_id.block(iter1,0,max_N_func,col_id.cols()));
-//       cov_data_.push_back(cov_data.block(iter2,0,max_N_dim,cov_data.cols()));
-//       iter1 += max_N_func;
-//       iter2 += max_N_dim;                   
-//     }
-//   }
-//   
-//   DData(Rcpp::List data) {
-//     B_ = (int)(data["B"]);
-//     col_id_.reserve(B_);
-//     cov_data_.reserve(B_);
-//     N_dim_ = Rcpp::as<Eigen::Map<Eigen::VectorXi> >(data["N_dim"]);
-//     N_func_ = Rcpp::as<Eigen::Map<Eigen::VectorXi> >(data["N_func"]);
-//     func_def_ = Rcpp::as<Eigen::Map<Eigen::MatrixXi> >(data["func_def"]);
-//     N_var_func_ = Rcpp::as<Eigen::Map<Eigen::MatrixXi> >(data["N_var_func"]);
-//     eff_range_ = Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(data["eff_range"]);
-//     N_par_ = Rcpp::as<Eigen::Map<Eigen::MatrixXi> >(data["N_par"]);
-//     int max_N_func = N_func_.maxCoeff();
-//     int max_N_dim = N_dim_.maxCoeff();
-//     int iter1 = 0;
-//     int iter2 = 0;
-//     Eigen::MatrixXi col_id_full = Rcpp::as<Eigen::Map<Eigen::MatrixXi> >(data["col_id"]);
-//     Eigen::MatrixXd cov_data_full = Rcpp::as<Eigen::Map<Eigen::MatrixXd> >(data["cov_data"]);
-//     for (int i = 0; i < B_; i++) {
-//       col_id_.push_back(col_id_full.block(iter1,0,max_N_func,col_id_full.cols()));
-//       cov_data_.push_back(cov_data_full.block(iter2,0,max_N_dim,cov_data_full.cols()));
-//       iter1 += max_N_func;
-//       iter2 += max_N_dim;                   
-//     }
-//     }
-//   
-//   };
-// }
 
 
 

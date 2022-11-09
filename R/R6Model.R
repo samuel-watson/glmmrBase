@@ -290,10 +290,13 @@ Model <- R6::R6Class("Model",
                     #' )
                     #' ysim <- des$sim_data()
                     sim_data = function(type = "y"){
-                      z <- stats::rnorm(nrow(self$covariance$D))
-                      L <- blockMat(self$covariance$get_chol_D())
-                      re <- L%*%matrix(z,ncol=1)
-                      mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + as.matrix(self$covariance$Z%*%re)
+                      # z <- stats::rnorm(nrow(self$covariance$D))
+                      # L <- self$covariance$get_chol_D()
+                      # re <- L%*%matrix(z,ncol=1)
+                      re <- do.call(sample_re,append(self$covariance$get_D_data(),
+                                                     list(eff_range = self$covariance$eff_range,
+                                                          gamma = self$covariance$parameters)))
+                      mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + c(as.matrix(self$covariance$Z)%*%re)
                       
                       f <- self$mean_function$family
                       if(f[1]=="poisson"){
