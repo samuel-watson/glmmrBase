@@ -54,7 +54,7 @@ Eigen::MatrixXd genCholD(const Eigen::ArrayXXi &cov,
   
   glmmr::DData dat(cov,data,eff_range);
   glmmr::DMatrix dmat(&dat, gamma);
-  Eigen::MatrixXd DBlocks = dmat.genD(0, true, true);
+  Eigen::MatrixXd DBlocks = dmat.genD(0, true, false);
   return(DBlocks);
 }
 

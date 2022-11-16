@@ -23,7 +23,6 @@ namespace glmmr {
       int b_;
       int B_;
       int matstart_;
-      int matsize_;
       
       DData(Eigen::ArrayXXi cov,
             Eigen::ArrayXd data,
@@ -65,18 +64,14 @@ namespace glmmr {
         b_ = b;
         
         matstart_ = 0;
-        matsize_ = 0;
-        int btr = B_;
-        for(int i = 0; i < cov_.rows(); i++){
-          if(cov_(i,0) != b && btr != cov_(i,0)){
-            matstart_ += cov_(i,1);
-            btr = cov_(i,0);
-          } else if(cov_(i,0) == b && btr != cov_(i,0)){
-            matsize_ += cov_(i,1);
-            btr = cov_(i,0);
-          } else if(cov_(i,0) > b){
-            break;
-          }
+        bool isb = b==0;
+        int iter = 0;
+        int bnow = B_+1;
+        while(!isb){
+          isb = cov_(iter,0) == b;
+          if(bnow != cov_(iter,0) && !isb )matstart_ += cov_(iter,1);
+          bnow = cov_(iter,0);
+          iter++;
         }
         
       }

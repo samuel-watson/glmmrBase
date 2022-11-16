@@ -226,7 +226,7 @@ public:
   // generate the cholesky decomposition of the submatrix
   Eigen::MatrixXd genCholSubD(bool upper = false) {
     int n = (int)n_;
-    std::vector<double> L(n * n);
+    std::vector<double> L(n * n, 0.0);
     //double* L = (double*)std::calloc(n * n, sizeof(double));
     
     for (int j = 0; j < n; j++) {
@@ -239,8 +239,11 @@ public:
       }
     }
     Eigen::MatrixXd M = Eigen::Map<Eigen::MatrixXd>(L.data(), n, n);
-    if (upper) M = M.transpose();
-    return M;
+    if (upper) {
+      return M;
+      } else {
+        return M.transpose();
+      }
   }
   
 };
@@ -320,7 +323,7 @@ class DMatrix {
     int idx = 0;
     for(int i=0; i< data_->B_; i++){
       data_->subdata(i);
-      Eigen::MatrixXd L = gen_block_mat(i,true,true);
+      Eigen::MatrixXd L = gen_block_mat(i,true,false);
       Rcpp::NumericVector z = Rcpp::rnorm(data_->n_dim());
       Eigen::Map<Eigen::VectorXd> Z(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(z));
       samps.segment(idx,data_->n_dim()) = L*Z;
