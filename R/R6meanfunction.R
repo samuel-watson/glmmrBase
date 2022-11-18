@@ -83,16 +83,17 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
                           #' by first-order approximation. 
+                          #' 
+                          #' If not all of `formula`, `data`, `family`, and `parameters` are not specified then the linked matrices 
+                          #' are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
+                          #' If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+                          #' parameters is automatic if using the `update_parameters()` member function.
                           #' @param formula A \link[stats]{formula} object that describes the mean function, see Details
-                          #' @param data A data frame containing the covariates in the model, named in the model formula
-                          #' @param family A family object expressing the distribution and link function of the model, see \link[stats]{family}
-                          #' @param parameters A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations
+                          #' @param data (Optional) A data frame containing the covariates in the model, named in the model formula
+                          #' @param family (Optional) A family object expressing the distribution and link function of the model, see \link[stats]{family}
+                          #' @param parameters (Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
+                          #' If the parameters are not specified then they are initialised to 0.
                           #' @param verbose Logical indicating whether to report detailed output
-                          #' @param random_function A string naming a function in the global environment that produces a vector of data describing a new
-                          #' treatment allocation in an experimental model. When used, the output of this function replaces the column of data named by
-                          #' `treat_var`
-                          #' @param treat_var The name of a column in data (or the name to give a new column) that a random treatment allocation generated
-                          #' by `random_function` replaces.
                           #' @return A MeanFunction object
                           #' @examples 
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
@@ -104,38 +105,39 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #'                         family = stats::binomial()
                           #'                         )
                           initialize = function(formula,
-                                                data,
-                                                family,
-                                                parameters ,
-                                                verbose = FALSE,
-                                                random_function=NULL,
-                                                treat_var = NULL
+                                                data = NULL,
+                                                family = NULL,
+                                                parameters = NULL ,
+                                                verbose = FALSE
                           ){
-                            if(any(missing(formula),missing(family),missing(parameters))){
-                              cat("not all inputs set. call generate() when set")
-                            } else {
-                              self$formula <- as.formula(formula, env=.GlobalEnv)
-                              self$family <- family
-                              self$parameters <- parameters
 
+                            allset <- TRUE
+                            self$formula <- as.formula(formula, env=.GlobalEnv)
+                            if(!is.null(family)){
+                              self$family <- family
+                            } else {
+                              allset <- FALSE
+                            }
+                            
+                            if(!is.null(data)){
                               if(!is(data,"data.frame"))stop("data must be data frame")
-                              # self$n <- nrow(data)
-                              if(!is.null(random_function)){
-                                if(is.null(treat_var))stop("provide name of treatment variable treat_var")
-                                
-                                #test random function
-                                test <- random_function()
-                                if(!is(test,"numeric") || length(test)!=nrow(data))stop("random_function does not produce a vector")
-                                if(verbose)message(paste0("randomise function provided, treatment variable '",treat_var,"' will be the last column of X,
-and the parameters should also be in this order"))
-                                # check it produces a varia
-                                self$randomise <- random_function
-                                self$treat_var <- treat_var
-                              }
                               self$data <- data
+                            } else {
+                              allset <- FALSE
+                            }
+                            
+                            if(!is.null(parameters)){
+                              self$parameters <- parameters
+                            } 
+                            
+                            if(allset){
                               private$generate(verbose=verbose)
-                              if(verbose)self$print()
-                            }},
+                            } else {
+                              private$hash <- digest::digest(1)
+                            }
+                            if(verbose & allset)self$print()
+                            
+                            },
                           #' @description 
                           #' Prints details about the object
                           #' 
@@ -153,6 +155,22 @@ and the parameters should also be in this order"))
                             print(head(self$X))
                             # cat("Data:\n")
                             # print(head(self$data))
+                          },
+                          #' @description 
+                          #' Updates the model parameters
+                          #' 
+                          #' @details 
+                          #' Using `update_parameters()` is the preferred way of updating the parameters of the 
+                          #' mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+                          #' The function calls check functions to automatically update linked matrices with the new parameters.
+                          #' If using direct assignment, call `self$check()` afterwards. 
+                          #' 
+                          #' @param parameters A vector of parameters for the mean function.
+                          #' @param verbose Logical indicating whether to provide more detailed feedback
+                          update_parameters = function(parameters,
+                                                       verbose = FALSE){
+                            self$parameters <- parameters
+                            self$check(verbose)
                           },
                           #' @description 
                           #' Returns or replaces the column names of the data in the object
@@ -219,25 +237,25 @@ and the parameters should also be in this order"))
                           #' mf1$subset_cols(1:2) 
                           subset_cols = function(index){
                             self$X <- self$X[,index]
-                          },
-                          #' @description 
-                          #' Generates a new random allocation
-                          #' 
-                          #' If a randomising function has been provided then a new random allocation will
-                          #' be generated, and will replace the exisitng data at `treat_var` in the X matrix
-                          #' @param ... ignored
-                          #' @return Nothing is returned, the X matrix is updated
-                          rerandomise = function(){
-                            new_draw <- self$randomise()
-                            if(!self$treat_var %in% colnames(self$X)){
-                              self$X <- cbind(self$X,new_draw)
-                              colnames(self$X)[ncol(self$X)] <- self$treat_var
-                            }
-                            # } else {
-                            #   self$X[,self$treat_var] <- new_draw
-                            # }
-                            private$Xb <- Matrix::drop(self$X %*% matrix(unlist(self$parameters[1:ncol(self$X)]),ncol=1))
                           }
+                          # #' @description 
+                          # #' Generates a new random allocation
+                          # #' 
+                          # #' If a randomising function has been provided then a new random allocation will
+                          # #' be generated, and will replace the exisitng data at `treat_var` in the X matrix
+                          # #' @param ... ignored
+                          # #' @return Nothing is returned, the X matrix is updated
+                          # rerandomise = function(){
+                          #   new_draw <- self$randomise()
+                          #   if(!self$treat_var %in% colnames(self$X)){
+                          #     self$X <- cbind(self$X,new_draw)
+                          #     colnames(self$X)[ncol(self$X)] <- self$treat_var
+                          #   }
+                          #   # } else {
+                          #   #   self$X[,self$treat_var] <- new_draw
+                          #   # }
+                          #   private$Xb <- Matrix::drop(self$X %*% matrix(unlist(self$parameters[1:ncol(self$X)]),ncol=1))
+                          # }
                         ),
                         private = list(
                           mod_string = NULL,
@@ -321,8 +339,8 @@ and the parameters should also be in this order"))
                               X <- cbind(X,Xadd)
                             }
                             if(any(private$funs=="RMINT"))X <- X[,-1]
-                            if((ncol(X)!=length(unlist(self$parameters))&is.null(self$randomise)) || 
-                              (!(length(unlist(self$parameters))%in%c(ncol(X),ncol(X)+1))&!is.null(self$randomise)))warning("wrong number of parameters")
+                            if(is.null(self$parameters))self$parameters <- rep(0,ncol(X))
+                            if(ncol(X)!=length(unlist(self$parameters)))warning("wrong number of parameters")
                             private$Xb <- X %*% matrix(unlist(self$parameters[1:ncol(X)]),ncol=1)
                             self$X <- Matrix::Matrix(X)
                             

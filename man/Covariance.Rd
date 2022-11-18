@@ -48,6 +48,17 @@ For example,
 Note that it is also possible to specify a group membership with two
 variable alternatively as `(1|gr(j)*gr(t))`, for example, but this 
 will require two parameters to be specified, so it is recommended against.
+
+If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
+are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
+If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+parameters is automatic if using the `update_parameters()` member function.
+
+
+Using `update_parameters()` is the preferred way of updating the parameters of the 
+mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+The function calls check functions to automatically update linked matrices with the new parameters.
+If using direct assignment, call `self$check()` afterwards.
 }
 \examples{
 
@@ -124,6 +135,7 @@ the functions with compact support require effective range parameters.}
 \item \href{#method-Covariance-n}{\code{Covariance$n()}}
 \item \href{#method-Covariance-new}{\code{Covariance$new()}}
 \item \href{#method-Covariance-check}{\code{Covariance$check()}}
+\item \href{#method-Covariance-update_parameters}{\code{Covariance$update_parameters()}}
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
 \item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
@@ -152,11 +164,11 @@ Scalar
 Create a new Covariance object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Covariance$new(
-  formula = NULL,
+  formula,
   data = NULL,
   parameters = NULL,
   eff_range = NULL,
-  verbose = TRUE
+  verbose = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -165,9 +177,9 @@ Create a new Covariance object
 \describe{
 \item{\code{formula}}{Formula describing the covariance function. See Details}
 
-\item{\code{data}}{Data frame with data required for constructing the covariance.}
+\item{\code{data}}{(Optional) Data frame with data required for constructing the covariance.}
 
-\item{\code{parameters}}{Vector with parameter values for the functions in the model
+\item{\code{parameters}}{(Optional) Vector with parameter values for the functions in the model
 formula. See Details.}
 
 \item{\code{eff_range}}{(Optional) Vector with the effective range parameter for covariance
@@ -224,6 +236,25 @@ cov$check(verbose=FALSE)
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-update_parameters"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-update_parameters}{}}}
+\subsection{Method \code{update_parameters()}}{
+Updates the covariance parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$update_parameters(parameters, verbose = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{parameters}}{A vector of parameters for the covariance function(s). See Details.}
+
+\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Covariance-print"></a>}}

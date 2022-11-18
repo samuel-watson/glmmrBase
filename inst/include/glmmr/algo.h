@@ -1,11 +1,8 @@
 #ifndef ALGO_H
 #define ALGO_H
 
-#define _USE_MATH_DEFINES
-
 #include <cmath> 
 #include <RcppEigen.h>
-//#include <Rcpp.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 

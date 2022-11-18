@@ -35,8 +35,8 @@ Covariance <- R6::R6Class("Covariance",
                         #' @description 
                         #' Create a new Covariance object
                         #' @param formula Formula describing the covariance function. See Details
-                        #' @param data Data frame with data required for constructing the covariance.
-                        #' @param parameters Vector with parameter values for the functions in the model
+                        #' @param data (Optional) Data frame with data required for constructing the covariance.
+                        #' @param parameters (Optional) Vector with parameter values for the functions in the model
                         #' formula. See Details.
                         #' @param eff_range (Optional) Vector with the effective range parameter for covariance
                         #' functions that require it, i.e. those with compact support.
@@ -69,26 +69,52 @@ Covariance <- R6::R6Class("Covariance",
                         #' Note that it is also possible to specify a group membership with two
                         #' variable alternatively as `(1|gr(j)*gr(t))`, for example, but this 
                         #' will require two parameters to be specified, so it is recommended against.
+                        #' 
+                        #' If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
+                        #' are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
+                        #' If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+                        #' parameters is automatic if using the `update_parameters()` member function.
                         #' @return A Covariance object
                         #' @examples 
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
                         #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                         #'                       parameters = c(0.25,0.7),
                         #'                       data= df)
-                        initialize = function(formula=NULL,
+                        initialize = function(formula,
                                               data = NULL,
                                               parameters= NULL,
                                               eff_range = NULL,
-                                              verbose=TRUE){
-                          if(any(is.null(data),is.null(formula),is.null(parameters))){
-                            message("not all attributes set. call check() when all attributes set.")
+                                              verbose=FALSE){
+                          # if(any(is.null(data),is.null(formula),is.null(parameters))){
+                          #   message("not all attributes set. call check() when all attributes set.")
+                          # } else {
+                          #   self$data = data
+                          #   self$formula = as.formula(formula, env=.GlobalEnv)
+                          #   self$parameters = parameters
+                          #   self$eff_range = eff_range
+                          #   private$cov_form()
+                          # }
+                          if(missing(formula))stop("formula required.")
+                          self$formula = as.formula(formula, env=.GlobalEnv)
+                          allset <- TRUE
+                          if(!is.null(data)){
+                            self$data <- data 
                           } else {
-                            self$data = data
-                            self$formula = as.formula(formula, env=.GlobalEnv)
-                            self$parameters = parameters
-                            self$eff_range = eff_range
-                            private$cov_form()
+                            allset <- FALSE
                           }
+                          
+                          if(!is.null(parameters)){
+                            self$parameters <- parameters
+                          }
+                          
+                          self$eff_range = eff_range
+                          
+                          if(allset){
+                            private$cov_form()
+                          } else {
+                            private$hash <- digest::digest(1)
+                          }
+                          
                         },
                         #' @description 
                         #' Check if anything has changed and update matrices if so.
@@ -112,6 +138,22 @@ Covariance <- R6::R6Class("Covariance",
                           }
 
                           invisible(self)
+                        },
+                        #' @description 
+                        #' Updates the covariance parameters
+                        #' 
+                        #' @details 
+                        #' Using `update_parameters()` is the preferred way of updating the parameters of the 
+                        #' mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+                        #' The function calls check functions to automatically update linked matrices with the new parameters.
+                        #' If using direct assignment, call `self$check()` afterwards.
+                        #' 
+                        #' @param parameters A vector of parameters for the covariance function(s). See Details.
+                        #' @param verbose Logical indicating whether to provide more detailed feedback
+                        update_parameters = function(parameters,
+                                                     verbose = FALSE){
+                          self$parameters <- parameters
+                          self$check(verbose)
                         },
                         #' @description 
                         #' Show details of Covariance object
@@ -280,9 +322,9 @@ Covariance <- R6::R6Class("Covariance",
                           D_data$data <- c()
                           fvar <- lapply(rev(flistvars),function(x)x$groups)
                           for(b in 1:B){
-                            D_data$cov[3,D_data$cov[1,]==b] <- match(unlist(rev(fl[[b]]$funs)),fnames)
-                            D_data$cov[4,D_data$cov[1,]==b] <- rev(unname(table(fvar[[b]])))
-                            D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]]
+                            D_data$cov[3,D_data$cov[1,]==b] <- match(unlist(rev(fl[[b]]$funs)),fnames) # function definition
+                            D_data$cov[4,D_data$cov[1,]==b] <- rev(unname(table(fvar[[b]]))) #number of variables
+                            D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]] # number of parameters
                           }
                           D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
@@ -346,6 +388,15 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         genD = function(update=TRUE,
                                         new_pars=NULL){
+                          
+                          # calculate number of parameters
+                          fnpar <- c(1,1,1,2,2,1,2,2,2,2,2,2,2,1)
+                          idmax <- which.max(private$D_data$cov[,5])[1]
+                          par_count <- private$D_data$cov[idmax,5] + fnpar[private$D_data$cov[idmax,3]]
+                          if(is.null(self$parameters))self$parameters <- rep(0.5,par_count)
+                          if(par_count != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
+                          
+                          
                           D <- do.call(genD,append(private$D_data,list(eff_range = self$eff_range,gamma=self$parameters)))#list(private$D_data,gamma=self$parameters)
                           #D <- blockMat(D)
                           if(update){

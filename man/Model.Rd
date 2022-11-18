@@ -48,6 +48,12 @@ The matrices X and Z both have n rows, where n is the number of observations in 
 Returns a data frame describing the number of independent clusters or groups at each level in the design. For example,
 if there were cluster-periods nested in clusters, then the top level would be clusters, and the second level would be 
 cluster periods.
+
+
+Using `update_parameters()` is the preferred way of updating the parameters of the 
+mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`. 
+The function calls check functions to automatically update linked matrices with the new parameters.
+If using direct assignment, call `self$check()` afterwards.
 }
 \examples{
 
@@ -63,47 +69,41 @@ df[df$cl > 5, 'int'] <- 1
 
 mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = stats::gaussian()
+  data=df
 )
 cov1 <- Covariance$new(
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
+  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
 )
 des <- Model$new(
   covariance = cov1,
-  mean.function = mf1,
+  mean = mf1,
+  family = stats::gaussian(),
   var_par = 1
 )
 
 #alternatively we can pass the data directly to Model
-#here we will specify a cohort study
+#here we will specify a cohort study and provide parameter values
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
 
 des <- Model$new(
-covariance = list(
-  data=df,
-  formula = ~ (1|gr(ind)*ar1(t)),
-  parameters = c(0.25,0.8)),
-mean.function = list(
-  formula = ~factor(t) + int - 1,
-  data=df,
-  parameters = rep(0,7),
-  family = stats::poisson()))
+  covariance = list(
+    formula = ~ (1|gr(ind)),
+    parameters = c(0.25)),
+  mean = list(
+    formula = ~ int,
+    parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson())
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list(data=df,
-                                           formula = ~(1|fexp(x,y)*ar1(t)),
-                                           parameters =c(0.2,0.1,0.8)),
-                         mean.function = list(data=df,
-                                              formula = ~ 1,
-                                              parameters = c(0.5),
-                                              family=stats::poisson())) 
+spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+                         mean = list(formula = ~ 1),
+                         data = df,
+                         family = stats::gaussian()) 
 
 ## ------------------------------------------------
 ## Method `Model$n_cluster`
@@ -113,20 +113,11 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = stats::gaussian()
-)
-cov1 <- Covariance$new(
-  data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
-)
 des <- Model$new(
-  covariance = cov1,
-  mean.function = mf1,
+  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
+  mean = list(formula = ~ factor(t) + int - 1),
+  data = df, 
+  family = stats::gaussian(),
   var_par = 1
 )
 des$n_cluster() ## returns two levels of 10 and 50
@@ -157,14 +148,13 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    data = df,
     formula = ~ (1|gr(cl)*ar1(t)),
     parameters = c(0.25,0.8)),
-  mean.function = list(
+  mean = list(
     formula = ~ factor(t) + int - 1,
-    data=df,
-    parameters = c(rep(0,5),0.6),
-    family = stats::binomial())
+    parameters = c(rep(0,5),0.6)),
+  data = df,
+  family = stats::binomial()
 )
 ysim <- des$sim_data()
 
@@ -177,14 +167,13 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    data = df,
     formula = ~ (1|gr(cl)*ar1(t)),
     parameters = c(0.25,0.8)),
-  mean.function = list(
+  mean = list(
     formula = ~ factor(t) + int - 1,
-    data=df,
-    parameters = c(rep(0,5),0.6),
-    family = stats::binomial())
+    parameters = c(rep(0,5),0.6)),
+  data = df, 
+  family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
@@ -193,27 +182,38 @@ des$mean_function$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
 
 ## ------------------------------------------------
+## Method `Model$update_parameters`
+## ------------------------------------------------
+
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+des <- Model$new(
+  covariance = list(
+    formula = ~ (1|gr(cl)*ar1(t))),
+  mean = list(
+    formula = ~ factor(t) + int - 1),
+  data = df, 
+  family = stats::binomial()
+)
+des$update_parameters(cov.pars = c(0.1,0.9))
+
+## ------------------------------------------------
 ## Method `Model$power`
 ## ------------------------------------------------
 
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
-
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = gaussian()
-)
-cov1 <- Covariance$new(
-  data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
-)
-des <- Design$new(
-  covariance = cov1,
-  mean.function = mf1,
+des <- Model$new(
+  covariance = list(
+    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    parameters = c(0.25,0.1)),
+  mean = list(
+    formula = ~ factor(t) + int - 1,
+    parameters = c(rep(0,5),0.6)),
+  data = df, 
+  family = stats::gaussian(),
   var_par = 1
 )
 des$power() #power of 0.90 for the int parameter
@@ -249,6 +249,7 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-subset_cols}{\code{Model$subset_cols()}}
 \item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
 \item \href{#method-Model-check}{\code{Model$check()}}
+\item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
@@ -283,7 +284,9 @@ Create a new Model object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$new(
   covariance,
-  mean.function,
+  mean,
+  data = NULL,
+  family = NULL,
   var_par = NULL,
   verbose = TRUE,
   skip.sigma = FALSE
@@ -294,10 +297,20 @@ Create a new Model object
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-that can be passed to `Covariance` to create a new object.}
+that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
+If parameters are not included then they are initialised to 0.5.}
 
-\item{\code{mean.function}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-that can be passed to `MeanFunction` to create a new object.}
+\item{\code{mean}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
+that can be passed to `MeanFunction` to create a new object. At a minimum the list must specify a formula.
+If parameters are not included then they are initialised to 0.}
+
+\item{\code{data}}{A data frame with the data required for the mean function and covariance objects. This argument
+can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
+object, or as a member of the list of arguments to both `covariance` and `mean`.}
+
+\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This 
+argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
+objects, or as members of the list of arguments to `mean`.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
@@ -322,47 +335,41 @@ df[df$cl > 5, 'int'] <- 1
 
 mf1 <- MeanFunction$new(
   formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = stats::gaussian()
+  data=df
 )
 cov1 <- Covariance$new(
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
+  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
 )
 des <- Model$new(
   covariance = cov1,
-  mean.function = mf1,
+  mean = mf1,
+  family = stats::gaussian(),
   var_par = 1
 )
 
 #alternatively we can pass the data directly to Model
-#here we will specify a cohort study
+#here we will specify a cohort study and provide parameter values
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
 
 des <- Model$new(
-covariance = list(
-  data=df,
-  formula = ~ (1|gr(ind)*ar1(t)),
-  parameters = c(0.25,0.8)),
-mean.function = list(
-  formula = ~factor(t) + int - 1,
-  data=df,
-  parameters = rep(0,7),
-  family = stats::poisson()))
+  covariance = list(
+    formula = ~ (1|gr(ind)),
+    parameters = c(0.25)),
+  mean = list(
+    formula = ~ int,
+    parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson())
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list(data=df,
-                                           formula = ~(1|fexp(x,y)*ar1(t)),
-                                           parameters =c(0.2,0.1,0.8)),
-                         mean.function = list(data=df,
-                                              formula = ~ 1,
-                                              parameters = c(0.5),
-                                              family=stats::poisson())) 
+spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+                         mean = list(formula = ~ 1),
+                         data = df,
+                         family = stats::gaussian()) 
 }
 \if{html}{\out{</div>}}
 
@@ -428,20 +435,11 @@ A data frame with the level, number of clusters, and variables describing each l
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = stats::gaussian()
-)
-cov1 <- Covariance$new(
-  data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
-)
 des <- Model$new(
-  covariance = cov1,
-  mean.function = mf1,
+  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
+  mean = list(formula = ~ factor(t) + int - 1),
+  data = df, 
+  family = stats::gaussian(),
   var_par = 1
 )
 des$n_cluster() ## returns two levels of 10 and 50
@@ -547,14 +545,13 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    data = df,
     formula = ~ (1|gr(cl)*ar1(t)),
     parameters = c(0.25,0.8)),
-  mean.function = list(
+  mean = list(
     formula = ~ factor(t) + int - 1,
-    data=df,
-    parameters = c(rep(0,5),0.6),
-    family = stats::binomial())
+    parameters = c(rep(0,5),0.6)),
+  data = df,
+  family = stats::binomial()
 )
 ysim <- des$sim_data()
 }
@@ -592,20 +589,59 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    data = df,
     formula = ~ (1|gr(cl)*ar1(t)),
     parameters = c(0.25,0.8)),
-  mean.function = list(
+  mean = list(
     formula = ~ factor(t) + int - 1,
-    data=df,
-    parameters = c(rep(0,5),0.6),
-    family = stats::binomial())
+    parameters = c(rep(0,5),0.6)),
+  data = df, 
+  family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
 des$check() #updates 
 des$mean_function$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-update_parameters"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-update_parameters}{}}}
+\subsection{Method \code{update_parameters()}}{
+Updates the parameters of the mean function and/or the covariance function
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL, verbose = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{mean.pars}}{(Optional) Vector of new mean function parameters}
+
+\item{\code{cov.pars}}{(Optional) Vector of new covariance function(s) parameters}
+
+\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+des <- Model$new(
+  covariance = list(
+    formula = ~ (1|gr(cl)*ar1(t))),
+  mean = list(
+    formula = ~ factor(t) + int - 1),
+  data = df, 
+  family = stats::binomial()
+)
+des$update_parameters(cov.pars = c(0.1,0.9))
 }
 \if{html}{\out{</div>}}
 
@@ -657,21 +693,15 @@ errors and estimated power.
 \preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
-
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df,
-  parameters = c(rep(0,5),0.6),
-  family = gaussian()
-)
-cov1 <- Covariance$new(
-  data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-  parameters = c(0.25,0.1)
-)
-des <- Design$new(
-  covariance = cov1,
-  mean.function = mf1,
+des <- Model$new(
+  covariance = list(
+    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    parameters = c(0.25,0.1)),
+  mean = list(
+    formula = ~ factor(t) + int - 1,
+    parameters = c(rep(0,5),0.6)),
+  data = df, 
+  family = stats::gaussian(),
   var_par = 1
 )
 des$power() #power of 0.90 for the int parameter
