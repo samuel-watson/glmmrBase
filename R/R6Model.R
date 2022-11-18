@@ -56,9 +56,17 @@ Model <- R6::R6Class("Model",
                     #' @description 
                     #' Create a new Model object
                     #' @param covariance Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-                    #' that can be passed to `Covariance` to create a new object.
-                    #' @param mean.function Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-                    #' that can be passed to `MeanFunction` to create a new object.
+                    #' that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
+                    #' If parameters are not included then they are initialised to 0.5.
+                    #' @param mean Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
+                    #' that can be passed to `MeanFunction` to create a new object. At a minimum the list must specify a formula.
+                    #' If parameters are not included then they are initialised to 0.
+                    #' @param data A data frame with the data required for the mean function and covariance objects. This argument
+                    #' can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
+                    #' object, or as a member of the list of arguments to both `covariance` and `mean`.
+                    #' @param family A family object expressing the distribution and link function of the model, see \link[stats]{family}. This 
+                    #' argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
+                    #' objects, or as members of the list of arguments to `mean`.
                     #' @param var_par Scale parameter required for some distributions, including Gaussian. Default is NULL.
                     #' @param verbose Logical indicating whether to provide detailed output
                     #' @param skip.sigma Logical indicating whether to skip the creating of the covariance matrix Sigma. For 
@@ -75,97 +83,127 @@ Model <- R6::R6Class("Model",
                     #' 
                     #' mf1 <- MeanFunction$new(
                     #'   formula = ~ factor(t) + int - 1,
-                    #'   data=df,
-                    #'   parameters = c(rep(0,5),0.6),
-                    #'   family = stats::gaussian()
+                    #'   data=df
                     #' )
                     #' cov1 <- Covariance$new(
                     #'   data = df,
-                    #'   formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-                    #'   parameters = c(0.25,0.1)
+                    #'   formula = ~ (1|gr(cl)) + (1|gr(cl*t))
                     #' )
                     #' des <- Model$new(
                     #'   covariance = cov1,
-                    #'   mean.function = mf1,
+                    #'   mean = mf1,
+                    #'   family = stats::gaussian(),
                     #'   var_par = 1
                     #' )
                     #' 
                     #' #alternatively we can pass the data directly to Model
-                    #' #here we will specify a cohort study
+                    #' #here we will specify a cohort study and provide parameter values
                     #' df <- nelder(~ind(20) * t(6))
                     #' df$int <- 0
                     #' df[df$t > 3, 'int'] <- 1
                     #' 
                     #' des <- Model$new(
-                    #' covariance = list(
-                    #'   data=df,
-                    #'   formula = ~ (1|gr(ind)*ar1(t)),
-                    #'   parameters = c(0.25,0.8)),
-                    #' mean.function = list(
-                    #'   formula = ~factor(t) + int - 1,
-                    #'   data=df,
-                    #'   parameters = rep(0,7),
-                    #'   family = stats::poisson()))
+                    #'   covariance = list(
+                    #'     formula = ~ (1|gr(ind)),
+                    #'     parameters = c(0.25)),
+                    #'   mean = list(
+                    #'     formula = ~ int,
+                    #'     parameters = c(1,0.5)),
+                    #'   data = df,
+                    #'   family = stats::poisson())
                     #'                   
                     #' #an example of a spatial grid with two time points
                     #' df <- nelder(~ (x(10)*y(10))*t(2))
-                    #' spt_design <- Model$new(covariance = list(data=df,
-                    #'                                            formula = ~(1|fexp(x,y)*ar1(t)),
-                    #'                                            parameters =c(0.2,0.1,0.8)),
-                    #'                          mean.function = list(data=df,
-                    #'                                               formula = ~ 1,
-                    #'                                               parameters = c(0.5),
-                    #'                                               family=stats::poisson())) 
+                    #' spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+                    #'                          mean = list(formula = ~ 1),
+                    #'                          data = df,
+                    #'                          family = stats::gaussian()) 
                     initialize = function(covariance,
-                                          mean.function,
+                                          mean,
+                                          data = NULL,
+                                          family = NULL,
                                           var_par = NULL,
                                           verbose=TRUE,
                                           skip.sigma = FALSE){
+                      
                       if(is(covariance,"R6")){
                         if(is(covariance,"Covariance")){
                           self$covariance <- covariance
+                          if(is.null(covariance$data)){
+                            if(is.null(data)){
+                              stop("No data specified in covariance object or call to function.")
+                            } else {
+                              self$covariance$data <- data
+                            }
+                          }
                         } else {
                           stop("covariance should be Covariance class or list of appropriate arguments")
                         }
                       } else if(is(covariance,"list")){
-                        if(is.null(covariance$eff_range))covariance$eff_range = NULL
+                        if(is.null(covariance$formula))stop("A formula must be specified for the covariance")
+                        if(is.null(covariance$data) & is.null(data))stop("No data specified in covariance list or call to function.")
                         self$covariance <- Covariance$new(
-                          formula= covariance$formula,
-                          data = covariance$data,
-                          parameters = covariance$parameters,
-                          eff_range = covariance$eff_range,
-                          verbose = verbose
+                          formula= covariance$formula
+                        )
+                        if(!is.null(covariance$parameters))self$covariance$parameters <- covariance$parameters
+                        if(!is.null(covariance$eff_range))self$covariance$eff_range <- covariance$eff_range
+                        if(is.null(covariance$data)){
+                          self$covariance$data <- data 
+                        } else {
+                          self$covariance$data <- covariance$data
+                        }
+                      }
+
+                      if(is(mean,"R6")){
+                        if(is(mean,"MeanFunction")){
+                          self$mean_function <- mean
+                          if(is.null(mean$data)){
+                            if(is.null(data)){
+                              stop("No data specified in MeanFunction object or call to function.")
+                            } else {
+                              self$mean_function$data <- data
+                            }
+                          }
+                          if(is.null(mean$family)){
+                            if(is.null(family)){
+                              stop("No family specified in MeanFunction object or call to function.")
+                            } else {
+                              self$mean_function$family <- family
+                            }
+                          }
+                          
+                        } else {
+                          stop("mean should be MeanFunction class or list of appropriate arguments")
+                        }
+                      } else if(is(mean,"list")){
+                        if(is.null(mean$formula))stop("A formula must be specified for the mean function.")
+                        if(is.null(mean$data) & is.null(data))stop("No data specified in mean list or call to function.")
+                        if(is.null(mean$family) & is.null(family))stop("No family specified in mean list or call to function.")
+                        self$mean_function <- MeanFunction$new(
+                          formula = mean$formula
                         )
                         
+                        if(!is.null(mean$parameters))self$mean_function$parameters <- mean$parameters
+                        if(is.null(mean$data)){
+                          self$mean_function$data <- data 
+                        } else {
+                          self$mean_function$data <- mean$data
+                        }
+                        if(is.null(mean$family)){
+                          self$mean_function$family <- family 
+                        } else {
+                          self$mean_function$family <- mean$family
+                        }
                       }
 
-                      if(is(mean.function,"R6")){
-                        if(is(mean.function,"MeanFunction")){
-                          self$mean_function <- mean.function
-                        } else {
-                          stop("mean.function should be MeanFunction class or list of appropriate arguments")
-                        }
-                      } else if(is(mean.function,"list")){
-                        if("random_function"%in%names(mean.function)){
-                          rfunc <- mean.function$random_function
-                          tpar <- mean.function$treat_var
-                        } else {
-                          rfunc <- NULL
-                          tpar <- NULL
-                        }
-                        self$mean_function <- MeanFunction$new(
-                          formula = mean.function$formula,
-                          data = mean.function$data,
-                          family = mean.function$family,
-                          parameters = mean.function$parameters,
-                          random_function = rfunc,
-                          treat_var = tpar,
-                          verbose = verbose
-                        )
+                      if(!is.null(var_par)){
+                        self$var_par <- var_par
+                      } else {
+                        self$var_par <- 1
                       }
-
-                      self$var_par <- var_par
-
+                      
+                      self$covariance$check(verbose=verbose)
+                      self$mean_function$check(verbose = verbose)
                       if(!skip.sigma)private$generate()
                       private$hash <- private$hash_do()
                     },
@@ -203,27 +241,20 @@ Model <- R6::R6Class("Model",
                     #' df$int <- 0
                     #' df[df$cl > 5, 'int'] <- 1
                     #' 
-                    #' mf1 <- MeanFunction$new(
-                    #'   formula = ~ factor(t) + int - 1,
-                    #'   data=df,
-                    #'   parameters = c(rep(0,5),0.6),
-                    #'   family = stats::gaussian()
-                    #' )
-                    #' cov1 <- Covariance$new(
-                    #'   data = df,
-                    #'   formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
-                    #'   parameters = c(0.25,0.1)
-                    #' )
                     #' des <- Model$new(
-                    #'   covariance = cov1,
-                    #'   mean.function = mf1,
+                    #'   covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
+                    #'   mean = list(formula = ~ factor(t) + int - 1),
+                    #'   data = df, 
+                    #'   family = stats::gaussian(),
                     #'   var_par = 1
                     #' )
                     #' des$n_cluster() ## returns two levels of 10 and 50
                     n_cluster = function(){
-                      gr_var <- apply(self$covariance$.__enclos_env__$private$D_data$func_def,1,
-                                      function(x)any(x==1))
-                      gr_count <- self$covariance$.__enclos_env__$private$D_data$N_dim
+                      # gr_var <- apply(self$covariance$.__enclos_env__$private$D_data$func_def,1,
+                      #                 function(x)any(x==1))
+                      n_blocks <- max(self$covariance$.__enclos_env__$private$D_data$cov[,1])
+                      gr_var <- sapply(0:n_blocks,function(i) any(self$covariance$.__enclos_env__$private$D_data$cov[self$covariance$.__enclos_env__$private$D_data$cov[,1]==i,3] == 1))
+                      gr_count <- self$covariance$.__enclos_env__$private$D_data$cov[!duplicated(self$covariance$.__enclos_env__$private$D_data$cov[,1]),2]
                       flist <- rev(self$covariance$.__enclos_env__$private$flistvars)
                       gr_cov_var <- lapply(flist,function(x)x$rhs)
                       if(any(gr_var)){
@@ -279,21 +310,20 @@ Model <- R6::R6Class("Model",
                     #' df[df$cl > 5, 'int'] <- 1
                     #' des <- Model$new(
                     #'   covariance = list(
-                    #'     data = df,
                     #'     formula = ~ (1|gr(cl)*ar1(t)),
                     #'     parameters = c(0.25,0.8)),
-                    #'   mean.function = list(
+                    #'   mean = list(
                     #'     formula = ~ factor(t) + int - 1,
-                    #'     data=df,
-                    #'     parameters = c(rep(0,5),0.6),
-                    #'     family = stats::binomial())
+                    #'     parameters = c(rep(0,5),0.6)),
+                    #'   data = df,
+                    #'   family = stats::binomial()
                     #' )
                     #' ysim <- des$sim_data()
                     sim_data = function(type = "y"){
-                      z <- stats::rnorm(nrow(self$covariance$D))
-                      L <- blockMat(self$covariance$get_chol_D())
-                      re <- L%*%matrix(z,ncol=1)
-                      mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + as.matrix(self$covariance$Z%*%re)
+                      re <- do.call(sample_re,append(self$covariance$get_D_data(),
+                                                     list(eff_range = self$covariance$eff_range,
+                                                          gamma = self$covariance$parameters)))
+                      mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + c(as.matrix(self$covariance$Z)%*%re)
                       
                       f <- self$mean_function$family
                       if(f[1]=="poisson"){
@@ -357,14 +387,13 @@ Model <- R6::R6Class("Model",
                     #' df[df$cl > 5, 'int'] <- 1
                     #' des <- Model$new(
                     #'   covariance = list(
-                    #'     data = df,
                     #'     formula = ~ (1|gr(cl)*ar1(t)),
                     #'     parameters = c(0.25,0.8)),
-                    #'   mean.function = list(
+                    #'   mean = list(
                     #'     formula = ~ factor(t) + int - 1,
-                    #'     data=df,
-                    #'     parameters = c(rep(0,5),0.6),
-                    #'     family = stats::binomial())
+                    #'     parameters = c(rep(0,5),0.6)),
+                    #'   data = df, 
+                    #'   family = stats::binomial()
                     #' )
                     #' des$check() #does nothing
                     #' des$covariance$parameters <- c(0.1,0.9)
@@ -379,10 +408,83 @@ Model <- R6::R6Class("Model",
                       }
                     },
                     #' @description 
+                    #' Updates the parameters of the mean function and/or the covariance function
+                    #' 
+                    #' @details 
+                    #' Using `update_parameters()` is the preferred way of updating the parameters of the 
+                    #' mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`. 
+                    #' The function calls check functions to automatically update linked matrices with the new parameters.
+                    #' If using direct assignment, call `self$check()` afterwards.
+                    #' 
+                    #' @param mean.pars (Optional) Vector of new mean function parameters
+                    #' @param cov.pars (Optional) Vector of new covariance function(s) parameters
+                    #' @param verbose Logical indicating whether to provide more detailed feedback
+                    #' @examples
+                    #' df <- nelder(~(cl(10)*t(5)) > ind(10))
+                    #' df$int <- 0
+                    #' df[df$cl > 5, 'int'] <- 1
+                    #' des <- Model$new(
+                    #'   covariance = list(
+                    #'     formula = ~ (1|gr(cl)*ar1(t))),
+                    #'   mean = list(
+                    #'     formula = ~ factor(t) + int - 1),
+                    #'   data = df, 
+                    #'   family = stats::binomial()
+                    #' )
+                    #' des$update_parameters(cov.pars = c(0.1,0.9))
+                    update_parameters = function(mean.pars = NULL,
+                                                 cov.pars = NULL,
+                                                 verbose = FALSE){
+                      if(!is.null(mean.pars))self$mean_function$update_parameters(mean.pars,verbose)
+                      if(!is.null(cov.pars))self$covariance$update_parameters(cov.pars,verbose)
+                      self$check(verbose)
+                    },
+                    #' @description 
                     #' Generates the information matrix
                     #' @return A PxP matrix
                     information_matrix = function(){
                       Matrix::crossprod(self$mean_function$X,solve(self$Sigma))%*%self$mean_function$X
+                    },
+                    #' @description 
+                    #' Estimates the power of the design described by the model using the square root
+                    #' of the relevant element of the GLS variance matrix:
+                    #' 
+                    #'  \deqn{(X^T\Sigma^{-1}X)^{-1}}
+                    #'  
+                    #' Note that this is equivalent to using the "design effect" for many
+                    #' models.
+                    #' @param alpha Numeric between zero and one indicating the type I error rate. 
+                    #' Default of 0.05.
+                    #' @return A data frame describing the parameters, their values, expected standard
+                    #' errors and estimated power.
+                    #' @examples 
+                    #' df <- nelder(~(cl(10)*t(5)) > ind(10))
+                    #' df$int <- 0
+                    #' df[df$cl > 5, 'int'] <- 1
+                    #' des <- Model$new(
+                    #'   covariance = list(
+                    #'     formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+                    #'     parameters = c(0.25,0.1)),
+                    #'   mean = list(
+                    #'     formula = ~ factor(t) + int - 1,
+                    #'     parameters = c(rep(0,5),0.6)),
+                    #'   data = df, 
+                    #'   family = stats::gaussian(),
+                    #'   var_par = 1
+                    #' )
+                    #' des$power() #power of 0.90 for the int parameter
+                    power = function(alpha=0.05){
+                      self$check(verbose=FALSE)
+                      M <- self$information_matrix()
+                      v0 <- solve(M)
+                      v0 <- as.vector(sqrt(diag(v0)))
+                      pwr <- pnorm(self$mean_function$parameters/v0 - qnorm(1-alpha/2))
+                      res <- data.frame(Parameter = colnames(self$mean_function$X),
+                                        Value = self$mean_function$parameters,
+                                        SE = v0,
+                                        Power = pwr)
+                      print(res)
+                      return(invisible(res))
                     }
                   ),
                   private = list(

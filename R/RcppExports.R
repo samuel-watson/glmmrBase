@@ -3,42 +3,44 @@
 
 #' Generates the covariance matrix of the random effects
 #' 
-#' Generates the covariance matrix of the random effects from a sparse representation
-#' @param D_data Named list specifying the covariance matrix D. Usually the return from the member function `get_D_data()` of the 
-#' covariance class
-#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
-#' specified by `func_def`
+#' Generates the covariance matrix of the random effects from a sparse representation. Used internally in the Covariance class.
+#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of variables
+#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
+#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
+#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
+#' @param gamma Vector of parameters used to generate the matrix D. 
 #' @return A symmetric positive definite covariance matrix
-genD <- function(D_data, gamma) {
-    .Call(`_glmmrBase_genD`, D_data, gamma)
+genD <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_genD`, cov, data, eff_range, gamma)
 }
 
-#' Generates the cholesky decomposition covariance matrix of the random effects
+#' Generates the Cholesky decomposition covariance matrix of the random effects
 #' 
-#' Generates the covariance matrix of the random effects from a sparse representation
-#' @param D_data Named list specifying the covariance matrix D. Usually the return from the member function `get_D_data()` of the 
-#' covariance class
-#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
-#' specified by `func_def`
-#' @return A lower triangular matrix matrix
-genCholD <- function(D_data, gamma) {
-    .Call(`_glmmrBase_genCholD`, D_data, gamma)
+#' Generates the Cholesky Decomposition of the covariance matrix of the random effects. Used internally in the Covariance class.
+#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
+#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
+#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
+#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
+#' @param gamma Vector of parameters used to generate the matrix D. 
+#' @return A lower triangular matrix
+genCholD <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_genCholD`, cov, data, eff_range, gamma)
 }
 
-#' Returns log likelihood for a set of observations
+#' Generates a sample of random effects
 #' 
-#' Generates the covariance matrix of the random effects from a sparse representation
-#' @param D_data Named list specifying the covariance matrix D. Usually the return from the member function `get_D_data()` of the 
-#' covariance class
-#' @param gamma Vector of covariance parameters specified in order they appear column wise in the functions 
-#' specified by `func_def`
-#' @param u A realisation of the random effects
-#' @return A lower triangular matrix matrix
-loglikD <- function(D_data, gamma, u) {
-    .Call(`_glmmrBase_loglikD`, D_data, gamma, u)
+#' Generates a sample of random effects from the specified covariance matrix.
+#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
+#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
+#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
+#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
+#' @param gamma Vector of parameters used to generate the matrix D. 
+#' @return A lower triangular matrix
+sample_re <- function(cov, data, eff_range, gamma) {
+    .Call(`_glmmrBase_sample_re`, cov, data, eff_range, gamma)
 }
 
-#' Generates the derivative of the link function with respect to the mean
+#' Generates the derivative of the link function with respect to the mean. Used internally in the Model function class.
 #' 
 #' @param xb Vector with mean function value evaluated at fitted model parameters
 #' @param family String declaring model family
@@ -46,15 +48,5 @@ loglikD <- function(D_data, gamma, u) {
 #' @return Vector of derivative values
 gen_dhdmu <- function(xb, family, link) {
     .Call(`_glmmrBase_gen_dhdmu`, xb, family, link)
-}
-
-#' Combines a field of matrices into a block diagonal matrix
-#' 
-#' Combines a field of matrices into a block diagonal matrix. Used on
-#' the output of `genD`
-#' @param matfield A field of matrices
-#' @return A block diagonal matrix
-blockMat <- function(matfield) {
-    .Call(`_glmmrBase_blockMat`, matfield)
 }
 

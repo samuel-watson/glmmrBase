@@ -29,7 +29,18 @@ are fixed effects for each time period. The formula specification for this would
 where `int` is the name of the variable indicating the treatment.
 
 One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
-by first-order approximation.
+by first-order approximation. 
+
+If not all of `formula`, `data`, `family`, and `parameters` are not specified then the linked matrices 
+are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
+If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+parameters is automatic if using the `update_parameters()` member function.
+
+
+Using `update_parameters()` is the preferred way of updating the parameters of the 
+mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+The function calls check functions to automatically update linked matrices with the new parameters.
+If using direct assignment, call `self$check()` afterwards.
 }
 \examples{
 
@@ -147,10 +158,10 @@ to identify where to replace allocation when randomiser is used.}
 \item \href{#method-MeanFunction-check}{\code{MeanFunction$check()}}
 \item \href{#method-MeanFunction-new}{\code{MeanFunction$new()}}
 \item \href{#method-MeanFunction-print}{\code{MeanFunction$print()}}
+\item \href{#method-MeanFunction-update_parameters}{\code{MeanFunction$update_parameters()}}
 \item \href{#method-MeanFunction-colnames}{\code{MeanFunction$colnames()}}
 \item \href{#method-MeanFunction-subset_rows}{\code{MeanFunction$subset_rows()}}
 \item \href{#method-MeanFunction-subset_cols}{\code{MeanFunction$subset_cols()}}
-\item \href{#method-MeanFunction-rerandomise}{\code{MeanFunction$rerandomise()}}
 \item \href{#method-MeanFunction-clone}{\code{MeanFunction$clone()}}
 }
 }
@@ -237,12 +248,10 @@ Create a new MeanFunction object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{MeanFunction$new(
   formula,
-  data,
-  family,
-  parameters,
-  verbose = FALSE,
-  random_function = NULL,
-  treat_var = NULL
+  data = NULL,
+  family = NULL,
+  parameters = NULL,
+  verbose = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -251,20 +260,14 @@ Create a new MeanFunction object
 \describe{
 \item{\code{formula}}{A \link[stats]{formula} object that describes the mean function, see Details}
 
-\item{\code{data}}{A data frame containing the covariates in the model, named in the model formula}
+\item{\code{data}}{(Optional) A data frame containing the covariates in the model, named in the model formula}
 
-\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}}
+\item{\code{family}}{(Optional) A family object expressing the distribution and link function of the model, see \link[stats]{family}}
 
-\item{\code{parameters}}{A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations}
+\item{\code{parameters}}{(Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
+If the parameters are not specified then they are initialised to 0.}
 
 \item{\code{verbose}}{Logical indicating whether to report detailed output}
-
-\item{\code{random_function}}{A string naming a function in the global environment that produces a vector of data describing a new
-treatment allocation in an experimental model. When used, the output of this function replaces the column of data named by
-`treat_var`}
-
-\item{\code{treat_var}}{The name of a column in data (or the name to give a new column) that a random treatment allocation generated
-by `random_function` replaces.}
 }
 \if{html}{\out{</div>}}
 }
@@ -300,6 +303,25 @@ Prints details about the object
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{ignored}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MeanFunction-update_parameters"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-update_parameters}{}}}
+\subsection{Method \code{update_parameters()}}{
+Updates the model parameters
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$update_parameters(parameters, verbose = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{parameters}}{A vector of parameters for the mean function.}
+
+\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
 \if{html}{\out{</div>}}
 }
@@ -416,29 +438,6 @@ mf1$subset_cols(1:2)
 
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MeanFunction-rerandomise"></a>}}
-\if{latex}{\out{\hypertarget{method-MeanFunction-rerandomise}{}}}
-\subsection{Method \code{rerandomise()}}{
-Generates a new random allocation
-
-If a randomising function has been provided then a new random allocation will
-be generated, and will replace the exisitng data at `treat_var` in the X matrix
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$rerandomise()}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{ignored}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Nothing is returned, the X matrix is updated
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MeanFunction-clone"></a>}}

@@ -125,7 +125,7 @@ parallel_crt <-  function(J,
       formula = f1,
       parameters = pars
     ),
-    mean.function = list(
+    mean = list(
       formula = "~ factor(t) + int - 1",
       data = df,
       family = family,
