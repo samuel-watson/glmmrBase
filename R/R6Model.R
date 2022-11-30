@@ -383,7 +383,7 @@ Model <- R6::R6Class("Model",
                            if(f[2]=="logit"){
                              if(is.null(self$var_par))stop("For beta(link='logit') provide var_par")
                              logitxb <- exp(mu)/(1+exp(mu))
-                             y <- rbeta(self$n(),logitxb*var_par,(1-logitxb)*var_par)
+                             y <- rbeta(self$n(),logitxb*self$var_par,(1-logitxb)*self$var_par)
                            }
                          }
                          
@@ -524,7 +524,7 @@ Model <- R6::R6Class("Model",
                                        Xb,
                                        var_par=NULL){
                          # assume random effects value is at zero
-                         if(!family[[1]]%in%c("poisson","binomial","gaussian","gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
+                         if(!family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                          
                          wdiag <- gen_dhdmu(c(Xb),
                                             family=family[[1]],
@@ -532,13 +532,13 @@ Model <- R6::R6Class("Model",
                          
                          if(family[[1]] == "gaussian"){
                            wdiag <- var_par * var_par * wdiag
-                         } else if(family[[1]] == "gamma"){
+                         } else if(family[[1]] == "Gamma"){
                            wdiag <- wdiag/var_par
                          } else if(family[[1]] == "beta"){
                            wdiag <- wdiag*(1+var_par)
                          }
                          
-                         W <- diag(drop(wdiag))
+                         W <- diag(1/drop(wdiag))
                          private$W <- Matrix::Matrix(W)
                        },
                        genS = function(D,Z,W,update=TRUE){

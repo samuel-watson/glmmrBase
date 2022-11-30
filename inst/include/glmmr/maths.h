@@ -93,9 +93,9 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
     {"binomialprobit",6},
     {"gaussianidentity",7},
     {"gaussianlog",8},
-    {"gammalog",9},
-    {"gammainverse",10},
-    {"gammaidentity",11},
+    {"Gammalog",9},
+    {"Gammainverse",10},
+    {"Gammaidentity",11},
     {"betalogit",12}
   };
   
