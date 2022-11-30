@@ -12,6 +12,7 @@ Description: Specification of generalised linear mixed models using the 'R6' obj
 License: GPL (>= 2)
 Imports: 
     methods,
+    digest,
     Rcpp (>= 1.0.7),
     R6
 LinkingTo: 
