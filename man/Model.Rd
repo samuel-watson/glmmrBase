@@ -310,7 +310,8 @@ object, or as a member of the list of arguments to both `covariance` and `mean`.
 
 \item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This 
 argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
-objects, or as members of the list of arguments to `mean`.}
+objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial}, 
+\link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 

@@ -92,7 +92,11 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
     {"binomialidentity",5},
     {"binomialprobit",6},
     {"gaussianidentity",7},
-    {"gaussianlog",8}
+    {"gaussianlog",8},
+    {"gammalog",9},
+    {"gammainverse",10},
+    {"gammaidentity",11},
+    {"betalogit",12}
   };
   
   switch (string_to_case.at(family + link)) {
@@ -136,6 +140,28 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1/exp(xb(i));
     }
+    break;
+  case 9:
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = 1.0;
+    }
+    break;
+  case 10:
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = 1/(xb(i)*xb(i));
+    }
+    break;
+  case 11:
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = (xb(i)*xb(i));
+    }
+    break;
+  case 12:
+    p = mod_inv_func(xb, "logit");
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = 1/(p(i)*(1.0 - p(i)));
+    }
+    break;
   }
   
   return wdiag;
