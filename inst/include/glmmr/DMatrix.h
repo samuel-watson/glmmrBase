@@ -2,12 +2,8 @@
 #define DMATRIX_H
 
 #include <cmath> 
-#include <omp.h>
-//include <Eigen/Dense>
-//#include <Eigen/Core>
 #include <unordered_map>
 #include <RcppEigen.h>
-//#include <Rcpp.h>
 
 #include "DData.h"
 #include "maths.h"

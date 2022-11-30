@@ -4,11 +4,9 @@
 #define _USE_MATH_DEFINES
 
 #include <cmath> 
-//#include <Eigen/Dense>
 #include <unordered_map>
 #include <RcppEigen.h>
 #include "algo.h"
-//#include <Rcpp.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 

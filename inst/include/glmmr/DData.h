@@ -1,13 +1,8 @@
 #ifndef DDATA_H
 #define DDATA_H
 
-//#include <Eigen/Dense>
 #include <RcppEigen.h>
 //#include <Rcpp.h>
-
-// class to hold data that describes how to construct the covariance matrix
-// option to add a constructor to generate these data from a formula and data but requires 
-// parsing character string which I can't be bothered to do in c++!
 
 // [[Rcpp::depends(RcppEigen)]]
 
