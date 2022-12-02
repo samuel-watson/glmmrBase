@@ -1,4 +1,4 @@
-[![cran version](http://www.r-pkg.org/badges/version/glmmrBase)](https://cran.r-project.org/web/packages/glmmrBase)
+[![cran version](http://www.r-pkg.org/badges/version/glmmrBase)](  https://CRAN.R-project.org/package=glmmrBase)
 
 # glmmrBase
 R package to support the specification of generalised linear mixed models using the R6 object-orientated class system. 
