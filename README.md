@@ -1,6 +1,7 @@
 [![cran version](http://www.r-pkg.org/badges/version/glmmrBase)](  https://CRAN.R-project.org/package=glmmrBase)
 
 # glmmrBase
+(Version 0.2.2)
 R package to support the specification of generalised linear mixed models using the R6 object-orientated class system. 
 
 ## Generalised linear mixed models
@@ -40,7 +41,7 @@ order of evaluation.
 
 ## Specifying covariance
 The specification of a covariance object requires three inputs: a formula, data, and parameters. A new instance of each class can be generated with the 
-`$new()` function, for example `Covariance\$new(...)`. 
+`$new()` function, for example `Covariance$new(...)`. 
 
 A covariance function is specified as an additive formula made up of components with structure `(1|f(j))`. The left side of the vertical bar specifies the 
 covariates in the model that have a random effects structure. The right side of the vertical bar specify the covariance function `f` for that term using variable 
@@ -82,7 +83,7 @@ Parameters are provided to the covariance function as a vector. The covariance f
 required to be provided to generate the matrix $D$ and related objects for analyses and which serve as starting values for model fitting. The elements of the 
 vector correspond to each of the functions in the covariance formula in the order they are written.
 
-A new covariance object can then be created as such
+A full call to create a new covariance object is:
 
 ```
 R> df <- nelder(~ (j(10)* t(5)) > ind(10))
@@ -91,7 +92,7 @@ R>                       parameters = c(0.05,0.8),
 R>                       data= df)
 ```
 
-where a compactly supported function is used, then the effective range parameters should be provided in the order the function appears in the formula.
+in this call, the `parameters` are optional, and if provided as a list of arguments to a `Model` object (see below), then the `data` argument is also optional. A compactly supported function is used, then the effective range parameters should be provided in the order the function appears in the formula.
 
 ```
 R> cov <- Covariance$new(formula = ~(1|prodwm(x,y)),
@@ -110,18 +111,59 @@ R>                        parameters = rep(0,6),
 R>                        family = gaussian())
 ```
 
+As before, the `parameters`, `data`, and `family` are optional and can instead be provided directly to the `Model` call below.
 Note that `factor` in this function does not drop one level, unlike standard R formulae, so removing the intercept is required to prevent a collinearity problem. 
 
 ## Model specification
-A model is simply a covariance object and a mean function object:
+A model can be created by specifying a `Covariance` and `MeanFunction` object:
 ```
 R> model <- Model$new(covariance = cov,
-R>                   mean.function = mf,
-R>                  var_par = 1)
+R>                    mean = mf,
+R>                    var_par = 1)
 ```
+Alternatively, we can provide a list of arguments to the `covariance` and `mean` arguments:
+```
+R> model <- Model$new(covariance = list(formula = ~(1|gr(j)*ar1(t))),
+R>                    mean = list(formula = ~ factor(t)+ int - 1),
+R>                    data = df,
+R>                    family = gaussian(),
+R>                    var_par = 1)
+```
+where, as required, parameters can be supplied to covariance and mean function argument lists. 
+
 For Gaussian models, and other distributions requiring an additional scale parameter $\phi$, one must also specify the option `var_par` which is the 
 conditional variance $\phi = \sigma$ at the individual level. The default value is 1. Alternatively, one can specify a design by providing the list of 
 arguments directly to `covariance` and `mean.function` instead of model objects.
+
+## Supported Families
+The package and associated packages (`glmmrMCML` and `glmmrOptim`) currently support the following families and link functions
+| Family | Link functions          |
+|--------|-------------------------|
+| Gaussian | Identity, log         |
+| Binomial | Logit, log, identity  |
+| Poisson  | Log, Identity         |
+| Gamma    | Log, Inverse, Identity|
+| Beta     | Logit                 |
+
+The Beta family is provided by the package function `Beta()`, which generates a barebones list specifying the family and link. We use a mean-variance parameterisation of the Beta family. The likelihood is:
+
+$$
+f(y_i | \mu_i, \phi) = \frac{y_i^{\mu_i\phi - 1}(1-y_i)^{(1-\mu_i)\phi - 1}}{B(\mu_i\phi, (1-\mu_i)\phi)}
+$$
+
+where $B()$ is the Beta function, and we use logit link
+
+$$
+\log\left( \frac{\mu_i}{1-\mu_i} \right) = \mathbf{x}_i\beta + \mathbf{z}_i \mathbf{u}
+$$
+
+We similarly use a mean-variance parameterisation for the Gamma regression function:
+
+$$
+f(y_i | \mu_i, \nu) = \frac{1}{\Gamma(\nu)}\left( \frac{\nu y_i}{\mu_i} \right)^\nu \exp \left( -\frac{\nu y_i}{\mu_i} \right) \frac{1}{y}
+$$
+
+where we also provide logit, inverse, and identity link functions for the specification of $\mu_i$.
 
 ## Accessing computed elements
 Each class holds associated matrices and has member functions to compute basic summaries and analyses. The `Matrix` package is used
