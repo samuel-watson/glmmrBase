@@ -9,10 +9,6 @@
 #include "maths.h"
 #include "algo.h"
 
-// #ifdef _OPENMP
-// #include <omp.h>
-// #endif
-
 // [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
@@ -55,7 +51,6 @@ public:
   Eigen::MatrixXd genSubD() {
     Eigen::MatrixXd D_ = Eigen::MatrixXd::Zero(n_, n_);
     if (data_->check_all_func_def()) {
-//#pragma omp parallel for // slower in parallel!
       for (int i = 0; i < (n_ - 1); i++) {
         for (int j = i + 1; j < n_; j++) {
           double val = get_val(i, j);
@@ -65,7 +60,6 @@ public:
       }
     }
     
-//#pragma omp parallel for
     for (int i = 0; i < n_; i++) {
       double val = get_val(i, i);
       D_(i, i) = val;

@@ -538,7 +538,7 @@ Model <- R6::R6Class("Model",
                            wdiag <- wdiag*(1+var_par)
                          }
                          
-                         W <- diag(1/drop(wdiag))
+                         W <- diag(drop(wdiag))
                          private$W <- Matrix::Matrix(W)
                        },
                        genS = function(D,Z,W,update=TRUE){
