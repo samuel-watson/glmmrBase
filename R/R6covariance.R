@@ -328,11 +328,10 @@ Covariance <- R6::R6Class("Covariance",
                           }
                           D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
-                          
                           # split into sub blocks
                           for(b in 1:B){
                             if(any(D_data$cov[3,D_data$cov[1,]==b] == 1)&!all(D_data$cov[3,D_data$cov[1,]==b] == 1)){
-                              #col1 <- which(D_data$cov[3,D_data$cov[1,]==b]==1)
+                             #col1 <- which(D_data$cov[3,D_data$cov[1,]==b]==1)
                               col1 <- which(D_data$cov[1,]==b & D_data$cov[3,] == 1)
                              #get range of data 
                               nvar <- D_data$cov[2,]*D_data$cov[4,]
@@ -349,10 +348,11 @@ Covariance <- R6::R6Class("Covariance",
                               newcov <- newcov[,rep(1:ncol(newcov),nrow(tabgr))]
                               newcov[2,] <- tabgr$Freq
                               newcov[1,] <- rep(1:nrow(tabgr),each=nfunc)
-                              D_data$cov[1,D_data$cov[1,]>b] <-  D_data$cov[1,D_data$cov[1,]>b] + nrow(tabgr) - 1
-                              D_data$cov <- matrix(c(as.vector(D_data$cov[D_data$cov[1,]>b,]),
-                                                   as.vector(newcov),
-                                                   as.vector(D_data$cov[D_data$cov[1,]>b,])),nrow=5)
+                              newcov[1,] <- newcov[1,] + b - 1
+                              if(any(D_data$cov[1,]>b))D_data$cov[1,D_data$cov[1,]>b] <-  D_data$cov[1,D_data$cov[1,]>b] + nrow(tabgr) + b - 1
+                              D_data$cov <-  matrix(c(as.vector(D_data$cov[,D_data$cov[1,]<b]),
+                                                      as.vector(newcov),
+                                                      as.vector(D_data$cov[,D_data$cov[1,]>b])),nrow=5)
                               
                               #reorder data
                               #if multiple variables reorder
@@ -382,6 +382,7 @@ Covariance <- R6::R6Class("Covariance",
                           private$Zlist <- Zlist
                           private$flist <- flist
                           private$flistlabs <- flistlabs
+                          ddata <<- D_data
                           private$genD()
                           private$flistvars <- flistvars
 

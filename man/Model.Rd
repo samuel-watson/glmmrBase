@@ -674,7 +674,7 @@ of the relevant element of the GLS variance matrix:
 Note that this is equivalent to using the "design effect" for many
 models.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$power(alpha = 0.05)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$power(alpha = 0.05, two.sided = TRUE, alternative = "pos")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -682,6 +682,11 @@ models.
 \describe{
 \item{\code{alpha}}{Numeric between zero and one indicating the type I error rate. 
 Default of 0.05.}
+
+\item{\code{two.sided}}{Logical indicating whether to use a two sided test}
+
+\item{\code{alternative}}{For a one-sided test whether the alternative hypothesis is that the
+parameter is positive "pos" or negative "neg"}
 }
 \if{html}{\out{</div>}}
 }

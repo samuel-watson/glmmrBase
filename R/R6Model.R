@@ -472,6 +472,9 @@ Model <- R6::R6Class("Model",
                        #' models.
                        #' @param alpha Numeric between zero and one indicating the type I error rate. 
                        #' Default of 0.05.
+                       #' @param two.sided Logical indicating whether to use a two sided test
+                       #' @param alternative For a one-sided test whether the alternative hypothesis is that the
+                       #' parameter is positive "pos" or negative "neg"
                        #' @return A data frame describing the parameters, their values, expected standard
                        #' errors and estimated power.
                        #' @examples 
@@ -490,12 +493,21 @@ Model <- R6::R6Class("Model",
                        #'   var_par = 1
                        #' )
                        #' des$power() #power of 0.90 for the int parameter
-                       power = function(alpha=0.05){
+                       power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
                          self$check(verbose=FALSE)
                          M <- self$information_matrix()
                          v0 <- solve(M)
                          v0 <- as.vector(sqrt(diag(v0)))
-                         pwr <- pnorm(self$mean_function$parameters/v0 - qnorm(1-alpha/2))
+                         if(two.sided){
+                           pwr <- pnorm(abs(self$mean_function$parameters/v0) - qnorm(1-alpha/2))
+                         } else {
+                           if(alternative == "pos"){
+                             pwr <- pnorm(self$mean_function$parameters/v0 - qnorm(1-alpha/2))
+                           } else {
+                             pwr <- pnorm(-self$mean_function$parameters/v0 - qnorm(1-alpha/2))
+                           }
+                         }
+                         
                          res <- data.frame(Parameter = colnames(self$mean_function$X),
                                            Value = self$mean_function$parameters,
                                            SE = v0,
