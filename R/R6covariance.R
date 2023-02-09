@@ -326,7 +326,8 @@ Covariance <- R6::R6Class("Covariance",
                             D_data$cov[4,D_data$cov[1,]==b] <- rev(unname(table(fvar[[b]]))) #number of variables
                             D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]] # number of parameters
                           }
-                          D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
+                          D_data$cov[5, ] <- cumsum(D_data$cov[5,] - D_data$cov[5,1])
+                          #D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
                           # split into sub blocks
                           for(b in 1:B){

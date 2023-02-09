@@ -22,21 +22,6 @@ Eigen::MatrixXd genD(const Eigen::ArrayXXi &cov,
   return(DBlocks);
 }
 
-// arma::field<arma::mat> genD(const arma::uword &B,
-//                                    const arma::uvec &N_dim,
-//                                    const arma::uvec &N_func,
-//                                    const arma::umat &func_def,
-//                                    const arma::umat &N_var_func,
-//                                    const arma::ucube &col_id,
-//                                    const arma::umat &N_par,
-//                                    const arma::cube &cov_data,
-//                                    const arma::vec &gamma){
-//   
-//   DMatrix dmat(B,N_dim,N_func,func_def,N_var_func,col_id,N_par,cov_data,gamma);
-//   arma::field<arma::mat> DBlocks = dmat.genD();
-//   return(DBlocks);
-// }
-
 //' Generates the Cholesky decomposition covariance matrix of the random effects
 //' 
 //' Generates the Cholesky Decomposition of the covariance matrix of the random effects. Used internally in the Covariance class.

@@ -28,6 +28,13 @@ namespace glmmr {
         subdata(0);
       }
       
+      DData(const DData& ddata):
+        cov_(ddata.cov_), data_(ddata.data_), eff_range_(ddata.eff_range_) {
+        b_ = 0;
+        B_ = ddata.cov_.col(0).maxCoeff() + 1;
+        subdata(0);
+      }
+      
       void subdata(int b){
         // find block numbers
         int start = 0;

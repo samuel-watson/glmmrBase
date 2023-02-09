@@ -96,7 +96,7 @@ public:
         val = val * pow(gamma_(data_->par_index(k)), dist);
         break;
       case 4:
-        val = val * gamma_(data_->par_index(k)) * exp(-1 * dist * dist / (gamma_(data_->par_index(k) + 1) * gamma_(data_->par_index(k) + 1)));
+        val = val * gamma_(data_->par_index(k)) * gamma_(data_->par_index(k)) * exp(-1 * dist * dist / (gamma_(data_->par_index(k) + 1) * gamma_(data_->par_index(k) + 1)));
         break;
       case 5:
         {
@@ -203,7 +203,7 @@ public:
           break;
         }
       case 13:
-        val = val * gamma_(data_->par_index(k)) * exp(-1 * dist / gamma_(data_->par_index(k) + 1));
+        val = val * gamma_(data_->par_index(k)) * gamma_(data_->par_index(k)) * exp(-1 * dist / gamma_(data_->par_index(k) + 1));
         break;
       case 14:
         val = val * exp(-1 * dist * dist / (gamma_(data_->par_index(k)) * gamma_(data_->par_index(k))));
@@ -265,6 +265,10 @@ class DMatrix {
     std::vector<double> par2 = gamma;
     gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
   }
+  
+  DMatrix(const DMatrix& dmat) :
+    gamma_(dmat.gamma_),
+    data_(dmat.data_) {}
   
   Eigen::MatrixXd gen_block_mat(int b,
                                 bool chol = false,
