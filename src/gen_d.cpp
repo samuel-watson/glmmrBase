@@ -16,9 +16,8 @@ Eigen::MatrixXd genD(const Eigen::ArrayXXi &cov,
                      const Eigen::ArrayXd &data,
                      const Eigen::ArrayXd &eff_range,
                      const Eigen::VectorXd& gamma) {
-  glmmr::DData dat(cov,data,eff_range);
-  glmmr::DMatrix dmat(&dat, gamma);
-  Eigen::MatrixXd DBlocks = dmat.genD(0);
+  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
+  Eigen::MatrixXd DBlocks = dmat.genD();
   return(DBlocks);
 }
 
@@ -36,10 +35,8 @@ Eigen::MatrixXd genCholD(const Eigen::ArrayXXi &cov,
                          const Eigen::ArrayXd &data,
                          const Eigen::ArrayXd &eff_range,
                          const Eigen::VectorXd& gamma) {
-  
-  glmmr::DData dat(cov,data,eff_range);
-  glmmr::DMatrix dmat(&dat, gamma);
-  Eigen::MatrixXd DBlocks = dmat.genD(0, true, false);
+  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
+  Eigen::MatrixXd DBlocks = dmat.genD(true, false);
   return(DBlocks);
 }
 
@@ -57,8 +54,7 @@ Eigen::VectorXd sample_re(const Eigen::ArrayXXi &cov,
                           const Eigen::ArrayXd &data,
                           const Eigen::ArrayXd &eff_range,
                           const Eigen::VectorXd& gamma){
-  glmmr::DData dat(cov,data,eff_range);
-  glmmr::DMatrix dmat(&dat, gamma);
+  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
   Eigen::VectorXd samps = dmat.sim_re();
   return samps;
 }

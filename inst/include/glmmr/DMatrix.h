@@ -242,25 +242,31 @@ class DMatrix {
   public:
   
   Eigen::VectorXd gamma_;
-  DData* data_;
+  DData data_;
   
-  DMatrix(DData* data,
+  DMatrix(const Eigen::ArrayXXi &cov,
+          const Eigen::ArrayXd &data,
+          const Eigen::ArrayXd &eff_range,
           const Eigen::VectorXd& gamma) :
   gamma_(gamma),
-  data_(data) {}
+  data_(cov,data,eff_range) {}
   
-  DMatrix(DData* data,
+  DMatrix(const Eigen::ArrayXXi &cov,
+          const Eigen::ArrayXd &data,
+          const Eigen::ArrayXd &eff_range,
           const Eigen::ArrayXd& gamma) :
     gamma_(gamma.size()),
-    data_(data) 
+    data_(cov,data,eff_range) 
   {
     gamma_ = gamma.matrix();  
   }
   
-  DMatrix(DData* data,
+  DMatrix(const Eigen::ArrayXXi &cov,
+          const Eigen::ArrayXd &data,
+          const Eigen::ArrayXd &eff_range,
           const std::vector<double>& gamma) :
     gamma_(gamma.size()),
-    data_(data) 
+    data_(cov,data,eff_range) 
   {
     std::vector<double> par2 = gamma;
     gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
@@ -276,8 +282,8 @@ class DMatrix {
   {
     Eigen::MatrixXd bblock;
     DSubMatrix* dblock;
-    data_->subdata(b);
-    dblock = new DSubMatrix(b, data_, gamma_);
+    data_.subdata(b);
+    dblock = new DSubMatrix(b, &data_, gamma_);
     
     if (!chol)
     {
@@ -309,37 +315,37 @@ class DMatrix {
   
   int B()
   {
-    return data_->B_;
+    return data_.B_;
   }
   
   Eigen::VectorXd sim_re(){
-    Eigen::VectorXd samps(data_->N());
+    Eigen::VectorXd samps(data_.N());
     int idx = 0;
-    for(int i=0; i< data_->B_; i++){
-      data_->subdata(i);
+    for(int i=0; i< data_.B_; i++){
+      data_.subdata(i);
       Eigen::MatrixXd L = gen_block_mat(i,true,false);
-      Rcpp::NumericVector z = Rcpp::rnorm(data_->n_dim());
+      Rcpp::NumericVector z = Rcpp::rnorm(data_.n_dim());
       Eigen::Map<Eigen::VectorXd> Z(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(z));
-      samps.segment(idx,data_->n_dim()) = L*Z;
-      idx += data_->n_dim();
+      samps.segment(idx,data_.n_dim()) = L*Z;
+      idx += data_.n_dim();
     }
     return samps;
   }
   
-  Eigen::MatrixXd genD(int b,
+  Eigen::MatrixXd genD_block(int b,
                        bool chol = false,
                        bool upper = false) {
-    if (b == data_->B_ - 1) {
+    if (b == data_.B_ - 1) {
       return gen_block_mat(b, chol, upper);
     }
     else {
       Eigen::MatrixXd mat1 = gen_block_mat(b, chol, upper);
       Eigen::MatrixXd mat2;
-      if (b == data_->B_ - 2) {
+      if (b == data_.B_ - 2) {
         mat2 = gen_block_mat(b + 1, chol, upper);
       }
       else {
-        mat2 = genD(b + 1, chol, upper);
+        mat2 = genD_block(b + 1, chol, upper);
       }
       int n1 = mat1.rows();
       int n2 = mat2.rows();
@@ -348,6 +354,11 @@ class DMatrix {
       dmat.block(n1, n1, n2, n2) = mat2;
       return dmat;
     }
+  }
+  
+  Eigen::MatrixXd genD(bool chol = false,
+                       bool upper = false){
+    return genD_block(0,chol,upper);
   }
   
 };
