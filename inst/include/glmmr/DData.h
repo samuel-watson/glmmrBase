@@ -110,6 +110,11 @@ namespace glmmr {
         return subcov_(k,2);
       }
       
+      int max_b_dim(){
+        int maxb = cov_.col(1).maxCoeff();
+        return maxb;
+      }
+      
       // k th function
       // p th variable
       double value(int k, int p, int i){
