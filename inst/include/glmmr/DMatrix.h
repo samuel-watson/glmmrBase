@@ -303,17 +303,20 @@ class DMatrix {
   void update_parameters(const Eigen::VectorXd& gamma)
   {
     gamma_ = gamma;
+    dblock_.gamma_ = gamma;
   }
   
   void update_parameters(const Eigen::ArrayXd& gamma)
   {
     gamma_ = gamma.matrix();
+    dblock_.gamma_ = gamma.matrix();
   }
   
   void update_parameters(const std::vector<double>& gamma)
   {
     std::vector<double> par2 = gamma;
     gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size()); 
+    dblock_.gamma_ = gamma_;
   }
   
   int B()
