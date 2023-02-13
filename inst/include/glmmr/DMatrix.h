@@ -15,42 +15,43 @@ namespace glmmr {
 
 class DSubMatrix {
 public:
-  int B_;
   int n_;
-  DData* data_;
+  DData& data_;
   Eigen::VectorXd gamma_;
   
-  DSubMatrix(int B,
-             DData* data,
+  DSubMatrix(DData& data,
              Eigen::VectorXd &gamma) :
-  B_(B), data_(data), gamma_(gamma) {
-    data_->subdata(B_);
-    n_ = data_->n_dim();
+  data_(data), gamma_(gamma) {
+    data_.subdata(0);
+    n_ = data_.n_dim();
   }
   
-  DSubMatrix(int B,
-             DData* data,
+  DSubMatrix(DData& data,
              Eigen::ArrayXd &gamma) :
-  B_(B), data_(data), gamma_(gamma.size()) {
+  data_(data), gamma_(gamma.size()) {
     gamma_ = gamma.matrix();
-    data_->subdata(B_);
-    n_ = data_->n_dim();
+    data_.subdata(0);
+    n_ = data_.n_dim();
   }
   
-  DSubMatrix(int B,
-             DData* data,
+  DSubMatrix(DData& data,
              const std::vector<double> &gamma) :
-    B_(B), data_(data), gamma_(gamma.size()) {
+    data_(data), gamma_(gamma.size()) {
     std::vector<double> par2 = gamma;
     gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
-    data_->subdata(B_);
-    n_ = data_->n_dim();
+    data_.subdata(0);
+    n_ = data_.n_dim();
+  }
+  
+  void set_block(int b){
+    data_.subdata(b);
+    n_ = data_.n_dim();
   }
   
   // generate and return the submatrix D
   Eigen::MatrixXd genSubD() {
     Eigen::MatrixXd D_ = Eigen::MatrixXd::Zero(n_, n_);
-    if (data_->check_all_func_def()) {
+    if (data_.check_all_func_def()) {
       for (int i = 0; i < (n_ - 1); i++) {
         for (int j = i + 1; j < n_; j++) {
           double val = get_val(i, j);
@@ -70,93 +71,93 @@ public:
   // generate the value of an element of the covariance matrix
   double get_val(int i, int j) {
     double val = 1;
-    for (int k = 0; k < data_->n_func(); k++) {
+    for (int k = 0; k < data_.n_func(); k++) {
       double dist = 0;
       if (i != j) {
-        for (int p = 0; p < data_->n_var_func(k); p++) {
-          double diff = data_->value(k,p,i) - data_->value(k,p,j);
+        for (int p = 0; p < data_.n_var_func(k); p++) {
+          double diff = data_.value(k,p,i) - data_.value(k,p,j);
           dist += diff * diff;
         }
         dist = sqrt(dist);
       }
-      int mcase = data_->func_def(k);
+      int mcase = data_.func_def(k);
       switch (mcase) {
       case 1:
         if (dist == 0) {
-          val = val * gamma_(data_->par_index(k)) * gamma_(data_->par_index(k));
+          val = val * gamma_(data_.par_index(k)) * gamma_(data_.par_index(k));
         }
         else {
           val = 0;
         }
         break;
       case 2:
-        val = val * exp(-1 * dist / gamma_(data_->par_index(k)));
+        val = val * exp(-1 * dist / gamma_(data_.par_index(k)));
         break;
       case 3:
-        val = val * pow(gamma_(data_->par_index(k)), dist);
+        val = val * pow(gamma_(data_.par_index(k)), dist);
         break;
       case 4:
-        val = val * gamma_(data_->par_index(k)) * gamma_(data_->par_index(k)) * exp(-1 * dist * dist / (gamma_(data_->par_index(k) + 1) * gamma_(data_->par_index(k) + 1)));
+        val = val * gamma_(data_.par_index(k)) * gamma_(data_.par_index(k)) * exp(-1 * dist * dist / (gamma_(data_.par_index(k) + 1) * gamma_(data_.par_index(k) + 1)));
         break;
       case 5:
         {
-          double xr = sqrt(2 * gamma_(data_->par_index(k) + 1)) * dist / gamma_(data_->par_index(k));
+          double xr = sqrt(2 * gamma_(data_.par_index(k) + 1)) * dist / gamma_(data_.par_index(k));
           double ans = 1;
           if (xr != 0) {
-            if (gamma_(data_->par_index(k) + 1) == 0.5) {
+            if (gamma_(data_.par_index(k) + 1) == 0.5) {
               ans = exp(-xr);
             }
             else {
-              double cte = pow(2.0, -1 * (gamma_(data_->par_index(k) + 1) - 1)) / tgamma(gamma_(data_->par_index(k) + 1));
-              ans = cte * pow(xr, gamma_(data_->par_index(k) + 1)) * R::bessel_k(xr, gamma_(data_->par_index(k) + 1),1);
+              double cte = pow(2.0, -1 * (gamma_(data_.par_index(k) + 1) - 1)) / tgamma(gamma_(data_.par_index(k) + 1));
+              ans = cte * pow(xr, gamma_(data_.par_index(k) + 1)) * R::bessel_k(xr, gamma_(data_.par_index(k) + 1),1);
             }
           }
           val = val * ans;
           break;
         }
       case 6:
-        val = val * R::bessel_k(dist / gamma_(data_->par_index(k)), 1, 1);
+        val = val * R::bessel_k(dist / gamma_(data_.par_index(k)), 1, 1);
         break;
       case 7:
         //wend 0
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
           else {
-            val = val * gamma_(data_->par_index(k)) * pow((1 - pdist), gamma_(data_->par_index(k) + 1));
+            val = val * gamma_(data_.par_index(k)) * pow((1 - pdist), gamma_(data_.par_index(k) + 1));
           }
           break;
         }
       case 8:
         // wend 1
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
           else {
-            val = val * gamma_(data_->par_index(k)) * (1 + (1 + gamma_(data_->par_index(k) + 1)) * pdist) * pow((1 - pdist), gamma_(data_->par_index(k) + 1) + 1.0);
+            val = val * gamma_(data_.par_index(k)) * (1 + (1 + gamma_(data_.par_index(k) + 1)) * pdist) * pow((1 - pdist), gamma_(data_.par_index(k) + 1) + 1.0);
           }
           break;
         }
       case 9:
         // wend 2
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
           else {
-            val = val * gamma_(data_->par_index(k)) * (1 + (gamma_(data_->par_index(k) + 1) + 2) * pdist + 0.333 * ((gamma_(data_->par_index(k) + 1) + 2) * (gamma_(data_->par_index(k) + 1) + 2) - 1) * pdist * pdist) * pow((1 - pdist), gamma_(data_->par_index(k) + 1) + 2.0);
+            val = val * gamma_(data_.par_index(k)) * (1 + (gamma_(data_.par_index(k) + 1) + 2) * pdist + 0.333 * ((gamma_(data_.par_index(k) + 1) + 2) * (gamma_(data_.par_index(k) + 1) + 2) - 1) * pdist * pdist) * pow((1 - pdist), gamma_(data_.par_index(k) + 1) + 2.0);
           }
           break;
         }
       case 10:
         //prodwm
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
@@ -166,47 +167,47 @@ public:
               wm = 1;
             }
             else {
-              wm = (pow(2.0, 1 - gamma_(data_->par_index(k) + 1)) / tgamma(gamma_(data_->par_index(k) + 1))) * pow(pdist, gamma_(data_->par_index(k) + 1)) * R::bessel_k(pdist, gamma_(data_->par_index(k) + 1),1);
+              wm = (pow(2.0, 1 - gamma_(data_.par_index(k) + 1)) / tgamma(gamma_(data_.par_index(k) + 1))) * pow(pdist, gamma_(data_.par_index(k) + 1)) * R::bessel_k(pdist, gamma_(data_.par_index(k) + 1),1);
               
             }
             double poly = (1 + (11 / 2) * pdist + (117 / 12) * pdist * pdist) * pow(1 - pdist, (11 / 2));
-            val = val * gamma_(data_->par_index(k)) * wm * poly;
+            val = val * gamma_(data_.par_index(k)) * wm * poly;
           }
           break;
         }
       case 11:
         //prodcb
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
           else {
-            double cauc = pow((1 + pow(pdist, gamma_(data_->par_index(k) + 1))), -3);
+            double cauc = pow((1 + pow(pdist, gamma_(data_.par_index(k) + 1))), -3);
             double boh = (1 - pdist) * cos(M_PI * pdist) * (1 / M_PI) * sin(M_PI * pdist);
-            val = val * gamma_(data_->par_index(k)) * cauc * boh;
+            val = val * gamma_(data_.par_index(k)) * cauc * boh;
           }
           break;
         }
       case 12:
         //prodek
         {
-          double pdist = dist / data_->subeff_range_(k);
+          double pdist = dist / data_.subeff_range_(k);
           if (pdist >= 1) {
             val = 0;
           }
           else {
-            double pexp = exp(-1.0 * pow(pdist, gamma_(data_->par_index(k) + 1)));
+            double pexp = exp(-1.0 * pow(pdist, gamma_(data_.par_index(k) + 1)));
             double kan = (1 - pdist) * sin(2 * M_PI * pdist) / (2 * M_PI * pdist) + (1 / M_PI) * (1 - cos(2 * M_PI * pdist)) / (2 * M_PI * pdist);
-            val = val * gamma_(data_->par_index(k)) * pexp * kan;
+            val = val * gamma_(data_.par_index(k)) * pexp * kan;
           }
           break;
         }
       case 13:
-        val = val * gamma_(data_->par_index(k)) * gamma_(data_->par_index(k)) * exp(-1 * dist / gamma_(data_->par_index(k) + 1));
+        val = val * gamma_(data_.par_index(k)) * gamma_(data_.par_index(k)) * exp(-1 * dist / gamma_(data_.par_index(k) + 1));
         break;
       case 14:
-        val = val * exp(-1 * dist * dist / (gamma_(data_->par_index(k)) * gamma_(data_->par_index(k))));
+        val = val * exp(-1 * dist * dist / (gamma_(data_.par_index(k)) * gamma_(data_.par_index(k))));
       }
     }
     
@@ -243,20 +244,23 @@ class DMatrix {
   
   Eigen::VectorXd gamma_;
   DData data_;
+  DSubMatrix dblock_;
   
   DMatrix(const Eigen::ArrayXXi &cov,
           const Eigen::ArrayXd &data,
           const Eigen::ArrayXd &eff_range,
           const Eigen::VectorXd& gamma) :
   gamma_(gamma),
-  data_(cov,data,eff_range) {}
+  data_(cov,data,eff_range),
+  dblock_(data_,gamma_) {}
   
   DMatrix(const Eigen::ArrayXXi &cov,
           const Eigen::ArrayXd &data,
           const Eigen::ArrayXd &eff_range,
           const Eigen::ArrayXd& gamma) :
     gamma_(gamma.size()),
-    data_(cov,data,eff_range) 
+    data_(cov,data,eff_range) ,
+    dblock_(data_,gamma_)
   {
     gamma_ = gamma.matrix();  
   }
@@ -266,7 +270,8 @@ class DMatrix {
           const Eigen::ArrayXd &eff_range,
           const std::vector<double>& gamma) :
     gamma_(gamma.size()),
-    data_(cov,data,eff_range) 
+    data_(cov,data,eff_range) ,
+    dblock_(data_,gamma_)
   {
     std::vector<double> par2 = gamma;
     gamma_ = Eigen::Map<Eigen::VectorXd>(par2.data(),par2.size());
@@ -274,26 +279,24 @@ class DMatrix {
   
   DMatrix(const DMatrix& dmat) :
     gamma_(dmat.gamma_),
-    data_(dmat.data_) {}
+    data_(dmat.data_),
+    dblock_(data_,gamma_) {}
   
   Eigen::MatrixXd gen_block_mat(int b,
                                 bool chol = false,
                                 bool upper = false)
   {
     Eigen::MatrixXd bblock;
-    DSubMatrix* dblock;
-    data_.subdata(b);
-    dblock = new DSubMatrix(b, &data_, gamma_);
+    dblock_.set_block(b);
     
     if (!chol)
     {
-      bblock = dblock->genSubD();
+      bblock = dblock_.genSubD();
     }
     else
     {
-      bblock = dblock->genCholSubD(upper);
+      bblock = dblock_.genCholSubD(upper);
     }
-    delete dblock;
     return bblock;
   }
   
