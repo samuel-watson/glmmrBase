@@ -41,6 +41,9 @@ Model <- R6::R6Class("Model",
                        Sigma = NULL,
                        #' @field var_par Scale parameter required for some distributions (Gaussian, Gamma, Beta).
                        var_par = NULL,
+                       #' @field attenuate_parameters Logical indicating whether to use "attenuated parameters" when calculating the 
+                       #' approximation to the covariance matrix for generalised models.
+                       attenuate_parameters = TRUE,
                        #' @description 
                        #' Return predicted values based on the currently stored parameter values in `mean_function`
                        #' @param type One of either "`link`" for values on the scale of the link function, or "`response`" 
@@ -302,9 +305,11 @@ Model <- R6::R6Class("Model",
                        #'
                        #'Generates a single vector of outcome data based upon the 
                        #'specified GLMM design
-                       #'@param type Either 'y' to return just the outcome data, or 'data'
-                       #' to return a data frame with the simulated outcome data alongside the model data 
-                       #' @return Either a vector or a data frame
+                       #'@param type Either 'y' to return just the outcome data, 'data'
+                       #' to return a data frame with the simulated outcome data alongside the model data,
+                       #' or 'all', which will return a list with simulated outcomes y, matrices X and Z, 
+                       #' parameters beta, and the values of the simulated random effects.
+                       #' @return Either a vector, a data frame, or a list
                        #' @examples
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
@@ -388,6 +393,8 @@ Model <- R6::R6Class("Model",
                          }
                          
                          if(type=="data.frame"|type=="data")y <- cbind(y,self$mean_function$data)
+                         if(type=="all")y <- list(y = y, X = self$mean_function$X, beta = self$mean_function$parameters,
+                                                  Z = self$covariance$Z, u = re)
                          return(y)
                          
                        },
@@ -523,48 +530,53 @@ Model <- R6::R6Class("Model",
                          exp(x)/(1+exp(x))
                        },
                        generate = function(){
-                         # add check for var par with gaussian family
-                         
-                         private$genW(family = self$mean_function$family,
-                                      Xb = self$mean_function$.__enclos_env__$private$Xb,
-                                      var_par = self$var_par)
-                         private$genS(D = self$covariance$D,
-                                      Z = self$covariance$Z,
-                                      W = private$W)
+                         private$genW()
+                         private$genS()
                        },
-                       genW = function(family,
-                                       Xb,
-                                       var_par=NULL){
+                       genW = function(){
                          # assume random effects value is at zero
-                         if(!family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
+                         if(!self$mean_function$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                          
-                         wdiag <- gen_dhdmu(c(Xb),
-                                            family=family[[1]],
-                                            link = family[[2]])
+                         wdiag <- gen_dhdmu(xb = c(self$mean_function$.__enclos_env__$private$Xb),
+                                            family=self$mean_function$family[[1]],
+                                            link = self$mean_function$family[[2]])
                          
-                         if(family[[1]] == "gaussian"){
-                           wdiag <- var_par * var_par * wdiag
-                         } else if(family[[1]] == "Gamma"){
-                           wdiag <- wdiag/var_par
-                         } else if(family[[1]] == "beta"){
-                           wdiag <- wdiag*(1+var_par)
+                         if(self$mean_function$family[[1]] == "gaussian"){
+                           wdiag <- self$var_par * self$var_par * wdiag
+                         } else if(self$mean_function$family[[1]] == "Gamma"){
+                           wdiag <- wdiag/self$var_par
+                         } else if(self$mean_function$family[[1]] == "beta"){
+                           wdiag <- wdiag*(1+self$var_par)
                          }
                          
                          W <- diag(drop(wdiag))
                          private$W <- Matrix::Matrix(W)
                        },
-                       genS = function(D,Z,W,update=TRUE){
-                         if(is(D,"numeric")){
-                           S <- W + D * Matrix::tcrossprod(Z)
-                         } else {
-                           S <- W + Z %*% Matrix::tcrossprod(D,Z)
-                         }
+                       genS = function(update=TRUE){
+                         S = gen_sigma_approx(xb=matrix(self$mean_function$X%*%self$mean_function$parameters,ncol=1),
+                                              Z = as.matrix(self$covariance$Z),
+                                              D = as.matrix(self$covariance$D),
+                                              family=self$mean_function$family[[1]],
+                                              link = self$mean_function$family[[2]],
+                                              var_par = self$var_par,
+                                              attenuate = self$attenuate_parameters)
                          if(update){
                            self$Sigma <- Matrix::Matrix(S)
                            private$hash <- private$hash_do()
                          } else {
                            return(S)
                          }
+                         # if(is(D,"numeric")){
+                         #   S <- W + D * Matrix::tcrossprod(Z)
+                         # } else {
+                         #   S <- W + Z %*% Matrix::tcrossprod(D,Z)
+                         # }
+                         # if(update){
+                         #   self$Sigma <- Matrix::Matrix(S)
+                         #   private$hash <- private$hash_do()
+                         # } else {
+                         #   return(S)
+                         # }
                          
                        },
                        hash = NULL,

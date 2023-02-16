@@ -234,6 +234,9 @@ des$power() #power of 0.90 for the int parameter
 diagonal matrix with elements on the diagonal equal to the GLM iterated weights. See Details.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
+
+\item{\code{attenuate_parameters}}{Logical indicating whether to use "attenuated parameters" when calculating the 
+approximation to the covariance matrix for generalised models.}
 }
 \if{html}{\out{</div>}}
 }
@@ -531,13 +534,15 @@ specified GLMM design
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{type}}{Either 'y' to return just the outcome data, or 'data'
-to return a data frame with the simulated outcome data alongside the model data}
+\item{\code{type}}{Either 'y' to return just the outcome data, 'data'
+to return a data frame with the simulated outcome data alongside the model data,
+or 'all', which will return a list with simulated outcomes y, matrices X and Z, 
+parameters beta, and the values of the simulated random effects.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Either a vector or a data frame
+Either a vector, a data frame, or a list
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
