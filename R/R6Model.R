@@ -536,8 +536,14 @@ Model <- R6::R6Class("Model",
                        genW = function(){
                          # assume random effects value is at zero
                          if(!self$mean_function$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
-                         
-                         wdiag <- gen_dhdmu(xb = c(self$mean_function$.__enclos_env__$private$Xb),
+                         xb <- c(self$mean_function$.__enclos_env__$private$Xb)
+                         if(self$attenuate_parameters){
+                           xb <- attenuate_xb(xb = xb,
+                                              Z = as.matrix(self$covariance$Z),
+                                              D = as.matrix(self$covariance$D),
+                                              link = self$mean_function$family[[2]])
+                         }
+                         wdiag <- gen_dhdmu(xb = xb,
                                             family=self$mean_function$family[[1]],
                                             link = self$mean_function$family[[2]])
                          

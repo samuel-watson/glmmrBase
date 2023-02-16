@@ -68,3 +68,18 @@ gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate, qlik = 
     .Call(`_glmmrBase_gen_sigma_approx`, xb, Z, D, family, link, var_par, attenuate, qlik)
 }
 
+#' Return marginal expectation with attenuation
+#' 
+#' The marginal expectation may be better approximated using an attenuation 
+#' scheme in non-linear models. This function returns the attenuated linear predictor.
+#' Used internally.
+#' @param xb Vector of values of the linear predictor
+#' @param Z Random effects design matrix
+#' @param D Covariance matrix of the random effects
+#' @param family String specifying the family
+#' @param link String specifying the link function
+#' @return A vector
+attenuate_xb <- function(xb, Z, D, link) {
+    .Call(`_glmmrBase_attenuate_xb`, xb, Z, D, link)
+}
+

@@ -131,3 +131,23 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
   }
   return S;
 }
+
+//' Return marginal expectation with attenuation
+//' 
+//' The marginal expectation may be better approximated using an attenuation 
+//' scheme in non-linear models. This function returns the attenuated linear predictor.
+//' Used internally.
+//' @param xb Vector of values of the linear predictor
+//' @param Z Random effects design matrix
+//' @param D Covariance matrix of the random effects
+//' @param family String specifying the family
+//' @param link String specifying the link function
+//' @return A vector
+// [[Rcpp::export]]
+Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
+                             const Eigen::MatrixXd& Z,
+                             const Eigen::MatrixXd& D,
+                             const std::string& link){
+  Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
+  return linpred;
+}
