@@ -15,8 +15,8 @@ An R6 class representing a GLMM model
 For the generalised linear mixed model 
 
 \deqn{Y \sim F(\mu,\sigma)}
-\deqn{\mu = h^-1(X\beta + Z\gamma)}
-\deqn{\gamma \sim MVN(0,D)}
+\deqn{\mu = h^-1(X\beta + Zu)}
+\deqn{u \sim MVN(0,D)}
 
 where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
 link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
@@ -25,17 +25,27 @@ methods for analysis and simulation with these models.
 This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
 in related packages.
 
-The class by default calculates the covariance matrix of the observations as:
+Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and 
+other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the 
+marginal quasilikelihood:
 
 \deqn{\Sigma = W^{-1} + ZDZ^T}
 
-where _W_ is a diagonal matrix with the WLS iterated weights for each observation equal
-to, for individual _i_ \eqn{\phi a_i v(\mu_i)[h'(\mu_i)]^2} (see Table 2.1 in McCullagh 
-and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
-the memory requirements can be prohibitive. 
+where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
+to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)} 
+(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
+the memory requirements can be prohibitive (use option `skip_sigma`). 
 
 See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
 detailed guide on model specification.
+
+
+**Attenutation**
+For calculations such as the information matrix, the first-order approximation to the covariance matrix 
+proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
+marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
+marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this 
+adjustment for calculations using the covariance matrix for non-linear models.
 
 
 Calls the respective print methods of the linked covariance and mean function objects.
@@ -218,6 +228,13 @@ des <- Model$new(
 )
 des$power() #power of 0.90 for the int parameter
 }
+\references{
+Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models. 
+Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
+
+Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach. 
+Biometrics, 44(4), 1049.<doi:10.2307/2531734>
+}
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
 }
@@ -234,15 +251,13 @@ des$power() #power of 0.90 for the int parameter
 diagonal matrix with elements on the diagonal equal to the GLM iterated weights. See Details.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
-
-\item{\code{attenuate_parameters}}{Logical indicating whether to use "attenuated parameters" when calculating the 
-approximation to the covariance matrix for generalised models.}
 }
 \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
+\item \href{#method-Model-use_attenutation}{\code{Model$use_attenutation()}}
 \item \href{#method-Model-fitted}{\code{Model$fitted()}}
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
@@ -256,6 +271,27 @@ approximation to the covariance matrix for generalised models.}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-use_attenutation"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-use_attenutation}{}}}
+\subsection{Method \code{use_attenutation()}}{
+Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
+the covariance matrix.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$use_attenutation(use)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{use}}{Logical indicating whether to use "attenuation".}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None. Used for effects.
 }
 }
 \if{html}{\out{<hr>}}

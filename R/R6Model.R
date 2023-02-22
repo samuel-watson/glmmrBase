@@ -5,8 +5,8 @@
 #' For the generalised linear mixed model 
 #' 
 #' \deqn{Y \sim F(\mu,\sigma)}
-#' \deqn{\mu = h^-1(X\beta + Z\gamma)}
-#' \deqn{\gamma \sim MVN(0,D)}
+#' \deqn{\mu = h^-1(X\beta + Zu)}
+#' \deqn{u \sim MVN(0,D)}
 #' 
 #' where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
 #' link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
@@ -15,17 +15,25 @@
 #' This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
 #' in related packages.
 #' 
-#' The class by default calculates the covariance matrix of the observations as:
+#' Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and 
+#' other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the 
+#' marginal quasilikelihood:
 #' 
 #' \deqn{\Sigma = W^{-1} + ZDZ^T}
 #' 
-#' where _W_ is a diagonal matrix with the WLS iterated weights for each observation equal
-#' to, for individual _i_ \eqn{\phi a_i v(\mu_i)[h'(\mu_i)]^2} (see Table 2.1 in McCullagh 
-#' and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
-#' the memory requirements can be prohibitive. 
+#' where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
+#' to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)} 
+#' (see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
+#' the memory requirements can be prohibitive (use option `skip_sigma`). 
 #' 
 #' See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
 #' detailed guide on model specification.
+#' @references 
+#' Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models. 
+#' Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
+#' 
+#' Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach. 
+#' Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 #' @importFrom Matrix Matrix
 #' @export 
 Model <- R6::R6Class("Model",
@@ -41,9 +49,30 @@ Model <- R6::R6Class("Model",
                        Sigma = NULL,
                        #' @field var_par Scale parameter required for some distributions (Gaussian, Gamma, Beta).
                        var_par = NULL,
-                       #' @field attenuate_parameters Logical indicating whether to use "attenuated parameters" when calculating the 
-                       #' approximation to the covariance matrix for generalised models.
-                       attenuate_parameters = TRUE,
+                       #' @description 
+                       #' Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
+                       #' the covariance matrix. 
+                       #' @details 
+                       #' **Attenutation**
+                       #' For calculations such as the information matrix, the first-order approximation to the covariance matrix 
+                       #' proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
+                       #' marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
+                       #' marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this 
+                       #' adjustment for calculations using the covariance matrix for non-linear models.
+                       #' @param use Logical indicating whether to use "attenuation".
+                       #' @return None. Used for effects.
+                       use_attenutation = function(use){
+                         curr_state <- private$attentuate_parameters
+                         if(use){
+                           private$attentuate_parameters <- TRUE
+                         } else {
+                           private$attentuate_parameters <- FALSE
+                         }
+                         if(private$attentuate_parameters != curr_state){
+                           private$genW()
+                           private$genS()
+                         }
+                       },
                        #' @description 
                        #' Return predicted values based on the currently stored parameter values in `mean_function`
                        #' @param type One of either "`link`" for values on the scale of the link function, or "`response`" 
@@ -369,7 +398,7 @@ Model <- R6::R6Class("Model",
                          }
                          
                          
-                         if(f[1]=="gamma"){
+                         if(f[1]=="Gamma"){
                            if(f[2]=="inverse"){
                              if(is.null(self$var_par))stop("For gamma(link='inverse') provide var_par")
                              y <- rgamma(self$n(),shape = self$var_par,rate = self$var_par*mu)
@@ -537,7 +566,7 @@ Model <- R6::R6Class("Model",
                          # assume random effects value is at zero
                          if(!self$mean_function$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                          xb <- c(self$mean_function$.__enclos_env__$private$Xb)
-                         if(self$attenuate_parameters){
+                         if(private$attenuate_parameters){
                            xb <- attenuate_xb(xb = xb,
                                               Z = as.matrix(self$covariance$Z),
                                               D = as.matrix(self$covariance$D),
@@ -565,7 +594,7 @@ Model <- R6::R6Class("Model",
                                               family=self$mean_function$family[[1]],
                                               link = self$mean_function$family[[2]],
                                               var_par = self$var_par,
-                                              attenuate = self$attenuate_parameters)
+                                              attenuate = private$attenuate_parameters)
                          if(update){
                            self$Sigma <- Matrix::Matrix(S)
                            private$hash <- private$hash_do()
@@ -585,6 +614,7 @@ Model <- R6::R6Class("Model",
                          # }
                          
                        },
+                       attenuate_parameters = TRUE,
                        hash = NULL,
                        hash_do = function(){
                          digest::digest(c(self$covariance$.__enclos_env__$private$hash,
