@@ -327,18 +327,16 @@ Covariance <- R6::R6Class("Covariance",
                             D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]] # number of parameters
                           }
                           D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - D_data$cov[5,1]
-                          #D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
                           # split into sub blocks
                           for(b in 1:B){
                             if(any(D_data$cov[3,D_data$cov[1,]==b] == 1)&!all(D_data$cov[3,D_data$cov[1,]==b] == 1)){
-                             #col1 <- which(D_data$cov[3,D_data$cov[1,]==b]==1)
                               col1 <- which(D_data$cov[1,]==b & D_data$cov[3,] == 1)
-                             #get range of data 
+                              #get range of data 
                               nvar <- D_data$cov[2,]*D_data$cov[4,]
                               nfunc <- ncol(D_data$cov[,D_data$cov[1,]==b]) 
                               dstart <- 1
-                              if(col1 > 1){
+                              if(b > 1){
                                 dstart <- dstart + nvar[1:(col1-1)]
                               }
                               dend <- dstart + nvar[col1] - 1
@@ -347,7 +345,7 @@ Covariance <- R6::R6Class("Covariance",
                               #duplicate columns
                               newcov <- D_data$cov[,D_data$cov[1,]==b ,drop=FALSE]
                               newcov <- newcov[,rep(1:ncol(newcov),nrow(tabgr))]
-                              newcov[2,] <- tabgr$Freq
+                              newcov[2,] <- rep(tabgr$Freq,each=nfunc)
                               newcov[1,] <- rep(1:nrow(tabgr),each=nfunc)
                               newcov[1,] <- newcov[1,] + b - 1
                               if(any(D_data$cov[1,]>b))D_data$cov[1,D_data$cov[1,]>b] <-  D_data$cov[1,D_data$cov[1,]>b] + nrow(tabgr) + b - 1
@@ -357,11 +355,12 @@ Covariance <- R6::R6Class("Covariance",
                               
                               #reorder data
                               #if multiple variables reorder
-                              dat <- matrix(D_data$data[dstart:dend2],nrow=sum(tabgr$Freq))
                               newdat <- c()
                               idx <- 1
                               for(i in 1:nrow(tabgr)){
-                                newdat <- c(newdat,as.vector(dat[idx:(idx+tabgr$Freq[i]-1),])) 
+                                for(j in 1:nfunc){
+                                  newdat <- c(newdat,D_data$dat[(idx:(idx+tabgr$Freq[i]-1)) + dend*(j-1)]) 
+                                }
                                 idx <- idx + tabgr$Freq[i]
                               }
                               D_data$data[dstart:dend2] <- newdat
