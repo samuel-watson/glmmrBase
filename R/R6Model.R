@@ -53,7 +53,7 @@ Model <- R6::R6Class("Model",
                        #' Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
                        #' the covariance matrix. 
                        #' @details 
-                       #' **Attenutation**
+                       #' **Attenuation**
                        #' For calculations such as the information matrix, the first-order approximation to the covariance matrix 
                        #' proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
                        #' marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
@@ -61,14 +61,14 @@ Model <- R6::R6Class("Model",
                        #' adjustment for calculations using the covariance matrix for non-linear models.
                        #' @param use Logical indicating whether to use "attenuation".
                        #' @return None. Used for effects.
-                       use_attenutation = function(use){
-                         curr_state <- private$attentuate_parameters
+                       use_attenuation = function(use){
+                         curr_state <- private$attenuate_parameters
                          if(use){
-                           private$attentuate_parameters <- TRUE
+                           private$attenuate_parameters <- TRUE
                          } else {
-                           private$attentuate_parameters <- FALSE
+                           private$attenuate_parameters <- FALSE
                          }
-                         if(private$attentuate_parameters != curr_state){
+                         if(private$attenuate_parameters != curr_state){
                            private$genW()
                            private$genS()
                          }
