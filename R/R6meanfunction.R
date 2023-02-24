@@ -1,4 +1,4 @@
-#' R6 Class representing a mean function function and data
+#' R6 Class representing a mean function/linear predictor
 #' 
 #' For the generalised linear mixed model 
 #' 
@@ -6,7 +6,7 @@
 #' \deqn{\mu = h^-1(X\beta + Z\gamma)}
 #' \deqn{\gamma \sim MVN(0,D)}
 #' 
-#' this class defines the family F, link function h, and fixed effects design matrix X. 
+#' this class defines the fixed effects design matrix X. 
 #' The mean function is defined by a model formula, data, and parameters.
 #' A new instance can be generated with $new(). The class will generate the 
 #' relevant matrix X automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
@@ -18,17 +18,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           formula = NULL,
                           #' @field data Data frame with data required to build X
                           data = NULL,
-                          #' @field family One of the family function used in R's glm functions. See \link[stats]{family} for details
-                          family = NULL,
                           #' @field parameters A vector of parameter values for \eqn{\beta} used for simulating data and calculating
                           #' covariance matrix of observations for non-linear models.
                           parameters = NULL,
-                          #' @field randomise A function that generates a new set of values representing the treatment allocation in an 
-                          #' experimental study
-                          randomise = NULL,
-                          #' @field treat_var A string naming the column in data that represents the treatment variable in data. Used
-                          #' to identify where to replace allocation when randomiser is used.
-                          treat_var = NULL,
                           #' @field X the fixed effects design matrix
                           X = NULL,
                           #' @description 
@@ -42,8 +34,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' df[df$cl <= 5, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
-                          #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
+                          #'                         parameters = c(-1,1)
                           #'                         )
                           #' mf1$n()
                           n=function(){
@@ -61,14 +52,13 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' df[df$cl <= 5, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
-                          #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
+                          #'                         parameters = c(-1,1)
                           #'                         )
                           #' mf1$parameters <- c(0,0)
                           #' mf1$check()
                           check = function(verbose=TRUE){
                             if(private$hash != private$hash_do()){
-                              if(verbose)message("changes found, updating")
+                              if(verbose)message("Updating model")
                               private$generate()
                             }},
                           #' @description 
@@ -84,13 +74,12 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
                           #' by first-order approximation. 
                           #' 
-                          #' If not all of `formula`, `data`, `family`, and `parameters` are not specified then the linked matrices 
+                          #' If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
                           #' are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
                           #' If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
                           #' parameters is automatic if using the `update_parameters()` member function.
                           #' @param formula A \link[stats]{formula} object that describes the mean function, see Details
                           #' @param data (Optional) A data frame containing the covariates in the model, named in the model formula
-                          #' @param family (Optional) A family object expressing the distribution and link function of the model, see \link[stats]{family}
                           #' @param parameters (Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
                           #' If the parameters are not specified then they are initialised to 0.
                           #' @param verbose Logical indicating whether to report detailed output
@@ -102,22 +91,15 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
                           #'                         )
                           initialize = function(formula,
                                                 data = NULL,
-                                                family = NULL,
                                                 parameters = NULL ,
                                                 verbose = FALSE
                           ){
 
                             allset <- TRUE
                             self$formula <- as.formula(formula, env=.GlobalEnv)
-                            if(!is.null(family)){
-                              self$family <- family
-                            } else {
-                              allset <- FALSE
-                            }
                             
                             if(!is.null(data)){
                               if(!is(data,"data.frame"))stop("data must be data frame")
@@ -143,18 +125,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' @param ... ignored
                           print = function(){
-                            cat("Mean Function")
-                            print(self$family)
-                            cat("Formula:")
-                            print(self$formula)
-                            if(!is.null(self$randomise)){
-                              cat(paste0("Treatment variable: ",self$treat_var))
-                              cat(paste0("\nRandom allocation function provided, e.g.: ",paste0(head(self$randomise()),collapse = "")))
-                            }
-                            cat("\n X matrix: \n")
-                            print(head(self$X))
-                            # cat("Data:\n")
-                            # print(head(self$data))
+                            cat("\U2BC8 Linear Predictor")
+                            cat("\n     \U2BA1 Formula: ~",as.character(self$formula)[2])
+                            cat("\n     \U2BA1 Parameters: ",self$parameters)
                           },
                           #' @description 
                           #' Updates the model parameters
@@ -183,8 +156,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' df[df$cl <= 5, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
-                          #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
+                          #'                         parameters = c(-1,1)
                           #'                         )
                           #' mf1$colnames(c("cluster","time","individual","treatment"))
                           #' mf1$colnames()
@@ -209,8 +181,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' df[df$cl <= 5, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
-                          #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
+                          #'                         parameters = c(-1,1)
                           #'                         )
                           #' mf1$subset_rows(1:20) 
                           subset_rows = function(index){
@@ -231,31 +202,12 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' df[df$cl <= 5, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
-                          #'                         parameters = c(-1,1),
-                          #'                         family = stats::binomial()
+                          #'                         parameters = c(-1,1)
                           #'                         )
                           #' mf1$subset_cols(1:2) 
                           subset_cols = function(index){
                             self$X <- self$X[,index]
                           }
-                          # #' @description 
-                          # #' Generates a new random allocation
-                          # #' 
-                          # #' If a randomising function has been provided then a new random allocation will
-                          # #' be generated, and will replace the exisitng data at `treat_var` in the X matrix
-                          # #' @param ... ignored
-                          # #' @return Nothing is returned, the X matrix is updated
-                          # rerandomise = function(){
-                          #   new_draw <- self$randomise()
-                          #   if(!self$treat_var %in% colnames(self$X)){
-                          #     self$X <- cbind(self$X,new_draw)
-                          #     colnames(self$X)[ncol(self$X)] <- self$treat_var
-                          #   }
-                          #   # } else {
-                          #   #   self$X[,self$treat_var] <- new_draw
-                          #   # }
-                          #   private$Xb <- Matrix::drop(self$X %*% matrix(unlist(self$parameters[1:ncol(self$X)]),ncol=1))
-                          # }
                         ),
                         private = list(
                           mod_string = NULL,
@@ -264,14 +216,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           funs = NULL,
                           vars = NULL,
                           hash = NULL,
-                          treat_par = NULL,
                           hash_do = function(){
-                            digest::digest(c(self$formula,self$data,self$family,
-                                             self$parameters,
-                                             self$randomiser))
-                            # digest::digest(c(self$formula,self$data,self$family,
-                            #                  digest::digest(as.character(self$parameters),serialize = FALSE),
-                            #                  self$randomiser))
+                            digest::digest(c(self$formula,self$data,
+                                             self$parameters))
                           },
                           generate = function(verbose = FALSE){
                             
@@ -344,8 +291,6 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             private$Xb <- X %*% matrix(unlist(self$parameters[1:ncol(X)]),ncol=1)
                             self$X <- Matrix::Matrix(X)
                             
-                            #add random function data
-                            if(!is.null(self$randomise))self$rerandomise()
                           }
                           
                         ))

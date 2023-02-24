@@ -76,7 +76,6 @@ gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate, qlik = 
 #' @param xb Vector of values of the linear predictor
 #' @param Z Random effects design matrix
 #' @param D Covariance matrix of the random effects
-#' @param family String specifying the family
 #' @param link String specifying the link function
 #' @return A vector
 attenuate_xb <- function(xb, Z, D, link) {

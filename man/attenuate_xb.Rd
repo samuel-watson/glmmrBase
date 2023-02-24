@@ -14,8 +14,6 @@ attenuate_xb(xb, Z, D, link)
 \item{D}{Covariance matrix of the random effects}
 
 \item{link}{String specifying the link function}
-
-\item{family}{String specifying the family}
 }
 \value{
 A vector

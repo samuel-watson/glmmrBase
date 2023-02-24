@@ -28,23 +28,21 @@ parallel_crt(
 
 \item{beta}{Vector of beta parameters to initialise the design, defaults to all zeros.}
 
-\item{icc}{Intraclass correlation coefficient. User may specify
-more than one value, see details.}
+\item{icc}{Intraclass correlation coefficient.}
 
-\item{cac}{Cluster autocorrelation coefficient, optional and user may specify more than one value, see details}
+\item{cac}{Cluster autocorrelation coefficient, optional.}
 
-\item{iac}{Individual autocorrelation coefficient, optional and user may specify more than one value, see details}
+\item{iac}{Individual autocorrelation coefficient, optional.}
 
 \item{var}{Assumed overall variance of the model, used to calculate the other covariance, see details}
 
 \item{family}{a \link[stats]{family} object}
 }
 \value{
-A Model object with MeanFunction and Covariance objects, or
-a ModelSpace holding several such Model objects.
+A Model object
 }
 \description{
-Generate a parallel cluster randomised trial design in glmmr
+Generate a parallel cluster randomised trial design model
 }
 \details{
 The complete parallel cluster randomised trial design has J clusters
@@ -76,10 +74,6 @@ For non-linear models, such as Poisson or Binomial models, there is no single ob
 for `var_par` (\eqn{\tau} in the above formulae), as the models are heteroskedastic. Choices 
 might include the variance at the mean values of the parameters or a reasonable choice based
 on the variance of the respective distribution.
-
-If the user specifies more than one value for icc, cac, or iac, then a ModelSpace is returned
-with Models with every combination of parameters. This can be used in particular to generate
-a design space for optimal design analyses.
 }
 \examples{
 #generate a simple design with only cluster random effects and 6 clusters in 3 time periods

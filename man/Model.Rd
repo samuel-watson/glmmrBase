@@ -40,7 +40,7 @@ See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmm
 detailed guide on model specification.
 
 
-**Attenutation**
+**Attenuation**
 For calculations such as the information matrix, the first-order approximation to the covariance matrix 
 proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
 marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
@@ -245,6 +245,8 @@ Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 
 \item{\code{mean_function}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
 
+\item{\code{family}}{One of the family function used in R's glm functions. See \link[stats]{family} for details}
+
 \item{\code{exp_condition}}{A vector indicting the unique experimental conditions for each observation, see Details.}
 
 \item{\code{Sigma}}{The overall covariance matrix for the observations. Calculated and updated automatically as \eqn{W^{-1} + ZDZ^T} where W is an n x n 
@@ -257,7 +259,7 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
-\item \href{#method-Model-use_attenutation}{\code{Model$use_attenutation()}}
+\item \href{#method-Model-use_attenuation}{\code{Model$use_attenuation()}}
 \item \href{#method-Model-fitted}{\code{Model$fitted()}}
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
@@ -274,13 +276,13 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-use_attenutation"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-use_attenutation}{}}}
-\subsection{Method \code{use_attenutation()}}{
+\if{html}{\out{<a id="method-Model-use_attenuation"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-use_attenuation}{}}}
+\subsection{Method \code{use_attenuation()}}{
 Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
 the covariance matrix.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$use_attenutation(use)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$use_attenuation(use)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

@@ -85,15 +85,6 @@ Covariance <- R6::R6Class("Covariance",
                                               parameters= NULL,
                                               eff_range = NULL,
                                               verbose=FALSE){
-                          # if(any(is.null(data),is.null(formula),is.null(parameters))){
-                          #   message("not all attributes set. call check() when all attributes set.")
-                          # } else {
-                          #   self$data = data
-                          #   self$formula = as.formula(formula, env=.GlobalEnv)
-                          #   self$parameters = parameters
-                          #   self$eff_range = eff_range
-                          #   private$cov_form()
-                          # }
                           if(missing(formula))stop("formula required.")
                           self$formula = as.formula(formula, env=.GlobalEnv)
                           allset <- TRUE
@@ -129,14 +120,14 @@ Covariance <- R6::R6Class("Covariance",
                         #' cov$check(verbose=FALSE)
                         check = function(verbose=TRUE){
                           new_hash <- private$hash_do()
-                          if(private$hash[1] != new_hash[1]){
-                            if(verbose)message("changes found, updating Z")
+                          if(private$hash != new_hash){
                             private$cov_form()
-                          } else if(private$hash[2] != new_hash[2]){
-                            if(verbose)message("changes found, updating D")
+                            if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
+                            if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
                             private$genD()
-                          }
-
+                          } else {
+                            message("Covariance up to date")
+                          } 
                           invisible(self)
                         },
                         #' @description 
@@ -164,13 +155,9 @@ Covariance <- R6::R6Class("Covariance",
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
-                          # MAKE CLEARER ABOUT FUNCTIONS AND PARAMETERS?
-
-                          cat("Covariance\n")
-                          print(self$formula)
-                          cat("Parameters:")
-                          print(unlist(self$parameters))
-                          #print(head(self$data))
+                          cat("\U2BC8 Covariance")
+                          cat("\n   \U2BA1 Formula: ~",as.character(self$formula)[2])
+                          cat("\n   \U2BA1 Parameters: ",self$parameters)
                         },
                         #' @description 
                         #' Keep specified indices and removes the rest
@@ -231,7 +218,7 @@ Covariance <- R6::R6Class("Covariance",
                         Zlist = NULL,
                         hash = NULL,
                         hash_do = function(){
-                          c(digest::digest(c(self$data)),digest::digest(c(self$formula,self$parameters)))
+                          c(digest::digest(c(self$data,self$formula,self$parameters,self$eff_range)))
                         },
                         cov_form = function(){
                           #1. split into independent components that can be combined in block diagonal form

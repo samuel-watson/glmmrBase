@@ -140,7 +140,6 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
 //' @param xb Vector of values of the linear predictor
 //' @param Z Random effects design matrix
 //' @param D Covariance matrix of the random effects
-//' @param family String specifying the family
 //' @param link String specifying the link function
 //' @return A vector
 // [[Rcpp::export]]

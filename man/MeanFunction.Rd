@@ -2,11 +2,11 @@
 % Please edit documentation in R/R6meanfunction.R
 \name{MeanFunction}
 \alias{MeanFunction}
-\title{R6 Class representing a mean function function and data}
+\title{R6 Class representing a mean function/linear predictor}
 \description{
-R6 Class representing a mean function function and data
+R6 Class representing a mean function/linear predictor
 
-R6 Class representing a mean function function and data
+R6 Class representing a mean function/linear predictor
 }
 \details{
 For the generalised linear mixed model 
@@ -15,7 +15,7 @@ For the generalised linear mixed model
 \deqn{\mu = h^-1(X\beta + Z\gamma)}
 \deqn{\gamma \sim MVN(0,D)}
 
-this class defines the family F, link function h, and fixed effects design matrix X. 
+this class defines the fixed effects design matrix X. 
 The mean function is defined by a model formula, data, and parameters.
 A new instance can be generated with $new(). The class will generate the 
 relevant matrix X automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
@@ -31,7 +31,7 @@ where `int` is the name of the variable indicating the treatment.
 One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
 by first-order approximation. 
 
-If not all of `formula`, `data`, `family`, and `parameters` are not specified then the linked matrices 
+If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
 are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
 If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
 parameters is automatic if using the `update_parameters()` member function.
@@ -53,8 +53,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$n()
 
@@ -67,8 +66,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$parameters <- c(0,0)
 mf1$check()
@@ -83,7 +81,6 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = stats::binomial()
                         )
 
 ## ------------------------------------------------
@@ -95,8 +92,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$colnames(c("cluster","time","individual","treatment"))
 mf1$colnames()
@@ -110,8 +106,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$subset_rows(1:20) 
 
@@ -124,8 +119,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$subset_cols(1:2) 
 }
@@ -136,16 +130,8 @@ mf1$subset_cols(1:2)
 
 \item{\code{data}}{Data frame with data required to build X}
 
-\item{\code{family}}{One of the family function used in R's glm functions. See \link[stats]{family} for details}
-
 \item{\code{parameters}}{A vector of parameter values for \eqn{\beta} used for simulating data and calculating
 covariance matrix of observations for non-linear models.}
-
-\item{\code{randomise}}{A function that generates a new set of values representing the treatment allocation in an 
-experimental study}
-
-\item{\code{treat_var}}{A string naming the column in data that represents the treatment variable in data. Used
-to identify where to replace allocation when randomiser is used.}
 
 \item{\code{X}}{the fixed effects design matrix}
 }
@@ -191,8 +177,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$n()
 }
@@ -229,8 +214,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$parameters <- c(0,0)
 mf1$check()
@@ -246,13 +230,7 @@ mf1$check()
 \subsection{Method \code{new()}}{
 Create a new MeanFunction object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$new(
-  formula,
-  data = NULL,
-  family = NULL,
-  parameters = NULL,
-  verbose = FALSE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$new(formula, data = NULL, parameters = NULL, verbose = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -261,8 +239,6 @@ Create a new MeanFunction object
 \item{\code{formula}}{A \link[stats]{formula} object that describes the mean function, see Details}
 
 \item{\code{data}}{(Optional) A data frame containing the covariates in the model, named in the model formula}
-
-\item{\code{family}}{(Optional) A family object expressing the distribution and link function of the model, see \link[stats]{family}}
 
 \item{\code{parameters}}{(Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
 If the parameters are not specified then they are initialised to 0.}
@@ -282,7 +258,6 @@ df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
-                        family = stats::binomial()
                         )
 }
 \if{html}{\out{</div>}}
@@ -350,8 +325,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$colnames(c("cluster","time","individual","treatment"))
 mf1$colnames()
@@ -390,8 +364,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$subset_rows(1:20) 
 }
@@ -429,8 +402,7 @@ df$int <- 0
 df[df$cl <= 5, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
-                        parameters = c(-1,1),
-                        family = stats::binomial()
+                        parameters = c(-1,1)
                         )
 mf1$subset_cols(1:2) 
 }

@@ -42,6 +42,8 @@ Model <- R6::R6Class("Model",
                        covariance = NULL,
                        #' @field mean_function A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.
                        mean_function = NULL,
+                       #' @field family One of the family function used in R's glm functions. See \link[stats]{family} for details
+                       family = NULL,
                        #' @field exp_condition A vector indicting the unique experimental conditions for each observation, see Details.
                        exp_condition = NULL,
                        #' @field Sigma The overall covariance matrix for the observations. Calculated and updated automatically as \eqn{W^{-1} + ZDZ^T} where W is an n x n 
@@ -81,7 +83,7 @@ Model <- R6::R6Class("Model",
                        fitted = function(type="link"){
                          Xb <- Matrix::drop(self$mean_function$X %*% self$mean_function$parameters)
                          if(type=="response"){
-                           Xb <- self$mean_function$family$linkinv(Xb)
+                           Xb <- self$family$linkinv(Xb)
                          }
                          return(Xb)
                        },
@@ -187,6 +189,12 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          
+                         if(is.null(family)){
+                           stop("No family specified.")
+                         } else {
+                           self$family <- family
+                         }
+                         
                          if(is(mean,"R6")){
                            if(is(mean,"MeanFunction")){
                              self$mean_function <- mean
@@ -197,13 +205,6 @@ Model <- R6::R6Class("Model",
                                  self$mean_function$data <- data
                                }
                              }
-                             if(is.null(mean$family)){
-                               if(is.null(family)){
-                                 stop("No family specified in MeanFunction object or call to function.")
-                               } else {
-                                 self$mean_function$family <- family
-                               }
-                             }
                              
                            } else {
                              stop("mean should be MeanFunction class or list of appropriate arguments")
@@ -211,7 +212,6 @@ Model <- R6::R6Class("Model",
                          } else if(is(mean,"list")){
                            if(is.null(mean$formula))stop("A formula must be specified for the mean function.")
                            if(is.null(mean$data) & is.null(data))stop("No data specified in mean list or call to function.")
-                           if(is.null(mean$family) & is.null(family))stop("No family specified in mean list or call to function.")
                            self$mean_function <- MeanFunction$new(
                              formula = mean$formula
                            )
@@ -221,11 +221,6 @@ Model <- R6::R6Class("Model",
                              self$mean_function$data <- data 
                            } else {
                              self$mean_function$data <- mean$data
-                           }
-                           if(is.null(mean$family)){
-                             self$mean_function$family <- family 
-                           } else {
-                             self$mean_function$family <- mean$family
                            }
                          }
                          
@@ -246,11 +241,17 @@ Model <- R6::R6Class("Model",
                        #' Calls the respective print methods of the linked covariance and mean function objects.
                        #' @param ... ignored
                        print = function(){
-                         cat("\n----------------------------------------\n")
-                         print(self$mean_function)
-                         cat("\n----------------------------------------\n")
-                         print(self$covariance)
-                         cat("\n----------------------------------------\n")
+                         cat("\U2BC8 GLMM Model")
+                         cat("\n   \U2BA1 Family :",self$family[[1]])
+                         cat("\n   \U2BA1 Link :",self$family[[2]])
+                         cat("\n   \U2BA1 Linear predictor")
+                         cat("\n   \U2223     \U2BA1 Formula: ~",as.character(self$mean_function$formula)[2])
+                         cat("\n   \U2223     \U2BA1 Parameters: ",self$mean_function$parameters)
+                         cat("\n   \U2BA1 Covariance")
+                         cat("\n   \U2223     \U2BA1 Formula: ~",as.character(self$covariance$formula)[2])
+                         cat("\n   \U2223     \U2BA1 Parameters: ",self$covariance$parameters)
+                         cat("\n   \U2223     \U2BA1 N random effects: ",ncol(self$covariance$Z))
+                         cat("\n   \U2BA1 N:",self$n())
                        },
                        #' @description 
                        #' Returns the number of observations in the model
@@ -360,7 +361,7 @@ Model <- R6::R6Class("Model",
                                                              gamma = self$covariance$parameters)))
                          mu <- c(drop(as.matrix(self$mean_function$X)%*%self$mean_function$parameters)) + c(as.matrix(self$covariance$Z)%*%re)
                          
-                         f <- self$mean_function$family
+                         f <- self$family
                          if(f[1]=="poisson"){
                            if(f[2]=="log"){
                              y <- rpois(self$n(),exp(mu))
@@ -564,23 +565,23 @@ Model <- R6::R6Class("Model",
                        },
                        genW = function(){
                          # assume random effects value is at zero
-                         if(!self$mean_function$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
+                         if(!self$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                          xb <- c(self$mean_function$.__enclos_env__$private$Xb)
                          if(private$attenuate_parameters){
                            xb <- attenuate_xb(xb = xb,
                                               Z = as.matrix(self$covariance$Z),
                                               D = as.matrix(self$covariance$D),
-                                              link = self$mean_function$family[[2]])
+                                              link = self$family[[2]])
                          }
                          wdiag <- gen_dhdmu(xb = xb,
-                                            family=self$mean_function$family[[1]],
-                                            link = self$mean_function$family[[2]])
+                                            family=self$family[[1]],
+                                            link = self$family[[2]])
                          
-                         if(self$mean_function$family[[1]] == "gaussian"){
+                         if(self$family[[1]] == "gaussian"){
                            wdiag <- self$var_par * self$var_par * wdiag
-                         } else if(self$mean_function$family[[1]] == "Gamma"){
+                         } else if(self$family[[1]] == "Gamma"){
                            wdiag <- wdiag/self$var_par
-                         } else if(self$mean_function$family[[1]] == "beta"){
+                         } else if(self$family[[1]] == "beta"){
                            wdiag <- wdiag*(1+self$var_par)
                          }
                          
@@ -591,8 +592,8 @@ Model <- R6::R6Class("Model",
                          S = gen_sigma_approx(xb=matrix(self$mean_function$X%*%self$mean_function$parameters,ncol=1),
                                               Z = as.matrix(self$covariance$Z),
                                               D = as.matrix(self$covariance$D),
-                                              family=self$mean_function$family[[1]],
-                                              link = self$mean_function$family[[2]],
+                                              family=self$family[[1]],
+                                              link = self$family[[2]],
                                               var_par = self$var_par,
                                               attenuate = private$attenuate_parameters)
                          if(update){
@@ -601,18 +602,6 @@ Model <- R6::R6Class("Model",
                          } else {
                            return(S)
                          }
-                         # if(is(D,"numeric")){
-                         #   S <- W + D * Matrix::tcrossprod(Z)
-                         # } else {
-                         #   S <- W + Z %*% Matrix::tcrossprod(D,Z)
-                         # }
-                         # if(update){
-                         #   self$Sigma <- Matrix::Matrix(S)
-                         #   private$hash <- private$hash_do()
-                         # } else {
-                         #   return(S)
-                         # }
-                         
                        },
                        attenuate_parameters = TRUE,
                        hash = NULL,
