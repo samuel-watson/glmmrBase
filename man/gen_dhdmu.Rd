@@ -2,7 +2,7 @@
 % Please edit documentation in R/RcppExports.R
 \name{gen_dhdmu}
 \alias{gen_dhdmu}
-\title{Generates the derivative of the link function with respect to the mean. Used internally in the Model function class.}
+\title{Generates the inverse GLM iterated weights.}
 \usage{
 gen_dhdmu(xb, family, link)
 }
@@ -17,5 +17,5 @@ gen_dhdmu(xb, family, link)
 Vector of derivative values
 }
 \description{
-Generates the derivative of the link function with respect to the mean. Used internally in the Model function class.
+Generates the inverse GLM iterated weights.
 }

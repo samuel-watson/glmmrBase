@@ -7,7 +7,7 @@
 staircase_crt(
   J,
   M,
-  beta = c(rep(0, J + 1), 0),
+  beta = c(rep(0, J - 1), 0),
   icc,
   cac = NULL,
   iac = NULL,
@@ -22,14 +22,13 @@ staircase_crt(
 
 \item{beta}{Vector of beta parameters to initialise the design, defaults to all zeros.}
 
-\item{icc}{Intraclass correlation coefficient. User may specify
-more than one value, see details.}
+\item{icc}{Intraclass correlation coefficient.}
 
-\item{cac}{Cluster autocorrelation coefficient, optional and user may specify more than one value, see details}
+\item{cac}{Cluster autocorrelation coefficient, optional}
 
-\item{iac}{Individual autocorrelation coefficient, optional and user may specify more than one value, see details}
+\item{iac}{Individual autocorrelation coefficient, optional}
 
-\item{var}{Assumed overall variance of the model, used to calculate the other covariance, see details}
+\item{var}{Assumed overall variance of the model, used to calculate the other covariance parameters, see details}
 
 \item{family}{a \link[stats]{family} object}
 }
@@ -38,7 +37,7 @@ A Model object with MeanFunction and Covariance objects, or
 a ModelSpace holding several such Model objects.
 }
 \description{
-Generate a staircase/diagonal cluster randomised trial design in glmmr
+Generate a staircase/diagonal cluster randomised trial design model
 }
 \details{
 The staircase/diagonal cluster randomised trial design has J sequences of clusters
@@ -73,10 +72,6 @@ For non-linear models, such as Poisson or Binomial models, there is no single ob
 for `var_par` (\eqn{\tau} in the above formulae), as the models are heteroskedastic. Choices 
 might include the variance at the mean values of the parameters or a reasonable choice based
 on the variance of the respective distribution.
-
-If the user specifies more than one value for icc, cac, or iac, then a ModelSpace is returned
-with Models with every combination of parameters. This can be used in particular to generate
-a design space for optimal design analyses.
 }
 \examples{
 #generate a simple design with only cluster random effects and 6 clusters with 10
@@ -85,10 +80,7 @@ des <- staircase_crt(6,10,icc=0.05)
 # same design but with a cohort of individuals
 des <- staircase_crt(6,10,icc=0.05, iac = 0.1)
 # same design, but with two clusters per sequence and specifying the initial parameters
-des <- staircase_crt(6,10,beta = c(rnorm(7,0,0.1),-0.1),icc=0.05, iac = 0.1)
-# specifying multiple values of the variance parameters will return a design space 
-# with all designs with all the combinations of the variance parameter
-des <- staircase_crt(6,10,icc=c(0.01,0.05), cac = c(0.5,0.7,0.9), iac = 0.1)
+des <- staircase_crt(6,10,beta = c(rnorm(5,0,0.1),-0.1),icc=0.05, iac = 0.1)
 }
 \seealso{
 \link[glmmrBase]{Model}

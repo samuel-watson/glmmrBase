@@ -165,6 +165,123 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
   return wdiag;
 }
 
+inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
+                               std::string link) {
+  
+  Eigen::VectorXd wdiag(xb.size());
+  Eigen::VectorXd p(xb.size());
+  const static std::unordered_map<std::string, int> string_to_case{
+    {"log",1},
+    {"identity",2},
+    {"logit",3},
+    {"probit",4},
+    {"inverse",5}
+  };
+  
+  switch (string_to_case.at(link)) {
+  case 1:
+    wdiag = glmmr::maths::exp_vec(-1.0 * xb);
+    break;
+  case 2:
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = 1.0;
+    }
+    break;
+  case 3:
+    p = glmmr::maths::mod_inv_func(xb, "logit");
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = 1/(p(i)*(1.0 - p(i)));
+    }
+    break;
+  case 4:
+    {
+      Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
+      wdiag = (pinv.inverse()).matrix();
+      break;
+    }
+  case 5:
+    for(int i =0; i< xb.size(); i++){
+      wdiag(i) = -1.0 * xb(i) * xb(i);
+    }
+    break;
+    
+  }
+  
+  return wdiag;
+}
+
+inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
+                                    const Eigen::MatrixXd& Z,
+                                    const Eigen::MatrixXd& D,
+                                    const std::string& link){
+  Eigen::ArrayXd xbnew(xb.array());
+  int n = xb.size();
+  if(link=="log"){
+    for(int i=0; i<n; i++){
+      xbnew(i) += (Z.row(i)*D*Z.row(i).transpose())(0)/2;
+    }
+  } else if(link=="probit"){
+    Eigen::ArrayXd zprod(n);
+    Eigen::MatrixXd Dzz(D.rows(),D.cols());
+    Eigen::PartialPivLU<Eigen::MatrixXd> pluDzz;
+    for(int i=0; i<n; i++){
+      Dzz = D*Z.row(i).transpose()*Z.row(i) + Eigen::MatrixXd::Identity(D.rows(),D.cols());
+      pluDzz = Eigen::PartialPivLU<Eigen::MatrixXd>(Dzz);
+      zprod(i) = pluDzz.determinant();
+    }
+    zprod = zprod.inverse().sqrt();
+    xbnew *= zprod;
+  } else if(link=="logit"){
+    double c = 0.5880842;
+    Eigen::ArrayXd zprod(n);
+    Eigen::MatrixXd Dzz(D.rows(),D.cols());
+    Eigen::PartialPivLU<Eigen::MatrixXd> pluDzz;
+    for(int i=0; i<n; i++){
+      Dzz = c*D*Z.row(i).transpose()*Z.row(i) + Eigen::MatrixXd::Identity(D.rows(),D.cols());
+      pluDzz = Eigen::PartialPivLU<Eigen::MatrixXd>(Dzz);
+      zprod(i) = pluDzz.determinant();
+    }
+    zprod = zprod.inverse().sqrt();
+    xbnew *= zprod;
+  }
+  
+  return xbnew.matrix();
+}
+
+inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
+                                    const std::string& family,
+                                    double var_par = 1.0){
+  Eigen::ArrayXd wdiag(mu.size());
+  const static std::unordered_map<std::string, int> string_to_case{
+    {"gaussian",1},
+    {"binomial",2},
+    {"poisson",3},
+    {"Gamma",4},
+    {"beta",5}
+  };
+  
+  switch (string_to_case.at(family)) {
+  case 1:
+    wdiag.setConstant(var_par);
+    break;
+  case 2:
+    wdiag = mu.array()*(1-mu.array());
+    break;
+  case 3:
+    wdiag = mu.array();
+    break;
+  case 4:
+    wdiag = mu.array().square();
+    break;
+  case 5:
+    wdiag = mu.array()*(1-mu.array())/(var_par+1);
+    break;
+  }
+  
+  return wdiag.matrix();
+}
+  
+  
 }
 
 namespace tools {

@@ -1,6 +1,6 @@
 #' Generate a parallel cluster design
 #' 
-#' Generate a parallel cluster randomised trial design in glmmr
+#' Generate a parallel cluster randomised trial design model
 #' 
 #' The complete parallel cluster randomised trial design has J clusters
 #' observed over T time periods. A proportion (`ratio`) of the clusters are assigned to
@@ -11,10 +11,9 @@
 #' @param t Integer. The number of time periods.
 #' @param ratio Numeric value indicating the proportion of clusters assigned to treatment. Default is 0.5.
 #' @param beta Vector of beta parameters to initialise the design, defaults to all zeros.
-#' @param icc Intraclass correlation coefficient. User may specify
-#' more than one value, see details.
-#' @param cac Cluster autocorrelation coefficient, optional and user may specify more than one value, see details
-#' @param iac Individual autocorrelation coefficient, optional and user may specify more than one value, see details
+#' @param icc Intraclass correlation coefficient. 
+#' @param cac Cluster autocorrelation coefficient, optional.
+#' @param iac Individual autocorrelation coefficient, optional.
 #' @param var Assumed overall variance of the model, used to calculate the other covariance, see details
 #' @param family a \link[stats]{family} object 
 #' @details 
@@ -42,10 +41,6 @@
 #' for `var_par` (\eqn{\tau} in the above formulae), as the models are heteroskedastic. Choices 
 #' might include the variance at the mean values of the parameters or a reasonable choice based
 #' on the variance of the respective distribution.
-#' 
-#' If the user specifies more than one value for icc, cac, or iac, then a ModelSpace is returned
-#' with Models with every combination of parameters. This can be used in particular to generate
-#' a design space for optimal design analyses.
 #' @examples 
 #' #generate a simple design with only cluster random effects and 6 clusters in 3 time periods
 #' # with 10 individuals in each cluster-period
@@ -57,8 +52,7 @@
 #' # specifying multiple values of the variance parameters will return a design space 
 #' # with all designs with all the combinations of the variance parameter
 #' des <- parallel_crt(J=6,M=10,t=3,icc=c(0.01,0.05), cac = c(0.5,0.7,0.9), iac = 0.1)
-#' @return A Model object with MeanFunction and Covariance objects, or
-#' a ModelSpace holding several such Model objects.
+#' @return A Model object
 #' @seealso \link[glmmrBase]{Model}
 #' @importFrom methods is 
 #' @importFrom stats model.matrix family formula
@@ -121,79 +115,18 @@ parallel_crt <-  function(J,
   
   d1 <- Model$new(
     covariance = list(
-      data=df,
       formula = f1,
       parameters = pars
     ),
     mean = list(
       formula = "~ factor(t) + int - 1",
-      data = df,
-      family = family,
       parameters = beta
-      
     ),
+    data=df,
+    family = family,
     var_par = sigma
   )
   
-  # if(ndesigns>1&requireNamespace(glmmrOptim)){
-  #   ds1 <- ModelSpace$new(d1)
-  #   if(is.null(cac))cac <- NA
-  #   if(is.null(iac))iac <- NA
-  #   dsvalues <- expand.grid(icc=icc,cac=cac,iac=iac)
-  #   
-  #   for(i in 1:(ndesigns-1)){
-  #     
-  #     if(!is.null(dsvalues$cac[i+1]) && !is.na(dsvalues$cac[i+1])){
-  #       wp_var <- dsvalues$icc[i+1]*var*(1-dsvalues$cac[i+1])
-  #       bp_var <- dsvalues$icc[i+1]*var*dsvalues$cac[i+1]
-  #     } else {
-  #       bp_var <- dsvalues$icc[i+1]*var
-  #     }
-  #     if(!is.null(dsvalues$iac[i+1]) && !is.na(dsvalues$iac[i+1])){
-  #       ind_var <- var*(1-dsvalues$icc[i+1])*dsvalues$iac[i+1]
-  #       sigma <- var*(1-dsvalues$icc[i+1])*(1-dsvalues$iac[i+1])
-  #     } else {
-  #       sigma <- var*(1-dsvalues$icc[i+1])
-  #     }
-  #     
-  #     if(is.null(dsvalues$cac[i+1]) || is.na(dsvalues$cac[i+1])){
-  #       if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
-  #         f1 <- "~(1|gr(J))"
-  #         pars <- c(sqrt(bp_var))
-  #       } else {
-  #         f1 <- "~(1|gr(J)) + (1|gr(ind))"
-  #         pars <- c(sqrt(bp_var),sqrt(ind_var))
-  #       }
-  #     } else {
-  #       if(is.null(dsvalues$iac[i+1]) || is.na(dsvalues$iac[i+1])){
-  #         f1 <- "~ (1|gr(J)) + (1|gr(J*t))"
-  #         pars <- c(sqrt(bp_var),sqrt(wp_var))
-  #       } else {
-  #         f1 <- "~ (1|gr(J)) + (1|gr(J*t)) + (1|gr(ind))"
-  #         pars <- c(sqrt(bp_var),sqrt(wp_var),sqrt(ind_var))
-  #       }
-  #     }
-  #     
-  #     
-  #     ds1$add(
-  #       Model$new(
-  #         covariance = Covariance$new(
-  #           data=df,
-  #           formula = f1,
-  #           parameters = pars
-  #         ),
-  #         mean.function = d1$mean_function$clone(),
-  #         var_par = 1
-  #       )
-  #     )
-  #     
-  #     # $parameters <- pars
-  #     # ds1$.__enclos_env__$private$designs[[i+1]]$covariance$formula <- f1
-  #     
-  #   }
-  #   return(ds1)
-  # } else {
-  #   return(d1)
-  # }
+  
   return(invisible(d1))
 }

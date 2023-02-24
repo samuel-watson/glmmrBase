@@ -40,7 +40,7 @@ sample_re <- function(cov, data, eff_range, gamma) {
     .Call(`_glmmrBase_sample_re`, cov, data, eff_range, gamma)
 }
 
-#' Generates the derivative of the link function with respect to the mean. Used internally in the Model function class.
+#' Generates the inverse GLM iterated weights.
 #' 
 #' @param xb Vector with mean function value evaluated at fitted model parameters
 #' @param family String declaring model family
@@ -48,5 +48,37 @@ sample_re <- function(cov, data, eff_range, gamma) {
 #' @return Vector of derivative values
 gen_dhdmu <- function(xb, family, link) {
     .Call(`_glmmrBase_gen_dhdmu`, xb, family, link)
+}
+
+#' Generates an approximation to the covariance of y
+#' 
+#' Generates a first-order approximation to the covariance matrix 
+#' of y based on the marginal quasi-likelihood. This approximation is
+#' exact for the Gaussian-identity model. Used internally by the \link[glmmrBase]{Model} class.
+#' @param xb Vector of values of the linear predictor
+#' @param Z Random effects design matrix
+#' @param D Covariance matrix of the random effects
+#' @param family String specifying the family
+#' @param link String specifying the link function
+#' @param var_par Value of the optional scale parameter
+#' @param attenuate Logical indicating whether to use "attenuated" values of the linear predictor
+#' @param qlik Not used.
+#' @return A matrix
+gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate, qlik = TRUE) {
+    .Call(`_glmmrBase_gen_sigma_approx`, xb, Z, D, family, link, var_par, attenuate, qlik)
+}
+
+#' Return marginal expectation with attenuation
+#' 
+#' The marginal expectation may be better approximated using an attenuation 
+#' scheme in non-linear models. This function returns the attenuated linear predictor.
+#' Used internally.
+#' @param xb Vector of values of the linear predictor
+#' @param Z Random effects design matrix
+#' @param D Covariance matrix of the random effects
+#' @param link String specifying the link function
+#' @return A vector
+attenuate_xb <- function(xb, Z, D, link) {
+    .Call(`_glmmrBase_attenuate_xb`, xb, Z, D, link)
 }
 

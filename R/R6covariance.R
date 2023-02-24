@@ -85,15 +85,6 @@ Covariance <- R6::R6Class("Covariance",
                                               parameters= NULL,
                                               eff_range = NULL,
                                               verbose=FALSE){
-                          # if(any(is.null(data),is.null(formula),is.null(parameters))){
-                          #   message("not all attributes set. call check() when all attributes set.")
-                          # } else {
-                          #   self$data = data
-                          #   self$formula = as.formula(formula, env=.GlobalEnv)
-                          #   self$parameters = parameters
-                          #   self$eff_range = eff_range
-                          #   private$cov_form()
-                          # }
                           if(missing(formula))stop("formula required.")
                           self$formula = as.formula(formula, env=.GlobalEnv)
                           allset <- TRUE
@@ -129,14 +120,14 @@ Covariance <- R6::R6Class("Covariance",
                         #' cov$check(verbose=FALSE)
                         check = function(verbose=TRUE){
                           new_hash <- private$hash_do()
-                          if(private$hash[1] != new_hash[1]){
-                            if(verbose)message("changes found, updating Z")
+                          if(private$hash != new_hash){
                             private$cov_form()
-                          } else if(private$hash[2] != new_hash[2]){
-                            if(verbose)message("changes found, updating D")
+                            if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
+                            if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
                             private$genD()
-                          }
-
+                          } else {
+                            message("Covariance up to date")
+                          } 
                           invisible(self)
                         },
                         #' @description 
@@ -164,13 +155,9 @@ Covariance <- R6::R6Class("Covariance",
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
-                          # MAKE CLEARER ABOUT FUNCTIONS AND PARAMETERS?
-
-                          cat("Covariance\n")
-                          print(self$formula)
-                          cat("Parameters:")
-                          print(unlist(self$parameters))
-                          #print(head(self$data))
+                          cat("\U2BC8 Covariance")
+                          cat("\n   \U2BA1 Formula: ~",as.character(self$formula)[2])
+                          cat("\n   \U2BA1 Parameters: ",self$parameters)
                         },
                         #' @description 
                         #' Keep specified indices and removes the rest
@@ -231,7 +218,7 @@ Covariance <- R6::R6Class("Covariance",
                         Zlist = NULL,
                         hash = NULL,
                         hash_do = function(){
-                          c(digest::digest(c(self$data)),digest::digest(c(self$formula,self$parameters)))
+                          c(digest::digest(c(self$data,self$formula,self$parameters,self$eff_range)))
                         },
                         cov_form = function(){
                           #1. split into independent components that can be combined in block diagonal form
@@ -327,18 +314,19 @@ Covariance <- R6::R6Class("Covariance",
                             D_data$cov[5,D_data$cov[1,]==b] <- fnpar[D_data$cov[3,D_data$cov[1,]==b]] # number of parameters
                           }
                           D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - D_data$cov[5,1]
-                          #D_data$cov[5, ] <- cumsum(D_data$cov[5,]) - 1
                           D_data$data <- Reduce(append,lapply(Distlist,as.vector))
+                          
                           # split into sub blocks
-                          for(b in 1:B){
+                          b <- 1
+                          maxB <- max(D_data$cov[1,])
+                          while(b <= maxB){
                             if(any(D_data$cov[3,D_data$cov[1,]==b] == 1)&!all(D_data$cov[3,D_data$cov[1,]==b] == 1)){
-                             #col1 <- which(D_data$cov[3,D_data$cov[1,]==b]==1)
                               col1 <- which(D_data$cov[1,]==b & D_data$cov[3,] == 1)
-                             #get range of data 
+                              #get range of data 
                               nvar <- D_data$cov[2,]*D_data$cov[4,]
                               nfunc <- ncol(D_data$cov[,D_data$cov[1,]==b]) 
                               dstart <- 1
-                              if(col1 > 1){
+                              if(b > 1){
                                 dstart <- dstart + nvar[1:(col1-1)]
                               }
                               dend <- dstart + nvar[col1] - 1
@@ -347,25 +335,29 @@ Covariance <- R6::R6Class("Covariance",
                               #duplicate columns
                               newcov <- D_data$cov[,D_data$cov[1,]==b ,drop=FALSE]
                               newcov <- newcov[,rep(1:ncol(newcov),nrow(tabgr))]
-                              newcov[2,] <- tabgr$Freq
+                              newcov[2,] <- rep(tabgr$Freq,each=nfunc)
                               newcov[1,] <- rep(1:nrow(tabgr),each=nfunc)
                               newcov[1,] <- newcov[1,] + b - 1
-                              if(any(D_data$cov[1,]>b))D_data$cov[1,D_data$cov[1,]>b] <-  D_data$cov[1,D_data$cov[1,]>b] + nrow(tabgr) + b - 1
+                              if(any(D_data$cov[1,]>b))D_data$cov[1,D_data$cov[1,]>b] <-  D_data$cov[1,D_data$cov[1,]>b] + nrow(tabgr) - 1
                               D_data$cov <-  matrix(c(as.vector(D_data$cov[,D_data$cov[1,]<b]),
                                                       as.vector(newcov),
                                                       as.vector(D_data$cov[,D_data$cov[1,]>b])),nrow=5)
                               
                               #reorder data
                               #if multiple variables reorder
-                              dat <- matrix(D_data$data[dstart:dend2],nrow=sum(tabgr$Freq))
                               newdat <- c()
                               idx <- 1
                               for(i in 1:nrow(tabgr)){
-                                newdat <- c(newdat,as.vector(dat[idx:(idx+tabgr$Freq[i]-1),])) 
+                                for(j in 1:nfunc){
+                                  newdat <- c(newdat,D_data$dat[(idx:(idx+tabgr$Freq[i]-1)) + dend*(j-1)]) 
+                                }
                                 idx <- idx + tabgr$Freq[i]
                               }
                               D_data$data[dstart:dend2] <- newdat
-                              
+                              maxB <- max(D_data$cov[1,])
+                              b <- b + nrow(tabgr)
+                            } else {
+                              b <- b+1
                             }
                           }
                           
@@ -396,8 +388,6 @@ Covariance <- R6::R6Class("Covariance",
                           par_count <- private$D_data$cov[idmax,5] + fnpar[private$D_data$cov[idmax,3]]
                           if(is.null(self$parameters))self$parameters <- rep(0.5,par_count)
                           if(par_count != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          
-                          
                           D <- do.call(genD,append(private$D_data,list(eff_range = self$eff_range,gamma=self$parameters)))#list(private$D_data,gamma=self$parameters)
                           #D <- blockMat(D)
                           if(update){
