@@ -98,6 +98,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dlinkdeta
+Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb, const std::string& link);
+RcppExport SEXP _glmmrBase_dlinkdeta(SEXP xbSEXP, SEXP linkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(dlinkdeta(xb, link));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_genD", (DL_FUNC) &_glmmrBase_genD, 4},
@@ -106,6 +118,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 8},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
+    {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
     {NULL, NULL, 0}
 };
 

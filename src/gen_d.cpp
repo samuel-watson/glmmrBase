@@ -150,3 +150,17 @@ Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
   Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
   return linpred;
 }
+
+//' Partial derivative of link function with respect to linear predictor
+//' 
+//' Returns the partial derivative of link function with respect to linear predictor.
+//' Used internally.
+//' @param xb Vector of values of the linear predictor
+//' @param link String specifying the link function
+//' @return A vector
+// [[Rcpp::export]]
+Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb,
+                            const std::string& link){
+ Eigen::VectorXd deta = glmmr::maths::detadmu(xb,link);
+ return deta;
+}

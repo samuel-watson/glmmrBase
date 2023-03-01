@@ -551,6 +551,19 @@ Model <- R6::R6Class("Model",
                                            Power = pwr)
                          print(res)
                          return(invisible(res))
+                       },
+                       #' @description 
+                       #' Returns the diagonal of the matrix W used to calculate the covariance matrix approximation
+                       #' @return A vector with values of the glm iterated weights
+                       w_matrix = function(){
+                         return(private$W)
+                       },
+                       #' @description 
+                       #' Returns the derivative of the link function with respect to the linear preditor
+                       #' @return A vector
+                       dh_deta = function(){
+                         Q = dlinkdeta(self$fitted(),self$family[[2]])
+                         return(Q)
                        }
                      ),
                      private = list(

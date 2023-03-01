@@ -272,6 +272,8 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
+\item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
+\item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -759,6 +761,32 @@ des$power() #power of 0.90 for the int parameter
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-w_matrix"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-w_matrix}{}}}
+\subsection{Method \code{w_matrix()}}{
+Returns the diagonal of the matrix W used to calculate the covariance matrix approximation
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$w_matrix()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector with values of the glm iterated weights
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-dh_deta"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-dh_deta}{}}}
+\subsection{Method \code{dh_deta()}}{
+Returns the derivative of the link function with respect to the linear preditor
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$dh_deta()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-clone"></a>}}

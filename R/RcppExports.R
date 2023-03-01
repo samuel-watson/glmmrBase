@@ -82,3 +82,14 @@ attenuate_xb <- function(xb, Z, D, link) {
     .Call(`_glmmrBase_attenuate_xb`, xb, Z, D, link)
 }
 
+#' Partial derivative of link function with respect to linear predictor
+#' 
+#' Returns the partial derivative of link function with respect to linear predictor.
+#' Used internally.
+#' @param xb Vector of values of the linear predictor
+#' @param link String specifying the link function
+#' @return A vector
+dlinkdeta <- function(xb, link) {
+    .Call(`_glmmrBase_dlinkdeta`, xb, link)
+}
+
