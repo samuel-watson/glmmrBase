@@ -1,8 +1,8 @@
 Package: glmmrBase
 Type: Package
 Title: Specification of Generalised Linear Mixed Models
-Version: 0.2.5
-Date: 2023-02-22
+Version: 0.2.6
+Date: 2023-03-02
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")),
              person("Yi", "Pan", email = "ypan1988@gmail.com",
