@@ -148,8 +148,9 @@ Covariance <- R6::R6Class("Covariance",
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
+                          re <- re_names(self$formula)
                           cat("\U2BC8 Covariance")
-                          cat("\n   \U2BA1 Formula: ~",self$formula)
+                          cat("\n   \U2BA1 Terms:",re)
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
                         },
                         #' @description 

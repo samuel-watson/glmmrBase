@@ -103,6 +103,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// re_names
+std::vector<std::string> re_names(const std::string& formula);
+RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
+    rcpp_result_gen = Rcpp::wrap(re_names(formula));
+    return rcpp_result_gen;
+END_RCPP
+}
 // gen_dhdmu
 Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb, std::string family, std::string link);
 RcppExport SEXP _glmmrBase_gen_dhdmu(SEXP xbSEXP, SEXP familySEXP, SEXP linkSEXP) {
@@ -168,6 +179,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_n_cov_pars", (DL_FUNC) &_glmmrBase_n_cov_pars, 3},
     {"_glmmrBase_sample_re", (DL_FUNC) &_glmmrBase_sample_re, 4},
     {"_glmmrBase_x_names", (DL_FUNC) &_glmmrBase_x_names, 1},
+    {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},

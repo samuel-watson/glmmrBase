@@ -115,6 +115,20 @@ std::vector<std::string> x_names(const std::string& formula){
   glmmr::Formula form(formula);
   return form.fe_;
 }
+
+//' Gets the names of the random effects terms
+//' 
+//' @param formula A string specifying the formula
+//' @return A vector of variable names
+// [[Rcpp::export]]
+std::vector<std::string> re_names(const std::string& formula){
+ glmmr::Formula form(formula);
+ std::vector<std::string> re(form.re_.size());
+ for(int i = 0; i < form.re_.size(); i++){
+   re[i] = "("+form.z_[i]+"|"+form.re_[i]+")";
+ }
+ return re;
+}
  
 //' Generates the inverse GLM iterated weights.
 //' 
@@ -164,9 +178,11 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
   if(family=="gaussian"){
     nvar_par *= var_par*var_par;
   } else if(family=="Gamma"){
-    nvar_par *= var_par;
+    nvar_par *= 1/var_par;
   } else if(family=="beta"){
     nvar_par *= (1+var_par);
+  } else if(family=="binomial"){
+    nvar_par *= 1/var_par;
   }
   W *= nvar_par;
   //W = W.array().inverse().matrix();

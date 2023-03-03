@@ -79,6 +79,14 @@ x_names <- function(formula) {
     .Call(`_glmmrBase_x_names`, formula)
 }
 
+#' Gets the names of the random effects terms
+#' 
+#' @param formula A string specifying the formula
+#' @return A vector of variable names
+re_names <- function(formula) {
+    .Call(`_glmmrBase_re_names`, formula)
+}
+
 #' Generates the inverse GLM iterated weights.
 #' 
 #' @param xb Vector with mean function value evaluated at fitted model parameters
