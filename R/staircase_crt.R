@@ -113,10 +113,10 @@ staircase_crt <-  function(J,
     }
   } else {
     if(is.null(iac[1]) || is.na(iac[1])){
-      f1 <- "~ (1|gr(J)) + (1|gr(J*t))"
+      f1 <- "~ (1|gr(J)) + (1|gr(J,t))"
       pars <- c(sqrt(bp_var),sqrt(wp_var))
     } else {
-      f1 <- "~ (1|gr(J)) + (1|gr(J*t)) + (1|gr(ind))"
+      f1 <- "~ (1|gr(J)) + (1|gr(J,t)) + (1|gr(ind))"
       pars <- c(sqrt(bp_var),sqrt(wp_var),sqrt(ind_var))
     }
   }

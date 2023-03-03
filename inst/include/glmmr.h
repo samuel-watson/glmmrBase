@@ -2,8 +2,9 @@
 #define GLMMR_H
 
 #include "glmmr/maths.h"
-#include "glmmr/DData.h"
-#include "glmmr/DMatrix.h"
+#include "glmmr/formula.hpp"
+#include "glmmr/covariance.hpp"
+#include "glmmr/linearpredictor.hpp"
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]

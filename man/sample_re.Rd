@@ -4,20 +4,19 @@
 \alias{sample_re}
 \title{Generates a sample of random effects}
 \usage{
-sample_re(cov, data, eff_range, gamma)
+sample_re(formula, data, colnames, theta)
 }
 \arguments{
-\item{cov}{An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
-in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.}
+\item{formula}{A string specifying the formula}
 
-\item{data}{Vector of data. Created by flattening the matrices in column-major order of the data used in each block.}
+\item{data}{A matrix with the data}
 
-\item{eff_range}{Vector of values with the effective range parameters of the covariance functions, where required.}
+\item{colnames}{A vector of strings specifying the column names of the data}
 
-\item{gamma}{Vector of parameters used to generate the matrix D.}
+\item{theta}{Vector of parameters used to generate the matrix D.}
 }
 \value{
-A lower triangular matrix
+A symmetric positive definite covariance matrix
 }
 \description{
 Generates a sample of random effects from the specified covariance matrix.

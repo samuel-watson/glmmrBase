@@ -3,41 +3,80 @@
 
 #' Generates the covariance matrix of the random effects
 #' 
-#' Generates the covariance matrix of the random effects from a sparse representation. Used internally in the Covariance class.
-#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of variables
-#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-#' @param gamma Vector of parameters used to generate the matrix D. 
+#' Generates the covariance matrix of the random effects.
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @param theta Vector of parameters used to generate the matrix D. 
 #' @return A symmetric positive definite covariance matrix
-genD <- function(cov, data, eff_range, gamma) {
-    .Call(`_glmmrBase_genD`, cov, data, eff_range, gamma)
+genD <- function(formula, data, colnames, theta) {
+    .Call(`_glmmrBase_genD`, formula, data, colnames, theta)
+}
+
+#' Generates the design matrix of the random effects
+#' 
+#' Generates the design matrix of the random effects.
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @return A symmetric positive definite covariance matrix
+genZ <- function(formula, data, colnames) {
+    .Call(`_glmmrBase_genZ`, formula, data, colnames)
+}
+
+#' Generates the matrix X
+#' 
+#' Generates the matrix X from a formula and data. This function replicates the functionality of the 
+#' R function model.matrix, but is intended to be extended to accomodate linearisation of non-linear functions
+#' and other functionality in future versions.
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @return A symmetric positive definite covariance matrix
+genX <- function(formula, data, colnames) {
+    .Call(`_glmmrBase_genX`, formula, data, colnames)
 }
 
 #' Generates the Cholesky decomposition covariance matrix of the random effects
 #' 
 #' Generates the Cholesky Decomposition of the covariance matrix of the random effects. Used internally in the Covariance class.
-#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
-#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-#' @param gamma Vector of parameters used to generate the matrix D. 
-#' @return A lower triangular matrix
-genCholD <- function(cov, data, eff_range, gamma) {
-    .Call(`_glmmrBase_genCholD`, cov, data, eff_range, gamma)
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @param theta Vector of parameters used to generate the matrix D. 
+#' @return A symmetric positive definite covariance matrix
+genCholD <- function(formula, data, colnames, theta) {
+    .Call(`_glmmrBase_genCholD`, formula, data, colnames, theta)
+}
+
+#' Returns the number of covariance parameters required for the formula
+#' 
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @return Integer count of parameters
+n_cov_pars <- function(formula, data, colnames) {
+    .Call(`_glmmrBase_n_cov_pars`, formula, data, colnames)
 }
 
 #' Generates a sample of random effects
 #' 
 #' Generates a sample of random effects from the specified covariance matrix.
-#' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
-#' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-#' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-#' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-#' @param gamma Vector of parameters used to generate the matrix D. 
-#' @return A lower triangular matrix
-sample_re <- function(cov, data, eff_range, gamma) {
-    .Call(`_glmmrBase_sample_re`, cov, data, eff_range, gamma)
+#' @param formula A string specifying the formula
+#' @param data A matrix with the data 
+#' @param colnames A vector of strings specifying the column names of the data
+#' @param theta Vector of parameters used to generate the matrix D. 
+#' @return A symmetric positive definite covariance matrix
+sample_re <- function(formula, data, colnames, theta) {
+    .Call(`_glmmrBase_sample_re`, formula, data, colnames, theta)
+}
+
+#' Gets the names of the fixed effects variables
+#' 
+#' @param formula A string specifying the formula
+#' @return A vector of variable names
+x_names <- function(formula) {
+    .Call(`_glmmrBase_x_names`, formula)
 }
 
 #' Generates the inverse GLM iterated weights.
@@ -62,10 +101,9 @@ gen_dhdmu <- function(xb, family, link) {
 #' @param link String specifying the link function
 #' @param var_par Value of the optional scale parameter
 #' @param attenuate Logical indicating whether to use "attenuated" values of the linear predictor
-#' @param qlik Not used.
 #' @return A matrix
-gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate, qlik = TRUE) {
-    .Call(`_glmmrBase_gen_sigma_approx`, xb, Z, D, family, link, var_par, attenuate, qlik)
+gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate) {
+    .Call(`_glmmrBase_gen_sigma_approx`, xb, Z, D, family, link, var_par, attenuate)
 }
 
 #' Return marginal expectation with attenuation

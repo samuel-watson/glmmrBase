@@ -100,16 +100,6 @@ cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)                     
-
-## ------------------------------------------------
-## Method `Covariance$sampleD`
-## ------------------------------------------------
-
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
-                      parameters = c(0.05,0.8),
-                      data= df)
-cov$sampleD(c(0.01,0.1))
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -119,9 +109,6 @@ cov$sampleD(c(0.01,0.1))
 \item{\code{formula}}{Covariance function formula.}
 
 \item{\code{parameters}}{Model parameters specified in order of the functions in the formula.}
-
-\item{\code{eff_range}}{The effective range of covariance functions, specified in order of the functions in the formula. Only 
-the functions with compact support require effective range parameters.}
 
 \item{\code{Z}}{Design matrix}
 
@@ -138,7 +125,6 @@ the functions with compact support require effective range parameters.}
 \item \href{#method-Covariance-update_parameters}{\code{Covariance$update_parameters()}}
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
-\item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
 \item \href{#method-Covariance-get_D_data}{\code{Covariance$get_D_data()}}
 \item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
@@ -163,13 +149,7 @@ Scalar
 \subsection{Method \code{new()}}{
 Create a new Covariance object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(
-  formula,
-  data = NULL,
-  parameters = NULL,
-  eff_range = NULL,
-  verbose = FALSE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(formula, data = NULL, parameters = NULL, verbose = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -181,9 +161,6 @@ Create a new Covariance object
 
 \item{\code{parameters}}{(Optional) Vector with parameter values for the functions in the model
 formula. See Details.}
-
-\item{\code{eff_range}}{(Optional) Vector with the effective range parameter for covariance
-functions that require it, i.e. those with compact support.}
 
 \item{\code{verbose}}{Logical whether to provide detailed output.}
 }
@@ -307,41 +284,6 @@ cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)                     
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Covariance-sampleD"></a>}}
-\if{latex}{\out{\hypertarget{method-Covariance-sampleD}{}}}
-\subsection{Method \code{sampleD()}}{
-Generate a new D matrix
-
-D is the covariance matrix of the random effects terms in the generalised linear mixed
-model. This function will return a matrix D for a given set of parameters.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$sampleD(parameters)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{parameters}}{list of lists, see `initialize()`}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-matrix
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
-                      parameters = c(0.05,0.8),
-                      data= df)
-cov$sampleD(c(0.01,0.1))
 }
 \if{html}{\out{</div>}}
 

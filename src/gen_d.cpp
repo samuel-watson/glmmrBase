@@ -4,61 +4,118 @@
 
 //' Generates the covariance matrix of the random effects
 //' 
-//' Generates the covariance matrix of the random effects from a sparse representation. Used internally in the Covariance class.
-//' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of variables
-//' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-//' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-//' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-//' @param gamma Vector of parameters used to generate the matrix D. 
+//' Generates the covariance matrix of the random effects.
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @param theta Vector of parameters used to generate the matrix D. 
 //' @return A symmetric positive definite covariance matrix
 // [[Rcpp::export]]
-Eigen::MatrixXd genD(const Eigen::ArrayXXi &cov,
-                     const Eigen::ArrayXd &data,
-                     const Eigen::ArrayXd &eff_range,
-                     const Eigen::VectorXd& gamma) {
-  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
-  Eigen::MatrixXd DBlocks = dmat.genD();
-  return(DBlocks);
+Eigen::MatrixXd genD(const std::string& formula,
+                     const Eigen::ArrayXXd& data,
+                     const std::vector<std::string>& colnames,
+                     const Eigen::VectorXd& theta) {
+  glmmr::Formula form(formula);
+  glmmr::Covariance cov(form,data,colnames,theta);
+  return cov.D();
+}
+
+//' Generates the design matrix of the random effects
+//' 
+//' Generates the design matrix of the random effects.
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @return A symmetric positive definite covariance matrix
+// [[Rcpp::export]]
+Eigen::MatrixXd genZ(const std::string& formula,
+                    const Eigen::ArrayXXd& data,
+                    const std::vector<std::string>& colnames) {
+ glmmr::Formula form(formula);
+ glmmr::Covariance cov(form,data,colnames);
+ return cov.Z();
+}
+
+//' Generates the matrix X
+//' 
+//' Generates the matrix X from a formula and data. This function replicates the functionality of the 
+//' R function model.matrix, but is intended to be extended to accomodate linearisation of non-linear functions
+//' and other functionality in future versions.
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @return A symmetric positive definite covariance matrix
+// [[Rcpp::export]]
+Eigen::MatrixXd genX(const std::string& formula,
+                    const Eigen::ArrayXXd& data,
+                    const std::vector<std::string>& colnames) {
+ glmmr::Formula form(formula);
+ glmmr::LinearPredictor lin(form,data,colnames);
+ return lin.X();
 }
 
 //' Generates the Cholesky decomposition covariance matrix of the random effects
 //' 
 //' Generates the Cholesky Decomposition of the covariance matrix of the random effects. Used internally in the Covariance class.
-//' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
-//' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-//' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-//' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-//' @param gamma Vector of parameters used to generate the matrix D. 
-//' @return A lower triangular matrix
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @param theta Vector of parameters used to generate the matrix D. 
+//' @return A symmetric positive definite covariance matrix
 // [[Rcpp::export]]
-Eigen::MatrixXd genCholD(const Eigen::ArrayXXi &cov,
-                         const Eigen::ArrayXd &data,
-                         const Eigen::ArrayXd &eff_range,
-                         const Eigen::VectorXd& gamma) {
-  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
-  Eigen::MatrixXd DBlocks = dmat.genD(true, false);
-  return(DBlocks);
+Eigen::MatrixXd genCholD(const std::string& formula,
+                         const Eigen::ArrayXXd& data,
+                         const std::vector<std::string>& colnames,
+                         const Eigen::VectorXd& theta) {
+ glmmr::Formula form(formula);
+ glmmr::Covariance cov(form,data,colnames,theta);
+ return cov.D(true,false);
 }
+
+//' Returns the number of covariance parameters required for the formula
+//' 
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @return Integer count of parameters
+// [[Rcpp::export]]
+int n_cov_pars(const std::string& formula,
+                          const Eigen::ArrayXXd& data,
+                          const std::vector<std::string>& colnames) {
+ glmmr::Formula form(formula);
+ glmmr::Covariance cov(form,data,colnames);
+ return cov.npar();
+}
+
 
 //' Generates a sample of random effects
 //' 
 //' Generates a sample of random effects from the specified covariance matrix.
-//' @param cov An integer matrix with columns of block identifier, dimension of block, function definition, number of varaibles
-//' in the argument to the funciton, and index of the parameters, respectively. Rows are specific functions of each block.
-//' @param data Vector of data. Created by flattening the matrices in column-major order of the data used in each block.
-//' @param eff_range Vector of values with the effective range parameters of the covariance functions, where required.
-//' @param gamma Vector of parameters used to generate the matrix D. 
-//' @return A lower triangular matrix
+//' @param formula A string specifying the formula
+//' @param data A matrix with the data 
+//' @param colnames A vector of strings specifying the column names of the data
+//' @param theta Vector of parameters used to generate the matrix D. 
+//' @return A symmetric positive definite covariance matrix
 // [[Rcpp::export]]
-Eigen::VectorXd sample_re(const Eigen::ArrayXXi &cov,
-                          const Eigen::ArrayXd &data,
-                          const Eigen::ArrayXd &eff_range,
-                          const Eigen::VectorXd& gamma){
-  glmmr::DMatrix dmat(cov,data,eff_range, gamma);
-  Eigen::VectorXd samps = dmat.sim_re();
-  return samps;
+Eigen::VectorXd sample_re(const std::string& formula,
+                        const Eigen::ArrayXXd& data,
+                        const std::vector<std::string>& colnames,
+                        const Eigen::VectorXd& theta) {
+  glmmr::Formula form(formula);
+  glmmr::Covariance cov(form,data,colnames,theta);
+  return cov.sim_re();
 }
 
+//' Gets the names of the fixed effects variables
+//' 
+//' @param formula A string specifying the formula
+//' @return A vector of variable names
+// [[Rcpp::export]]
+std::vector<std::string> x_names(const std::string& formula){
+  glmmr::Formula form(formula);
+  return form.fe_;
+}
+ 
 //' Generates the inverse GLM iterated weights.
 //' 
 //' @param xb Vector with mean function value evaluated at fitted model parameters
@@ -85,7 +142,6 @@ Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
 //' @param link String specifying the link function
 //' @param var_par Value of the optional scale parameter
 //' @param attenuate Logical indicating whether to use "attenuated" values of the linear predictor
-//' @param qlik Not used.
 //' @return A matrix
 // [[Rcpp::export]]
 Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
@@ -94,8 +150,7 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
                                  std::string family,
                                  std::string link,
                                  double var_par,
-                                 bool attenuate,
-                                 bool qlik = true
+                                 bool attenuate
                                  ){
   Eigen::MatrixXd S(xb.size(),xb.size());
   // generate the linear predictor
@@ -104,31 +159,19 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
     linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
   }
 
-  if(qlik){
-    Eigen::VectorXd W = glmmr::maths::dhdmu(linpred,family,link);
-    double nvar_par = 1.0;
-    if(family=="gaussian"){
-      nvar_par *= var_par*var_par;
-    } else if(family=="Gamma"){
-      nvar_par *= var_par;
-    } else if(family=="beta"){
-      nvar_par *= (1+var_par);
-    }
-    W *= nvar_par;
-    //W = W.array().inverse().matrix();
-    S = Z*D*Z.transpose();
-    S += W.asDiagonal();
-  } else {
-    // this is useless - supposed to be a GEE approach but
-    // doesn't provide useful answers. leaving here for now
-    // incase we come back to it
-    Eigen::VectorXd L = glmmr::maths::detadmu(linpred,link);
-    Eigen::VectorXd mu = glmmr::maths::mod_inv_func(linpred,link);
-    Eigen::VectorXd A = glmmr::maths::marginal_var(mu,family,var_par);
-    L = L.array().inverse().matrix();
-    S = L.asDiagonal()*Z*D*Z.transpose()*L.asDiagonal();
-    S += A.asDiagonal();
+  Eigen::VectorXd W = glmmr::maths::dhdmu(linpred,family,link);
+  double nvar_par = 1.0;
+  if(family=="gaussian"){
+    nvar_par *= var_par*var_par;
+  } else if(family=="Gamma"){
+    nvar_par *= var_par;
+  } else if(family=="beta"){
+    nvar_par *= (1+var_par);
   }
+  W *= nvar_par;
+  //W = W.array().inverse().matrix();
+  S = Z*D*Z.transpose();
+  S += W.asDiagonal();
   return S;
 }
 

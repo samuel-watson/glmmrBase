@@ -33,8 +33,7 @@ marginal quasilikelihood:
 
 where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
 to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)} 
-(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
-the memory requirements can be prohibitive (use option `skip_sigma`). 
+(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). 
 
 See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
 detailed guide on model specification.
@@ -52,12 +51,6 @@ Calls the respective print methods of the linked covariance and mean function ob
 
 
 The matrices X and Z both have n rows, where n is the number of observations in the model/design.
-
-
-**Number of clusters**
-Returns a data frame describing the number of independent clusters or groups at each level in the design. For example,
-if there were cluster-periods nested in clusters, then the top level would be clusters, and the second level would be 
-cluster periods.
 
 
 Using `update_parameters()` is the preferred way of updating the parameters of the 
@@ -83,7 +76,7 @@ mf1 <- MeanFunction$new(
 )
 cov1 <- Covariance$new(
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
+  formula = ~ (1|gr(cl)) + (1|gr(cl,t))
 )
 des <- Model$new(
   covariance = cov1,
@@ -107,30 +100,23 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
+  
+# or as
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = list(parameters = c(0.25)),
+  mean = list(parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson()
+  )
+
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian()) 
-
-## ------------------------------------------------
-## Method `Model$n_cluster`
-## ------------------------------------------------
-
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-des <- Model$new(
-  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
-  mean = list(formula = ~ factor(t) + int - 1),
-  data = df, 
-  family = stats::gaussian(),
-  var_par = 1
-)
-des$n_cluster() ## returns two levels of 10 and 50
 
 ## ------------------------------------------------
 ## Method `Model$subset_rows`
@@ -138,7 +124,7 @@ des$n_cluster() ## returns two levels of 10 and 50
 
 #generate a stepped wedge design and remove the first sequence
 des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean_function$data$J!=1)
+ids_to_keep <- which(des$mean$data$J!=1)
 des$subset_rows(ids_to_keep)
 
 ## ------------------------------------------------
@@ -188,7 +174,7 @@ des <- Model$new(
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
 des$check() #updates 
-des$mean_function$parameters <- c(rnorm(5),0.1)
+des$mean$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
 
 ## ------------------------------------------------
@@ -217,7 +203,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
     parameters = c(0.25,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -243,14 +229,13 @@ Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 \describe{
 \item{\code{covariance}}{A \link[glmmrBase]{Covariance} object defining the random effects covariance.}
 
-\item{\code{mean_function}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
+\item{\code{mean}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
 
 \item{\code{family}}{One of the family function used in R's glm functions. See \link[stats]{family} for details}
 
 \item{\code{exp_condition}}{A vector indicting the unique experimental conditions for each observation, see Details.}
 
-\item{\code{Sigma}}{The overall covariance matrix for the observations. Calculated and updated automatically as \eqn{W^{-1} + ZDZ^T} where W is an n x n 
-diagonal matrix with elements on the diagonal equal to the GLM iterated weights. See Details.}
+\item{\code{formula}}{The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
 }
@@ -264,7 +249,6 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
 \item \href{#method-Model-n}{\code{Model$n()}}
-\item \href{#method-Model-n_cluster}{\code{Model$n_cluster()}}
 \item \href{#method-Model-subset_rows}{\code{Model$subset_rows()}}
 \item \href{#method-Model-subset_cols}{\code{Model$subset_cols()}}
 \item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
@@ -274,6 +258,7 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
+\item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -302,7 +287,8 @@ None. Used for effects.
 \if{html}{\out{<a id="method-Model-fitted"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
-Return predicted values based on the currently stored parameter values in `mean_function`
+Return predicted values. Does not account for the random effects. For simulated values based 
+on resampling random effects, see `sim_data()`
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link")}\if{html}{\out{</div>}}
 }
@@ -326,19 +312,23 @@ A \link[Matrix]{Matrix} class object containing the predicted values
 Create a new Model object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$new(
+  formula,
   covariance,
   mean,
   data = NULL,
   family = NULL,
   var_par = NULL,
-  verbose = TRUE,
-  skip.sigma = FALSE
+  offset = NULL,
+  verbose = TRUE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then 
+seaparate formulae need to be provided to the covariance and mean arguments below.}
+
 \item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
 that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.5.}
@@ -358,11 +348,9 @@ objects, or as members of the list of arguments to `mean`. Current accepts \link
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
-\item{\code{verbose}}{Logical indicating whether to provide detailed output}
+\item{\code{offset}}{A vector of offset values. Optional - could be provided to the argument to mean instead.}
 
-\item{\code{skip.sigma}}{Logical indicating whether to skip the creating of the covariance matrix Sigma. For 
-very large designs with thousands of observations or more, the covariance matrix will be too big to 
-fit in memory, so this option will prevent sigma being created.}
+\item{\code{verbose}}{Logical indicating whether to provide detailed output}
 }
 \if{html}{\out{</div>}}
 }
@@ -383,7 +371,7 @@ mf1 <- MeanFunction$new(
 )
 cov1 <- Covariance$new(
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
+  formula = ~ (1|gr(cl)) + (1|gr(cl,t))
 )
 des <- Model$new(
   covariance = cov1,
@@ -407,10 +395,20 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
+  
+# or as
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = list(parameters = c(0.25)),
+  mean = list(parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson()
+  )
+
                   
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian()) 
@@ -455,45 +453,6 @@ Returns the number of observations in the model
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-n_cluster"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-n_cluster}{}}}
-\subsection{Method \code{n_cluster()}}{
-Returns the number of clusters at each level
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$n_cluster()}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{ignored}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with the level, number of clusters, and variables describing each level.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-des <- Model$new(
-  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
-  mean = list(formula = ~ factor(t) + int - 1),
-  data = df, 
-  family = stats::gaussian(),
-  var_par = 1
-)
-des$n_cluster() ## returns two levels of 10 and 50
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-subset_rows"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-subset_rows}{}}}
 \subsection{Method \code{subset_rows()}}{
@@ -519,7 +478,7 @@ The function updates the object and nothing is returned
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{#generate a stepped wedge design and remove the first sequence
 des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean_function$data$J!=1)
+ids_to_keep <- which(des$mean$data$J!=1)
 des$subset_rows(ids_to_keep)
 }
 \if{html}{\out{</div>}}
@@ -646,7 +605,7 @@ des <- Model$new(
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
 des$check() #updates 
-des$mean_function$parameters <- c(rnorm(5),0.1)
+des$mean$parameters <- c(rnorm(5),0.1)
 des$check() #updates 
 }
 \if{html}{\out{</div>}}
@@ -698,7 +657,7 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \if{html}{\out{<a id="method-Model-information_matrix"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-information_matrix}{}}}
 \subsection{Method \code{information_matrix()}}{
-Generates the information matrix
+Generates the information matrix of the GLS estimator
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix()}\if{html}{\out{</div>}}
 }
@@ -746,7 +705,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
     parameters = c(0.25,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -786,6 +745,21 @@ Returns the derivative of the link function with respect to the linear preditor
 
 \subsection{Returns}{
 A vector
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-Sigma"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-Sigma}{}}}
+\subsection{Method \code{Sigma()}}{
+Returns the (approximate) covariance matrix of y
+
+Returns the covariance matrix Sigma. For non-linear models this is an approximation. See Details.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$Sigma()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A matrix.
 }
 }
 \if{html}{\out{<hr>}}

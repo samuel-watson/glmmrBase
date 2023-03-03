@@ -50,7 +50,7 @@ If using direct assignment, call `self$check()` afterwards.
 
 df <- nelder(~(cl(4)*t(5)) > ind(5))
 df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
+df[df$cl <= 2, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1)
@@ -77,7 +77,7 @@ mf1$check()
 
 df <- nelder(~(cl(4)*t(5)) > ind(5))
 df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
+df[df$cl <= 2, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
@@ -133,6 +133,8 @@ mf1$subset_cols(1:2)
 \item{\code{parameters}}{A vector of parameter values for \eqn{\beta} used for simulating data and calculating
 covariance matrix of observations for non-linear models.}
 
+\item{\code{offset}}{An optional vector specifying the offset values}
+
 \item{\code{X}}{the fixed effects design matrix}
 }
 \if{html}{\out{</div>}}
@@ -148,6 +150,7 @@ covariance matrix of observations for non-linear models.}
 \item \href{#method-MeanFunction-colnames}{\code{MeanFunction$colnames()}}
 \item \href{#method-MeanFunction-subset_rows}{\code{MeanFunction$subset_rows()}}
 \item \href{#method-MeanFunction-subset_cols}{\code{MeanFunction$subset_cols()}}
+\item \href{#method-MeanFunction-linear_predictor}{\code{MeanFunction$linear_predictor()}}
 \item \href{#method-MeanFunction-clone}{\code{MeanFunction$clone()}}
 }
 }
@@ -174,7 +177,7 @@ The number of observations in the model
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(4)*t(5)) > ind(5))
 df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
+df[df$cl <= 2, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1)
@@ -230,7 +233,13 @@ mf1$check()
 \subsection{Method \code{new()}}{
 Create a new MeanFunction object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$new(formula, data = NULL, parameters = NULL, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$new(
+  formula,
+  data,
+  parameters = NULL,
+  offset = NULL,
+  verbose = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -243,6 +252,8 @@ Create a new MeanFunction object
 \item{\code{parameters}}{(Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
 If the parameters are not specified then they are initialised to 0.}
 
+\item{\code{offset}}{A vector of offset values (optional)}
+
 \item{\code{verbose}}{Logical indicating whether to report detailed output}
 }
 \if{html}{\out{</div>}}
@@ -254,7 +265,7 @@ A MeanFunction object
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(4)*t(5)) > ind(5))
 df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
+df[df$cl <= 2, 'int'] <- 1
 mf1 <- MeanFunction$new(formula = ~ int ,
                         data=df,
                         parameters = c(-1,1),
@@ -410,6 +421,21 @@ mf1$subset_cols(1:2)
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MeanFunction-linear_predictor"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-linear_predictor}{}}}
+\subsection{Method \code{linear_predictor()}}{
+Returns the linear predictor 
+
+Returns the linear predictor, X * beta
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$linear_predictor()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-MeanFunction-clone"></a>}}

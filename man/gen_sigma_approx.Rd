@@ -4,7 +4,7 @@
 \alias{gen_sigma_approx}
 \title{Generates an approximation to the covariance of y}
 \usage{
-gen_sigma_approx(xb, Z, D, family, link, var_par, attenuate, qlik = TRUE)
+gen_sigma_approx(xb, Z, D, family, link, var_par, attenuate)
 }
 \arguments{
 \item{xb}{Vector of values of the linear predictor}
@@ -20,8 +20,6 @@ gen_sigma_approx(xb, Z, D, family, link, var_par, attenuate, qlik = TRUE)
 \item{var_par}{Value of the optional scale parameter}
 
 \item{attenuate}{Logical indicating whether to use "attenuated" values of the linear predictor}
-
-\item{qlik}{Not used.}
 }
 \value{
 A matrix
