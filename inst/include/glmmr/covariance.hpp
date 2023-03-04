@@ -1,6 +1,8 @@
 #ifndef COVARIANCE_HPP
 #define COVARIANCE_HPP
 
+#define _USE_MATH_DEFINES
+
 #include "general.h"
 #include "interpreter.h"
 #include "formula.hpp"
@@ -9,36 +11,68 @@ namespace glmmr {
 
 class Covariance {
 public:
+  glmmr::Formula form_;
   const Eigen::ArrayXXd data_;
   const strvec colnames_;
   dblvec parameters_;
   dblvec other_pars_;
   
-  Covariance(const glmmr::Formula& form,
-                                const Eigen::ArrayXXd &data,
-                                const strvec& colnames) : 
-    data_(data), colnames_(colnames), form_(form), Q_(0) {
-    parse();
-  };
+  Covariance(const std::string& formula,
+             const Eigen::ArrayXXd &data,
+             const strvec& colnames) : 
+    form_(formula), data_(data), colnames_(colnames), Q_(0),
+    size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {};
   
   Covariance(const glmmr::Formula& form,
-                                const Eigen::ArrayXXd &data,
-                                const strvec& colnames,
-                                const dblvec& parameters) : 
-    data_(data), colnames_(colnames), parameters_(parameters),form_(form),  Q_(0) {
-    parse();
-  };
+             const Eigen::ArrayXXd &data,
+             const strvec& colnames) : 
+    form_(form), data_(data), colnames_(colnames), Q_(0),
+    size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {};
+  
+  Covariance(const std::string& formula,
+             const Eigen::ArrayXXd &data,
+             const strvec& colnames,
+             const dblvec& parameters) : 
+    form_(formula), data_(data), colnames_(colnames), parameters_(parameters), 
+    Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {};
   
   Covariance(const glmmr::Formula& form,
-                                const Eigen::ArrayXXd &data,
-                                const strvec& colnames,
-                                const Eigen::ArrayXd& parameters) : 
-    data_(data), colnames_(colnames),form_(form),  Q_(0) {
+             const Eigen::ArrayXXd &data,
+             const strvec& colnames,
+             const dblvec& parameters) : 
+    form_(form), data_(data), colnames_(colnames), parameters_(parameters), 
+    Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {};
+  
+  Covariance(const std::string& formula,
+             const Eigen::ArrayXXd &data,
+             const strvec& colnames,
+             const Eigen::ArrayXd& parameters) : 
+    form_(formula), data_(data), colnames_(colnames),Q_(0),
+    size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {
     update_parameters(parameters);
-    parse();
+  };
+  
+  Covariance(const glmmr::Formula& form,
+             const Eigen::ArrayXXd &data,
+              const strvec& colnames,
+              const Eigen::ArrayXd& parameters) : 
+    form_(form), data_(data), colnames_(colnames),Q_(0),
+    size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()) {
+    update_parameters(parameters);
   };
   
   void update_parameters(const dblvec& parameters){
+    parameters_ = parameters;
+  };
+  
+  //external version for Rcpp module
+  void update_parameters_extern(const dblvec& parameters){
     parameters_ = parameters;
   };
   
@@ -68,7 +102,8 @@ public:
   
   Eigen::MatrixXd D(bool chol = false,
                     bool upper = false){
-    return D_builder(0,chol,upper);
+    Eigen::MatrixXd D = D_builder(0,chol,upper);
+    return D;
   };
   
   int npar(){
@@ -86,8 +121,19 @@ public:
     return Q_;
   }
   
+  int max_block_dim(){
+    int max = 0;
+    for(int i = 0; i<re_data_.size(); i++){
+      if(re_data_[i].size() > max)max = re_data_[i].size();
+    }
+    return max;
+  }
+  
+  double log_likelihood(const Eigen::VectorXd &u);
+  
+  double log_determinant();
+  
 private:
-  const glmmr::Formula& form_;
   intvec z_;
   dblvec3d re_data_;
   intvec3d re_cols_;
@@ -97,34 +143,20 @@ private:
   intvec3d re_pars_;
   intvec2d re_rpn_;
   intvec2d re_index_;
+  intvec2d re_obs_index_;
   int Q_;
   int n_;
   int B_;
   int npars_;
+  Eigen::ArrayXd size_B_array;
+  Eigen::MatrixXd dmat_matrix;
+  Eigen::VectorXd zquad;
   
   Eigen::MatrixXd D_builder(int b,
                             bool chol = false,
-                            bool upper = false){
-    if (b == B_ - 1) {
-      return chol ? get_chol_block(b,upper) : get_block(b);
-    }
-    else {
-      Eigen::MatrixXd mat1 = chol ? get_chol_block(b,upper) : get_block(b);
-      Eigen::MatrixXd mat2;
-      if (b == B_ - 2) {
-        mat2 = chol ? get_chol_block(b+1,upper) : get_block(b+1);
-      }
-      else {
-        mat2 = D_builder(b + 1, chol, upper);
-      }
-      int n1 = mat1.rows();
-      int n2 = mat2.rows();
-      Eigen::MatrixXd dmat = Eigen::MatrixXd::Zero(n1+n2, n1+n2);
-      dmat.block(0,0,n1,n1) = mat1;
-      dmat.block(n1, n1, n2, n2) = mat2;
-      return dmat;
-    }
-  }
+                            bool upper = false);
+  
+ 
 };
 
 }

@@ -194,70 +194,10 @@ inline void glmmr::Covariance::parse(){
   
   B_ = re_data_.size();
   n_ = data_.rows();
-  
-  // glmmr::print_vec_2d<intvec2d>(re_rpn_);
-  // glmmr::print_vec_2d<intvec2d>(re_index_);
-  // glmmr::print_vec_3d<dblvec3d>(re_data_);
-  // glmmr::print_vec_3d<intvec3d>(re_cols_);
-  // glmmr::print_vec_1d<intvec>(z_);
 }
 
 inline double glmmr::Covariance::get_val(int b, int i, int j){
   return glmmr::calculate(re_rpn_[b],re_index_[b],parameters_,re_data_[b],i,j);
-  // int idx_iter = 0;
-  // dblvec stack;
-  // for(int k = 0; k < re_rpn_[b].size(); k++){
-  //   // error checking - remove for release version
-  //   if(re_rpn_[b][k] == 1 && re_rpn_[b][k] ==0 && idx_iter >= re_index_[b].size())Rcpp::stop("Error A");
-  //   if(re_rpn_[b][k] == 1 && re_rpn_[b][k] ==0 && re_index_[b][idx_iter] >= re_data_[b][i].size() )Rcpp::stop("Error B");
-  //   if(re_rpn_[b][k] == 2 && re_index_[b][idx_iter] >=  parameters_.size())Rcpp::stop("Error C");
-  //   if(re_rpn_[b][k] > 2 && stack.size() < 2){
-  //     Rcpp::Rcout << "Instruction: " << k << " = " << re_rpn_[b][k];
-  //     Rcpp::stop("Error D");
-  //   }
-  //   
-  //   switch(re_rpn_[b][k]){
-  //   case 0:
-  //     stack.insert(stack.begin(),re_data_[b][i][re_index_[b][idx_iter]]);
-  //     idx_iter++;
-  //     break;
-  //   case 1:
-  //     stack.insert(stack.begin(),re_data_[b][j][re_index_[b][idx_iter]]);
-  //     idx_iter++;
-  //     break;
-  //   case 2:
-  //     stack.insert(stack.begin(),parameters_[re_index_[b][idx_iter]]);
-  //     idx_iter++;
-  //     break;
-  //   case 3:
-  //     stack[0] += stack[1];
-  //     stack.erase(std::next(stack.begin()));
-  //     break;
-  //   case 4:
-  //     stack[0] -= stack[1];
-  //     stack.erase(std::next(stack.begin()));
-  //     break;
-  //   case 5:
-  //     stack[0] *= stack[1];
-  //     stack.erase(std::next(stack.begin()));
-  //     break;
-  //   case 6:
-  //     stack[0] *= 1/stack[1];
-  //     stack.erase(std::next(stack.begin()));
-  //     break;
-  //   case 7:
-  //     stack[0] = sqrt(stack[0]);
-  //     break;
-  //   case 8:
-  //     stack[0] = pow(stack[1],stack[0]);
-  //     stack.erase(std::next(stack.begin()));
-  //     break;
-  //   case 9:
-  //     stack[0] = exp(stack[0]);
-  //     break;
-  //   }
-  // }
-  // return stack[0];
 }
 
 inline Eigen::MatrixXd glmmr::Covariance::get_block(int b){
@@ -289,6 +229,7 @@ inline Eigen::MatrixXd glmmr::Covariance::Z(){
   int zcount = 0;
   int nvar,nval;
   int i,j,k,l,m;
+  re_obs_index_.resize(re_data_.size());
   for(i = 0; i < re_data_.size(); i++){
     for(j = 0; j < re_data_[i].size(); j++){
       dblvec vals(re_data_[i][j].size());
@@ -301,6 +242,7 @@ inline Eigen::MatrixXd glmmr::Covariance::Z(){
           }
         }
         if(re_data_[i][j]==vals){
+          re_obs_index_[i].push_back(k);
           Z(k,zcount) = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
         }
       }
@@ -343,6 +285,70 @@ inline Eigen::VectorXd glmmr::Covariance::sim_re(){
     idx += ndim;
   }
   return samps;
+}
+
+inline Eigen::MatrixXd glmmr::Covariance::D_builder(int b,
+                                                    bool chol,
+                                                    bool upper){
+  if (b == B_ - 1) {
+    return chol ? get_chol_block(b,upper) : get_block(b);
+  }
+  else {
+    Eigen::MatrixXd mat1 = chol ? get_chol_block(b,upper) : get_block(b);
+    Eigen::MatrixXd mat2;
+    if (b == B_ - 2) {
+      mat2 = chol ? get_chol_block(b+1,upper) : get_block(b+1);
+    }
+    else {
+      mat2 = D_builder(b + 1, chol, upper);
+    }
+    int n1 = mat1.rows();
+    int n2 = mat2.rows();
+    Eigen::MatrixXd dmat = Eigen::MatrixXd::Zero(n1+n2, n1+n2);
+    dmat.block(0,0,n1,n1) = mat1;
+    dmat.block(n1, n1, n2, n2) = mat2;
+    return dmat;
+  }
+}
+
+inline double glmmr::Covariance::log_likelihood(const Eigen::VectorXd &u){
+  int blocksize;
+  double logdet_val=0.0;
+  double loglik_val=0.0;
+  size_B_array.setZero();
+  for(int b=0;b<B_;b++){
+    blocksize = re_data_[b].size();
+    dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
+    if(fn_[b].size()==1 && fn_[b][0]=="gr"){
+      for(int k=0; k<blocksize; k++){
+        double var = get_val(b,k,k);
+        size_B_array[b] = -0.5*log(var*var) -0.5*log(2*M_PI) -
+          0.5*u(re_obs_index_[b][k])*u(re_obs_index_[b][k])/(var*var);
+      }
+    } else {
+      logdet_val = 0;
+      for(int j = 0; j < blocksize; j++){
+        logdet_val += 2*log(dmat_matrix(j,j));
+      }
+      zquad.segment(0,blocksize) = glmmr::algo::forward_sub(dmat_matrix,u,re_obs_index_[b]);
+      size_B_array[b] = (-0.5*blocksize * log(2*M_PI) - 0.5*logdet_val - 0.5*zquad.transpose()*zquad);
+    }
+  }
+  loglik_val = size_B_array.sum();
+  return loglik_val;
+}
+
+inline double glmmr::Covariance::log_determinant(){
+  int blocksize;
+  double logdet_val = 0.0;
+  for(int b=0;b<B_;b++){
+    blocksize = re_obs_index_[b].size();
+    dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
+    for(int i = 0; i < blocksize; i++){
+      logdet_val += 2*log(dmat_matrix(i,i));
+    }
+  }
+  return logdet_val;
 }
 
 #endif

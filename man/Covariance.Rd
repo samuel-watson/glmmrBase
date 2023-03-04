@@ -125,8 +125,9 @@ cov$subset(1:100)
 \item \href{#method-Covariance-update_parameters}{\code{Covariance$update_parameters()}}
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
-\item \href{#method-Covariance-get_D_data}{\code{Covariance$get_D_data()}}
 \item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
+\item \href{#method-Covariance-log_likelihood}{\code{Covariance$log_likelihood()}}
+\item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -220,15 +221,13 @@ cov$check(verbose=FALSE)
 \subsection{Method \code{update_parameters()}}{
 Updates the covariance parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$update_parameters(parameters, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$update_parameters(parameters)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{parameters}}{A vector of parameters for the covariance function(s). See Details.}
-
-\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
 \if{html}{\out{</div>}}
 }
@@ -291,38 +290,51 @@ cov$subset(1:100)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Covariance-get_D_data"></a>}}
-\if{latex}{\out{\hypertarget{method-Covariance-get_D_data}{}}}
-\subsection{Method \code{get_D_data()}}{
-Returns the list specifying the covariance matrix D
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_D_data()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A list
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Covariance-get_chol_D"></a>}}
 \if{latex}{\out{\hypertarget{method-Covariance-get_chol_D}{}}}
 \subsection{Method \code{get_chol_D()}}{
 Returns the Cholesky decomposition of the covariance matrix D
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D(parameters = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-log_likelihood"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-log_likelihood}{}}}
+\subsection{Method \code{log_likelihood()}}{
+The function returns the values of the multivariate Gaussian log likelihood
+with mean zero and covariance D for a given vector of random effect terms.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$log_likelihood(u)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{parameters}}{(Optional) Vector of parameters, if specified then the Cholesky
-factor is calculated with these parameter values rather than the ones stored in the
-object.}
+\item{\code{u}}{Vector of random effects}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A list of matrices
+Value of the log likelihood
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-simulate_re"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-simulate_re}{}}}
+\subsection{Method \code{simulate_re()}}{
+Simulates a set of random effects from the multivariate Gaussian distribution
+with mean zero and covariance D.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$simulate_re()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector of random effect values
 }
 }
 \if{html}{\out{<hr>}}

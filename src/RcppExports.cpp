@@ -11,33 +11,6 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// genD
-Eigen::MatrixXd genD(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames, const Eigen::VectorXd& theta);
-RcppExport SEXP _glmmrBase_genD(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP, SEXP thetaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type theta(thetaSEXP);
-    rcpp_result_gen = Rcpp::wrap(genD(formula, data, colnames, theta));
-    return rcpp_result_gen;
-END_RCPP
-}
-// genZ
-Eigen::MatrixXd genZ(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames);
-RcppExport SEXP _glmmrBase_genZ(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    rcpp_result_gen = Rcpp::wrap(genZ(formula, data, colnames));
-    return rcpp_result_gen;
-END_RCPP
-}
 // genX
 Eigen::MatrixXd genX(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames);
 RcppExport SEXP _glmmrBase_genX(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP) {
@@ -48,47 +21,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
     Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
     rcpp_result_gen = Rcpp::wrap(genX(formula, data, colnames));
-    return rcpp_result_gen;
-END_RCPP
-}
-// genCholD
-Eigen::MatrixXd genCholD(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames, const Eigen::VectorXd& theta);
-RcppExport SEXP _glmmrBase_genCholD(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP, SEXP thetaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type theta(thetaSEXP);
-    rcpp_result_gen = Rcpp::wrap(genCholD(formula, data, colnames, theta));
-    return rcpp_result_gen;
-END_RCPP
-}
-// n_cov_pars
-int n_cov_pars(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames);
-RcppExport SEXP _glmmrBase_n_cov_pars(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    rcpp_result_gen = Rcpp::wrap(n_cov_pars(formula, data, colnames));
-    return rcpp_result_gen;
-END_RCPP
-}
-// sample_re
-Eigen::VectorXd sample_re(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames, const Eigen::VectorXd& theta);
-RcppExport SEXP _glmmrBase_sample_re(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP, SEXP thetaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type theta(thetaSEXP);
-    rcpp_result_gen = Rcpp::wrap(sample_re(formula, data, colnames, theta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -171,19 +103,17 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_covariance_cpp();
+
 static const R_CallMethodDef CallEntries[] = {
-    {"_glmmrBase_genD", (DL_FUNC) &_glmmrBase_genD, 4},
-    {"_glmmrBase_genZ", (DL_FUNC) &_glmmrBase_genZ, 3},
     {"_glmmrBase_genX", (DL_FUNC) &_glmmrBase_genX, 3},
-    {"_glmmrBase_genCholD", (DL_FUNC) &_glmmrBase_genCholD, 4},
-    {"_glmmrBase_n_cov_pars", (DL_FUNC) &_glmmrBase_n_cov_pars, 3},
-    {"_glmmrBase_sample_re", (DL_FUNC) &_glmmrBase_sample_re, 4},
     {"_glmmrBase_x_names", (DL_FUNC) &_glmmrBase_x_names, 1},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
     {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
+    {"_rcpp_module_boot_covariance_cpp", (DL_FUNC) &_rcpp_module_boot_covariance_cpp, 0},
     {NULL, NULL, 0}
 };
 

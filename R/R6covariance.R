@@ -92,7 +92,6 @@ Covariance <- R6::R6Class("Covariance",
                             self$parameters <- parameters
                           }
                           
-                          
                           if(allset){
                             private$cov_form()
                           } else {
@@ -119,7 +118,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
                             private$genD()
                           } else {
-                            message("Covariance up to date")
+                            if(verbose)message("Covariance up to date")
                           } 
                           invisible(self)
                         },
@@ -133,11 +132,10 @@ Covariance <- R6::R6Class("Covariance",
                         #' If using direct assignment, call `self$check()` afterwards.
                         #' 
                         #' @param parameters A vector of parameters for the covariance function(s). See Details.
-                        #' @param verbose Logical indicating whether to provide more detailed feedback
-                        update_parameters = function(parameters,
-                                                     verbose = FALSE){
+                        update_parameters = function(parameters){
                           self$parameters <- parameters
-                          self$check(verbose)
+                          private$cpp_class$update_parameters(parameters)
+                          self$check(FALSE)
                         },
                         #' @description 
                         #' Show details of Covariance object
@@ -167,24 +165,29 @@ Covariance <- R6::R6Class("Covariance",
                           self$check()
                         },
                         #' @description 
-                        #' Returns the list specifying the covariance matrix D
-                        #' @return A list
-                        get_D_data = function(){
-                          return(private$D_data)
+                        #' Returns the Cholesky decomposition of the covariance matrix D
+                        #' @return A matrix
+                        get_chol_D = function(){
+                          return(private$cpp_class$D(TRUE,FALSE))
                         },
                         #' @description 
-                        #' Returns the Cholesky decomposition of the covariance matrix D
-                        #' @param parameters (Optional) Vector of parameters, if specified then the Cholesky
-                        #' factor is calculated with these parameter values rather than the ones stored in the
-                        #' object.
-                        #' @return A list of matrices
-                        get_chol_D = function(parameters=NULL){
-                          if(is.null(parameters)){
-                            L = genCholD(gsub("~","",as.character(self$formula)),as.matrix(self$data),colnames(self$data),self$parameters)
-                          } else {
-                            L = genCholD(gsub("~","",as.character(self$formula)),as.matrix(self$data),colnames(self$data),parameters)
-                          }
-                          return(L)
+                        #' The function returns the values of the multivariate Gaussian log likelihood
+                        #' with mean zero and covariance D for a given vector of random effect terms.
+                        #' @param u Vector of random effects
+                        #' @return Value of the log likelihood
+                        log_likelihood = function(u){
+                          Q <- private$cpp_class$Q()
+                          if(length(u)!=Q)stop("Vector not equal to number of random effects")
+                          loglik <- private$cpp_class$log_likelihood(u)
+                          return(loglik)
+                        },
+                        #' @description 
+                        #' Simulates a set of random effects from the multivariate Gaussian distribution
+                        #' with mean zero and covariance D.
+                        #' @return A vector of random effect values
+                        simulate_re = function(){
+                          re <- private$cpp_class$simulate_re()
+                          return(re)
                         }
                       ),
                       private = list(
@@ -193,17 +196,23 @@ Covariance <- R6::R6Class("Covariance",
                           c(digest::digest(c(self$data,self$formula,self$parameters)))
                         },
                         parcount = NULL,
+                        cpp_class = NULL,
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
-                          private$parcount <- n_cov_pars(self$formula,as.matrix(self$data),colnames(self$data))
+                          private$cpp_class <- new(covariance,
+                                                   self$formula,
+                                                   as.matrix(self$data),
+                                                   colnames(self$data))
+                          private$parcount <- private$cpp_class$n_cov_pars()
+                          if(is.null(self$parameters))self$parameters <- rep(0.5,private$parcount)
+                          private$cpp_class$update_parameters(self$parameters)
                           private$genD()
-                          self$Z <- genZ(self$formula,as.matrix(self$data),colnames(self$data))
+                          self$Z <- private$cpp_class$Z()
                         },
                         genD = function(update=TRUE){
-                          if(is.null(self$parameters))self$parameters <- rep(0.5,private$parcount)
                           if(private$parcount != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          D <- genD(self$formula,as.matrix(self$data),colnames(self$data),self$parameters)
+                          D <- private$cpp_class$D(FALSE,FALSE)
                           if(update){
                             self$D <- Matrix::Matrix(D)
                             private$hash <- private$hash_do()

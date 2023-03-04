@@ -3,6 +3,7 @@
 
 #include <cmath> 
 #include <RcppEigen.h>
+#include "general.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 
@@ -37,18 +38,20 @@ inline int get_flink(const std::string &family,
   return string_to_case.at(family + link);
 }
 
-// inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
-//                                    const Eigen::VectorXd& u)
-// {
-//   int n = u.size();
-//   std::vector<double> y(n);
-//   for (int i = 0; i < n; i++) {
-//     double lsum = glmmr::algo::inner_sum(U.col(i).data(), &y[0], i);
-//     y.push_back((u(i) - lsum) / U(i, i));
-//   }
-//   Eigen::VectorXd z = Eigen::Map<Eigen::VectorXd>(y.data(), n);
-//   return z;
-// }
+inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
+                                   const Eigen::VectorXd& u,
+                                   const intvec& idx)
+{
+  Eigen::VectorXd y(idx.size());
+  for (int i = 0; i < idx.size(); i++) {
+    double lsum = 0;
+    for (int j = 0; j < i; j++) {
+      lsum += U(i,j) * y(j);
+    }
+    y(i) = (u(idx[i]) - lsum) / U(i,i);
+  }
+  return y;
+}
 
 
 }

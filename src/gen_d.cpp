@@ -2,40 +2,6 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
-//' Generates the covariance matrix of the random effects
-//' 
-//' Generates the covariance matrix of the random effects.
-//' @param formula A string specifying the formula
-//' @param data A matrix with the data 
-//' @param colnames A vector of strings specifying the column names of the data
-//' @param theta Vector of parameters used to generate the matrix D. 
-//' @return A symmetric positive definite covariance matrix
-// [[Rcpp::export]]
-Eigen::MatrixXd genD(const std::string& formula,
-                     const Eigen::ArrayXXd& data,
-                     const std::vector<std::string>& colnames,
-                     const Eigen::VectorXd& theta) {
-  glmmr::Formula form(formula);
-  glmmr::Covariance cov(form,data,colnames,theta);
-  return cov.D();
-}
-
-//' Generates the design matrix of the random effects
-//' 
-//' Generates the design matrix of the random effects.
-//' @param formula A string specifying the formula
-//' @param data A matrix with the data 
-//' @param colnames A vector of strings specifying the column names of the data
-//' @return A symmetric positive definite covariance matrix
-// [[Rcpp::export]]
-Eigen::MatrixXd genZ(const std::string& formula,
-                    const Eigen::ArrayXXd& data,
-                    const std::vector<std::string>& colnames) {
- glmmr::Formula form(formula);
- glmmr::Covariance cov(form,data,colnames);
- return cov.Z();
-}
-
 //' Generates the matrix X
 //' 
 //' Generates the matrix X from a formula and data. This function replicates the functionality of the 
@@ -52,58 +18,6 @@ Eigen::MatrixXd genX(const std::string& formula,
  glmmr::Formula form(formula);
  glmmr::LinearPredictor lin(form,data,colnames);
  return lin.X();
-}
-
-//' Generates the Cholesky decomposition covariance matrix of the random effects
-//' 
-//' Generates the Cholesky Decomposition of the covariance matrix of the random effects. Used internally in the Covariance class.
-//' @param formula A string specifying the formula
-//' @param data A matrix with the data 
-//' @param colnames A vector of strings specifying the column names of the data
-//' @param theta Vector of parameters used to generate the matrix D. 
-//' @return A symmetric positive definite covariance matrix
-// [[Rcpp::export]]
-Eigen::MatrixXd genCholD(const std::string& formula,
-                         const Eigen::ArrayXXd& data,
-                         const std::vector<std::string>& colnames,
-                         const Eigen::VectorXd& theta) {
- glmmr::Formula form(formula);
- glmmr::Covariance cov(form,data,colnames,theta);
- return cov.D(true,false);
-}
-
-//' Returns the number of covariance parameters required for the formula
-//' 
-//' @param formula A string specifying the formula
-//' @param data A matrix with the data 
-//' @param colnames A vector of strings specifying the column names of the data
-//' @return Integer count of parameters
-// [[Rcpp::export]]
-int n_cov_pars(const std::string& formula,
-                          const Eigen::ArrayXXd& data,
-                          const std::vector<std::string>& colnames) {
- glmmr::Formula form(formula);
- glmmr::Covariance cov(form,data,colnames);
- return cov.npar();
-}
-
-
-//' Generates a sample of random effects
-//' 
-//' Generates a sample of random effects from the specified covariance matrix.
-//' @param formula A string specifying the formula
-//' @param data A matrix with the data 
-//' @param colnames A vector of strings specifying the column names of the data
-//' @param theta Vector of parameters used to generate the matrix D. 
-//' @return A symmetric positive definite covariance matrix
-// [[Rcpp::export]]
-Eigen::VectorXd sample_re(const std::string& formula,
-                        const Eigen::ArrayXXd& data,
-                        const std::vector<std::string>& colnames,
-                        const Eigen::VectorXd& theta) {
-  glmmr::Formula form(formula);
-  glmmr::Covariance cov(form,data,colnames,theta);
-  return cov.sim_re();
 }
 
 //' Gets the names of the fixed effects variables
