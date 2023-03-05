@@ -133,6 +133,10 @@ public:
   
   double log_determinant();
   
+  int block_dim(int b){
+    return re_data_[b].size();
+  };
+  
 private:
   intvec z_;
   dblvec3d re_data_;
