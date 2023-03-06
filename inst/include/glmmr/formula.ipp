@@ -2,12 +2,12 @@
 #define FORMULA_IPP
 
 inline void glmmr::Formula::tokenise(){
-  Rcpp::Rcout << "\nCheck 1";
+
   // tokenise string - split at + or space except between brackets
   const std::regex re("([\\s\\+]+)(?![^\\(]*\\|)(?![^\\|]*\\))");
   std::sregex_token_iterator it{ formula_.begin(), formula_.end(), re, -1 };
   tokens_ = strvec{ it, {} };
-  Rcpp::Rcout << "\nCheck 1a";
+  
   tokens_.erase(
     std::remove_if(tokens_.begin(),
                    tokens_.end(),
@@ -15,7 +15,7 @@ inline void glmmr::Formula::tokenise(){
                      return s.size() == 0;
                    }),
                    tokens_.end());
-  Rcpp::Rcout << "\nCheck 1b";
+                   
   // separate into fixed and random effect components
   int n = tokens_.size();
   for(int i = 0; i<n ; i++){
@@ -29,11 +29,11 @@ inline void glmmr::Formula::tokenise(){
       fe_.push_back(tokens_[i]);
     }
   }
-  Rcpp::Rcout << "\nCheck 1c";
+  
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);
   }
-  Rcpp::Rcout << "\nCheck 1d";
+  
   // check if to remove intercept
   RM_INT = false;
   for(int i=0; i< fe_.size();i++){
@@ -43,7 +43,7 @@ inline void glmmr::Formula::tokenise(){
       break;
     }
   }
-  Rcpp::Rcout << "\nCheck 1e";
+  
   // random effects: separate right and left hand sides
   int m = re_.size();
   
@@ -56,7 +56,7 @@ inline void glmmr::Formula::tokenise(){
     getline(check1, intermediate, '|');
     re_.push_back(intermediate.substr(0,intermediate.length()-1));
   }
-  Rcpp::Rcout << "\nCheck 1f";
+  
   // check if multiple values on LHS and split into separate RE terms
   m = z_.size();
   int iter = 0;
@@ -77,7 +77,7 @@ inline void glmmr::Formula::tokenise(){
       iter++;
     }
   }
-  Rcpp::Rcout << "\nCheck 1g";
+  
   for(int i = 0; i < re_.size(); i++){
     re_[i].erase(std::remove_if(re_[i].begin(), re_[i].end(), [](unsigned char x) { return std::isspace(x); }), re_[i].end());
   }
@@ -87,12 +87,12 @@ inline void glmmr::Formula::tokenise(){
   for(int i = 0; i < z_.size(); i++){
     z_[i].erase(std::remove_if(z_[i].begin(), z_[i].end(), [](unsigned char x) { return std::isspace(x); }), z_[i].end());
   }
-  Rcpp::Rcout << "\nCheck 1h";
+  
   auto intfind = std::find(fe_.begin(),fe_.end(),"1");
   if(intfind != fe_.end()){
     fe_.erase(intfind);
   }
-  Rcpp::Rcout << "\nCheck 1i";
+  
 }
 
 

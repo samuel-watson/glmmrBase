@@ -54,12 +54,12 @@ inline double calculate(const intvec& instructions,
                         const intvec& indexes,
                         const dblvec& parameters,
                         const dblvec2d& data,
-                        const int& i, 
+                        const int& i,
                         const int& j){
   int idx_iter = 0;
   dblvec stack;
   for(int k = 0; k < instructions.size(); k++){
-    
+
     switch(instructions[k]){
     case 0:
       stack.insert(stack.begin(),data[i][indexes[idx_iter]]);

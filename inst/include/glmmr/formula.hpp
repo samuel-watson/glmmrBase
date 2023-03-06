@@ -17,7 +17,6 @@ public:
 
   Formula(const std::string& formula) : 
     formula_(formula) {
-    Rcpp::Rcout << "\nCheck 0a";
     tokenise();
   };
   

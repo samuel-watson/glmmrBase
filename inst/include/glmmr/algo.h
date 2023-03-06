@@ -1,7 +1,7 @@
 #ifndef ALGO_H
 #define ALGO_H
 
-#include <cmath> 
+#include <cmath>
 #include <RcppEigen.h>
 #include "general.h"
 
@@ -34,7 +34,7 @@ inline int get_flink(const std::string &family,
     {"Gammaidentity",11},
     {"betalogit",12}
   };
-  
+
   return string_to_case.at(family + link);
 }
 

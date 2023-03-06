@@ -12,67 +12,67 @@ public:
   const Eigen::ArrayXXd data_;
   const strvec colnames_;
   Eigen::VectorXd parameters_;
-  
+
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
-             const strvec& colnames) : 
-    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form), 
+             const strvec& colnames) :
+    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form),
     P_(form.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     parameters_.setZero();
     parse();
   };
-  
+
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
-             const dblvec& parameters) : 
-    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form), 
+             const dblvec& parameters) :
+    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form),
     P_(form_.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     for(int i = 0; i < parameters.size(); i++)parameters_(i) = parameters[i];
     parse();
   };
-  
+
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
-             const Eigen::ArrayXd& parameters) : 
-    data_(data), colnames_(colnames), parameters_(parameters.matrix()), form_(form), 
+             const Eigen::ArrayXd& parameters) :
+    data_(data), colnames_(colnames), parameters_(parameters.matrix()), form_(form),
     P_(form_.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     parse();
   };
-  
+
   void update_parameters(const dblvec& parameters){
     if(parameters.size()!=parameters_.size())Rcpp::stop("wrong number of parameters");
     for(int i = 0; i < parameters.size(); i++)parameters_(i) = parameters[i];
   };
-  
+
   void update_parameters(const Eigen::ArrayXd& parameters){
     if(parameters.size()!=parameters_.size())Rcpp::stop("wrong number of parameters");
     parameters_ = parameters;
   };
-  
+
   int P(){
     return P_;
   }
-  
+
   void parse();
-  
+
   Eigen::VectorXd xb(){
     return X_*parameters_;
   }
-  
+
   Eigen::MatrixXd X(){
     return X_;
   }
-  
+
   // void update_formula(const glmmr::Formula& form){
   //   form_ = glmmr::Formula(form);
   //   X_.resize(data_.rows(),form.fe_.size());
   //   P_ = form.fe_.size();
   //   parse();
   // }
-  
-  
+
+
 private:
   const glmmr::Formula& form_;
   int P_;

@@ -3,15 +3,14 @@
 // [[Rcpp::depends(RcppEigen)]]
 
 //' Generates the matrix X
-//' 
-//' Generates the matrix X from a formula and data. This function replicates the functionality of the 
+//'
+//' Generates the matrix X from a formula and data. This function replicates the functionality of the
 //' R function model.matrix, but is intended to be extended to accomodate linearisation of non-linear functions
 //' and other functionality in future versions.
 //' @param formula A string specifying the formula
-//' @param data A matrix with the data 
+//' @param data A matrix with the data
 //' @param colnames A vector of strings specifying the column names of the data
 //' @return A symmetric positive definite covariance matrix
-// [[Rcpp::export]]
 Eigen::MatrixXd genX(const std::string& formula,
                     const Eigen::ArrayXXd& data,
                     const std::vector<std::string>& colnames) {
@@ -24,19 +23,15 @@ Eigen::MatrixXd genX(const std::string& formula,
 //' 
 //' @param formula A string specifying the formula
 //' @return A vector of variable names
-// [[Rcpp::export]]
 std::vector<std::string> x_names(const std::string& formula){
-  std::vector<std::string> out = {"a","b"};
-  //glmmr::Formula form(formula);
-  //return form.fe_;
-  return out;
+  glmmr::Formula form(formula);
+  return form.fe_;
 }
 
 //' Gets the names of the random effects terms
 //' 
 //' @param formula A string specifying the formula
 //' @return A vector of variable names
-// [[Rcpp::export]]
 std::vector<std::string> re_names(const std::string& formula){
  glmmr::Formula form(formula);
  std::vector<std::string> re(form.re_.size());
@@ -45,97 +40,97 @@ std::vector<std::string> re_names(const std::string& formula){
  }
  return re;
 }
- 
-//' Generates the inverse GLM iterated weights.
-//' 
-//' @param xb Vector with mean function value evaluated at fitted model parameters
-//' @param family String declaring model family
-//' @param link String declaring model link function
-//' @return Vector of derivative values
-// [[Rcpp::export]]
-Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
-                          std::string family,
-                          std::string link) {
-  Eigen::VectorXd out = glmmr::maths::dhdmu(xb, family, link);
-  return out;
-}
-
-//' Generates an approximation to the covariance of y
-//' 
-//' Generates a first-order approximation to the covariance matrix 
-//' of y based on the marginal quasi-likelihood. This approximation is
-//' exact for the Gaussian-identity model. Used internally by the \link[glmmrBase]{Model} class.
-//' @param xb Vector of values of the linear predictor
-//' @param Z Random effects design matrix
-//' @param D Covariance matrix of the random effects
-//' @param family String specifying the family
-//' @param link String specifying the link function
-//' @param var_par Value of the optional scale parameter
-//' @param attenuate Logical indicating whether to use "attenuated" values of the linear predictor
-//' @return A matrix
-// [[Rcpp::export]]
-Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
-                                 const Eigen::MatrixXd& Z,
-                                 const Eigen::MatrixXd& D,
-                                 std::string family,
-                                 std::string link,
-                                 double var_par,
-                                 bool attenuate
-                                 ){
-  Eigen::MatrixXd S(xb.size(),xb.size());
-  // generate the linear predictor
-  Eigen::VectorXd linpred(xb);
-  if(attenuate){
-    linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
-  }
-
-  Eigen::VectorXd W = glmmr::maths::dhdmu(linpred,family,link);
-  double nvar_par = 1.0;
-  if(family=="gaussian"){
-    nvar_par *= var_par*var_par;
-  } else if(family=="Gamma"){
-    nvar_par *= 1/var_par;
-  } else if(family=="beta"){
-    nvar_par *= (1+var_par);
-  } else if(family=="binomial"){
-    nvar_par *= 1/var_par;
-  }
-  W *= nvar_par;
-  //W = W.array().inverse().matrix();
-  S = Z*D*Z.transpose();
-  S += W.asDiagonal();
-  return S;
-}
-
-//' Return marginal expectation with attenuation
-//' 
-//' The marginal expectation may be better approximated using an attenuation 
-//' scheme in non-linear models. This function returns the attenuated linear predictor.
-//' Used internally.
-//' @param xb Vector of values of the linear predictor
-//' @param Z Random effects design matrix
-//' @param D Covariance matrix of the random effects
-//' @param link String specifying the link function
-//' @return A vector
-// [[Rcpp::export]]
-Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
-                             const Eigen::MatrixXd& Z,
-                             const Eigen::MatrixXd& D,
-                             const std::string& link){
-  Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
-  return linpred;
-}
-
-//' Partial derivative of link function with respect to linear predictor
-//' 
-//' Returns the partial derivative of link function with respect to linear predictor.
-//' Used internally.
-//' @param xb Vector of values of the linear predictor
-//' @param link String specifying the link function
-//' @return A vector
-// [[Rcpp::export]]
-Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb,
-                            const std::string& link){
- Eigen::VectorXd deta = glmmr::maths::detadmu(xb,link);
- return deta;
-}
+//  
+// //' Generates the inverse GLM iterated weights.
+// //' 
+// //' @param xb Vector with mean function value evaluated at fitted model parameters
+// //' @param family String declaring model family
+// //' @param link String declaring model link function
+// //' @return Vector of derivative values
+// // [[Rcpp::export]]
+// Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
+//                           std::string family,
+//                           std::string link) {
+//   Eigen::VectorXd out = glmmr::maths::dhdmu(xb, family, link);
+//   return out;
+// }
+// 
+// //' Generates an approximation to the covariance of y
+// //' 
+// //' Generates a first-order approximation to the covariance matrix 
+// //' of y based on the marginal quasi-likelihood. This approximation is
+// //' exact for the Gaussian-identity model. Used internally by the \link[glmmrBase]{Model} class.
+// //' @param xb Vector of values of the linear predictor
+// //' @param Z Random effects design matrix
+// //' @param D Covariance matrix of the random effects
+// //' @param family String specifying the family
+// //' @param link String specifying the link function
+// //' @param var_par Value of the optional scale parameter
+// //' @param attenuate Logical indicating whether to use "attenuated" values of the linear predictor
+// //' @return A matrix
+// // [[Rcpp::export]]
+// Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
+//                                  const Eigen::MatrixXd& Z,
+//                                  const Eigen::MatrixXd& D,
+//                                  std::string family,
+//                                  std::string link,
+//                                  double var_par,
+//                                  bool attenuate
+//                                  ){
+//   Eigen::MatrixXd S(xb.size(),xb.size());
+//   // generate the linear predictor
+//   Eigen::VectorXd linpred(xb);
+//   if(attenuate){
+//     linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
+//   }
+// 
+//   Eigen::VectorXd W = glmmr::maths::dhdmu(linpred,family,link);
+//   double nvar_par = 1.0;
+//   if(family=="gaussian"){
+//     nvar_par *= var_par*var_par;
+//   } else if(family=="Gamma"){
+//     nvar_par *= 1/var_par;
+//   } else if(family=="beta"){
+//     nvar_par *= (1+var_par);
+//   } else if(family=="binomial"){
+//     nvar_par *= 1/var_par;
+//   }
+//   W *= nvar_par;
+//   //W = W.array().inverse().matrix();
+//   S = Z*D*Z.transpose();
+//   S += W.asDiagonal();
+//   return S;
+// }
+// 
+// //' Return marginal expectation with attenuation
+// //' 
+// //' The marginal expectation may be better approximated using an attenuation 
+// //' scheme in non-linear models. This function returns the attenuated linear predictor.
+// //' Used internally.
+// //' @param xb Vector of values of the linear predictor
+// //' @param Z Random effects design matrix
+// //' @param D Covariance matrix of the random effects
+// //' @param link String specifying the link function
+// //' @return A vector
+// // [[Rcpp::export]]
+// Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
+//                              const Eigen::MatrixXd& Z,
+//                              const Eigen::MatrixXd& D,
+//                              const std::string& link){
+//   Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
+//   return linpred;
+// }
+// 
+// //' Partial derivative of link function with respect to linear predictor
+// //' 
+// //' Returns the partial derivative of link function with respect to linear predictor.
+// //' Used internally.
+// //' @param xb Vector of values of the linear predictor
+// //' @param link String specifying the link function
+// //' @return A vector
+// // [[Rcpp::export]]
+// Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb,
+//                             const std::string& link){
+//  Eigen::VectorXd deta = glmmr::maths::detadmu(xb,link);
+//  return deta;
+// }

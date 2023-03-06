@@ -3,6 +3,7 @@
 
 #define _USE_MATH_DEFINES
 
+#include <SparseChol.h>
 #include "general.h"
 #include "interpreter.h"
 #include "formula.hpp"
@@ -16,66 +17,68 @@ public:
   const strvec colnames_;
   dblvec parameters_;
   dblvec other_pars_;
-  
+
   Covariance(const std::string& formula,
              const Eigen::ArrayXXd &data,
-             const strvec& colnames) : 
+             const strvec& colnames) :
     form_(formula), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {};
-  
+
   Covariance(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
-             const strvec& colnames) : 
+             const strvec& colnames) :
     form_(form), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {};
-  
+
   Covariance(const std::string& formula,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
-             const dblvec& parameters) : 
-    form_(formula), data_(data), colnames_(colnames), parameters_(parameters), 
+             const dblvec& parameters) :
+    form_(formula), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {};
-  
+
   Covariance(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
-             const dblvec& parameters) : 
-    form_(form), data_(data), colnames_(colnames), parameters_(parameters), 
+             const dblvec& parameters) :
+    form_(form), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {};
-  
+
   Covariance(const std::string& formula,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
-             const Eigen::ArrayXd& parameters) : 
+             const Eigen::ArrayXd& parameters) :
     form_(formula), data_(data), colnames_(colnames),Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {
     update_parameters(parameters);
   };
-  
+
   Covariance(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
               const strvec& colnames,
-              const Eigen::ArrayXd& parameters) : 
+              const Eigen::ArrayXd& parameters) :
     form_(form), data_(data), colnames_(colnames),Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {
     update_parameters(parameters);
   };
-  
+
   void update_parameters(const dblvec& parameters){
     parameters_ = parameters;
+    //if(isSparse)update_ax();
   };
-  
+
   //external version for Rcpp module
   void update_parameters_extern(const dblvec& parameters){
     parameters_ = parameters;
+    //if(isSparse)update_ax();
   };
-  
+
   void update_parameters(const Eigen::ArrayXd& parameters){
     if(parameters_.size()==0){
       for(int i = 0; i < parameters.size(); i++){
@@ -85,37 +88,43 @@ public:
       for(int i = 0; i < parameters.size(); i++){
         parameters_[i] = parameters(i);
       }
+      //if(isSparse)update_ax();
     } else {
       Rcpp::stop("Wrong number of parameters");
     }
   };
-  
+
   void parse();
-  
+
   double get_val(int b, int i, int j);
-  
+
   Eigen::MatrixXd get_block(int b);
-  
+
   Eigen::MatrixXd get_chol_block(int b,bool upper = false);
-  
+
   Eigen::MatrixXd Z();
-  
+
   Eigen::MatrixXd D(bool chol = false,
                     bool upper = false){
-    Eigen::MatrixXd D = D_builder(0,chol,upper);
+    Eigen::MatrixXd D(Q_,Q_);
+    if(isSparse){
+      D = D_sparse_builder(chol,upper);
+    } else {
+      D = D_builder(0,chol,upper);
+    }
     return D;
   };
-  
+
   int npar(){
     return npars_;
   };
-  
+
   int B(){
     return B_;
   }
-  
+
   Eigen::VectorXd sim_re();
-  
+
   int Q(){
     if(Q_==0)Rcpp::stop("Random effects not initialised");
     return Q_;
@@ -130,13 +139,15 @@ public:
   }
   
   double log_likelihood(const Eigen::VectorXd &u);
-  
+
   double log_determinant();
-  
+
   int block_dim(int b){
     return re_data_[b].size();
   };
-  
+
+  void make_sparse();
+
 private:
   intvec z_;
   dblvec3d re_data_;
@@ -155,12 +166,19 @@ private:
   Eigen::ArrayXd size_B_array;
   Eigen::MatrixXd dmat_matrix;
   Eigen::VectorXd zquad;
-  
+  bool isSparse = false;
+  intvec Ap;
+  intvec Ai;
+  dblvec Ax;
+
   Eigen::MatrixXd D_builder(int b,
                             bool chol = false,
                             bool upper = false);
-  
- 
+
+  void update_ax();
+
+  Eigen::MatrixXd D_sparse_builder(bool chol = false,
+                                   bool upper = false);
 };
 
 }

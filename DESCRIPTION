@@ -7,7 +7,7 @@ Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")),
              person("Yi", "Pan", email = "ypan1988@gmail.com",
                   role = c("aut")))
-Description: Specification of generalised linear mixed models using the 'R6' object-orientated class system. The package provides classes 'Covariance', 'MeanFunction' and 'Model', which allow for flexible specification of generalised linear mixed models, as well as functionality to produce relevant matrices, values, and analyses. 
+Description: Specification of generalised linear mixed models with a range of related functions and calculations. The package provides classes 'Covariance', 'MeanFunction' and 'Model', which allow for flexible specification of generalised linear mixed models, as well as functionality to produce relevant matrices, values, and analyses. 
   See <https://github.com/samuel-watson/glmmrBase/blob/master/README.md> for a detailed manual.
 License: GPL (>= 2)
 Imports: 
@@ -17,7 +17,8 @@ Imports:
     R6
 LinkingTo: 
     Rcpp (>= 0.12.0),
-    RcppEigen
+    RcppEigen,
+    SparseChol
 RoxygenNote: 7.2.1
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre],
