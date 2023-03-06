@@ -2,7 +2,7 @@
 #define FORMULA_IPP
 
 inline void glmmr::Formula::tokenise(){
-  
+  Rcpp::Rcout << "\nCheck 1";
   // tokenise string - split at + or space except between brackets
   const std::regex re("([\\s\\+]+)(?![^\\(]*\\|)(?![^\\|]*\\))");
   std::sregex_token_iterator it{ formula_.begin(), formula_.end(), re, -1 };
