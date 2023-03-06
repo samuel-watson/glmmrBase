@@ -26,8 +26,10 @@ Eigen::MatrixXd genX(const std::string& formula,
 //' @return A vector of variable names
 // [[Rcpp::export]]
 std::vector<std::string> x_names(const std::string& formula){
-  glmmr::Formula form(formula);
-  return form.fe_;
+  std::vector<std::string> out = {"a","b"};
+  //glmmr::Formula form(formula);
+  //return form.fe_;
+  return out;
 }
 
 //' Gets the names of the random effects terms
