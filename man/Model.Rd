@@ -12,38 +12,38 @@ A GLMM Model
 An R6 class representing a GLMM model
 
 
-For the generalised linear mixed model 
+For the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Zu)}
 \deqn{u \sim MVN(0,D)}
 
-where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
+where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F,
 link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
 methods for analysis and simulation with these models.
 
-This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
+This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality
 in related packages.
 
-Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and 
-other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the 
+Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
+other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the
 marginal quasilikelihood:
 
 \deqn{\Sigma = W^{-1} + ZDZ^T}
 
 where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
-to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)} 
-(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). 
+to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
+(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>).
 
-See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
 
 
 **Attenuation**
-For calculations such as the information matrix, the first-order approximation to the covariance matrix 
-proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
-marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
-marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this 
+For calculations such as the information matrix, the first-order approximation to the covariance matrix
+proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the
+marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the
+marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this
 adjustment for calculations using the covariance matrix for non-linear models.
 
 
@@ -53,8 +53,8 @@ Calls the respective print methods of the linked covariance and mean function ob
 The matrices X and Z both have n rows, where n is the number of observations in the model/design.
 
 
-Using `update_parameters()` is the preferred way of updating the parameters of the 
-mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`. 
+Using `update_parameters()` is the preferred way of updating the parameters of the
+mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`.
 The function calls check functions to automatically update linked matrices with the new parameters.
 If using direct assignment, call `self$check()` afterwards.
 }
@@ -100,7 +100,7 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-  
+
 # or as
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
@@ -110,13 +110,13 @@ des <- Model$new(
   family = stats::poisson()
   )
 
-                  
+
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
                          mean = list(formula = ~ 1),
                          data = df,
-                         family = stats::gaussian()) 
+                         family = stats::gaussian())
 
 ## ------------------------------------------------
 ## Method `Model$subset_rows`
@@ -168,14 +168,14 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates 
+des$check() #updates
 des$mean$parameters <- c(rnorm(5),0.1)
-des$check() #updates 
+des$check() #updates
 
 ## ------------------------------------------------
 ## Method `Model$update_parameters`
@@ -189,7 +189,7 @@ des <- Model$new(
     formula = ~ (1|gr(cl)*ar1(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$update_parameters(cov.pars = c(0.1,0.9))
@@ -208,17 +208,17 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::gaussian(),
   var_par = 1
 )
 des$power() #power of 0.90 for the int parameter
 }
 \references{
-Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models. 
+Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
 Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
 
-Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach. 
+Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach.
 Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 }
 \seealso{
@@ -266,7 +266,7 @@ Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 \if{html}{\out{<a id="method-Model-use_attenuation"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-use_attenuation}{}}}
 \subsection{Method \code{use_attenuation()}}{
-Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
+Sets the model to use or not use "attenuation" when calculating the first-order approximation to
 the covariance matrix.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$use_attenuation(use)}\if{html}{\out{</div>}}
@@ -287,7 +287,7 @@ None. Used for effects.
 \if{html}{\out{<a id="method-Model-fitted"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
-Return predicted values. Does not account for the random effects. For simulated values based 
+Return predicted values. Does not account for the random effects. For simulated values based
 on resampling random effects, see `sim_data()`
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link")}\if{html}{\out{</div>}}
@@ -296,7 +296,7 @@ on resampling random effects, see `sim_data()`
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{type}}{One of either "`link`" for values on the scale of the link function, or "`response`" 
+\item{\code{type}}{One of either "`link`" for values on the scale of the link function, or "`response`"
 for values on the scale of the response}
 }
 \if{html}{\out{</div>}}
@@ -326,7 +326,7 @@ Create a new Model object
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then 
+\item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then
 seaparate formulae need to be provided to the covariance and mean arguments below.}
 
 \item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
@@ -341,9 +341,9 @@ If parameters are not included then they are initialised to 0.}
 can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
 object, or as a member of the list of arguments to both `covariance` and `mean`.}
 
-\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This 
+\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This
 argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
-objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial}, 
+objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial},
 \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
@@ -395,7 +395,7 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-  
+
 # or as
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
@@ -405,13 +405,13 @@ des <- Model$new(
   family = stats::poisson()
   )
 
-                  
+
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
                          mean = list(formula = ~ 1),
                          data = df,
-                         family = stats::gaussian()) 
+                         family = stats::gaussian())
 }
 \if{html}{\out{</div>}}
 
@@ -458,7 +458,7 @@ Returns the number of observations in the model
 \subsection{Method \code{subset_rows()}}{
 Subsets the design keeping specified observations only
 
-Given a vector of row indices, the corresponding rows will be kept and the 
+Given a vector of row indices, the corresponding rows will be kept and the
 other rows will be removed from the mean function and covariance
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$subset_rows(index)}\if{html}{\out{</div>}}
@@ -490,7 +490,7 @@ des$subset_rows(ids_to_keep)
 \if{html}{\out{<a id="method-Model-subset_cols"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-subset_cols}{}}}
 \subsection{Method \code{subset_cols()}}{
-Subsets the columns of the design 
+Subsets the columns of the design
 
 Removes the specified columns from the linked mean function object's X matrix.
 \subsection{Usage}{
@@ -524,7 +524,7 @@ des$subset_cols(c(2:8,10))
 \subsection{Method \code{sim_data()}}{
 Generates a realisation of the design
 
-Generates a single vector of outcome data based upon the 
+Generates a single vector of outcome data based upon the
 specified GLMM design
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$sim_data(type = "y")}\if{html}{\out{</div>}}
@@ -535,7 +535,7 @@ specified GLMM design
 \describe{
 \item{\code{type}}{Either 'y' to return just the outcome data, 'data'
 to return a data frame with the simulated outcome data alongside the model data,
-or 'all', which will return a list with simulated outcomes y, matrices X and Z, 
+or 'all', which will return a list with simulated outcomes y, matrices X and Z,
 parameters beta, and the values of the simulated random effects.}
 }
 \if{html}{\out{</div>}}
@@ -599,14 +599,14 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates 
+des$check() #updates
 des$mean$parameters <- c(rnorm(5),0.1)
-des$check() #updates 
+des$check() #updates
 }
 \if{html}{\out{</div>}}
 
@@ -643,7 +643,7 @@ des <- Model$new(
     formula = ~ (1|gr(cl)*ar1(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$update_parameters(cov.pars = c(0.1,0.9))
@@ -674,7 +674,7 @@ Estimates the power of the design described by the model using the square root
 of the relevant element of the GLS variance matrix:
 
  \deqn{(X^T\Sigma^{-1}X)^{-1}}
- 
+
 Note that this is equivalent to using the "design effect" for many
 models.
 \subsection{Usage}{
@@ -684,7 +684,7 @@ models.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{alpha}}{Numeric between zero and one indicating the type I error rate. 
+\item{\code{alpha}}{Numeric between zero and one indicating the type I error rate.
 Default of 0.05.}
 
 \item{\code{two.sided}}{Logical indicating whether to use a two sided test}
@@ -710,7 +710,7 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::gaussian(),
   var_par = 1
 )

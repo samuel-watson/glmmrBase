@@ -10,6 +10,7 @@
 
 namespace glmmr {
 
+
 class Covariance {
 public:
   glmmr::Formula form_;
@@ -23,14 +24,14 @@ public:
              const strvec& colnames) :
     form_(formula), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {};
+    zquad(max_block_dim()), mat(intvec({0,1})) {};
 
   Covariance(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames) :
     form_(form), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {};
+    zquad(max_block_dim()), mat(intvec({0,1})) {};
 
   Covariance(const std::string& formula,
              const Eigen::ArrayXXd &data,
@@ -38,7 +39,7 @@ public:
              const dblvec& parameters) :
     form_(formula), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {};
+    zquad(max_block_dim()), mat(intvec({0,1})) {};
 
   Covariance(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
@@ -46,7 +47,7 @@ public:
              const dblvec& parameters) :
     form_(form), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {};
+    zquad(max_block_dim()), mat(intvec({0,1})) {};
 
   Covariance(const std::string& formula,
              const Eigen::ArrayXXd &data,
@@ -54,7 +55,7 @@ public:
              const Eigen::ArrayXd& parameters) :
     form_(formula), data_(data), colnames_(colnames),Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {
+    zquad(max_block_dim()), mat(intvec({0,1})) {
     update_parameters(parameters);
   };
 
@@ -64,19 +65,18 @@ public:
               const Eigen::ArrayXd& parameters) :
     form_(form), data_(data), colnames_(colnames),Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
-    zquad(max_block_dim()) {
+    zquad(max_block_dim()), mat(intvec({0,1})) {
     update_parameters(parameters);
   };
 
   void update_parameters(const dblvec& parameters){
     parameters_ = parameters;
-    //if(isSparse)update_ax();
+    if(isSparse)update_ax();
   };
 
-  //external version for Rcpp module
   void update_parameters_extern(const dblvec& parameters){
     parameters_ = parameters;
-    //if(isSparse)update_ax();
+    if(isSparse)update_ax();
   };
 
   void update_parameters(const Eigen::ArrayXd& parameters){
@@ -88,7 +88,7 @@ public:
       for(int i = 0; i < parameters.size(); i++){
         parameters_[i] = parameters(i);
       }
-      //if(isSparse)update_ax();
+      if(isSparse)update_ax();
     } else {
       Rcpp::stop("Wrong number of parameters");
     }
@@ -97,10 +97,6 @@ public:
   void parse();
 
   double get_val(int b, int i, int j);
-
-  Eigen::MatrixXd get_block(int b);
-
-  Eigen::MatrixXd get_chol_block(int b,bool upper = false);
 
   Eigen::MatrixXd Z();
 
@@ -132,8 +128,8 @@ public:
   
   int max_block_dim(){
     int max = 0;
-    for(int i = 0; i<re_data_.size(); i++){
-      if(re_data_[i].size() > max)max = re_data_[i].size();
+    for(int i = 0; i<B_; i++){
+      if(block_dim(i) > max)max = block_dim(i);
     }
     return max;
   }
@@ -147,6 +143,10 @@ public:
   };
 
   void make_sparse();
+  
+  void make_dense();
+  
+  bool any_group_re();
 
 private:
   intvec z_;
@@ -167,9 +167,11 @@ private:
   Eigen::MatrixXd dmat_matrix;
   Eigen::VectorXd zquad;
   bool isSparse = false;
-  intvec Ap;
-  intvec Ai;
-  dblvec Ax;
+  sparse mat;
+  
+  Eigen::MatrixXd get_block(int b);
+  
+  Eigen::MatrixXd get_chol_block(int b,bool upper = false);
 
   Eigen::MatrixXd D_builder(int b,
                             bool chol = false,

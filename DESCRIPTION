@@ -1,8 +1,8 @@
 Package: glmmrBase
 Type: Package
-Title: Specification of Generalised Linear Mixed Models
+Title: Generalised Linear Mixed Models in R
 Version: 0.3.1
-Date: 2023-03-02
+Date: 2023-03-07
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")),
              person("Yi", "Pan", email = "ypan1988@gmail.com",
@@ -19,7 +19,7 @@ LinkingTo:
     Rcpp (>= 0.12.0),
     RcppEigen,
     SparseChol
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre],
         Yi Pan [aut]
@@ -33,4 +33,3 @@ Depends:
     Matrix (>= 1.3-1)
 SystemRequirements: GNU make
 Encoding: UTF-8
-

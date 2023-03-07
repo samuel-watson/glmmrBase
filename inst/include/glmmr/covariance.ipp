@@ -273,6 +273,7 @@ inline Eigen::MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
 }
 
 inline Eigen::VectorXd glmmr::Covariance::sim_re(){
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
   Eigen::VectorXd samps(Q_);
   int idx = 0;
   int ndim;
@@ -312,115 +313,116 @@ inline Eigen::MatrixXd glmmr::Covariance::D_builder(int b,
 }
 
 inline double glmmr::Covariance::log_likelihood(const Eigen::VectorXd &u){
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
   double logdet_val=0.0;
   double loglik_val=0.0;
+  int obs_counter=0;
   if(!isSparse){
     int blocksize;
-
     size_B_array.setZero();
     for(int b=0;b<B_;b++){
-      blocksize = re_data_[b].size();
-      dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
-      if(fn_[b].size()==1 && fn_[b][0]=="gr"){
-        for(int k=0; k<blocksize; k++){
-          double var = get_val(b,k,k);
-          size_B_array[b] = -0.5*log(var*var) -0.5*log(2*M_PI) -
-            0.5*u(re_obs_index_[b][k])*u(re_obs_index_[b][k])/(var*var);
-        }
+      blocksize = block_dim(b);
+      if(blocksize==1){
+        double var = get_val(b,0,0);
+        size_B_array[b] = -0.5*log(var*var) -0.5*log(2*M_PI) -
+          0.5*u(obs_counter)*u(obs_counter)/(var*var);
       } else {
-        logdet_val = 0;
-        for(int j = 0; j < blocksize; j++){
-          logdet_val += 2*log(dmat_matrix(j,j));
+        dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
+        logdet_val = 0.0;
+        for(int i = 0; i < blocksize; i++){
+          logdet_val += 2*log(dmat_matrix(i,i));
         }
-        zquad.segment(0,blocksize) = glmmr::algo::forward_sub(dmat_matrix,u,re_obs_index_[b]);
+        zquad.segment(0,blocksize) = glmmr::algo::forward_sub(dmat_matrix,u.segment(obs_counter,blocksize),blocksize);
         size_B_array[b] = (-0.5*blocksize * log(2*M_PI) - 0.5*logdet_val - 0.5*zquad.transpose()*zquad);
       }
+      obs_counter += blocksize;
     }
     loglik_val = size_B_array.sum();
   } else {
-    sparse* mat;
-    SparseChol* chol;
-    mat = new sparse(Ap);
-    mat->Ai = Ai;
-    mat->Ax = Ax;
-    chol = new SparseChol(mat);
-    chol->ldl_numeric();
-
-    for (auto& k : chol->D)
-      logdet_val += log(k);
+    SparseChol chol(&mat);
+    int d = chol.ldl_numeric();
+    for (auto k : chol.D) logdet_val += log(k);
 
     dblvec v(u.data(), u.data()+u.size());
-    chol->ldl_lsolve(&v[0]);
-    chol->ldl_d2solve(&v[0]);
-    double quad = glmmr::algo::inner_sum(&v[0],&v[0],n_);
-    loglik_val = (-0.5*n_ * log(2*M_PI) - 0.5*logdet_val - 0.5*quad);
-    delete chol;
-    delete mat;
+    chol.ldl_lsolve(&v[0]);
+    chol.ldl_d2solve(&v[0]);
+    double quad = glmmr::algo::inner_sum(&v[0],&v[0],Q_);
+    loglik_val = (-0.5*Q_ * log(2*M_PI) - 0.5*logdet_val - 0.5*quad);
   }
-
   return loglik_val;
 }
 
 inline double glmmr::Covariance::log_determinant(){
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
   int blocksize;
   double logdet_val = 0.0;
-  for(int b=0;b<B_;b++){
-    blocksize = re_obs_index_[b].size();
-    dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
-    for(int i = 0; i < blocksize; i++){
-      logdet_val += 2*log(dmat_matrix(i,i));
+  if(!isSparse){
+    for(int b=0;b<B_;b++){
+      blocksize = block_dim(b);
+      dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
+      for(int i = 0; i < blocksize; i++){
+        logdet_val += 2*log(dmat_matrix(i,i));
+      }
     }
+  } else {
+    SparseChol chol(&mat);
+    int d = chol.ldl_numeric();
+    for (auto k : chol.D) logdet_val += log(k);
   }
+  
   return logdet_val;
 }
 
 inline void glmmr::Covariance::make_sparse(){
-  if(!isSparse && Ap.size()==0){
-    isSparse = true;
-    int dim;
-    double val;
-    int col_counter=0;
-    // algorithm to generate the sparse matrix representation
-    for(int b = 0; b < B(); b++){
-      dim = block_dim(b);
-      for(int i = 0; i < dim; i++){
-        Ap.push_back(Ai.size());
-        for(int j = 0; j < (i+1); j++){
-          val = get_val(b,i,j);
-          if(val!=0){
-            Ax.push_back(val);
-            Ai.push_back((col_counter+j));
-          }
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
+  isSparse = true;
+  int dim;
+  double val;
+  int col_counter=0;
+  mat.Ap.clear();
+  mat.Ai.clear();
+  mat.Ax.clear();
+  // algorithm to generate the sparse matrix representation
+  for(int b = 0; b < B(); b++){
+    dim = block_dim(b);
+    for(int i = 0; i < dim; i++){
+      mat.Ap.push_back(mat.Ai.size());
+      for(int j = 0; j < (i+1); j++){
+        val = get_val(b,i,j);
+        if(val!=0){
+          mat.Ax.push_back(val);
+          mat.Ai.push_back((col_counter+j));
         }
-        col_counter++;
       }
     }
-  } else {
-    Rcpp::stop("Already a sparse representation");
+    col_counter += dim;
   }
-  glmmr::print_vec_1d<dblvec>(Ax);
-  glmmr::print_vec_1d<intvec>(Ap);
-  glmmr::print_vec_1d<intvec>(Ai);
+  mat.n = mat.Ap.size();
+  mat.Ap.push_back(mat.Ax.size());
 };
+
+inline void glmmr::Covariance::make_dense(){
+  isSparse = false;
+}
 
 inline void glmmr::Covariance::update_ax(){
   int llim = 0;
   int nj = 0;
-  int ulim = Ap[nj+block_dim(0)];
+  int ulim = mat.Ap[nj+block_dim(0)];
   int j = 0;
 
   for(int b=0; b < B(); b++){
     for(int i = llim; i<ulim; i++){
-      if(i == Ap[j+1])j++;
-      Ax[i] = get_val(b,Ai[i]-nj,j-nj);
+      if(i == mat.Ap[j+1])j++;
+      mat.Ax[i] = get_val(b,mat.Ai[i]-nj,j-nj);
     }
     llim = ulim;
     if(b<(B()-1)){
       nj += block_dim(b);
-      ulim = Ap[nj+block_dim(b+1)];
+      ulim = mat.Ap[nj+block_dim(b+1)];
     }
     if(b == (B()-1)){
-      ulim = Ai.size();
+      ulim = mat.Ai.size();
     }
   }
 };
@@ -429,34 +431,41 @@ inline Eigen::MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
                                  bool upper){
   Eigen::MatrixXd D = Eigen::MatrixXd::Zero(Q_,Q_);
   if(!chol){
-    for(int i = 0; i < Ap.size(); i++){
-      int nelem = i < (Ap.size()-1) ? Ap[i+1] : Q_;
-      for(int j = Ap[i]; j < nelem; j++){
-        D(Ai[j],i) = Ax[j];
-        if(Ai[j]!=i) D(i,Ai[j]) = D(Ai[j],i);
+    for(int i = 0; i < Q_; i++){
+      for(int j = mat.Ap[i]; j < mat.Ap[i+1]; j++){
+        D(mat.Ai[j],i) = mat.Ax[j];
+        if(mat.Ai[j]!=i) D(i,mat.Ai[j]) = D(mat.Ai[j],i);
       }
     }
   } else {
-    sparse* mat;
-    SparseChol* chol;
-    mat = new sparse(Ap);
-    mat->Ai = Ai;
-    mat->Ax = Ax;
-    chol = new SparseChol(mat);
-    chol->ldl_numeric();
+    SparseChol chol(&mat);
+    int d = chol.ldl_numeric();
     for(int i = 0; i < Q_; i++){
-      int nelem = i < (Q_-1) ? chol->L->Ap[i+1] : Q_;
-      for(int j = chol->L->Ap[i]; j < nelem; j++){
-        D(chol->L->Ai[j],i) = chol->L->Ax[j];
+      for(int j = chol.L->Ap[i]; j < chol.L->Ap[i+1]; j++){
+        D(chol.L->Ai[j],i) = chol.L->Ax[j];
       }
     }
-    Eigen::Map<Eigen::VectorXd> diag(chol->D.data(),chol->D.size());
+    Eigen::VectorXd diag = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(chol.D.data(),chol.D.size());
+    diag = diag.array().sqrt().matrix();
+    D.diagonal() = Eigen::ArrayXd::Ones(Q_);
     D *= diag.asDiagonal();
-    if(!upper)D.transposeInPlace();
-    delete chol;
-    delete mat;
+    if(upper)D.transposeInPlace();
   }
   return D;
+}
+
+inline bool glmmr::Covariance::any_group_re(){
+  bool gr = false;
+  for(int i = 0; i < fn_.size(); i++){
+    for(int j = 0; j < fn_[i].size(); j++){
+      if(fn_[i][j]=="gr"){
+        gr = true;
+        break;
+      }
+    }
+    if(gr)break;
+  }
+  return gr;
 }
 
 #endif

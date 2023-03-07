@@ -132,8 +132,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' @param ... ignored
                           print = function(){
-                            re <- re_names(self$formula)
-                            f1 <- self$formula
+                            re <- .re_names(self$formula)
+                            f1 <- gsub(" ","",self$formula)
                             if(length(re)>0){
                               for(i in 1:length(re)){
                                 f1 <- gsub(paste0("+",re[i]),"",f1)
@@ -289,9 +289,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             private$hash <- private$hash_do()
                           },
                           genX = function(){
-                            self$X <- genX(self$formula,as.matrix(self$data),colnames(self$data))
+                            self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
                             if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
-                            cnames <- x_names(self$formula)
+                            cnames <- .x_names(self$formula)
                             if(!grepl("-1",self$formula)) cnames <- c("[Intercept]",cnames)
                             colnames(self$X) <- cnames
                           }

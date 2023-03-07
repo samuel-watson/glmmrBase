@@ -5,6 +5,7 @@ using namespace Rcpp;
 // for some reason for R >4.2.1 the RCPP MODULE crashed R when loading, so it has been rewritten using export of pointers instead
 // since these are wrapped in the R6 classes, exposing them to the user should present minimal risk
 
+// [[Rcpp::export(.Covariance__new)]]
 SEXP Covariance__new(SEXP form_,SEXP data_, SEXP colnames_){
   std::string form = as<std::string>(form_);
   Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
@@ -13,42 +14,95 @@ SEXP Covariance__new(SEXP form_,SEXP data_, SEXP colnames_){
   return ptr;
 }
 
+// [[Rcpp::export(.Covariance__Z)]]
 SEXP Covariance__Z(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   Eigen::MatrixXd Z = ptr->Z();
   return wrap(Z);
 }
 
+// [[Rcpp::export(.Covariance__Update_parameters)]]
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   std::vector<double> parameters = as<std::vector<double> >(parameters_);
   ptr->update_parameters_extern(parameters);
 }
 
+// [[Rcpp::export(.Covariance__D)]]
 SEXP Covariance__D(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   Eigen::MatrixXd D = ptr->D(false,false);
   return wrap(D);
 }
 
-// RCPP_EXPOSED_CLASS(glmmr::Covariance)
-//   
-// 
-// RCPP_MODULE(covariance_cpp){
-//   using namespace Rcpp;
-//   
-//   
-//   class_<glmmr::Covariance>("covariance")
-//     .constructor<std::string,Eigen::ArrayXXd,std::vector<std::string> >()
-//     .method("Z",&glmmr::Covariance::Z,"Return matrix Z")
-//     // .method("D",&glmmr::Covariance::D,"Return matrix D")
-//     // .method("B",&glmmr::Covariance::B,"Return the number of blocks")
-//     // .method("Q",&glmmr::Covariance::Q,"Return the number of random effects")
-//     // .method("log_likelihood",&glmmr::Covariance::log_likelihood,"Log likelihood")
-//     // .method("log_determinant",&glmmr::Covariance::log_determinant,"Log determinant of D")
-//     // .method("n_cov_pars",&glmmr::Covariance::npar,"Number of covariance function parameters")
-//     // .method("simulate_re",&glmmr::Covariance::sim_re,"Simulate random effects")
-//     // .method("update_parameters",&glmmr::Covariance::update_parameters_extern,"updates the parameters")
-//     // .method("make_sparse",&glmmr::Covariance::make_sparse,"uses sparse matrix methods")
-//   ;
-// }
+// [[Rcpp::export(.Covariance__D_chol)]]
+SEXP Covariance__D_chol(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::MatrixXd D = ptr->D(true,false);
+  return wrap(D);
+}
+
+// [[Rcpp::export(.Covariance__B)]]
+SEXP Covariance__B(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  int B = ptr->B();
+  return wrap(B);
+}
+
+// [[Rcpp::export(.Covariance__Q)]]
+SEXP Covariance__Q(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  int Q = ptr->Q();
+  return wrap(Q);
+}
+
+// [[Rcpp::export(.Covariance__log_likelihood)]]
+SEXP Covariance__log_likelihood(SEXP xp, SEXP u_){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::VectorXd u = as<Eigen::VectorXd>(u_);
+  double ll = ptr->log_likelihood(u);
+  return wrap(ll);
+}
+
+// [[Rcpp::export(.Covariance__log_determinant)]]
+SEXP Covariance__log_determinant(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  double ll = ptr->log_determinant();
+  return wrap(ll);
+}
+
+// [[Rcpp::export(.Covariance__n_cov_pars)]]
+SEXP Covariance__n_cov_pars(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  int G = ptr->npar();
+  return wrap(G);
+}
+
+// [[Rcpp::export(.Covariance__simulate_re)]]
+SEXP Covariance__simulate_re(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::VectorXd rr = ptr->sim_re();
+  return wrap(rr);
+}
+
+// [[Rcpp::export(.Covariance__make_sparse)]]
+void Covariance__make_sparse(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  ptr->make_sparse();
+}
+
+// [[Rcpp::export(.Covariance__make_dense)]]
+void Covariance__make_dense(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  ptr->make_dense();
+}
+
+// [[Rcpp::export(.Covariance__any_gr)]]
+SEXP Covariance__any_gr(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  bool gr = ptr->any_group_re();
+  return wrap(gr);
+}
+
+
+

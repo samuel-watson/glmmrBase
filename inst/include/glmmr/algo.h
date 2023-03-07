@@ -40,15 +40,15 @@ inline int get_flink(const std::string &family,
 
 inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
                                    const Eigen::VectorXd& u,
-                                   const intvec& idx)
+                                   const int& n)
 {
-  Eigen::VectorXd y(idx.size());
-  for (int i = 0; i < idx.size(); i++) {
+  Eigen::VectorXd y(n);
+  for (int i = 0; i < n; i++) {
     double lsum = 0;
     for (int j = 0; j < i; j++) {
       lsum += U(i,j) * y(j);
     }
-    y(i) = (u(idx[i]) - lsum) / U(i,i);
+    y(i) = (u(i) - lsum) / U(i,i);
   }
   return y;
 }

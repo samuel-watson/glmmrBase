@@ -9,54 +9,54 @@ R6 Class representing a covariance function and data
 R6 Class representing a covariance function and data
 }
 \details{
-For the generalised linear mixed model 
+For the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Z\gamma)}
 \deqn{\gamma \sim MVN(0,D)}
 
 where h is the link function, this class defines Z and D. The covariance is defined by a covariance function, data, and parameters.
-A new instance can be generated with $new(). The class will generate the 
-relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+A new instance can be generated with $new(). The class will generate the
+relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
 
 
 **Intitialisation**
-A covariance function is specified as an additive formula made up of 
-components with structure \code{(1|f(j))}. The left side of the vertical bar 
-specifies the covariates in the model that have a random effects structure. 
-The right side of the vertical bar specify the covariance function `f` for 
-that term using variable named in the data `j`. 
-Covariance functions on the right side of the vertical bar are multiplied 
-together, i.e. \code{(1|f(j)*g(t))}. 
+A covariance function is specified as an additive formula made up of
+components with structure \code{(1|f(j))}. The left side of the vertical bar
+specifies the covariates in the model that have a random effects structure.
+The right side of the vertical bar specify the covariance function `f` for
+that term using variable named in the data `j`.
+Covariance functions on the right side of the vertical bar are multiplied
+together, i.e. \code{(1|f(j)*g(t))}.
 
 There are several common functions included for a named variable in data \code{x}.
 A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
-* \code{gr(x)}: Indicator function (1 parameter)   
+* \code{gr(x)}: Indicator function (1 parameter)
 * \code{fexp(x)}: Exponential function (2 parameters)
 * \code{ar1(x)}: AR1 function (1 parameter)
 * \code{sqexp(x)}: Squared exponential (1 parameter)
 * \code{matern(x)}: Matern function (2 parameters)
 * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
 
-Parameters are provided to the covariance function as a vector. 
-The parameters in the vector for each function should be provided 
-in the order the covariance functions are written are written. 
+Parameters are provided to the covariance function as a vector.
+The parameters in the vector for each function should be provided
+in the order the covariance functions are written are written.
 For example,
 * Formula: `~(1|gr(j))+(1|gr(j*t))`; parameters: `c(0.25,0.1)`
 * Formula: `~(1|gr(j)*fexp(t))`; parameters: `c(0.25,1,0.5)`
 Note that it is also possible to specify a group membership with two
-variable alternatively as `(1|gr(j)*gr(t))`, for example, but this 
+variable alternatively as `(1|gr(j)*gr(t))`, for example, but this
 will require two parameters to be specified, so it is recommended against.
 
-If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
+If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices
 are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
-If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of
 parameters is automatic if using the `update_parameters()` member function.
 
 
-Using `update_parameters()` is the preferred way of updating the parameters of the 
-mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+Using `update_parameters()` is the preferred way of updating the parameters of the
+mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`.
 The function calls check functions to automatically update linked matrices with the new parameters.
 If using direct assignment, call `self$check()` afterwards.
 }
@@ -99,7 +99,7 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
-cov$subset(1:100)                     
+cov$subset(1:100)
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -128,6 +128,7 @@ cov$subset(1:100)
 \item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
 \item \href{#method-Covariance-log_likelihood}{\code{Covariance$log_likelihood()}}
 \item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
+\item \href{#method-Covariance-sparse}{\code{Covariance$sparse()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -282,7 +283,7 @@ Keep specified indices and removes the rest
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
-cov$subset(1:100)                     
+cov$subset(1:100)
 }
 \if{html}{\out{</div>}}
 
@@ -335,6 +336,20 @@ with mean zero and covariance D.
 
 \subsection{Returns}{
 A vector of random effect values
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-sparse"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-sparse}{}}}
+\subsection{Method \code{sparse()}}{
+If this function is called then sparse matrix methods will be used for calculations
+involving D
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+None. Called for effects.
 }
 }
 \if{html}{\out{<hr>}}
