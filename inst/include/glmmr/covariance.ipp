@@ -141,6 +141,7 @@ inline void glmmr::Covariance::parse(){
             intvec parcount2;
             for(int l = 0; l < npars; l++){
               parcount2.push_back(l+npars_);
+              re_fn_par_link_.push_back(i);
             }
             parcount1.push_back(parcount2);
             npars_ += npars;
@@ -154,7 +155,7 @@ inline void glmmr::Covariance::parse(){
       }
     }
   }
-
+  
   //now build the reverse polish notation
   int nvarfn;
   for(int i =0; i<fn_.size();i++){

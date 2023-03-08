@@ -199,6 +199,16 @@ Covariance <- R6::R6Class("Covariance",
                           } else {
                             .Covariance__make_dense(private$ptr)
                           }
+                        },
+                        #' @description 
+                        #' Returns a table showing which parameters are members of which covariance 
+                        #' function term.
+                        #' @return A data frame
+                        parameter_table = function(){
+                          re <- .Covariance__re_terms(private$ptr)
+                          paridx <- .Covariance__parameter_fn_index(private$ptr)+1
+                          partable <- data.frame(term = re[paridx], parameter = self$parameters)
+                          return(partable)
                         }
                       ),
                       private = list(

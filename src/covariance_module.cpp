@@ -104,5 +104,17 @@ SEXP Covariance__any_gr(SEXP xp){
   return wrap(gr);
 }
 
+// [[Rcpp::export(.Covariance__parameter_fn_index)]]
+SEXP Covariance__parameter_fn_index(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  std::vector<int> gr = ptr->parameter_fn_index();
+  return wrap(gr);
+}
 
+// [[Rcpp::export(.Covariance__re_terms)]]
+SEXP Covariance__re_terms(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  std::vector<std::string> gr = ptr->form_.re_terms();
+  return wrap(gr);
+}
 

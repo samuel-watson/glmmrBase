@@ -166,6 +166,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Covariance__parameter_fn_index
+SEXP Covariance__parameter_fn_index(SEXP xp);
+RcppExport SEXP _glmmrBase_Covariance__parameter_fn_index(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__parameter_fn_index(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Covariance__re_terms
+SEXP Covariance__re_terms(SEXP xp);
+RcppExport SEXP _glmmrBase_Covariance__re_terms(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__re_terms(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // genX
 Eigen::MatrixXd genX(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames);
 RcppExport SEXP _glmmrBase_genX(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP) {
@@ -273,6 +295,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__make_sparse", (DL_FUNC) &_glmmrBase_Covariance__make_sparse, 1},
     {"_glmmrBase_Covariance__make_dense", (DL_FUNC) &_glmmrBase_Covariance__make_dense, 1},
     {"_glmmrBase_Covariance__any_gr", (DL_FUNC) &_glmmrBase_Covariance__any_gr, 1},
+    {"_glmmrBase_Covariance__parameter_fn_index", (DL_FUNC) &_glmmrBase_Covariance__parameter_fn_index, 1},
+    {"_glmmrBase_Covariance__re_terms", (DL_FUNC) &_glmmrBase_Covariance__re_terms, 1},
     {"_glmmrBase_genX", (DL_FUNC) &_glmmrBase_genX, 3},
     {"_glmmrBase_x_names", (DL_FUNC) &_glmmrBase_x_names, 1},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},

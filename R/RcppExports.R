@@ -57,6 +57,14 @@
     .Call(`_glmmrBase_Covariance__any_gr`, xp)
 }
 
+.Covariance__parameter_fn_index <- function(xp) {
+    .Call(`_glmmrBase_Covariance__parameter_fn_index`, xp)
+}
+
+.Covariance__re_terms <- function(xp) {
+    .Call(`_glmmrBase_Covariance__re_terms`, xp)
+}
+
 .genX <- function(formula, data, colnames) {
     .Call(`_glmmrBase_genX`, formula, data, colnames)
 }

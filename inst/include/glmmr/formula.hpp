@@ -44,8 +44,13 @@ public:
     return z_;
   }
   
+  strvec re_terms(){
+    return re_terms_;
+  }
+  
 private:
   strvec tokens_;
+  strvec re_terms_;
 };
 
 }

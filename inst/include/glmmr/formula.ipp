@@ -46,6 +46,7 @@ inline void glmmr::Formula::tokenise(){
   
   // random effects: separate right and left hand sides
   int m = re_.size();
+  re_terms_ = re_;
   
   for(int i = 0; i<m;i++){
     std::stringstream check1(re_[0]);
