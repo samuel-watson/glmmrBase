@@ -82,10 +82,9 @@ private:
 }
 
 inline void glmmr::LinearPredictor::parse(){
-  P_ = form_.fe_.size();
   int int_log = form_.RM_INT ? 0 : 1;
   if(!form_.RM_INT) X_.col(0) = Eigen::VectorXd::Ones(X_.rows());
-  if(P_>0){
+  if(form_.fe_.size()>0){
     for(int i = 0; i<P_; i++){
       auto colidx = std::find(colnames_.begin(),colnames_.end(),form_.fe_[i]);
       if(colidx == colnames_.end()){
@@ -97,6 +96,7 @@ inline void glmmr::LinearPredictor::parse(){
       }
     }
   }
+  P_ = X_.cols();
 }
 
 #endif
