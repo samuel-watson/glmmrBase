@@ -118,3 +118,9 @@ SEXP Covariance__re_terms(SEXP xp){
   return wrap(gr);
 }
 
+// [[Rcpp::export(.Covariance__re_count)]]
+SEXP Covariance__re_count(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  std::vector<int> gr = ptr->re_count();
+  return wrap(gr);
+}

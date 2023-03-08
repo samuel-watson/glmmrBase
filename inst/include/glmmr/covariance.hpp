@@ -151,6 +151,10 @@ public:
   intvec parameter_fn_index(){
     return re_fn_par_link_;
   }
+  
+  intvec re_count(){
+    return re_count_;
+  }
 
 private:
   intvec z_;
@@ -164,6 +168,7 @@ private:
   intvec2d re_index_;
   intvec2d re_obs_index_;
   intvec re_fn_par_link_;
+  intvec re_count_;
   int Q_;
   int n_;
   int B_;

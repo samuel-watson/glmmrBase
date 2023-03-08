@@ -207,7 +207,8 @@ Covariance <- R6::R6Class("Covariance",
                         parameter_table = function(){
                           re <- .Covariance__re_terms(private$ptr)
                           paridx <- .Covariance__parameter_fn_index(private$ptr)+1
-                          partable <- data.frame(term = re[paridx], parameter = self$parameters)
+                          recount <- .Covariance__re_count(private$ptr)
+                          partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
                         }
                       ),

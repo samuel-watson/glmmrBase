@@ -156,6 +156,7 @@ inline void glmmr::Covariance::parse(){
     }
   }
   
+  
   //now build the reverse polish notation
   int nvarfn;
   for(int i =0; i<fn_.size();i++){
@@ -191,6 +192,11 @@ inline void glmmr::Covariance::parse(){
   Q_ = 0;
   for(int i = 0; i < re_data_.size(); i++){
     Q_ += re_data_[i].size();
+  }
+  re_count_.resize(form_.re_terms().size());
+  std::fill(re_count_.begin(), re_count_.end(), 0);
+  for(int i = 0; i < re_data_.size(); i++){
+    re_count_[re_order_[i]] += re_data_[i].size();
   }
 
   B_ = re_data_.size();

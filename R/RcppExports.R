@@ -65,6 +65,10 @@
     .Call(`_glmmrBase_Covariance__re_terms`, xp)
 }
 
+.Covariance__re_count <- function(xp) {
+    .Call(`_glmmrBase_Covariance__re_count`, xp)
+}
+
 .genX <- function(formula, data, colnames) {
     .Call(`_glmmrBase_genX`, formula, data, colnames)
 }
