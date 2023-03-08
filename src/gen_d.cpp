@@ -45,7 +45,6 @@ Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
                                  bool attenuate
                                  ){
   Eigen::MatrixXd S(xb.size(),xb.size());
-  // generate the linear predictor
   Eigen::VectorXd linpred(xb);
   if(attenuate){
     linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);

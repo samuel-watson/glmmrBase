@@ -65,14 +65,6 @@ public:
     return X_;
   }
 
-  // void update_formula(const glmmr::Formula& form){
-  //   form_ = glmmr::Formula(form);
-  //   X_.resize(data_.rows(),form.fe_.size());
-  //   P_ = form.fe_.size();
-  //   parse();
-  // }
-
-
 private:
   const glmmr::Formula& form_;
   int P_;
