@@ -154,10 +154,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' @param parameters A vector of parameters for the mean function.
                           #' @param verbose Logical indicating whether to provide more detailed feedback
-                          update_parameters = function(parameters,
-                                                       verbose = FALSE){
+                          update_parameters = function(parameters){
                             self$parameters <- parameters
-                            self$check(verbose)
+                            self$check(FALSE)
                           },
                           #' @description 
                           #' Returns or replaces the column names of the data in the object

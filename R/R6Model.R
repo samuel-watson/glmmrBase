@@ -495,11 +495,10 @@ Model <- R6::R6Class("Model",
                        #' )
                        #' des$update_parameters(cov.pars = c(0.1,0.9))
                        update_parameters = function(mean.pars = NULL,
-                                                    cov.pars = NULL,
-                                                    verbose = FALSE){
-                         if(!is.null(mean.pars))self$mean$update_parameters(mean.pars,verbose)
-                         if(!is.null(cov.pars))self$covariance$update_parameters(cov.pars,verbose)
-                         self$check(verbose)
+                                                    cov.pars = NULL){
+                         if(!is.null(mean.pars))self$mean$update_parameters(mean.pars)
+                         if(!is.null(cov.pars))self$covariance$update_parameters(cov.pars)
+                         self$check(FALSE)
                        },
                        #' @description
                        #' Generates the information matrix of the GLS estimator
