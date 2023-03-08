@@ -75,6 +75,7 @@ private:
 }
 
 inline void glmmr::LinearPredictor::parse(){
+  P_ = form_.RM_INT ? form_.fe_.size() : form_.fe_.size()+1;
   int int_log = form_.RM_INT ? 0 : 1;
   if(!form_.RM_INT) X_.col(0) = Eigen::VectorXd::Ones(X_.rows());
   if(form_.fe_.size()>0){
@@ -89,7 +90,6 @@ inline void glmmr::LinearPredictor::parse(){
       }
     }
   }
-  P_ = X_.cols();
 }
 
 #endif

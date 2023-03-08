@@ -2,6 +2,7 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
+
  // [[Rcpp::export(.genX)]]
  Eigen::MatrixXd genX(const std::string& formula,
                     const Eigen::ArrayXXd& data,
