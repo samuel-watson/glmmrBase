@@ -35,6 +35,7 @@ Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
   return out;
 }
 
+
 // [[Rcpp::export(.gen_sigma_approx)]]
 Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
                                  const Eigen::MatrixXd& Z,

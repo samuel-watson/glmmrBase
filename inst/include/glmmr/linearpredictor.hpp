@@ -16,8 +16,9 @@ public:
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames) :
-    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form),
-    P_(form.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
+    data_(data), colnames_(colnames), parameters_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1), 
+    form_(form),
+    X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     parameters_.setZero();
     parse();
   };
@@ -26,8 +27,8 @@ public:
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const dblvec& parameters) :
-    data_(data), colnames_(colnames), parameters_(form.fe_.size()), form_(form),
-    P_(form_.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
+    data_(data), colnames_(colnames), parameters_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1), form_(form),
+    X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     for(int i = 0; i < parameters.size(); i++)parameters_(i) = parameters[i];
     parse();
   };
@@ -37,17 +38,17 @@ public:
              const strvec& colnames,
              const Eigen::ArrayXd& parameters) :
     data_(data), colnames_(colnames), parameters_(parameters.matrix()), form_(form),
-    P_(form_.fe_.size()), X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
+    X_(data.rows(),form.RM_INT ? form.fe_.size() : form.fe_.size()+1) {
     parse();
   };
 
   void update_parameters(const dblvec& parameters){
-    if(parameters.size()!=parameters_.size())Rcpp::stop("wrong number of parameters");
-    for(int i = 0; i < parameters.size(); i++)parameters_(i) = parameters[i];
+    if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
+    for(int i = 0; i < P_; i++)parameters_(i) = parameters[i];
   };
 
   void update_parameters(const Eigen::ArrayXd& parameters){
-    if(parameters.size()!=parameters_.size())Rcpp::stop("wrong number of parameters");
+    if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
     parameters_ = parameters;
   };
 
