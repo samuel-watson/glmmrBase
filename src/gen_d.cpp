@@ -2,11 +2,10 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
-
- // [[Rcpp::export(.genX)]]
- Eigen::MatrixXd genX(const std::string& formula,
-                    const Eigen::ArrayXXd& data,
-                    const std::vector<std::string>& colnames) {
+// [[Rcpp::export(.genX)]]
+Eigen::MatrixXd genX(const std::string& formula,
+                  const Eigen::ArrayXXd& data,
+                  const std::vector<std::string>& colnames) {
  glmmr::Formula form(formula);
  glmmr::LinearPredictor lin(form,data,colnames);
  return lin.X();

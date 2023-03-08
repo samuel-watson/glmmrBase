@@ -79,7 +79,7 @@ inline void glmmr::LinearPredictor::parse(){
   int int_log = form_.RM_INT ? 0 : 1;
   if(!form_.RM_INT) X_.col(0) = Eigen::VectorXd::Ones(X_.rows());
   if(form_.fe_.size()>0){
-    for(int i = 0; i<P_; i++){
+    for(int i = 0; i<form_.fe_.size(); i++){
       auto colidx = std::find(colnames_.begin(),colnames_.end(),form_.fe_[i]);
       if(colidx == colnames_.end()){
         Rcpp::stop("X variable not in colnames");
