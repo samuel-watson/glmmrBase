@@ -132,15 +132,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' @param ... ignored
                           print = function(){
-                            re <- .re_names(self$formula)
-                            f1 <- gsub(" ","",self$formula)
-                            if(length(re)>0){
-                              for(i in 1:length(re)){
-                                f1 <- gsub(paste0("+",re[i]),"",f1)
-                              }
-                            }
                             cat("\U2BC8 Linear Predictor")
-                            cat("\n     \U2BA1 Formula: ~",f1)
+                            cat("\n     \U2BA1 Formula: ~",self$formula)
                             cat("\n     \U2BA1 Parameters: ",self$parameters)
                           },
                           #' @description 
@@ -248,6 +241,14 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             if(grepl("~",self$formula) && length(as.formula(self$formula))==3)stop("formula should not have dependent variable.")
                             if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
                             self$formula <- gsub(" ","",self$formula)
+                            #need to remove random effect terms from the formula
+                            re <- .re_names(self$formula)
+                            for(i in 1:length(re)){
+                              re[i] <- gsub("\\(","\\\\(",re[i])
+                              re[i] <- gsub("\\)","\\\\)",re[i])
+                              re[i] <- gsub("\\|","\\\\|",re[i])
+                              self$formula <- gsub(paste0("\\+",re[i]),"",self$formula)
+                            }
                             ## add handling of factors
                             if(grepl("factor[^ \\[]+[ \\s\\+]",self$formula)){
                               

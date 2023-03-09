@@ -283,15 +283,8 @@ Model <- R6::R6Class("Model",
                          cat("\U2BC8 GLMM Model")
                          cat("\n   \U2BA1 Family :",self$family[[1]])
                          cat("\n   \U2BA1 Link :",self$family[[2]])
-                         re <- .re_names(self$mean$formula)
-                         f1 <- gsub(" ","",self$mean$formula)
-                         if(length(re)>0){
-                           for(i in 1:length(re)){
-                             f1 <- gsub(paste0("+",re[i]),"",f1)
-                           }
-                         }
                          cat("\n   \U2BA1 Linear predictor")
-                         cat("\n   \U2223     \U2BA1 Formula: ~",f1)
+                         cat("\n   \U2223     \U2BA1 Formula: ~",self$mean$formula)
                          cat("\n   \U2223     \U2BA1 Parameters: ",self$mean$parameters)
                          cat("\n   \U2BA1 Covariance")
                          cat("\n   \U2223     \U2BA1 Terms: ",.re_names(self$covariance$formula))

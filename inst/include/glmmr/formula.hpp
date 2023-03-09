@@ -55,7 +55,6 @@ private:
 
 }
 
-
 #include "formula.ipp"
 
 #endif
