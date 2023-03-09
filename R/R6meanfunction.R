@@ -247,11 +247,13 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             self$formula <- private$original_formula
                             if(grepl("~",self$formula) && length(as.formula(self$formula))==3)stop("formula should not have dependent variable.")
                             if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
+                            self$formula <- gsub(" ","",self$formula)
                             ## add handling of factors
                             if(grepl("factor[^ \\[]+[ \\s\\+]",self$formula)){
-                              rm_int <- grepl("-[ \\s+]1",self$formula)
+                              
+                              rm_int <- grepl("-1",self$formula)
                               cstart <- ifelse(rm_int,1,2)
-                              regres <- gregexpr("factor\\(.\\)",self$formula)
+                              regres <- gregexpr("factor\\(.*\\)",self$formula)
                               for(i in 1:length(regres[[1]])){
                                 tmpstr <- substr(self$formula,regres[[1]][i],regres[[1]][i]+attr(regres[[1]],"match.length")[i]-1)
                                 tmpdat <- stats::model.matrix(as.formula(paste0("~",tmpstr,"-1")),data=self$data)
