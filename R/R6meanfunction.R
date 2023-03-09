@@ -253,7 +253,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             }
                             
                             ## add handling of factors
-                            if(grepl("factor[^ \\[]+[ \\s\\+]",self$formula)){
+                            if(grepl("factor[^ \\[]+[ \\s\\+\\-]",self$formula)){
                               
                               rm_int <- grepl("-1",self$formula)
                               cstart <- ifelse(rm_int,1,2)
@@ -294,6 +294,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             private$hash <- private$hash_do()
                           },
                           genX = function(){
+                            print(self$formula)
+                            print(head(self$data))
+                            print(colnames(self$data))
                             self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
                             if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
                             cnames <- .x_names(self$formula)
