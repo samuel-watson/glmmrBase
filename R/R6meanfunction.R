@@ -294,9 +294,6 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             private$hash <- private$hash_do()
                           },
                           genX = function(){
-                            print(self$formula)
-                            print(head(self$data))
-                            print(colnames(self$data))
                             self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
                             if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
                             cnames <- .x_names(self$formula)
