@@ -358,8 +358,8 @@ Model <- R6::R6Class("Model",
                        #' ysim <- des$sim_data()
                        sim_data = function(type = "y"){
                          re <- self$covariance$simulate_re()
-                         mu <- c(drop(as.matrix(self$mean$X)%*%self$mean$parameters)) +
-                           c(as.matrix(self$covariance$Z)%*%re) +
+                         mu <- drop(as.matrix(self$mean$X)%*%self$mean$parameters) +
+                           drop(as.matrix(self$covariance$Z)%*%re) +
                            self$mean$offset
 
                          f <- self$family

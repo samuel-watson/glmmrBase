@@ -295,6 +295,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           },
                           genX = function(){
                             self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
+                            if(!is.null(self$parameters)&ncol(self$X)!=length(self$parameters))stop("wrong length parameter vector")
                             if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
                             cnames <- .x_names(self$formula)
                             if(!grepl("-1",self$formula)) cnames <- c("[Intercept]",cnames)
