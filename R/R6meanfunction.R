@@ -243,12 +243,15 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             self$formula <- gsub(" ","",self$formula)
                             #need to remove random effect terms from the formula
                             re <- .re_names(self$formula)
-                            for(i in 1:length(re)){
-                              re[i] <- gsub("\\(","\\\\(",re[i])
-                              re[i] <- gsub("\\)","\\\\)",re[i])
-                              re[i] <- gsub("\\|","\\\\|",re[i])
-                              self$formula <- gsub(paste0("\\+",re[i]),"",self$formula)
+                            if(length(re)>0){
+                              for(i in 1:length(re)){
+                                re[i] <- gsub("\\(","\\\\(",re[i])
+                                re[i] <- gsub("\\)","\\\\)",re[i])
+                                re[i] <- gsub("\\|","\\\\|",re[i])
+                                self$formula <- gsub(paste0("\\+",re[i]),"",self$formula)
+                              }
                             }
+                            
                             ## add handling of factors
                             if(grepl("factor[^ \\[]+[ \\s\\+]",self$formula)){
                               
