@@ -65,8 +65,10 @@ Model <- R6::R6Class("Model",
                          curr_state <- private$attenuate_parameters
                          if(use){
                            private$attenuate_parameters <- TRUE
+                           if(!is.null(private$ptr)).Model__use_attenuation(private$ptr,TRUE)
                          } else {
                            private$attenuate_parameters <- FALSE
+                           if(!is.null(private$ptr)).Model__use_attenuation(private$ptr,FALSE)
                          }
                          if(private$attenuate_parameters != curr_state){
                            private$genW()
@@ -651,6 +653,7 @@ Model <- R6::R6Class("Model",
                                        usestan = TRUE){
                          private$update_ptr(y)
                          .Model__use_L_in_calculations(private$ptr,FALSE)
+                         .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
                          if(self$family[[1]]=="binomial"){
                            if(!all(y==0 | y==1))stop("y must be 0 or 1")
@@ -900,6 +903,7 @@ Model <- R6::R6Class("Model",
                                      tol = 1e-2){
                          private$update_ptr(y)
                          .Model__use_L_in_calculations(private$ptr,TRUE)
+                         .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          # initialise u to random values as algorithm can fail if all zeros
                          .Model__update_u(private$ptr,matrix(rnorm(ncol(des$covariance$Z)),nrow=ncol(des$covariance$Z),ncol=1))
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
