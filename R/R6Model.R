@@ -901,7 +901,7 @@ Model <- R6::R6Class("Model",
                          private$update_ptr(y)
                          .Model__use_L_in_calculations(private$ptr,TRUE)
                          # initialise u to random values as algorithm can fail if all zeros
-                         .Model__update_u(mptr,matrix(rnorm(ncol(des$covariance$Z)),nrow=ncol(des$covariance$Z),ncol=1))
+                         .Model__update_u(private$ptr,matrix(rnorm(ncol(des$covariance$Z)),nrow=ncol(des$covariance$Z),ncol=1))
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
                          ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
