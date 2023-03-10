@@ -1,15 +1,12 @@
-#include "../inst/include/glmmr.h"
+#include <glmmr.h>
 
 using namespace Rcpp;
 
-// for some reason for R >4.2.1 the RCPP MODULE crashed R when loading, so it has been rewritten using export of pointers instead
-// since these are wrapped in the R6 classes, exposing them to the user should present minimal risk
-
 // [[Rcpp::export(.Covariance__new)]]
 SEXP Covariance__new(SEXP form_,SEXP data_, SEXP colnames_){
-  std::string form = as<std::string>(form_);
-  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
-  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  std::string form = Rcpp::as<std::string>(form_);
+  Eigen::ArrayXXd data = Rcpp::as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = Rcpp::as<std::vector<std::string> >(colnames_);
   Rcpp::XPtr<glmmr::Covariance> ptr(new glmmr::Covariance(form,data,colnames),true);
   return ptr;
 }
@@ -42,18 +39,18 @@ SEXP Covariance__D_chol(SEXP xp){
   return wrap(D);
 }
 
-// [[Rcpp::export(.Covariance__B)]]
+// [[Rcpp::export(Covariance__B)]]
 SEXP Covariance__B(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   int B = ptr->B();
-  return wrap(B);
+  return Rcpp::wrap(B);
 }
 
-// [[Rcpp::export(.Covariance__Q)]]
+// [[Rcpp::export(Covariance__Q)]]
 SEXP Covariance__Q(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   int Q = ptr->Q();
-  return wrap(Q);
+  return Rcpp::wrap(Q);
 }
 
 // [[Rcpp::export(.Covariance__log_likelihood)]]

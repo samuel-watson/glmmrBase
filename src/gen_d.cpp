@@ -1,4 +1,4 @@
-#include "../inst/include/glmmr.h"
+#include <glmmr.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 

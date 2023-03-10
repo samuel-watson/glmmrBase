@@ -21,11 +21,11 @@
     .Call(`_glmmrBase_Covariance__D_chol`, xp)
 }
 
-.Covariance__B <- function(xp) {
+Covariance__B <- function(xp) {
     .Call(`_glmmrBase_Covariance__B`, xp)
 }
 
-.Covariance__Q <- function(xp) {
+Covariance__Q <- function(xp) {
     .Call(`_glmmrBase_Covariance__Q`, xp)
 }
 
@@ -95,5 +95,169 @@
 
 .dlinkdeta <- function(xb, link) {
     .Call(`_glmmrBase_dlinkdeta`, xb, link)
+}
+
+.Model__new <- function(y_, formula_, data_, colnames_, family_, link_) {
+    .Call(`_glmmrBase_Model__new`, y_, formula_, data_, colnames_, family_, link_)
+}
+
+.Model__set_offset <- function(xp, offset_) {
+    invisible(.Call(`_glmmrBase_Model__set_offset`, xp, offset_))
+}
+
+.Model__update_beta <- function(xp, beta_) {
+    invisible(.Call(`_glmmrBase_Model__update_beta`, xp, beta_))
+}
+
+.Model__update_theta <- function(xp, theta_) {
+    invisible(.Call(`_glmmrBase_Model__update_theta`, xp, theta_))
+}
+
+.Model__update_u <- function(xp, u_) {
+    invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_))
+}
+
+.Model__use_L_in_calculations <- function(xp, useL_) {
+    invisible(.Call(`_glmmrBase_Model__use_L_in_calculations`, xp, useL_))
+}
+
+.Model__use_attenuation <- function(xp, use_) {
+    invisible(.Call(`_glmmrBase_Model__use_attenuation`, xp, use_))
+}
+
+.Model__update_W <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__update_W`, xp))
+}
+
+.Model__log_prob <- function(xp, v_) {
+    .Call(`_glmmrBase_Model__log_prob`, xp, v_)
+}
+
+.Model__log_gradient <- function(xp, v_, usezl_, beta_) {
+    .Call(`_glmmrBase_Model__log_gradient`, xp, v_, usezl_, beta_)
+}
+
+.Model__linear_predictor <- function(xp) {
+    .Call(`_glmmrBase_Model__linear_predictor`, xp)
+}
+
+.Model__log_likelihood <- function(xp) {
+    .Call(`_glmmrBase_Model__log_likelihood`, xp)
+}
+
+.Model__ml_theta <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__ml_theta`, xp))
+}
+
+.Model__ml_beta <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__ml_beta`, xp))
+}
+
+.Model__ml_all <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__ml_all`, xp))
+}
+
+.Model__laplace_ml_beta_u <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_u`, xp))
+}
+
+.Model__laplace_ml_theta <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_theta`, xp))
+}
+
+.Model__laplace_ml_beta_theta <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_theta`, xp))
+}
+
+.Model__nr_beta <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__nr_beta`, xp))
+}
+
+.Model__laplace_nr_beta_u <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__laplace_nr_beta_u`, xp))
+}
+
+.Model__laplace_hessian <- function(xp) {
+    .Call(`_glmmrBase_Model__laplace_hessian`, xp)
+}
+
+.Model__hessian <- function(xp) {
+    .Call(`_glmmrBase_Model__hessian`, xp)
+}
+
+.Model__u <- function(xp) {
+    .Call(`_glmmrBase_Model__u`, xp)
+}
+
+.Model__Zu <- function(xp) {
+    .Call(`_glmmrBase_Model__Zu`, xp)
+}
+
+.Model__P <- function(xp) {
+    .Call(`_glmmrBase_Model__P`, xp)
+}
+
+.Model__Q <- function(xp) {
+    .Call(`_glmmrBase_Model__Q`, xp)
+}
+
+.Model__X <- function(xp) {
+    .Call(`_glmmrBase_Model__X`, xp)
+}
+
+.Model__mcmc_sample <- function(xp, warmup_, samples_, adapt_) {
+    invisible(.Call(`_glmmrBase_Model__mcmc_sample`, xp, warmup_, samples_, adapt_))
+}
+
+.Model__set_trace <- function(xp, trace_) {
+    invisible(.Call(`_glmmrBase_Model__set_trace`, xp, trace_))
+}
+
+.Model__get_beta <- function(xp) {
+    .Call(`_glmmrBase_Model__get_beta`, xp)
+}
+
+.Model__y <- function(xp) {
+    .Call(`_glmmrBase_Model__y`, xp)
+}
+
+.Model__get_theta <- function(xp) {
+    .Call(`_glmmrBase_Model__get_theta`, xp)
+}
+
+.Model__get_var_par <- function(xp) {
+    .Call(`_glmmrBase_Model__get_var_par`, xp)
+}
+
+.Model__set_var_par <- function(xp, var_par_) {
+    invisible(.Call(`_glmmrBase_Model__set_var_par`, xp, var_par_))
+}
+
+.Model__L <- function(xp) {
+    .Call(`_glmmrBase_Model__L`, xp)
+}
+
+.Model__ZL <- function(xp) {
+    .Call(`_glmmrBase_Model__ZL`, xp)
+}
+
+.Model__xb <- function(xp) {
+    .Call(`_glmmrBase_Model__xb`, xp)
+}
+
+.Model__aic <- function(xp) {
+    .Call(`_glmmrBase_Model__aic`, xp)
+}
+
+.Model__mcmc_set_lambda <- function(xp, lambda_) {
+    invisible(.Call(`_glmmrBase_Model__mcmc_set_lambda`, xp, lambda_))
+}
+
+.Model__mcmc_set_max_steps <- function(xp, max_steps_) {
+    invisible(.Call(`_glmmrBase_Model__mcmc_set_max_steps`, xp, max_steps_))
+}
+
+.Model__mcmc_set_refresh <- function(xp, refresh_) {
+    invisible(.Call(`_glmmrBase_Model__mcmc_set_refresh`, xp, refresh_))
 }
 

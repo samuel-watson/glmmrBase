@@ -5,6 +5,7 @@
 #include "glmmr/formula.hpp"
 #include "glmmr/covariance.hpp"
 #include "glmmr/linearpredictor.hpp"
+#include "glmmr/model.hpp"
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]

@@ -200,8 +200,8 @@ Covariance <- R6::R6Class("Covariance",
                             .Covariance__make_dense(private$ptr)
                           }
                         },
-                        #' @description 
-                        #' Returns a table showing which parameters are members of which covariance 
+                        #' @description
+                        #' Returns a table showing which parameters are members of which covariance
                         #' function term.
                         #' @return A data frame
                         parameter_table = function(){
