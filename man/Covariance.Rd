@@ -129,6 +129,7 @@ cov$subset(1:100)
 \item \href{#method-Covariance-log_likelihood}{\code{Covariance$log_likelihood()}}
 \item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
 \item \href{#method-Covariance-sparse}{\code{Covariance$sparse()}}
+\item \href{#method-Covariance-parameter_table}{\code{Covariance$parameter_table()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -350,6 +351,20 @@ involving D
 
 \subsection{Returns}{
 None. Called for effects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-parameter_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-parameter_table}{}}}
+\subsection{Method \code{parameter_table()}}{
+Returns a table showing which parameters are members of which covariance
+function term.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$parameter_table()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame
 }
 }
 \if{html}{\out{<hr>}}

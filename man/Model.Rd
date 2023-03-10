@@ -11,7 +11,6 @@ A GLMM Model
 \details{
 An R6 class representing a GLMM model
 
-
 For the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
@@ -31,32 +30,54 @@ marginal quasilikelihood:
 
 \deqn{\Sigma = W^{-1} + ZDZ^T}
 
-where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
-to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
-(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>).
+where \emph{W} is a diagonal matrix with the GLM iterated weights for each observation equal
+to, for individual \emph{i} \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
+(see Table 2.1 in McCullagh and Nelder (1989) \url{ISBN:9780412317606}).
 
 See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
 
-
-**Attenuation**
+\strong{Attenuation}
 For calculations such as the information matrix, the first-order approximation to the covariance matrix
 proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the
 marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the
-marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this
+marginal mean is achieved by "attenuating" the linear predictor. Setting \code{use} equal to TRUE uses this
 adjustment for calculations using the covariance matrix for non-linear models.
-
 
 Calls the respective print methods of the linked covariance and mean function objects.
 
-
 The matrices X and Z both have n rows, where n is the number of observations in the model/design.
 
-
-Using `update_parameters()` is the preferred way of updating the parameters of the
-mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`.
+Using \code{update_parameters()} is the preferred way of updating the parameters of the
+mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
-If using direct assignment, call `self$check()` afterwards.
+If using direct assignment, call \code{self$check()} afterwards.
+
+\strong{MCMCML}
+Fits generalised linear mixed models using one of three algorithms: Markov Chain Newton
+Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or Maximum simulated
+likelihood (MSL). All the algorithms are described by McCullagh (1997). For each iteration
+of the algorithm the unobserved random effect terms (\eqn{\gamma}) are simulated
+using Markov Chain Monte Carlo (MCMC) methods (we use Hamiltonian Monte Carlo through Stan),
+and then these values are conditioned on in the subsequent steps to estimate the covariance
+parameters and the mean function parameters (\eqn{\beta}). For all the algorithms,
+the covariance parameter estimates are updated using an expectation maximisation step.
+For the mean function parameters you can either use a Newton Raphson step (MCNR) or
+an expectation maximisation step (MCEM). A simulated likelihood step can be added at the
+end of either MCNR or MCEM, which uses an importance sampling technique to refine the
+parameter estimates.
+
+The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
+tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
+
+Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}
+
+\strong{Laplace approximation}
+Fits generalised linear mixed models using Laplace approximation to the log likelihood. For non-Gaussian models
+the covariance matrix is approximated using the first order approximation based on the marginal
+quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
+can be further adjusted following the proposal of Zeger et al (1988), use the member function \code{use_attenuated()} in this
+class, see \link[glmmrBase]{Model}.
 }
 \examples{
 
@@ -213,16 +234,73 @@ des <- Model$new(
   var_par = 1
 )
 des$power() #power of 0.90 for the int parameter
+
+## ------------------------------------------------
+## Method `Model$MCML`
+## ------------------------------------------------
+
+\dontrun{
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+# specify parameter values in the call for the data simulation below
+des <- ModelMCML$new(
+  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
+                     parameters = c(0.25,0.7)),
+  mean = list(formula = ~ factor(t) + int - 1,
+                        parameters = c(rep(0,5),0.2)),
+  data = df,
+  family = gaussian()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE)
+#fits the models using Stan
+fit2 <- des$MCML(y = ysim,method="mcnr")
+ #adds a simulated likelihood step after the MCEM algorithm
+fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
+
+ # we could use LA to find better starting values
+fit4 <- des$LA(y=ysim)
+# to set better starting values we can use the update_parameters function
+des$update_parameters(mean = fit4$coefficients$est[1:6],
+                     cov = fit4$coefficients$est[7:8])
+fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
+}
+
+## ------------------------------------------------
+## Method `Model$LA`
+## ------------------------------------------------
+
+\dontrun{
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+# specify parameter values in the call for the data simulation below
+des <- ModelMCML$new(
+  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
+                     parameters = c(0.25,0.7)),
+  mean = list(formula = ~ factor(t) + int - 1,
+                        parameters = c(rep(0,5),-0.2)),
+  data = df,
+  family = stats::binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$LA(y = ysim)
+}
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
-Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
+Journal of the American Statistical Association<, 88(421), 9–25. \url{doi:10.1080/01621459.1993.10594284}
 
 Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach.
-Biometrics, 44(4), 1049.<doi:10.2307/2531734>
+Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 }
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
+
+\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
+
+\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -238,6 +316,23 @@ Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 \item{\code{formula}}{The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
+
+\item{\code{mcmc_options}}{There are five options for MCMC sampling that are specified in this list:
+\itemize{
+\item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
+sampler, this only applies to the first iteration of the MCML algorithm, as the
+values from the previous iteration are carried over.
+\item \code{samps} The number of MCMC samples drawn in the MCML algorithm. For
+smaller tolerance values larger numbers of samples are required. For the internal
+HMC sampler, larger numbers of samples are generally required than if using Stan since
+the samples generally exhibit higher autocorrealtion, especially for more complex
+covariance structures.
+\item \code{lambda} (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
+(equal to number of steps times the step length). Larger values result in lower correlation in samples, but
+require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
+\item \code{refresh} How frequently to print to console MCMC progress if displaying verbose output.
+\item \code{maxsteps} (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
+}}
 }
 \if{html}{\out{</div>}}
 }
@@ -259,6 +354,8 @@ Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
 \item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
+\item \href{#method-Model-MCML}{\code{Model$MCML()}}
+\item \href{#method-Model-LA}{\code{Model$LA()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -288,7 +385,7 @@ None. Used for effects.
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
 Return predicted values. Does not account for the random effects. For simulated values based
-on resampling random effects, see `sim_data()`
+on resampling random effects, see \code{sim_data()}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link")}\if{html}{\out{</div>}}
 }
@@ -296,7 +393,7 @@ on resampling random effects, see `sim_data()`
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{type}}{One of either "`link`" for values on the scale of the link function, or "`response`"
+\item{\code{type}}{One of either "\code{link}" for values on the scale of the link function, or "\code{response}"
 for values on the scale of the response}
 }
 \if{html}{\out{</div>}}
@@ -330,20 +427,20 @@ Create a new Model object
 seaparate formulae need to be provided to the covariance and mean arguments below.}
 
 \item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
+that can be passed to \code{Covariance} to create a new object. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.5.}
 
 \item{\code{mean}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-that can be passed to `MeanFunction` to create a new object. At a minimum the list must specify a formula.
+that can be passed to \code{MeanFunction} to create a new object. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.}
 
 \item{\code{data}}{A data frame with the data required for the mean function and covariance objects. This argument
-can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
-object, or as a member of the list of arguments to both `covariance` and `mean`.}
+can be ignored if data are provided to the covariance or mean arguments either via \code{Covariance} and \code{MeanFunction}
+object, or as a member of the list of arguments to both \code{covariance} and \code{mean}.}
 
 \item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This
-argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
-objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial},
+argument is optional if the family is provided either via a \code{MeanFunction} or \code{MeanFunction}
+objects, or as members of the list of arguments to \code{mean}. Current accepts \link[stats]{binomial},
 \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
@@ -422,7 +519,7 @@ spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
 \if{html}{\out{<a id="method-Model-print"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-print}{}}}
 \subsection{Method \code{print()}}{
-Print method for `Model` class
+Print method for \code{Model} class
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$print()}\if{html}{\out{</div>}}
 }
@@ -619,7 +716,7 @@ des$check() #updates
 \subsection{Method \code{update_parameters()}}{
 Updates the parameters of the mean function and/or the covariance function
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -673,7 +770,7 @@ A PxP matrix
 Estimates the power of the design described by the model using the square root
 of the relevant element of the GLS variance matrix:
 
- \deqn{(X^T\Sigma^{-1}X)^{-1}}
+\deqn{(X^T\Sigma^{-1}X)^{-1}}
 
 Note that this is equivalent to using the "design effect" for many
 models.
@@ -761,6 +858,141 @@ Returns the covariance matrix Sigma. For non-linear models this is an approximat
 \subsection{Returns}{
 A matrix.
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-MCML"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-MCML}{}}}
+\subsection{Method \code{MCML()}}{
+Markov Chain Monte Carlo Maximum Likelihood  model fitting
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
+  y,
+  method = "mcnr",
+  sim.lik.step = FALSE,
+  verbose = TRUE,
+  tol = 0.01,
+  max.iter = 30,
+  sparse = FALSE,
+  usestan = TRUE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A numeric vector of outcome data}
+
+\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, see Details. Default is \code{mcem}.}
+
+\item{\code{sim.lik.step}}{Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
+not do this step), defaults to FALSE.}
+
+\item{\code{verbose}}{Logical indicating whether to provide detailed output, defaults to TRUE.}
+
+\item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
+between iterations at which to stop the algorithm.}
+
+\item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
+
+\item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
+
+\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
+the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
+it generally produces a larger number of effective samplers per unit time, especially for more complex
+covariance functions.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{mcml} object
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+# specify parameter values in the call for the data simulation below
+des <- ModelMCML$new(
+  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
+                     parameters = c(0.25,0.7)),
+  mean = list(formula = ~ factor(t) + int - 1,
+                        parameters = c(rep(0,5),0.2)),
+  data = df,
+  family = gaussian()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE)
+#fits the models using Stan
+fit2 <- des$MCML(y = ysim,method="mcnr")
+ #adds a simulated likelihood step after the MCEM algorithm
+fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
+
+ # we could use LA to find better starting values
+fit4 <- des$LA(y=ysim)
+# to set better starting values we can use the update_parameters function
+des$update_parameters(mean = fit4$coefficients$est[1:6],
+                     cov = fit4$coefficients$est[7:8])
+fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
+}
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-LA"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-LA}{}}}
+\subsection{Method \code{LA()}}{
+Maximum Likelihood model fitting with Laplace Approximation
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 20, tol = 0.01)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A numeric vector of outcome data}
+
+\item{\code{start}}{Optional. A numeric vector indicating starting values for the model parameters.}
+
+\item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
+
+\item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
+
+\item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
+
+\item{\code{tol}}{Maximum difference between successive iterations at which to terminate the algorithm}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{mcml} object
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+# specify parameter values in the call for the data simulation below
+des <- ModelMCML$new(
+  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
+                     parameters = c(0.25,0.7)),
+  mean = list(formula = ~ factor(t) + int - 1,
+                        parameters = c(rep(0,5),-0.2)),
+  data = df,
+  family = stats::binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$LA(y = ysim)
+}
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-clone"></a>}}

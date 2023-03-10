@@ -299,7 +299,7 @@ Prints details about the object
 \subsection{Method \code{update_parameters()}}{
 Updates the model parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$update_parameters(parameters, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$update_parameters(parameters)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
