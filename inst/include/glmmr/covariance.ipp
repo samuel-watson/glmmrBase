@@ -92,13 +92,15 @@ inline void glmmr::Covariance::parse(){
     int total_vars = allcols.size();
     int gridx;
     dblvec allvals;
+    intvec newrecols;
     allvals.resize(total_vars);
+    newrecols.resize(total_vars);
     int currresize = re_data_.size();
     re_data_.resize(currresize+groups.size());
-
+    re_cols_.resize(currresize+groups.size());
     // // for each group, create a new z data including the group
     for(j = 0; j < groups.size(); j++){
-      re_cols_.push_back(fnvars);
+      //re_cols_.push_back(fnvars);
       fn_.push_back(fn);
       z_.push_back(zcol);
       re_order_.push_back(form_.re_order_[i]);
@@ -115,9 +117,11 @@ inline void glmmr::Covariance::parse(){
 
         for(l = 0; l<total_vars; l++){
           allvals[l] = data_(k,allcols[l]);
+          newrecols[l] = l;
         }
         if(std::find(re_data_[gridx + currresize].begin(),re_data_[gridx + currresize].end(),allvals) ==re_data_[gridx + currresize].end()){
           re_data_[gridx + currresize].push_back(allvals);
+          re_cols_[gridx + currresize].push_back(newrecols);
         }
       }
     }
@@ -155,7 +159,6 @@ inline void glmmr::Covariance::parse(){
       }
     }
   }
-  
   
   //now build the reverse polish notation
   int nvarfn;

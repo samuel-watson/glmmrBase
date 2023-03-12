@@ -743,6 +743,37 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__mcmc_set_target_accept
+void Model__mcmc_set_target_accept(SEXP xp, SEXP target_);
+RcppExport SEXP _glmmrBase_Model__mcmc_set_target_accept(SEXP xpSEXP, SEXP target_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type target_(target_SEXP);
+    Model__mcmc_set_target_accept(xp, target_);
+    return R_NilValue;
+END_RCPP
+}
+// Model__make_sparse
+void Model__make_sparse(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__make_sparse(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Model__make_sparse(xp);
+    return R_NilValue;
+END_RCPP
+}
+// Model__make_dense
+void Model__make_dense(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__make_dense(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Model__make_dense(xp);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
@@ -810,6 +841,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__mcmc_set_lambda", (DL_FUNC) &_glmmrBase_Model__mcmc_set_lambda, 2},
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 2},
     {"_glmmrBase_Model__mcmc_set_refresh", (DL_FUNC) &_glmmrBase_Model__mcmc_set_refresh, 2},
+    {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 2},
+    {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 1},
+    {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
     {NULL, NULL, 0}
 };
 

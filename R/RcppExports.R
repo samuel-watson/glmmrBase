@@ -261,3 +261,15 @@ Covariance__Q <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_refresh`, xp, refresh_))
 }
 
+.Model__mcmc_set_target_accept <- function(xp, target_) {
+    invisible(.Call(`_glmmrBase_Model__mcmc_set_target_accept`, xp, target_))
+}
+
+.Model__make_sparse <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__make_sparse`, xp))
+}
+
+.Model__make_dense <- function(xp) {
+    invisible(.Call(`_glmmrBase_Model__make_dense`, xp))
+}
+

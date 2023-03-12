@@ -295,3 +295,22 @@ void Model__mcmc_set_refresh(SEXP xp, SEXP refresh_){
   ptr->mcmc_set_refresh(refresh);
 }
 
+// [[Rcpp::export(.Model__mcmc_set_target_accept)]]
+void Model__mcmc_set_target_accept(SEXP xp, SEXP target_){
+  double target = as<double>(target_);
+  XPtr<glmmr::Model> ptr(xp);
+  ptr->mcmc_set_target_accept(target);
+}
+
+// [[Rcpp::export(.Model__make_sparse)]]
+void Model__make_sparse(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  ptr->make_covariance_sparse();
+}
+
+// [[Rcpp::export(.Model__make_dense)]]
+void Model__make_dense(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  ptr->make_covariance_dense();
+}
+

@@ -26,10 +26,11 @@ Author: Sam Watson [aut, cre]
 URL: https://github.com/samuel-watson/glmmrBase
 BugReports: https://github.com/samuel-watson/glmmrBase/issues
 Suggests: 
-    testthat
+    testthat (>= 3.0.0)
 Biarch: true
 Depends: 
     R (>= 3.4.0), 
     Matrix (>= 1.3-1)
 SystemRequirements: GNU make
 Encoding: UTF-8
+Config/testthat/edition: 3

@@ -1,6 +1,6 @@
 #' A GLMM Model
 #'
-#' An R6 class representing a GLMM model
+#' A generalised linear mixed model and a range of associated functions
 #' @details
 #' For the generalised linear mixed model
 #'
@@ -8,22 +8,19 @@
 #' \deqn{\mu = h^-1(X\beta + Zu)}
 #' \deqn{u \sim MVN(0,D)}
 #'
-#' where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F,
-#' link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
-#' methods for analysis and simulation with these models.
-#'
-#' This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality
-#' in related packages.
+#' where h is the link function. The class provides access to all of the matrices above and associated calculations and functions including model fitting, power analysis,
+#' and various relevant decompositions. The object is an R6 class and so can serve as a parent class for extended functionality.
 #'
 #' Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
-#' other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the
+#' other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
 #' marginal quasilikelihood:
 #'
 #' \deqn{\Sigma = W^{-1} + ZDZ^T}
 #'
 #' where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
 #' to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
-#' (see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>).
+#' (see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). The modification proposed by Zegers et al to the linear predictor to
+#' improve the accuracy of approximations based on the marginal quasilikelihood is also available, see `use_attenuation()`.
 #'
 #' See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 #' detailed guide on model specification.
@@ -1028,6 +1025,22 @@ Model <- R6::R6Class("Model",
                          return(out)
                          
                        },
+                       #' @description 
+                       #' Set whether to use sparse matrix methods for model calculations and fitting.
+                       #' By default the model does not use sparse matrix methods.
+                       #' @param sparse Logical indicating whether to use sparse matrix methods
+                       #' @return None, called for effects
+                       sparse = function(sparse = TRUE){
+                         if(!is.null(private$ptr)){
+                           if(sparse){
+                             .Model__make_sparse(private$ptr)
+                           } else {
+                             .Model__make_dense(private$ptr)
+                           }
+                         } 
+                         private$useSparse = sparse
+                         self$covariance$sparse(sparse)
+                       },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
@@ -1052,6 +1065,7 @@ Model <- R6::R6Class("Model",
                      private = list(
                        W = NULL,
                        Xb = NULL,
+                       useSparse = FALSE,
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
@@ -1120,6 +1134,13 @@ Model <- R6::R6Class("Model",
                          .Model__update_beta(private$ptr,self$mean$parameters)
                          .Model__update_theta(private$ptr,self$covariance$parameters)
                          .Model__set_var_par(private$ptr,self$var_par)
+                         .Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
+                         .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
+                         .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
+                         .Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
+                         if(private$useSparse){
+                           .Model__make_sparse(private$ptr)
+                         } 
                        }
                      ))
 

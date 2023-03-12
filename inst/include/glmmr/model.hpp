@@ -172,11 +172,23 @@ public:
     mcmc_.refresh_ = refresh;
   }
   
+  void mcmc_set_target_accept(double target){
+    mcmc_.target_accept_ = target;
+  }
+  
   void set_trace(int trace){
     trace_ = trace;
   }
   
   double aic();
+  
+  void make_covariance_sparse(){
+    covariance_.make_sparse();
+  }
+  
+  void make_covariance_dense(){
+    covariance_.make_dense();
+  }
   
 private:
   Eigen::ArrayXd size_m_array;
