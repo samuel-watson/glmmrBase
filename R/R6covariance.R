@@ -222,6 +222,13 @@ Covariance <- R6::R6Class("Covariance",
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
+                          re <- .re_names(self$formula)
+                          self$formula <- re[1]
+                          if(length(re)>1){
+                            for(i in 2:length(re)){
+                              self$formula <- paste0(self$formula,"+",re[i])
+                            }
+                          }
                           private$ptr <- .Covariance__new(self$formula,
                                                          as.matrix(self$data),
                                                          colnames(self$data))

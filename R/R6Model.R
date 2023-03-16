@@ -69,17 +69,27 @@ Model <- R6::R6Class("Model",
                          }
                          if(private$attenuate_parameters != curr_state){
                            private$genW()
-                           private$genS()
                          }
                        },
                        #' @description
                        #' Return predicted values. Does not account for the random effects. For simulated values based
-                       #' on resampling random effects, see `sim_data()`
+                       #' on resampling random effects, see `sim_data()`. 
                        #' @param type One of either "`link`" for values on the scale of the link function, or "`response`"
                        #' for values on the scale of the response
+                       #' @param X (Optional) Fixed effects matrix to generate fitted values
+                       #' @param u (Optional) Random effects values at which to generate fitted values
                        #' @return A \link[Matrix]{Matrix} class object containing the predicted values
-                       fitted = function(type="link"){
-                         Xb <- self$mean$linear_predictor()
+                       fitted = function(type="link", X, u){
+                         if(missing(X)){
+                           Xb <- self$mean$linear_predictor()
+                         } else {
+                           Xb <- X%*%self$mean$parameters 
+                         }
+                         
+                         if(!missing(u)){
+                           Xb <- Xb + self$covariance$Z%*%u
+                         }
+                         
                          if(type=="response"){
                            Xb <- self$family$linkinv(Xb)
                          }
@@ -334,7 +344,7 @@ Model <- R6::R6Class("Model",
                        #'Generates a realisation of the design
                        #'
                        #'Generates a single vector of outcome data based upon the
-                       #'specified GLMM design
+                       #'specified GLMM design. 
                        #'@param type Either 'y' to return just the outcome data, 'data'
                        #' to return a data frame with the simulated outcome data alongside the model data,
                        #' or 'all', which will return a list with simulated outcomes y, matrices X and Z,
@@ -648,25 +658,15 @@ Model <- R6::R6Class("Model",
                                        max.iter = 30,
                                        sparse = FALSE,
                                        usestan = TRUE){
+                         private$verify_data(y)
                          private$update_ptr(y)
                          .Model__use_L_in_calculations(private$ptr,FALSE)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
-                         if(self$family[[1]]=="binomial"){
-                           if(!all(y==0 | y==1))stop("y must be 0 or 1")
-                         } else if(self$family[[1]]=="poisson"){
-                           if(any(y <0) || any(y%%1 != 0))stop("y must be integer >= 0")
-                         } else if(self$family[[1]]=="beta"){
-                           if(any(y<0 || y>1))stop("y must be between 0 and 1")
-                         } else if(self$family[[1]]=="Gamma") {
-                           if(any(y<=0))stop("y must be positive")
-                         } else if(self$family[[1]]=="gaussian" & self$family[[2]]=="log"){
-                           if(any(y<=0))stop("y must be positive")
-                         }
                          
                          if(!usestan){
                            .Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
-                           .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$max_steps)
+                           .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                            .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
                          }
                          
@@ -701,7 +701,7 @@ Model <- R6::R6Class("Model",
                              if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
                              model_file <- system.file("stan",
                                                        file_type$file,
-                                                       package = "glmmrMCML",
+                                                       package = "glmmrBase",
                                                        mustWork = TRUE)
                              mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
                            }
@@ -898,6 +898,7 @@ Model <- R6::R6Class("Model",
                                      verbose = FALSE,
                                      max.iter = 20,
                                      tol = 1e-2){
+                         private$verify_data(y)
                          private$update_ptr(y)
                          .Model__use_L_in_calculations(private$ptr,TRUE)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
@@ -905,18 +906,6 @@ Model <- R6::R6Class("Model",
                          .Model__update_u(private$ptr,matrix(rnorm(ncol(des$covariance$Z)),nrow=ncol(des$covariance$Z),ncol=1))
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
-                         ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
-                         if(self$family[[1]]=="binomial"){
-                           if(!all(y==0 | y==1))stop("y must be 0 or 1")
-                         } else if(self$family[[1]]=="poisson"){
-                           if(any(y <0) || any(y%%1 != 0))stop("y must be integer >= 0")
-                         } else if(self$family[[1]]=="beta"){
-                           if(any(y<0 || y>1))stop("y must be between 0 and 1")
-                         } else if(self$family[[1]]=="Gamma") {
-                           if(any(y<=0))stop("y must be positive")
-                         } else if(self$family[[1]]=="gaussian" & self$family[[2]]=="log"){
-                           if(any(y<=0))stop("y must be positive")
-                         }
                          
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
                          
@@ -1041,6 +1030,72 @@ Model <- R6::R6Class("Model",
                          private$useSparse = sparse
                          self$covariance$sparse(sparse)
                        },
+                       #' @description 
+                       #' Generate an MCMC sample of the random effects
+                       #' @param y Numeric vector of outcome data
+                       #' @param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
+                       #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
+                       #'it generally produces a larger number of effective samplers per unit time, especially for more complex
+                       #'covariance functions.
+                       #' @param verbose Logical indicating whether to provide detailed output to the console
+                       #'@return A matrix of samples of the random effects
+                       mcmc_sample = function(y,usestan = TRUE,verbose=TRUE){
+                         private$verify_data(y)
+                         if(usestan){
+                           file_type <- mcnr_family(self$family)
+                           if(!requireNamespace("cmdstanr")){
+                             stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
+                                    Set option usestan=FALSE to use the in-built MCMC sampler.")
+                           } else {
+                             if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                             model_file <- system.file("stan",
+                                                       file_type$file,
+                                                       package = "glmmrBase",
+                                                       mustWork = TRUE)
+                             mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
+                           }
+                           data <- list(
+                             N = self$n(),
+                             Q = .Model__Q(private$ptr),
+                             Xb = .Model__xb(private$ptr),
+                             Z = .Model__ZL(private$ptr),
+                             y = y,
+                             sigma = self$var_par,
+                             type=as.numeric(file_type$type)
+                           )
+                           
+                           if(verbose){
+                             fit <- mod$sample(data = data,
+                                               chains = 1,
+                                               iter_warmup = self$mcmc_options$warmup,
+                                               iter_sampling = self$mcmc_options$samps,
+                                               refresh = self$mcmc_options$refresh)
+                           } else {
+                             capture.output(fit <- mod$sample(data = data,
+                                                              chains = 1,
+                                                              iter_warmup = self$mcmc_options$warmup,
+                                                              iter_sampling = self$mcmc_options$samps,
+                                                              refresh = 0),
+                                            file=tempfile())
+                           }
+                           
+                           dsamps <- fit$draws("gamma",format = "matrix")
+                           class(dsamps) <- "matrix"
+                           dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
+                           
+                         } else {
+                           private$update_ptr(y)
+                           if(verbose).Model__set_trace(private$ptr,2)
+                           .Model__use_L_in_calculations(private$ptr,FALSE)
+                           .Model__use_attenuation(private$ptr,private$attenuate_parameters)
+                           .Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
+                           .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
+                           .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
+                           .Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,100)
+                           dsamps <- .Model__u(private$ptr)
+                         }
+                         return(dsamps)
+                       },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
@@ -1109,7 +1164,7 @@ Model <- R6::R6Class("Model",
                                               attenuate = private$attenuate_parameters)
                          return(S)
                        },
-                       attenuate_parameters = TRUE,
+                       attenuate_parameters = FALSE,
                        hash = NULL,
                        hash_do = function(){
                          digest::digest(c(self$covariance$.__enclos_env__$private$hash,
@@ -1141,6 +1196,19 @@ Model <- R6::R6Class("Model",
                          if(private$useSparse){
                            .Model__make_sparse(private$ptr)
                          } 
+                       },
+                       verify_data = function(y){
+                         if(self$family[[1]]=="binomial"){
+                           if(!all(y==0 | y==1))stop("y must be 0 or 1")
+                         } else if(self$family[[1]]=="poisson"){
+                           if(any(y <0) || any(y%%1 != 0))stop("y must be integer >= 0")
+                         } else if(self$family[[1]]=="beta"){
+                           if(any(y<0 || y>1))stop("y must be between 0 and 1")
+                         } else if(self$family[[1]]=="Gamma") {
+                           if(any(y<=0))stop("y must be positive")
+                         } else if(self$family[[1]]=="gaussian" & self$family[[2]]=="log"){
+                           if(any(y<=0))stop("y must be positive")
+                         }
                        }
                      ))
 
