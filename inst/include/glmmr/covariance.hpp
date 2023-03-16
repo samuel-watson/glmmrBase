@@ -10,7 +10,6 @@
 
 namespace glmmr {
 
-
 class Covariance {
 public:
   glmmr::Formula form_;
@@ -160,7 +159,8 @@ private:
   intvec z_;
   dblvec3d re_data_;
   intvec3d re_cols_;
-  dblvec3d z_data_;
+  intvec3d re_cols_data_;
+  //dblvec3d z_data_;
   strvec2d fn_;
   intvec re_order_;
   intvec3d re_pars_;

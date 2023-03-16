@@ -290,14 +290,14 @@ inline double calculate(const intvec& instructions,
   int idx_iter = 0;
   double a,b,var;
   std::stack<double> stack;
-  Rcpp::Rcout << "\nIdx: " << i << " " << j;
-  if(i==0 && j==0){
-    glmmr::print_vec_1d<intvec>(indexes);
-    glmmr::print_vec_2d<dblvec2d>(data);
-  }
+  // Rcpp::Rcout << "\nIdx: " << i << " " << j;
+  // if(i==0 && j==0){
+  //   glmmr::print_vec_1d<intvec>(indexes);
+  //   glmmr::print_vec_2d<dblvec2d>(data);
+  // }
   
   for(int k = 0; k < instructions.size(); k++){
-    Rcpp::Rcout << "\nInstruction: " << k << " = " << instructions[k];
+    //Rcpp::Rcout << "\nInstruction: " << k << " = " << instructions[k];
 
     switch(instructions[k]){
     case 0:
@@ -346,12 +346,15 @@ inline double calculate(const intvec& instructions,
       stack.push(sqrt(a));
       break;
     case 8:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(pow(b,a));
-      break;
+      {
+        a = stack.top();
+        stack.pop();
+        b = stack.top();
+        stack.pop();
+        double out = pow(b,a);
+        stack.push(out);
+        break;
+      }
     case 9:
       a = stack.top();
       stack.pop();
@@ -424,8 +427,9 @@ inline double calculate(const intvec& instructions,
       stack.push(M_PI);
       break;
     }
-    var = stack.top();
-    Rcpp::Rcout << "\nTop: " << var;
+    if(stack.size() == 0)Rcpp::stop("Error stack empty!");
+    //var = stack.top();
+    //Rcpp::Rcout << " | Top: " << var;
   }
   return stack.top();
 }

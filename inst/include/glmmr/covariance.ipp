@@ -98,6 +98,7 @@ inline void glmmr::Covariance::parse(){
     int currresize = re_data_.size();
     re_data_.resize(currresize+groups.size());
     re_cols_.resize(currresize+groups.size());
+    re_cols_data_.resize(currresize+groups.size());
     // // for each group, create a new z data including the group
     for(j = 0; j < groups.size(); j++){
       //re_cols_.push_back(fnvars);
@@ -122,6 +123,7 @@ inline void glmmr::Covariance::parse(){
         if(std::find(re_data_[gridx + currresize].begin(),re_data_[gridx + currresize].end(),allvals) ==re_data_[gridx + currresize].end()){
           re_data_[gridx + currresize].push_back(allvals);
           re_cols_[gridx + currresize].push_back(newrecols);
+          re_cols_data_[gridx + currresize].push_back(allcols);
         }
       }
     }
@@ -213,9 +215,11 @@ inline double glmmr::Covariance::get_val(int b, int i, int j){
 inline Eigen::MatrixXd glmmr::Covariance::get_block(int b){
   if(b > re_rpn_.size()-1)Rcpp::stop("b larger than number of block");
   if(parameters_.size()==0)Rcpp::stop("no parameters");
+  if(b > B_-1)Rcpp::stop("b is too large");
 
   int dim = re_data_[b].size();
   Eigen::MatrixXd D(dim,dim);
+  D.setZero();
   //diagonal
   for(int k = 0; k < dim; k++){
     D(k,k) = get_val(b,k,k);
@@ -223,14 +227,13 @@ inline Eigen::MatrixXd glmmr::Covariance::get_block(int b){
   if(dim>1){
     for(int i = 0; i < (dim-1); i++){
       for(int j = (i+1); j < dim; j++){
-        D(j,i) = get_val(b,j,i);
-        D(i,j) = D(j,i);
+      D(j,i) = get_val(b,j,i);
+      D(i,j) = D(j,i);
       }
     }
   }
   return D;
 }
-
 
 inline Eigen::MatrixXd glmmr::Covariance::Z(){
   if(Q_==0)Rcpp::stop("Random effects not initialised");
@@ -241,26 +244,24 @@ inline Eigen::MatrixXd glmmr::Covariance::Z(){
   int i,j,k,l,m;
   re_obs_index_.resize(re_data_.size());
   for(i = 0; i < re_data_.size(); i++){
-    for(j = 0; j < re_data_[i].size(); j++){
-      dblvec vals(re_data_[i][j].size());
-      for(k = 0; k < data_.rows(); k++){
-        nval = 0;
-        for(l = 0; l < re_cols_[i].size(); l++){
-          for(m = 0; m < re_cols_[i][l].size(); m++){
-            vals[nval] = data_(k,re_cols_[i][l][m]);
-            nval++;
+     for(j = 0; j < re_data_[i].size(); j++){
+       nvar = re_data_[i][j].size();
+       dblvec vals(nvar);
+       for(k = 0; k < data_.rows(); k++){
+          for(m = 0; m < nvar; m++){
+            vals[m] = data_(k,re_cols_data_[i][j][m]);
+          }
+          if(re_data_[i][j]==vals){
+            re_obs_index_[i].push_back(k);
+            Z(k,zcount) = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
           }
         }
-        if(re_data_[i][j]==vals){
-          re_obs_index_[i].push_back(k);
-          Z(k,zcount) = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
-        }
-      }
       zcount++;
-    }
+     }
   }
   return Z;
 }
+
 
 inline Eigen::MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
   int n = re_data_[b].size();;
