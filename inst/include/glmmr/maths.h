@@ -13,6 +13,21 @@
 namespace glmmr {
 namespace maths {
 
+const static inline std::unordered_map<std::string,int> model_to_int{
+  {"poissonlog",1},
+  {"poissonidentity",2},
+  {"binomiallogit",3},
+  {"binomiallog",4},
+  {"binomialidentity",5},
+  {"binomialprobit",6},
+  {"gaussianidentity",7},
+  {"gaussianlog",8},
+  {"gammalog",9},
+  {"gammainverse",10},
+  {"gammaidentity",11},
+  {"betalogit",12}
+};
+
 inline double gaussian_cdf(double value)
 {
   return 0.5 * erfc(-value * 0.707106781186547524401);
@@ -82,22 +97,8 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
   
   Eigen::VectorXd wdiag(xb.size());
   Eigen::ArrayXd p(xb.size());
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"poissonlog",1},
-    {"poissonidentity",2},
-    {"binomiallogit",3},
-    {"binomiallog",4},
-    {"binomialidentity",5},
-    {"binomialprobit",6},
-    {"gaussianidentity",7},
-    {"gaussianlog",8},
-    {"Gammalog",9},
-    {"Gammainverse",10},
-    {"Gammaidentity",11},
-    {"betalogit",12}
-  };
   
-  switch (string_to_case.at(family + link)) {
+  switch (glmmr::maths::model_to_int.at(family + link)) {
   case 1:
     wdiag = exp_vec(-1.0 * xb);
     break;
@@ -281,20 +282,7 @@ inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
   return wdiag.matrix();
 }
 
-const static inline std::unordered_map<std::string,int> string_to_case{
-  {"poissonlog",1},
-  {"poissonidentity",2},
-  {"binomiallogit",3},
-  {"binomiallog",4},
-  {"binomialidentity",5},
-  {"binomialprobit",6},
-  {"gaussianidentity",7},
-  {"gaussianlog",8},
-  {"gammalog",9},
-  {"gammainverse",10},
-  {"gammaidentity",11},
-  {"betalogit",12}
-};
+
 
 //ramanujans approximation
 inline double log_factorial_approx(double n){

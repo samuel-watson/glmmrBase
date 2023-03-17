@@ -54,7 +54,7 @@ public:
       n_(data.rows()),
       Q_(covariance_.Q()),
       P_(linpred_.P()),
-      flink(glmmr::maths::string_to_case.at(family_+link_)),
+      flink(glmmr::maths::model_to_int.at(family_+link_)),
       useLflag(false),
       attenuate_(false),
       Z_(covariance_.Z()),
@@ -104,12 +104,13 @@ public:
   double log_prob(const Eigen::VectorXd &v);
   
   Eigen::VectorXd log_gradient(const Eigen::VectorXd &v,
-                           bool usezl = true,
-                           bool beta = false);
+                              bool usezl = true,
+                              bool beta = false);
  
   Eigen::MatrixXd linpred(){
     return (zu_.colwise()+(linpred_.xb()+offset_));
   }
+  
   
   Eigen::VectorXd xb(){
     return linpred_.xb()+offset_;

@@ -1041,6 +1041,7 @@ Model <- R6::R6Class("Model",
                        #'@return A matrix of samples of the random effects
                        mcmc_sample = function(y,usestan = TRUE,verbose=TRUE){
                          private$verify_data(y)
+                         private$update_ptr(y)
                          if(usestan){
                            file_type <- mcnr_family(self$family)
                            if(!requireNamespace("cmdstanr")){
@@ -1081,10 +1082,10 @@ Model <- R6::R6Class("Model",
                            
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
-                           dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
+                           dsamps <- Matrix::Matrix(.Model__L(private$ptr) %*% Matrix::t(dsamps)) #check this
                            
                          } else {
-                           private$update_ptr(y)
+                           
                            if(verbose).Model__set_trace(private$ptr,2)
                            .Model__use_L_in_calculations(private$ptr,FALSE)
                            .Model__use_attenuation(private$ptr,private$attenuate_parameters)

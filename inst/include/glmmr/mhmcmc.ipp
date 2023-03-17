@@ -20,7 +20,7 @@ inline void glmmr::Model::HMC::new_proposal(bool adapt,
   
   Rcpp::NumericVector z = Rcpp::rnorm(r_.size());
   r_ = Rcpp::as<Eigen::Map<Eigen::VectorXd> >(z);
-  grad_ = M_.log_gradient(u0_);
+  grad_ = M_.log_gradient(u0_,true,false);
   double lpr_ = 0.5*r_.transpose()*r_;
   up_ = u0_;
 
@@ -30,7 +30,7 @@ inline void glmmr::Model::HMC::new_proposal(bool adapt,
   for(int i=0; i< steps_; i++){
     r_ += (e_/2)*grad_;
     up_ += e_ * r_;
-    grad_ = M_.log_gradient(up_);
+    grad_ = M_.log_gradient(up_,true,false);
     r_ += (e_/2)*grad_;
   }
 
