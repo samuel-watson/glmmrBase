@@ -707,8 +707,6 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          
-                         
-                         
                          data <- list(
                            N = self$n(),
                            Q = .Model__Q(private$ptr),
@@ -741,15 +739,15 @@ Model <- R6::R6Class("Model",
                              dsamps <- fit$draws("gamma",format = "matrix")
                              class(dsamps) <- "matrix"
                              dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
-                             if(trace==2)t2 <- Sys.time()
-                             if(trace==2)cat("\nMCMC sampling took: ",t2-t1)
-                             
                              .Model__update_u(private$ptr,as.matrix(dsamps))
                            } else {
-                             .Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,
-                                                 self$mcmc_options$samps,100)
+                             .Model__mcmc_sample(private$ptr,
+                                                 self$mcmc_options$warmup,
+                                                 self$mcmc_options$samps,
+                                                 self$mcmc_options$adapt)
                            }
-                           
+                           if(trace==2)t2 <- Sys.time()
+                           if(trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
                            if(method=="mcnr"){
@@ -767,7 +765,7 @@ Model <- R6::R6Class("Model",
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            
                            if(trace==2)t3 <- Sys.time()
-                           if(trace==2)cat("\nModel fitting took: ",t3-t2)
+                           if(trace==2)cat("\nModel fitting took: ",t3-t2,"s")
                            if(verbose){
                              #cat("\ntheta:",theta[all_pars])
                              cat("\nBeta: ", beta_new)
@@ -790,7 +788,6 @@ Model <- R6::R6Class("Model",
                            theta_new <- .Model__get_theta(private$ptr)
                            var_par_new <- .Model__get_var_par(private$ptr)
                          }
-                         
                          
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
@@ -835,7 +832,6 @@ Model <- R6::R6Class("Model",
                          condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
                          margR2 <- var(Matrix::drop(xb))/total_var
                          
-                         
                          out <- list(coefficients = res,
                                      converged = !not_conv,
                                      method = method,
@@ -844,12 +840,15 @@ Model <- R6::R6Class("Model",
                                      sim_lik = sim.lik.step,
                                      aic = aic,
                                      Rsq = c(cond = condR2,marg=margR2),
-                                     mean_form = as.character(self$mean_function$formula),
-                                     cov_form = as.character(self$covariance$formula),
+                                     mean_form = self$mean$formula,
+                                     cov_form = self$covariance$formula,
                                      family = self$family[[1]],
                                      link = self$family[[2]],
                                      re.samps = u,
-                                     iter = iter)
+                                     iter = iter,
+                                     P = length(self$mean$parameters),
+                                     Q = length(self$covariance$parameters),
+                                     var_par_family = var_par_family)
                          
                          class(out) <- "mcml"
                          
@@ -903,7 +902,7 @@ Model <- R6::R6Class("Model",
                          .Model__use_L_in_calculations(private$ptr,TRUE)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          # initialise u to random values as algorithm can fail if all zeros
-                         .Model__update_u(private$ptr,matrix(rnorm(ncol(des$covariance$Z)),nrow=ncol(des$covariance$Z),ncol=1))
+                         .Model__update_u(private$ptr,matrix(rnorm(ncol(self$covariance$Z)),nrow=ncol(self$covariance$Z),ncol=1))
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
                          
@@ -934,7 +933,7 @@ Model <- R6::R6Class("Model",
                            beta_new <- .Model__get_beta(private$ptr)
                            theta_new <- .Model__get_theta(private$ptr)
                            var_par_new <- .Model__get_var_par(private$ptr)
-                           all_pars_new <- c(beta,theta)
+                           all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
                            
                            if(verbose){
@@ -945,10 +944,16 @@ Model <- R6::R6Class("Model",
                              cat("\n",Reduce(paste0,rep("-",40)))
                            }
                          }
-                         .Model__laplace_ml_beta_theta(private$ptr)
-                         
                          not_conv <- iter >= max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
+                         
+                         .Model__laplace_ml_beta_theta(private$ptr)
+                         beta_new <- .Model__get_beta(private$ptr)
+                         theta_new <- .Model__get_theta(private$ptr)
+                         var_par_new <- .Model__get_var_par(private$ptr)
+                         all_pars_new <- c(beta_new,theta_new)
+                         if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
+                         
                          
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
@@ -1002,12 +1007,15 @@ Model <- R6::R6Class("Model",
                                      sim_lik = FALSE,
                                      aic = aic,
                                      Rsq = c(cond = condR2,marg=margR2),
-                                     mean_form = as.character(self$mean_function$formula),
-                                     cov_form = as.character(self$covariance$formula),
+                                     mean_form = self$mean$formula,
+                                     cov_form = self$covariance$formula,
                                      family = self$family[[1]],
                                      link = self$family[[2]],
                                      re.samps = u,
-                                     iter = iter)
+                                     iter = iter,
+                                     P = length(self$mean$parameters),
+                                     Q = length(self$covariance$parameters),
+                                     var_par_family = var_par_family)
                          
                          class(out) <- "mcml"
                          
@@ -1092,7 +1100,7 @@ Model <- R6::R6Class("Model",
                            .Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
                            .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                            .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
-                           .Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,100)
+                           .Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt)
                            dsamps <- .Model__u(private$ptr)
                          }
                          return(dsamps)
@@ -1113,10 +1121,11 @@ Model <- R6::R6Class("Model",
                        #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
                        mcmc_options = list(warmup = 500,
                                            samps = 250,
-                                           lambda = 5,
+                                           lambda = 1,
                                            refresh = 500,
                                            maxsteps = 100,
-                                           target_accept = 0.95)
+                                           target_accept = 0.95,
+                                           adapt = 50)
                      ),
                      private = list(
                        W = NULL,

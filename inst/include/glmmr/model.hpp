@@ -1,6 +1,8 @@
 #ifndef MODEL_HPP
 #define MODEL_HPP
 
+#define _USE_MATH_DEFINES
+
 #include <boost/math/special_functions/digamma.hpp>
 #include <rbobyqa.h>
 #include "general.h"

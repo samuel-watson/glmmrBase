@@ -9,7 +9,7 @@ A GLMM Model
 A GLMM Model
 }
 \details{
-An R6 class representing a GLMM model
+A generalised linear mixed model and a range of associated functions
 
 For the generalised linear mixed model
 
@@ -17,22 +17,19 @@ For the generalised linear mixed model
 \deqn{\mu = h^-1(X\beta + Zu)}
 \deqn{u \sim MVN(0,D)}
 
-where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F,
-link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
-methods for analysis and simulation with these models.
-
-This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality
-in related packages.
+where h is the link function. The class provides access to all of the matrices above and associated calculations and functions including model fitting, power analysis,
+and various relevant decompositions. The object is an R6 class and so can serve as a parent class for extended functionality.
 
 Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
-other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the
+other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
 marginal quasilikelihood:
 
 \deqn{\Sigma = W^{-1} + ZDZ^T}
 
 where \emph{W} is a diagonal matrix with the GLM iterated weights for each observation equal
 to, for individual \emph{i} \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
-(see Table 2.1 in McCullagh and Nelder (1989) \url{ISBN:9780412317606}).
+(see Table 2.1 in McCullagh and Nelder (1989) \url{ISBN:9780412317606}). The modification proposed by Zegers et al to the linear predictor to
+improve the accuracy of approximations based on the marginal quasilikelihood is also available, see \code{use_attenuation()}.
 
 See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
@@ -356,6 +353,8 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
 \item \href{#method-Model-MCML}{\code{Model$MCML()}}
 \item \href{#method-Model-LA}{\code{Model$LA()}}
+\item \href{#method-Model-sparse}{\code{Model$sparse()}}
+\item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -385,9 +384,9 @@ None. Used for effects.
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
 Return predicted values. Does not account for the random effects. For simulated values based
-on resampling random effects, see \code{sim_data()}
+on resampling random effects, see \code{sim_data()}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link", X, u)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -395,6 +394,10 @@ on resampling random effects, see \code{sim_data()}
 \describe{
 \item{\code{type}}{One of either "\code{link}" for values on the scale of the link function, or "\code{response}"
 for values on the scale of the response}
+
+\item{\code{X}}{(Optional) Fixed effects matrix to generate fitted values}
+
+\item{\code{u}}{(Optional) Random effects values at which to generate fitted values}
 }
 \if{html}{\out{</div>}}
 }
@@ -622,7 +625,7 @@ des$subset_cols(c(2:8,10))
 Generates a realisation of the design
 
 Generates a single vector of outcome data based upon the
-specified GLMM design
+specified GLMM design.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$sim_data(type = "y")}\if{html}{\out{</div>}}
 }
@@ -993,6 +996,54 @@ fit1 <- des$LA(y = ysim)
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-sparse"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sparse}{}}}
+\subsection{Method \code{sparse()}}{
+Set whether to use sparse matrix methods for model calculations and fitting.
+By default the model does not use sparse matrix methods.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None, called for effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-mcmc_sample"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-mcmc_sample}{}}}
+\subsection{Method \code{mcmc_sample()}}{
+Generate an MCMC sample of the random effects
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(y, usestan = TRUE, verbose = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Numeric vector of outcome data}
+
+\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
+the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
+it generally produces a larger number of effective samplers per unit time, especially for more complex
+covariance functions.}
+
+\item{\code{verbose}}{Logical indicating whether to provide detailed output to the console}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix of samples of the random effects
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-clone"></a>}}

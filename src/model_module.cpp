@@ -2,9 +2,6 @@
 
 using namespace Rcpp;
 
-// exporting pointer rather than using Rcpp Module as loading the module
-// caused R to consistently crash for versions > 4.2.0
-
 // [[Rcpp::export(.Model__new)]]
 SEXP Model__new(SEXP y_,SEXP formula_, SEXP data_, SEXP colnames_,
                 SEXP family_, SEXP link_){

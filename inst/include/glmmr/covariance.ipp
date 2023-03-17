@@ -142,6 +142,8 @@ inline void glmmr::Covariance::parse(){
         if(firsti){
           intvec2d parcount1;
           for(int k = 0; k < fn_[j].size(); k++){
+          // add validator
+           if(glmmr::validate_fn(fn_[j][k]))Rcpp::stop("Function " + fn_[j][k] + " not valid");
             auto parget = nvars.find(fn_[j][k]);
             int npars = parget->second;
             intvec parcount2;
@@ -335,9 +337,10 @@ inline double glmmr::Covariance::log_likelihood(const Eigen::VectorXd &u){
       blocksize = block_dim(b);
       if(blocksize==1){
         double var = get_val(b,0,0);
-        size_B_array[b] = -0.5*log(var*var) -0.5*log(2*M_PI) -
-          0.5*u(obs_counter)*u(obs_counter)/(var*var);
+        size_B_array[b] = -0.5*log(var) -0.5*log(2*M_PI) -
+          0.5*u(obs_counter)*u(obs_counter)/(var);
       } else {
+        zquad.setZero();
         dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);
         logdet_val = 0.0;
         for(int i = 0; i < blocksize; i++){

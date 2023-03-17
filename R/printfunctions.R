@@ -30,10 +30,8 @@ print.mcml <- function(x, ...){
   cat("\nFixed effects formula :",x$mean_form)
   cat("\nCovariance function formula: ",x$cov_form)
   cat("\nFamily: ",x$family,", Link function:",x$link,"\n")
-  if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n")
-  # semethod <- ifelse(x$permutation,"permutation test",
-  #                    ifelse(x$robust,"robust",ifelse(x$hessian,"hessian","approx")))
-  # cat("P-value and confidence interval method: ",semethod,"\n\n")
+  if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n\n")
+ 
   dim1 <- dim(x$re.samps)[1]
   pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),c('est','SE','lower','upper')]
   z <- pars$est/pars$SE
@@ -48,16 +46,23 @@ print.mcml <- function(x, ...){
   }
   rownames(pars) <- rnames
   pars <- apply(pars,2,round,digits = digits)
-  print(pars)
+  
+  cat("\nFixed effects: \n")
+  print(pars[1:x$P,])
+  
+  cat("\nRandom effects: \n")
+  total_vars <- x$P+x$Q
+  if(x$var_par_family)total_vars <- total_vars + 1
+  print(pars[(x$P+1):(total_vars),1])
   
   cat("\ncAIC: ",round(x$aic,digits))
   cat("\nApproximate R-squared: Conditional: ",round(x$Rsq[1],digits)," Marginal: ",round(x$Rsq[2],digits))
-  
+  if(!x$converged)cat("\nMCML ALGORITHM DID NOT CONVERGE!")
 #   #messages
 #   if(x$permutation)message("Permutation test used for one parameter, other SEs are not reported. SEs and Z values
 # are approximate based on the p-value, and assume normality.")
   #if(!x$hessian&!x$permutation)warning("Hessian was not positive definite, standard errors are approximate")
-  if(!x$converged)warning("Algorithm did not converge")
+  #if(!x$converged)warning("Algorithm did not converge")
   return(invisible(pars))
 }
 

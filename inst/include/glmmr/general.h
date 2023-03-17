@@ -58,6 +58,11 @@ const static std::unordered_map<str,int> string_to_case{
   {"prodek",14}
 };
 
+inline bool validate_fn(const str& fn){
+  bool not_fn = string_to_case.find(fn) == string_to_case.end();
+  return not_fn;
+}
+
 const static intvec xvar_rpn = {0,1,4,0,1,4,5};
 
 template<typename T>

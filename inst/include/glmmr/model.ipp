@@ -88,12 +88,12 @@ inline double glmmr::Model::log_prob(const Eigen::VectorXd &v){
   for(int i = 0; i < n_; i++){
     lp1 += glmmr::maths::log_likelihood(y_(i),mu(i),var_par_,flink);
   }
-//#pragma omp parallel for reduction (+:lp2)
-//  for(int i = 0; i < v.size(); i++){
-//    lp2 += glmmr::maths::log_likelihood(v(i),0,1,7);
-//  }
-  lp2 = -0.5*v.transpose()*v;
-  return lp1+lp2;
+#pragma omp parallel for reduction (+:lp2)
+  for(int i = 0; i < v.size(); i++){
+    lp2 += -0.5*v(i)*v(i); //glmmr::maths::log_likelihood(v(i),0,1,7);
+  }
+  //lp2 = -0.5*v.transpose()*v -0.5*v.size()*log(2*M_PI);
+  return lp1+lp2-0.5*v.size()*log(2*M_PI);
 }
 
 inline Eigen::VectorXd glmmr::Model::log_gradient(const Eigen::VectorXd &v,
