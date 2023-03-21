@@ -346,7 +346,7 @@ inline VectorXd glmmr::Covariance::sim_re(){
     }
   } else {
       Rcpp::NumericVector z = Rcpp::rnorm(Q_);
-      Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
+      VectorXd zz = Rcpp::as<VectorXd>(z);
       samps = matL * zz;
   }
   

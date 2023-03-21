@@ -130,9 +130,9 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   case 3:
   {
     size_n_array = size_n_array.exp();
-    size_n_array += ArrayXd::Ones(n_);
+    size_n_array += 1.0;
     size_n_array = size_n_array.array().inverse();
-    size_n_array -= ArrayXd::Ones(n_);
+    size_n_array -= 1.0;
     size_n_array += y_.array();
     if(beta){
       size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
