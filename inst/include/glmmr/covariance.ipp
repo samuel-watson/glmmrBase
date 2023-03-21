@@ -335,14 +335,21 @@ inline VectorXd glmmr::Covariance::sim_re(){
   VectorXd samps(Q_);
   int idx = 0;
   int ndim;
-  for(int i=0; i< B(); i++){
-    MatrixXd L = get_chol_block(i);
-    ndim = re_data_[i].size();
-    Rcpp::NumericVector z = Rcpp::rnorm(ndim);
-    Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
-    samps.segment(idx,ndim) = L*zz;
-    idx += ndim;
+  if(!isSparse){
+    for(int i=0; i< B(); i++){
+      MatrixXd L = get_chol_block(i);
+      ndim = re_data_[i].size();
+      Rcpp::NumericVector z = Rcpp::rnorm(ndim);
+      Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
+      samps.segment(idx,ndim) = L*zz;
+      idx += ndim;
+    }
+  } else {
+      Rcpp::NumericVector z = Rcpp::rnorm(Q_);
+      Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
+      samps = matL * zz;
   }
+  
   return samps;
 }
 
