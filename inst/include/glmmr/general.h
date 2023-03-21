@@ -10,7 +10,10 @@
 #include <algorithm>
 #include <cmath>
 #include <stack>
+#include <SparseChol.h>
 #include "algo.h"
+
+using namespace Eigen;
 
 typedef std::string str;
 typedef std::vector<str> strvec;
@@ -88,6 +91,15 @@ inline void print_vec_3d(const T& vec){
       for(auto j: vec[i][k]) Rcpp::Rcout << j << " ";
     }
   }
+}
+
+inline void print_sparse(const sparse& A){
+  Rcpp::Rcout << "\nmatL Ap: ";
+  for(auto i: A.Ap)Rcpp::Rcout << " " << i;
+  Rcpp::Rcout << "\nmatL Ai: ";
+  for(auto i: A.Ai)Rcpp::Rcout << " " << i;
+  Rcpp::Rcout << "\nmatL Ax: ";
+  for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
 }

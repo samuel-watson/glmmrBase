@@ -53,7 +53,6 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
   return y;
 }
 
-
 }
 }
 

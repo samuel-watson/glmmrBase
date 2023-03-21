@@ -18,6 +18,51 @@ SEXP Covariance__Z(SEXP xp){
   return wrap(Z);
 }
 
+// [[Rcpp::export(.Covariance__ZL)]]
+SEXP Covariance__ZL(SEXP xp){
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::MatrixXd Z = ptr->ZL();
+  return wrap(Z);
+}
+
+// [[Rcpp::export(.Covariance__LZWZL)]]
+SEXP Covariance__LZWZL(SEXP xp, SEXP w_){
+  Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::MatrixXd Z = ptr->LZWZL(w);
+  return wrap(Z);
+}
+
+// [[Rcpp::export(.Covariance__ZL2)]]
+SEXP Covariance__ZL2(SEXP xp, SEXP w_){
+  Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
+  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+  Eigen::MatrixXd Z = ptr->Z();
+  Eigen::MatrixXd L = ptr->D(true,false);
+  Eigen::MatrixXd ZL = Z*L;
+  Eigen::MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
+  return wrap(LZWZL);
+}
+
+// // [[Rcpp::export(.Covariance__LZWZL)]]
+// SEXP Covariance__LZWZL(SEXP xp, SEXP w_){
+//   Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
+//   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+//   Eigen::MatrixXd Z = ptr->LZWZL(w);
+//   return wrap(Z);
+// }
+
+// // [[Rcpp::export(.Covariance__LZWZL2)]]
+// SEXP Covariance__LZWZL2(SEXP xp, SEXP w_){
+//   Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
+//   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+//   Eigen::MatrixXd Z = ptr->Z();
+//   Eigen::MatrixXd L = ptr->D(true,false);
+//   Eigen::MatrixXd ZL = Z*L;
+//   Eigen::MatrixXd LZWZL = ZL.transpose()*w.asDiagonal()*ZL;
+//   return wrap(LZWZL);
+// }
+
 // [[Rcpp::export(.Covariance__Update_parameters)]]
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
@@ -32,12 +77,26 @@ SEXP Covariance__D(SEXP xp){
   return wrap(D);
 }
 
+// // [[Rcpp::export(.Covariance__Dsparse)]]
+// SEXP Covariance__Dsparse(SEXP xp){
+//   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+//   Eigen::MatrixXd D = ptr->D_sparse(false,false);
+//   return wrap(D);
+// }
+
 // [[Rcpp::export(.Covariance__D_chol)]]
 SEXP Covariance__D_chol(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   Eigen::MatrixXd D = ptr->D(true,false);
   return wrap(D);
 }
+
+// // [[Rcpp::export(.Covariance__D_cholsparse)]]
+// SEXP Covariance__D_cholsparse(SEXP xp){
+//   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
+//   Eigen::MatrixXd D = ptr->D_sparse(true,false);
+//   return wrap(D);
+// }
 
 // [[Rcpp::export(Covariance__B)]]
 SEXP Covariance__B(SEXP xp){
@@ -85,13 +144,13 @@ SEXP Covariance__simulate_re(SEXP xp){
 // [[Rcpp::export(.Covariance__make_sparse)]]
 void Covariance__make_sparse(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
-  ptr->make_sparse();
+  ptr->set_sparse(true);
 }
 
 // [[Rcpp::export(.Covariance__make_dense)]]
 void Covariance__make_dense(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
-  ptr->make_dense();
+  ptr->set_sparse(false);
 }
 
 // [[Rcpp::export(.Covariance__any_gr)]]

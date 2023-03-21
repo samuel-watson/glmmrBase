@@ -660,7 +660,6 @@ Model <- R6::R6Class("Model",
                                        usestan = TRUE){
                          private$verify_data(y)
                          private$update_ptr(y)
-                         .Model__use_L_in_calculations(private$ptr,FALSE)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
                          
@@ -738,8 +737,8 @@ Model <- R6::R6Class("Model",
                              
                              dsamps <- fit$draws("gamma",format = "matrix")
                              class(dsamps) <- "matrix"
-                             dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
-                             .Model__update_u(private$ptr,as.matrix(dsamps))
+                             #dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
+                             .Model__update_u(private$ptr,as.matrix(t(dsamps)))
                            } else {
                              .Model__mcmc_sample(private$ptr,
                                                  self$mcmc_options$warmup,
@@ -756,7 +755,7 @@ Model <- R6::R6Class("Model",
                              .Model__nr_beta(private$ptr)
                            }
                            .Model__ml_theta(private$ptr)
-                           L <- Matrix::Matrix(.Model__L(private$ptr))
+                           #L <- Matrix::Matrix(.Model__L(private$ptr))
                            
                            beta_new <- .Model__get_beta(private$ptr)
                            theta_new <- .Model__get_theta(private$ptr)
@@ -899,7 +898,6 @@ Model <- R6::R6Class("Model",
                                      tol = 1e-2){
                          private$verify_data(y)
                          private$update_ptr(y)
-                         .Model__use_L_in_calculations(private$ptr,TRUE)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          # initialise u to random values as algorithm can fail if all zeros
                          .Model__update_u(private$ptr,matrix(rnorm(ncol(self$covariance$Z)),nrow=ncol(self$covariance$Z),ncol=1))
@@ -1095,7 +1093,6 @@ Model <- R6::R6Class("Model",
                          } else {
                            
                            if(verbose).Model__set_trace(private$ptr,2)
-                           .Model__use_L_in_calculations(private$ptr,FALSE)
                            .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                            .Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
                            .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
@@ -1130,7 +1127,7 @@ Model <- R6::R6Class("Model",
                      private = list(
                        W = NULL,
                        Xb = NULL,
-                       useSparse = FALSE,
+                       useSparse = TRUE,
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
@@ -1203,8 +1200,8 @@ Model <- R6::R6Class("Model",
                          .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                          .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
                          .Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
-                         if(private$useSparse){
-                           .Model__make_sparse(private$ptr)
+                         if(!private$useSparse){
+                           .Model__make_dense(private$ptr)
                          } 
                        },
                        verify_data = function(y){

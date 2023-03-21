@@ -6,9 +6,9 @@ inline double glmmr::Model::D_likelihood::operator()(const dblvec &par) {
   logl = 0;
 #pragma omp parallel for reduction (+:logl)
   for(int i = 0; i < M_.u_.cols(); i++){
-    logl += M_.covariance_.log_likelihood(M_.u_.col(i));
+    logl += M_.covariance_.log_likelihood(Lu_.col(i));
   }
-  return -1*logl/M_.u_.cols();
+  return -1*logl/Lu_.cols();
 }
 
 
@@ -62,8 +62,9 @@ inline double glmmr::Model::LA_likelihood::operator()(const dblvec &par) {
   ll = M_.log_likelihood();
   if(M_.family_!="gaussian"){
     M_.update_W();
-    LZWZL = M_.ZL_.transpose() * M_.W_.asDiagonal() * M_.ZL_;
-    LZWZL.noalias() += Eigen::MatrixXd::Identity(LZWZL.rows(),LZWZL.cols());
+    //LZWZL = M_.ZL_.transpose() * M_.W_.asDiagonal() * M_.ZL_;
+    //LZWZL.noalias() += Eigen::MatrixXd::Identity(LZWZL.rows(),LZWZL.cols());
+    LZWZL = M_.covariance_.LZWZL(M_.W_);
     LZWdet = glmmr::maths::logdet(LZWZL);
   }
   return -1.0*(ll - 0.5*logl - 0.5*LZWdet);
@@ -83,8 +84,7 @@ inline double glmmr::Model::LA_likelihood_cov::operator()(const dblvec &par) {
   logl = M_.u_.col(0).transpose() * M_.u_.col(0);
   ll = M_.log_likelihood();
   M_.update_W();
-  LZWZL = M_.ZL_.transpose() * M_.W_.asDiagonal() * M_.ZL_;
-  LZWZL.noalias() += Eigen::MatrixXd::Identity(LZWZL.rows(),LZWZL.cols());
+  LZWZL = M_.covariance_.LZWZL(M_.W_);
   LZWdet = glmmr::maths::logdet(LZWZL);
   
   return -1*(ll - 0.5*logl - 0.5*LZWdet);
@@ -100,24 +100,14 @@ inline double glmmr::Model::LA_likelihood_btheta::operator()(const dblvec &par) 
   if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
     M_.var_par_ = par[par.size()-1];
   } 
-  //Rcpp::Rcout << "\nbeta: ";
-  //for(auto i: beta)Rcpp::Rcout <<  " " << i;
-  //Rcpp::Rcout << "\ntheta: ";
-  //for(auto i: theta)Rcpp::Rcout <<  " " << i;
   
   M_.update_beta(beta);
   M_.update_theta(theta);
   ll = M_.log_likelihood();
   logl = M_.u_.col(0).transpose() * M_.u_.col(0);
-  
   M_.update_W();
-  //Rcpp::Rcout << "\nZL: " << M_.ZL_;
-  
-  LZWZL = M_.ZL_.transpose() * M_.W_.asDiagonal() * M_.ZL_;
-  LZWZL.noalias() += Eigen::MatrixXd::Identity(LZWZL.rows(),LZWZL.cols());
+  LZWZL = M_.covariance_.LZWZL(M_.W_);
   LZWdet = glmmr::maths::logdet(LZWZL);
-  //Rcpp::Rcout << "\nLZWZL: " << LZWZL;
-  //Rcpp::Rcout << "\nll: " << ll << " logl: " << logl << " LZWdet: " << LZWdet;
   return -1*(ll - 0.5*logl - 0.5*LZWdet);
 }
 

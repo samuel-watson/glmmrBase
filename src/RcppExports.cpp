@@ -35,6 +35,41 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Covariance__ZL
+SEXP Covariance__ZL(SEXP xp);
+RcppExport SEXP _glmmrBase_Covariance__ZL(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__ZL(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Covariance__LZWZL
+SEXP Covariance__LZWZL(SEXP xp, SEXP w_);
+RcppExport SEXP _glmmrBase_Covariance__LZWZL(SEXP xpSEXP, SEXP w_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type w_(w_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__LZWZL(xp, w_));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Covariance__ZL2
+SEXP Covariance__ZL2(SEXP xp, SEXP w_);
+RcppExport SEXP _glmmrBase_Covariance__ZL2(SEXP xpSEXP, SEXP w_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type w_(w_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__ZL2(xp, w_));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Covariance__Update_parameters
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_);
 RcppExport SEXP _glmmrBase_Covariance__Update_parameters(SEXP xpSEXP, SEXP parameters_SEXP) {
@@ -350,17 +385,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__use_L_in_calculations
-void Model__use_L_in_calculations(SEXP xp, SEXP useL_);
-RcppExport SEXP _glmmrBase_Model__use_L_in_calculations(SEXP xpSEXP, SEXP useL_SEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type useL_(useL_SEXP);
-    Model__use_L_in_calculations(xp, useL_);
-    return R_NilValue;
-END_RCPP
-}
 // Model__use_attenuation
 void Model__use_attenuation(SEXP xp, SEXP use_);
 RcppExport SEXP _glmmrBase_Model__use_attenuation(SEXP xpSEXP, SEXP use_SEXP) {
@@ -395,16 +419,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__log_gradient
-SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP usezl_, SEXP beta_);
-RcppExport SEXP _glmmrBase_Model__log_gradient(SEXP xpSEXP, SEXP v_SEXP, SEXP usezl_SEXP, SEXP beta_SEXP) {
+SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP beta_);
+RcppExport SEXP _glmmrBase_Model__log_gradient(SEXP xpSEXP, SEXP v_SEXP, SEXP beta_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< SEXP >::type v_(v_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type usezl_(usezl_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type beta_(beta_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__log_gradient(xp, v_, usezl_, beta_));
+    rcpp_result_gen = Rcpp::wrap(Model__log_gradient(xp, v_, beta_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -778,6 +801,9 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
     {"_glmmrBase_Covariance__Z", (DL_FUNC) &_glmmrBase_Covariance__Z, 1},
+    {"_glmmrBase_Covariance__ZL", (DL_FUNC) &_glmmrBase_Covariance__ZL, 1},
+    {"_glmmrBase_Covariance__LZWZL", (DL_FUNC) &_glmmrBase_Covariance__LZWZL, 2},
+    {"_glmmrBase_Covariance__ZL2", (DL_FUNC) &_glmmrBase_Covariance__ZL2, 2},
     {"_glmmrBase_Covariance__Update_parameters", (DL_FUNC) &_glmmrBase_Covariance__Update_parameters, 2},
     {"_glmmrBase_Covariance__D", (DL_FUNC) &_glmmrBase_Covariance__D, 1},
     {"_glmmrBase_Covariance__D_chol", (DL_FUNC) &_glmmrBase_Covariance__D_chol, 1},
@@ -805,11 +831,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 2},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 2},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 2},
-    {"_glmmrBase_Model__use_L_in_calculations", (DL_FUNC) &_glmmrBase_Model__use_L_in_calculations, 2},
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 2},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 1},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 2},
-    {"_glmmrBase_Model__log_gradient", (DL_FUNC) &_glmmrBase_Model__log_gradient, 4},
+    {"_glmmrBase_Model__log_gradient", (DL_FUNC) &_glmmrBase_Model__log_gradient, 3},
     {"_glmmrBase_Model__linear_predictor", (DL_FUNC) &_glmmrBase_Model__linear_predictor, 1},
     {"_glmmrBase_Model__log_likelihood", (DL_FUNC) &_glmmrBase_Model__log_likelihood, 1},
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 1},

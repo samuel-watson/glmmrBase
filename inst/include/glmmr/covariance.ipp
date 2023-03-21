@@ -210,17 +210,56 @@ inline void glmmr::Covariance::parse(){
   n_ = data_.rows();
 }
 
+inline void glmmr::Covariance::update_parameters(const dblvec& parameters){
+    if(parameters_.size()==0){
+      parameters_ = parameters;
+      make_sparse();
+      spchol.update(mat);
+      L_constructor();
+    } else {
+      parameters_ = parameters;
+      update_ax();
+    }
+  };
+  
+inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters){
+    if(parameters_.size()==0){
+      parameters_ = parameters;
+      make_sparse();
+      spchol.update(mat);
+      L_constructor();
+    } else {
+      parameters_ = parameters;
+      update_ax();
+    }
+  };
+
+inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
+    if(parameters_.size()==0){
+      for(int i = 0; i < parameters.size(); i++){
+        parameters_.push_back(parameters(i));
+      }
+    } else if(parameters_.size() == parameters.size()){
+      for(int i = 0; i < parameters.size(); i++){
+        parameters_[i] = parameters(i);
+      }
+      update_ax();
+    } else {
+      Rcpp::stop("Wrong number of parameters");
+    }
+  };
+
 inline double glmmr::Covariance::get_val(int b, int i, int j){
   return glmmr::calculate(re_rpn_[b],re_index_[b],parameters_,re_data_[b],i,j);
 }
 
-inline Eigen::MatrixXd glmmr::Covariance::get_block(int b){
+inline MatrixXd glmmr::Covariance::get_block(int b){
   if(b > re_rpn_.size()-1)Rcpp::stop("b larger than number of block");
   if(parameters_.size()==0)Rcpp::stop("no parameters");
   if(b > B_-1)Rcpp::stop("b is too large");
 
   int dim = re_data_[b].size();
-  Eigen::MatrixXd D(dim,dim);
+  MatrixXd D(dim,dim);
   D.setZero();
   //diagonal
   for(int k = 0; k < dim; k++){
@@ -237,13 +276,14 @@ inline Eigen::MatrixXd glmmr::Covariance::get_block(int b){
   return D;
 }
 
-inline Eigen::MatrixXd glmmr::Covariance::Z(){
+inline void glmmr::Covariance::Z_constructor(){
   if(Q_==0)Rcpp::stop("Random effects not initialised");
-  Eigen::MatrixXd Z(data_.rows(),Q_);
+  MatrixXd Z(data_.rows(),Q_);
   Z.setZero();
   int zcount = 0;
   int nvar,nval;
   int i,j,k,l,m;
+  double val;
   re_obs_index_.resize(re_data_.size());
   for(i = 0; i < re_data_.size(); i++){
      for(j = 0; j < re_data_[i].size(); j++){
@@ -261,11 +301,16 @@ inline Eigen::MatrixXd glmmr::Covariance::Z(){
       zcount++;
      }
   }
+  matZ = glmmr::dense_to_sparse(Z,false);
+  //return Z;
+}
+
+inline MatrixXd glmmr::Covariance::Z(){
+  MatrixXd Z = sparse_to_dense(matZ,false);
   return Z;
 }
 
-
-inline Eigen::MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
+inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
   int n = re_data_[b].size();;
   std::vector<double> L(n * n, 0.0);
 
@@ -277,7 +322,7 @@ inline Eigen::MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
       L[i * n + j] = (1.0 / L[j * n + j] * (get_val(b, j, i) - s));
     }
   }
-  Eigen::MatrixXd M = Eigen::Map<Eigen::MatrixXd>(L.data(), n, n);
+  MatrixXd M = Map<MatrixXd>(L.data(), n, n);
   if (upper) {
     return M;
   } else {
@@ -285,31 +330,31 @@ inline Eigen::MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
   }
 }
 
-inline Eigen::VectorXd glmmr::Covariance::sim_re(){
+inline VectorXd glmmr::Covariance::sim_re(){
   if(parameters_.size()==0)Rcpp::stop("no parameters");
-  Eigen::VectorXd samps(Q_);
+  VectorXd samps(Q_);
   int idx = 0;
   int ndim;
   for(int i=0; i< B(); i++){
-    Eigen::MatrixXd L = get_chol_block(i);
+    MatrixXd L = get_chol_block(i);
     ndim = re_data_[i].size();
     Rcpp::NumericVector z = Rcpp::rnorm(ndim);
-    Eigen::Map<Eigen::VectorXd> zz(Rcpp::as<Eigen::Map<Eigen::VectorXd> >(z));
+    Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
     samps.segment(idx,ndim) = L*zz;
     idx += ndim;
   }
   return samps;
 }
 
-inline Eigen::MatrixXd glmmr::Covariance::D_builder(int b,
+inline MatrixXd glmmr::Covariance::D_builder(int b,
                                                     bool chol,
                                                     bool upper){
   if (b == B_ - 1) {
     return chol ? get_chol_block(b,upper) : get_block(b);
   }
   else {
-    Eigen::MatrixXd mat1 = chol ? get_chol_block(b,upper) : get_block(b);
-    Eigen::MatrixXd mat2;
+    MatrixXd mat1 = chol ? get_chol_block(b,upper) : get_block(b);
+    MatrixXd mat2;
     if (b == B_ - 2) {
       mat2 = chol ? get_chol_block(b+1,upper) : get_block(b+1);
     }
@@ -318,14 +363,53 @@ inline Eigen::MatrixXd glmmr::Covariance::D_builder(int b,
     }
     int n1 = mat1.rows();
     int n2 = mat2.rows();
-    Eigen::MatrixXd dmat = Eigen::MatrixXd::Zero(n1+n2, n1+n2);
+    MatrixXd dmat = MatrixXd::Zero(n1+n2, n1+n2);
     dmat.block(0,0,n1,n1) = mat1;
     dmat.block(n1, n1, n2, n2) = mat2;
     return dmat;
   }
 }
 
-inline double glmmr::Covariance::log_likelihood(const Eigen::VectorXd &u){
+inline sparse glmmr::Covariance::ZL_sparse(){
+  //Rcpp::Rcout << "\nError?: matZ (n,m): (" << matZ.n << ", " << matZ.m << ")";
+  //Rcpp::Rcout << "\nmatL (n,m): (" << matL.n << ", " << matL.m << ")";
+  sparse ZLs = matZ * matL;
+  return ZLs;
+}
+
+inline MatrixXd glmmr::Covariance::ZL(){
+  sparse ZD = ZL_sparse();
+  MatrixXd ZL = glmmr::sparse_to_dense(ZD,false);
+  return ZL;
+}
+
+inline MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w){
+  sparse ZL = ZL_sparse();
+  sparse ZLt = ZL;
+  ZLt.transpose();
+  ZLt = ZLt % w;
+  ZLt *= ZL;
+  // add 1 to diagonal
+  for(int i = 0; i < ZLt.n; i++){
+    for(int j = ZLt.Ap[i]; j<ZLt.Ap[i+1]; j++){
+      if(i == ZLt.Ai[j])ZLt.Ax[j]++;
+    }
+  }
+  return glmmr::sparse_to_dense(ZLt);
+}
+
+inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
+  sparse ZL = ZL_sparse();
+  //ZL = ;
+  //MatrixXd ZLu = glmmr::sparse_to_dense(ZLu);
+  return ZL * u;
+}
+
+inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
+  return matL * u;
+}
+
+inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
   if(parameters_.size()==0)Rcpp::stop("no parameters");
   double logdet_val=0.0;
   double loglik_val=0.0;
@@ -353,13 +437,13 @@ inline double glmmr::Covariance::log_likelihood(const Eigen::VectorXd &u){
     }
     loglik_val = size_B_array.sum();
   } else {
-    SparseChol chol(&mat);
-    int d = chol.ldl_numeric();
-    for (auto k : chol.D) logdet_val += log(k);
+    //SparseChol chol(mat);
+    //int d = chol.ldl_numeric();
+    for (auto k : spchol.D) logdet_val += log(k);
 
     dblvec v(u.data(), u.data()+u.size());
-    chol.ldl_lsolve(&v[0]);
-    chol.ldl_d2solve(&v[0]);
+    spchol.ldl_lsolve(&v[0]);
+    spchol.ldl_d2solve(&v[0]);
     double quad = glmmr::algo::inner_sum(&v[0],&v[0],Q_);
     loglik_val = (-0.5*Q_ * log(2*M_PI) - 0.5*logdet_val - 0.5*quad);
   }
@@ -379,17 +463,18 @@ inline double glmmr::Covariance::log_determinant(){
       }
     }
   } else {
-    SparseChol chol(&mat);
-    int d = chol.ldl_numeric();
-    for (auto k : chol.D) logdet_val += log(k);
+    //SparseChol chol(&mat);
+    //int d = chol.ldl_numeric();
+    for (auto k : spchol.D) logdet_val += log(k);
   }
   
   return logdet_val;
 }
 
+
 inline void glmmr::Covariance::make_sparse(){
   if(parameters_.size()==0)Rcpp::stop("no parameters");
-  isSparse = true;
+  //isSparse = true;
   int dim;
   double val;
   int col_counter=0;
@@ -412,11 +497,17 @@ inline void glmmr::Covariance::make_sparse(){
     col_counter += dim;
   }
   mat.n = mat.Ap.size();
+  mat.m = mat.Ap.size();
   mat.Ap.push_back(mat.Ax.size());
 };
 
-inline void glmmr::Covariance::make_dense(){
-  isSparse = false;
+inline void glmmr::Covariance::L_constructor(){
+  int d = spchol.ldl_numeric();
+  matL = spchol.LD();
+}
+
+inline void glmmr::Covariance::set_sparse(bool sparse){
+  isSparse = sparse;
 }
 
 inline void glmmr::Covariance::update_ax(){
@@ -439,31 +530,18 @@ inline void glmmr::Covariance::update_ax(){
       ulim = mat.Ai.size();
     }
   }
+  spchol.A_ = mat;
+  int d = spchol.ldl_numeric(); // assumes structure of D doesn't change
+  matL = spchol.LD();
 };
 
-inline Eigen::MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
+inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
                                  bool upper){
-  Eigen::MatrixXd D = Eigen::MatrixXd::Zero(Q_,Q_);
+  MatrixXd D = MatrixXd::Zero(Q_,Q_);
   if(!chol){
-    for(int i = 0; i < Q_; i++){
-      for(int j = mat.Ap[i]; j < mat.Ap[i+1]; j++){
-        D(mat.Ai[j],i) = mat.Ax[j];
-        if(mat.Ai[j]!=i) D(i,mat.Ai[j]) = D(mat.Ai[j],i);
-      }
-    }
+    D = glmmr::sparse_to_dense(mat,true);
   } else {
-    SparseChol chol(&mat);
-    int d = chol.ldl_numeric();
-    for(int i = 0; i < Q_; i++){
-      for(int j = chol.L->Ap[i]; j < chol.L->Ap[i+1]; j++){
-        D(chol.L->Ai[j],i) = chol.L->Ax[j];
-      }
-    }
-    Eigen::VectorXd diag = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(chol.D.data(),chol.D.size());
-    diag = diag.array().sqrt().matrix();
-    D.diagonal() = Eigen::ArrayXd::Ones(Q_);
-    D *= diag.asDiagonal();
-    if(upper)D.transposeInPlace();
+    D = glmmr::sparse_to_dense(matL,false);
   }
   return D;
 }
@@ -481,5 +559,7 @@ inline bool glmmr::Covariance::any_group_re(){
   }
   return gr;
 }
+
+
 
 #endif

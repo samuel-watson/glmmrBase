@@ -43,12 +43,12 @@ void Model__update_u(SEXP xp, SEXP u_){
   ptr->update_u(u);
 }
 
-// [[Rcpp::export(.Model__use_L_in_calculations)]]
-void Model__use_L_in_calculations(SEXP xp, SEXP useL_){
-  bool useL = as<bool>(useL_);
-  XPtr<glmmr::Model> ptr(xp);
-  ptr->use_L_in_calculations(useL);
-}
+// // [[Rcpp::export(.Model__use_L_in_calculations)]]
+// void Model__use_L_in_calculations(SEXP xp, SEXP useL_){
+//   bool useL = as<bool>(useL_);
+//   XPtr<glmmr::Model> ptr(xp);
+//   ptr->use_L_in_calculations(useL);
+// }
 
 // [[Rcpp::export(.Model__use_attenuation)]]
 void Model__use_attenuation(SEXP xp, SEXP use_){
@@ -72,12 +72,11 @@ SEXP Model__log_prob(SEXP xp, SEXP v_){
 }
 
 // [[Rcpp::export(.Model__log_gradient)]]
-SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP usezl_, SEXP beta_){
+SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP beta_){
   Eigen::VectorXd v = as<Eigen::VectorXd>(v_);
-  bool usezl = as<bool>(usezl_);
   bool beta = as<bool>(beta_);
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::VectorXd loggrad = ptr->log_gradient(v,usezl,beta);
+  Eigen::VectorXd loggrad = ptr->log_gradient(v,beta);
   return wrap(loggrad);
 }
 
@@ -246,14 +245,14 @@ void Model__set_var_par(SEXP xp, SEXP var_par_){
 // [[Rcpp::export(.Model__L)]]
 SEXP Model__L(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd L = ptr->L();
+  Eigen::MatrixXd L = ptr->covariance_.D(true,false);
   return wrap(L);
 }
 
 // [[Rcpp::export(.Model__ZL)]]
 SEXP Model__ZL(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd ZL = ptr->ZL();
+  Eigen::MatrixXd ZL = ptr->covariance_.ZL();
   return wrap(ZL);
 }
 

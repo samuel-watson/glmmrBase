@@ -9,6 +9,18 @@
     .Call(`_glmmrBase_Covariance__Z`, xp)
 }
 
+.Covariance__ZL <- function(xp) {
+    .Call(`_glmmrBase_Covariance__ZL`, xp)
+}
+
+.Covariance__LZWZL <- function(xp, w_) {
+    .Call(`_glmmrBase_Covariance__LZWZL`, xp, w_)
+}
+
+.Covariance__ZL2 <- function(xp, w_) {
+    .Call(`_glmmrBase_Covariance__ZL2`, xp, w_)
+}
+
 .Covariance__Update_parameters <- function(xp, parameters_) {
     invisible(.Call(`_glmmrBase_Covariance__Update_parameters`, xp, parameters_))
 }
@@ -117,10 +129,6 @@ Covariance__Q <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_))
 }
 
-.Model__use_L_in_calculations <- function(xp, useL_) {
-    invisible(.Call(`_glmmrBase_Model__use_L_in_calculations`, xp, useL_))
-}
-
 .Model__use_attenuation <- function(xp, use_) {
     invisible(.Call(`_glmmrBase_Model__use_attenuation`, xp, use_))
 }
@@ -133,8 +141,8 @@ Covariance__Q <- function(xp) {
     .Call(`_glmmrBase_Model__log_prob`, xp, v_)
 }
 
-.Model__log_gradient <- function(xp, v_, usezl_, beta_) {
-    .Call(`_glmmrBase_Model__log_gradient`, xp, v_, usezl_, beta_)
+.Model__log_gradient <- function(xp, v_, beta_) {
+    .Call(`_glmmrBase_Model__log_gradient`, xp, v_, beta_)
 }
 
 .Model__linear_predictor <- function(xp) {
