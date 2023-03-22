@@ -53,6 +53,7 @@ progress_bar <- function(i,n,len=30){
   return(msg)
 }
 
+
 #' Returns the file name and type for MCNR function
 #' 
 #' Returns the file name and type for MCNR function

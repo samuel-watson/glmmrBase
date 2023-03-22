@@ -33,34 +33,12 @@ SEXP Covariance__LZWZL(SEXP xp, SEXP w_){
   return wrap(Z);
 }
 
-// [[Rcpp::export(.Covariance__ZL2)]]
-SEXP Covariance__ZL2(SEXP xp, SEXP w_){
-  Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
-  Rcpp::XPtr<glmmr::Covariance> ptr(xp);
-  Eigen::MatrixXd Z = ptr->Z();
-  Eigen::MatrixXd L = ptr->D(true,false);
-  Eigen::MatrixXd ZL = Z*L;
-  Eigen::MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
-  return wrap(LZWZL);
-}
-
 // // [[Rcpp::export(.Covariance__LZWZL)]]
 // SEXP Covariance__LZWZL(SEXP xp, SEXP w_){
 //   Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
 //   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
 //   Eigen::MatrixXd Z = ptr->LZWZL(w);
 //   return wrap(Z);
-// }
-
-// // [[Rcpp::export(.Covariance__LZWZL2)]]
-// SEXP Covariance__LZWZL2(SEXP xp, SEXP w_){
-//   Eigen::VectorXd w = Rcpp::as<Eigen::VectorXd>(w_);
-//   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
-//   Eigen::MatrixXd Z = ptr->Z();
-//   Eigen::MatrixXd L = ptr->D(true,false);
-//   Eigen::MatrixXd ZL = Z*L;
-//   Eigen::MatrixXd LZWZL = ZL.transpose()*w.asDiagonal()*ZL;
-//   return wrap(LZWZL);
 // }
 
 // [[Rcpp::export(.Covariance__Update_parameters)]]

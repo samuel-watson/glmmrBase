@@ -17,10 +17,6 @@
     .Call(`_glmmrBase_Covariance__LZWZL`, xp, w_)
 }
 
-.Covariance__ZL2 <- function(xp, w_) {
-    .Call(`_glmmrBase_Covariance__ZL2`, xp, w_)
-}
-
 .Covariance__Update_parameters <- function(xp, parameters_) {
     invisible(.Call(`_glmmrBase_Covariance__Update_parameters`, xp, parameters_))
 }
@@ -129,6 +125,10 @@ Covariance__Q <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_))
 }
 
+.Model__predict <- function(xp, newdata_, newoffset_, m) {
+    .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m)
+}
+
 .Model__use_attenuation <- function(xp, use_) {
     invisible(.Call(`_glmmrBase_Model__use_attenuation`, xp, use_))
 }
@@ -193,8 +193,8 @@ Covariance__Q <- function(xp) {
     .Call(`_glmmrBase_Model__hessian`, xp)
 }
 
-.Model__u <- function(xp) {
-    .Call(`_glmmrBase_Model__u`, xp)
+.Model__u <- function(xp, scaled_) {
+    .Call(`_glmmrBase_Model__u`, xp, scaled_)
 }
 
 .Model__Zu <- function(xp) {

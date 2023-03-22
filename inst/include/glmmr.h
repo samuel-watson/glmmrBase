@@ -1,6 +1,7 @@
 #ifndef GLMMR_H
 #define GLMMR_H
 
+#include "glmmr/general.h"
 #include "glmmr/maths.h"
 #include "glmmr/formula.hpp"
 #include "glmmr/covariance.hpp"

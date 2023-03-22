@@ -1,5 +1,15 @@
 #include <glmmr.h>
 
+namespace Rcpp {
+template<>
+SEXP wrap(const vector_matrix& x){
+  return Rcpp::wrap(Rcpp::List::create(
+      Rcpp::Named("vec") = Rcpp::wrap(x.vec),
+      Rcpp::Named("mat") = Rcpp::wrap(x.mat)
+  ));
+}
+}
+
 using namespace Rcpp;
 
 // [[Rcpp::export(.Model__new)]]
@@ -43,12 +53,27 @@ void Model__update_u(SEXP xp, SEXP u_){
   ptr->update_u(u);
 }
 
-// // [[Rcpp::export(.Model__use_L_in_calculations)]]
-// void Model__use_L_in_calculations(SEXP xp, SEXP useL_){
-//   bool useL = as<bool>(useL_);
-//   XPtr<glmmr::Model> ptr(xp);
-//   ptr->use_L_in_calculations(useL);
-// }
+// [[Rcpp::export(.Model__predict)]]
+SEXP Model__predict(SEXP xp, SEXP newdata_,
+                          SEXP newoffset_,
+                          int m){
+  Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
+  Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
+  XPtr<glmmr::Model> ptr(xp);
+  vector_matrix res = ptr->predict_re(newdata,newoffset);
+  Eigen::MatrixXd samps(newdata.rows(),m>0 ? m : 1);
+  if(m>0){
+    samps = glmmr::maths::sample_MVN(res,m);
+  } else {
+    samps.setZero();
+  }
+  Eigen::VectorXd xb = ptr->predict_xb(newdata,newoffset);
+  return Rcpp::List::create(
+    Rcpp::Named("linear_predictor") = wrap(xb),
+    Rcpp::Named("re_parameters") = wrap(res),
+    Rcpp::Named("samples") = wrap(samps)
+  );
+}
 
 // [[Rcpp::export(.Model__use_attenuation)]]
 void Model__use_attenuation(SEXP xp, SEXP use_){
@@ -157,9 +182,9 @@ SEXP Model__hessian(SEXP xp){
 }
 
 // [[Rcpp::export(.Model__u)]]
-SEXP Model__u(SEXP xp){
+SEXP Model__u(SEXP xp, bool scaled_){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd u = ptr->u();
+  Eigen::MatrixXd u = ptr->u(scaled_);
   return wrap(u);
 }
 

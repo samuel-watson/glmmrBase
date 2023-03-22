@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <RcppEigen.h>
 #include "algo.h"
+#include "general.h"
 
 // [[Rcpp::depends(RcppEigen)]]
 
@@ -385,6 +386,20 @@ inline typename MatrixType::Scalar logdet(const MatrixType& M) {
     ld += log(U(i,i));
   ld *= 2;
   return ld;
+}
+
+inline MatrixXd sample_MVN(const vector_matrix& mu,
+                           int m){
+  int n = mu.vec.size();
+  MatrixXd L = mu.mat.llt().matrixL();
+  Rcpp::NumericVector z(n);
+  MatrixXd samps(n,m);
+  for(int i = 0; i < m; i++){
+    z = Rcpp::rnorm(n);
+    samps.col(i) = Rcpp::as<VectorXd>(z);
+    samps.col(i) += mu.vec;
+  }
+  return samps;
 }
   
 }

@@ -72,8 +72,9 @@ Model <- R6::R6Class("Model",
                          }
                        },
                        #' @description
-                       #' Return predicted values. Does not account for the random effects. For simulated values based
-                       #' on resampling random effects, see `sim_data()`. 
+                       #' Return fitted values. Does not account for the random effects. For simulated values based
+                       #' on resampling random effects, see `sim_data()`. To predict the values at a new location see 
+                       #' `predict()`.
                        #' @param type One of either "`link`" for values on the scale of the link function, or "`response`"
                        #' for values on the scale of the response
                        #' @param X (Optional) Fixed effects matrix to generate fitted values
@@ -94,6 +95,33 @@ Model <- R6::R6Class("Model",
                            Xb <- self$family$linkinv(Xb)
                          }
                          return(Xb)
+                       },
+                       #' @description 
+                       #' Generate predictions at new values
+                       #' 
+                       #' Generates predicted values using a new data set to specify covariance 
+                       #' values and values for the variables that define the covariance function.
+                       #' The function will return a list with the linear predictor, conditional 
+                       #' distribution of the new random effects term conditional on the current estimates
+                       #' of the random effects, and some simulated values of the random effects if requested.
+                       #' @param newdata A data frame specifying the new data at which to generate predictions
+                       #' @param m Number of samples of the random effects to draw
+                       #' @param offset Optional vector of offset values for the new data
+                       #' @return A list with the linear predictor, parameters (mean and covariance matrices) for
+                       #' the conditional distribution of the random effects, and any random effect samples.
+                       predict = function(newdata,
+                                          offset = rep(0,nrow(newdata)),
+                                          m=0
+                                          ){
+                         if(is.null(private$ptr))stop("No previous model has been estimated")
+                         if(missing(offset)){
+                           offs <- rep(0,nrow(newdata))
+                         } else {
+                           offs <- offset
+                         }
+                         preddata <- private$model_data(newdata)
+                         out <- .Model__predict(private$ptr,as.matrix(preddata),offset,m)
+                         return(out)
                        },
                        #' @description
                        #' Create a new Model object
@@ -717,7 +745,7 @@ Model <- R6::R6Class("Model",
                          )
                          iter <- 0
                          
-                         while(any(abs(all_pars-all_pars_new)>tol)&iter <= max.iter){
+                         while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
                            if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
@@ -775,7 +803,7 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          
-                         not_conv <- iter >= max.iter|any(abs(all_pars-all_pars_new)>tol)
+                         not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          
                          if(sim.lik.step){
@@ -894,13 +922,13 @@ Model <- R6::R6Class("Model",
                                      start,
                                      method = "nr",
                                      verbose = FALSE,
-                                     max.iter = 20,
+                                     max.iter = 40,
                                      tol = 1e-2){
                          private$verify_data(y)
                          private$update_ptr(y)
                          .Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          # initialise u to random values as algorithm can fail if all zeros
-                         .Model__update_u(private$ptr,matrix(rnorm(ncol(self$covariance$Z)),nrow=ncol(self$covariance$Z),ncol=1))
+                         # .Model__update_u(private$ptr,matrix(rnorm(ncol(self$covariance$Z)),nrow=ncol(self$covariance$Z),ncol=1))
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
                          
@@ -915,7 +943,7 @@ Model <- R6::R6Class("Model",
                          all_pars_new <- rep(1,length(all_pars))
                          iter <- 0
                          
-                         while(any(abs(all_pars-all_pars_new)>tol)&iter <= max.iter){
+                         while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            
                            iter <- iter + 1
@@ -942,7 +970,7 @@ Model <- R6::R6Class("Model",
                              cat("\n",Reduce(paste0,rep("-",40)))
                            }
                          }
-                         not_conv <- iter >= max.iter|any(abs(all_pars-all_pars_new)>tol)
+                         not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          
                          .Model__laplace_ml_beta_theta(private$ptr)
@@ -957,7 +985,7 @@ Model <- R6::R6Class("Model",
                                                 cov.pars = theta_new)
                          
                          self$var_par <- var_par_new
-                         u <- .Model__u(private$ptr)
+                         u <- .Model__u(private$ptr,TRUE)
                          invM <- Matrix::solve(self$information_matrix())
                          SE <- sqrt(Matrix::diag(invM))
                          
@@ -1098,9 +1126,46 @@ Model <- R6::R6Class("Model",
                            .Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                            .Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
                            .Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt)
-                           dsamps <- .Model__u(private$ptr)
+                           dsamps <- .Model__u(private$ptr,TRUE)
                          }
                          return(dsamps)
+                       },
+                       #' @description 
+                       #' The gradient of the log-likelihood with respect to either the random effects or
+                       #' the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
+                       #' Cholesky decomposition of the matrix D. To obtain the random effects from the last 
+                       #' model fit, see member function `$u`
+                       #' @param y Vector of outcome data
+                       #' @param u Vector of random effects scaled by the Cholesky decomposition of D
+                       #' @return A vector of the gradient
+                       log_gradient = function(y,u,beta=FALSE){
+                         private$verify_data(y)
+                         private$update_ptr(y)
+                         grad <- .Model__log_gradient(private$ptr,u,beta)
+                         return(grad)
+                       },
+                       #' @description 
+                       #' Returns the sample of random effects from the last model fit
+                       #' @param scaled Logical indicating whether to return samples on the N(0,I) scale (`scaled=FALSE`) or
+                       #' N(0,D) scale (`scaled=TRUE`)
+                       #' @return A matrix of random effect samples
+                       u = function(scaled = TRUE){
+                         if(is.null(private$ptr))stop("No previous model fit")
+                         return(.Model__u(private$ptr,scaled))
+                       },
+                       #' @description 
+                       #' The log likelihood for the GLMM. The random effects can be left 
+                       #' unspecified. If no random effects are provided, and there was a previous model fit with the same data `y`
+                       #' then the random effects will be taken from that model. If there was no
+                       #' previous model fit then the random effects are assumed to be all zero.
+                       #' @param y A vector of outcome data
+                       #' @param u An optional matrix of random effect samples. This can be a single column.
+                       #' @return The log-likelihood of the model parameters
+                       log_likelihood = function(y,u){
+                         private$verify_data(y)
+                         private$update_ptr(y)
+                         if(!missing(u)).Model__update_u(private$ptr,u)
+                         return(.Model__log_likelihood(private$ptr))
                        },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
@@ -1186,8 +1251,8 @@ Model <- R6::R6Class("Model",
                            form <- gsub(" ","",self$mean$formula)
                          }
                          data <- self$covariance$data
-                         if(any(!colnames(self$mean$data)%in%colnames(data()))){
-                           cnames <- which(!colnames(self$mean$data)%in%colnames(data()))
+                         if(any(!colnames(self$mean$data)%in%colnames(data))){
+                           cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                            data <- cbind(data,self$mean$data[,cnames])
                          }
                          private$ptr <- .Model__new(y,form,as.matrix(data),colnames(data),
@@ -1216,6 +1281,33 @@ Model <- R6::R6Class("Model",
                          } else if(self$family[[1]]=="gaussian" & self$family[[2]]=="log"){
                            if(any(y<=0))stop("y must be positive")
                          }
+                       },
+                       model_data = function(newdata){
+                         cnames1 <- colnames(self$covariance$data)
+                         cnames2 <- colnames(self$mean$data)
+                         cnames2 <- cnames2[!cnames2%in%cnames1]
+                         cnames <- c(cnames1,cnames2)
+                         if(!isTRUE(all.equal(cnames,colnames(newdata)))){
+                           newdat <- newdata[,cnames[cnames%in%colnames(newdata)]]
+                           newcnames <- cnames[!cnames%in%colnames(newdata)]
+                           for(i in newcnames){
+                             if(grepl("factor",i)){
+                               id1 <- gregexpr("\\[",i)
+                               id2 <- gregexpr("\\]",i)
+                               var <- substr(i,id1[[1]][1]+1,id2[[1]][1]-1)
+                               if(!var%in%colnames(newdata))stop(paste0("factor ",var," not in data"))
+                               val <- substr(i,id2[[1]][1]+1,nchar(i))
+                               newcol <- I(newdata[,var]==val)*1
+                               newdat <- cbind(newdat,newcol)
+                               colnames(newdat)[ncol(newdat)] <- i
+                             } else {
+                               stop(paste0("Variable ",i," not in data"))
+                             }
+                           }
+                         } else {
+                           newdat = newdata
+                         }
+                         return(newdat)
                        }
                      ))
 

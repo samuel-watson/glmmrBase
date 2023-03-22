@@ -1,7 +1,7 @@
 #ifndef GLMMRSPARSE_H
 #define GLMMRSPARSE_H
 
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
+//#define MIN(a,b) ((a) < (b) ? (a) : (b))
 
 #include "general.h"
 // extends some of the SparseChol functions and operators to Eigen classes
@@ -14,7 +14,7 @@ inline MatrixXd sparse_to_dense(const sparse& m,
   for(int i = 0; i < m.n; i++){
     for(int j = m.Ap[i]; j < m.Ap[i+1]; j++){
       D(i,m.Ai[j]) = m.Ax[j];
-      if(symmetric && m.Ai[j]!=i) D(m.Ai[j],i) = D(m.Ai[j],i);
+      if(symmetric) D(m.Ai[j],i) = m.Ax[j];
     }
   }
   return D;
@@ -25,7 +25,6 @@ inline sparse dense_to_sparse(const MatrixXd& A,
   sparse As(A.rows(),A.cols(),A.data(),true); // this doesn't account for symmetric yet
   return As;
 }
-
 
 inline void mat_mat_mult(const double* a, const double* b, double* ab,
                          const int* Ai, const int* Ap, 

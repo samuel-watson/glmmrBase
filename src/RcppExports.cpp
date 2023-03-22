@@ -58,18 +58,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Covariance__ZL2
-SEXP Covariance__ZL2(SEXP xp, SEXP w_);
-RcppExport SEXP _glmmrBase_Covariance__ZL2(SEXP xpSEXP, SEXP w_SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type w_(w_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Covariance__ZL2(xp, w_));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Covariance__Update_parameters
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_);
 RcppExport SEXP _glmmrBase_Covariance__Update_parameters(SEXP xpSEXP, SEXP parameters_SEXP) {
@@ -385,6 +373,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__predict
+SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
+RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newdata_(newdata_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newoffset_(newoffset_SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__use_attenuation
 void Model__use_attenuation(SEXP xp, SEXP use_);
 RcppExport SEXP _glmmrBase_Model__use_attenuation(SEXP xpSEXP, SEXP use_SEXP) {
@@ -556,13 +558,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__u
-SEXP Model__u(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__u(SEXP xpSEXP) {
+SEXP Model__u(SEXP xp, bool scaled_);
+RcppExport SEXP _glmmrBase_Model__u(SEXP xpSEXP, SEXP scaled_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__u(xp));
+    Rcpp::traits::input_parameter< bool >::type scaled_(scaled_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__u(xp, scaled_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -803,7 +806,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__Z", (DL_FUNC) &_glmmrBase_Covariance__Z, 1},
     {"_glmmrBase_Covariance__ZL", (DL_FUNC) &_glmmrBase_Covariance__ZL, 1},
     {"_glmmrBase_Covariance__LZWZL", (DL_FUNC) &_glmmrBase_Covariance__LZWZL, 2},
-    {"_glmmrBase_Covariance__ZL2", (DL_FUNC) &_glmmrBase_Covariance__ZL2, 2},
     {"_glmmrBase_Covariance__Update_parameters", (DL_FUNC) &_glmmrBase_Covariance__Update_parameters, 2},
     {"_glmmrBase_Covariance__D", (DL_FUNC) &_glmmrBase_Covariance__D, 1},
     {"_glmmrBase_Covariance__D_chol", (DL_FUNC) &_glmmrBase_Covariance__D_chol, 1},
@@ -831,6 +833,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 2},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 2},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 2},
+    {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 2},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 1},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 2},
@@ -847,7 +850,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 1},
     {"_glmmrBase_Model__laplace_hessian", (DL_FUNC) &_glmmrBase_Model__laplace_hessian, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
-    {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 1},
+    {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
     {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
     {"_glmmrBase_Model__Q", (DL_FUNC) &_glmmrBase_Model__Q, 1},

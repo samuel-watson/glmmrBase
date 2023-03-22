@@ -74,7 +74,7 @@ inline void glmmr::Model::update_W(int i){
   }
   W_ = glmmr::maths::dhdmu(size_n_array,family_,link_);
   W_.noalias() = (W_.array().inverse()).matrix();
-  W_ *= nvar_par;
+  W_ *= 1/nvar_par;
 }
 
 inline double glmmr::Model::log_prob(const VectorXd &v){
@@ -283,6 +283,18 @@ inline double glmmr::Model::log_likelihood() {
   return ll/zu_.cols();
 }
 
+inline double glmmr::Model::full_log_likelihood(){
+  double ll = log_likelihood();
+  double logl = 0;
+  MatrixXd Lu = covariance_.Lu(u_);
+#pragma omp parallel for reduction (+:logl)
+  for(int i = 0; i < Lu.cols(); i++){
+    logl += covariance_.log_likelihood(Lu.col(i));
+  }
+  logl *= 1/Lu.cols();
+  return ll+logl;
+}
+
 
 inline dblvec glmmr::Model::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
@@ -362,7 +374,13 @@ inline void glmmr::Model::ml_beta(){
 }
 
 inline void glmmr::Model::ml_all(){
-  F_likelihood dl(*this,true);
+  MatrixXd Lu = covariance_.Lu(u_);
+  double denomD = 0;
+  for(int i = 0; i < Lu.cols(); i++){
+      denomD += covariance_.log_likelihood(Lu.col(i));
+  }
+  denomD *= 1/Lu.cols();
+  F_likelihood dl(*this,denomD,true);
   Rbobyqa<F_likelihood,dblvec> opt;
   dblvec start = get_start_values(true,true);
   dblvec lower = get_lower_values(true,true);
@@ -423,7 +441,7 @@ inline void glmmr::Model::nr_beta(){
   for(int i = 0; i < niter; ++i){
     VectorXd w = glmmr::maths::dhdmu(zd.col(i),family_,link_);
     w = (w.array().inverse()).matrix();
-    w *= 1/nvar_par;
+    w *= nvar_par;
     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
     ArrayXd resid = (y_ - zdu);
     sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
@@ -447,19 +465,18 @@ inline void glmmr::Model::laplace_nr_beta_u(){
   double sigmas;
   update_W();
   VectorXd zd = (linpred()).col(0);
-  VectorXd dmu = glmmr::maths::detadmu(zd,link_);
+  VectorXd dmu =  glmmr::maths::detadmu(zd,link_);
   
   MatrixXd LZWZL = covariance_.LZWZL(W_);
   LZWZL = LZWZL.llt().solve(MatrixXd::Identity(LZWZL.rows(),LZWZL.cols()));
-  VectorXd zdu = glmmr::maths::mod_inv_func(zd, link_);
+  VectorXd zdu =  glmmr::maths::mod_inv_func(zd, link_);
   ArrayXd resid = (y_ - zdu).array();
   sigmas = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
   
-  MatrixXd XtXW = linpred_.X().transpose() * W_.asDiagonal() * linpred_.X();
+  MatrixXd XtXW = (linpred_.X()).transpose() * W_.asDiagonal() * linpred_.X();
   VectorXd w = W_;
   w = w.cwiseProduct(dmu);
   w = w.cwiseProduct(resid.matrix());
-  
   XtXW = XtXW.inverse();
   VectorXd bincr = XtXW * (linpred_.X()).transpose() * w;
   VectorXd vgrad = log_gradient(u_.col(0));
@@ -622,5 +639,93 @@ inline double glmmr::Model::aic(){
   
   return (-2*( ll + logl ) + 2*dof); 
 }
+
+inline vector_matrix glmmr::Model::predict_re(const ArrayXXd& newdata_,
+                                              const ArrayXd& newoffset_){
+  if(covariance_.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
+  // generate the merged data
+  int nnew = newdata_.rows();
+  ArrayXXd mergedata(n_+nnew,covariance_.data_.cols());
+  mergedata.topRows(n_) = covariance_.data_;
+  mergedata.bottomRows(nnew) = newdata_;
+  ArrayXd mergeoffset(n_+nnew);
+  mergeoffset.head(n_) = offset_;
+  mergeoffset.tail(nnew) = newoffset_;
+  glmmr::Covariance covariancenew_(formula_,
+                                   mergedata,
+                                   covariance_.colnames_,
+                                   covariance_.parameters_);
+  glmmr::Covariance covariancenewnew_(formula_,
+                                   newdata_,
+                                   covariance_.colnames_,
+                                   covariance_.parameters_);
+  glmmr::LinearPredictor newlinpred_(formula_,
+                                     mergedata,
+                                     linpred_.colnames_,
+                                     linpred_.parameters_.array());
+  // //generate sigma
+  int newQ_ = covariancenewnew_.Q();
+  vector_matrix result(newQ_);
+  result.vec.setZero();
+  result.mat.setZero();
+  MatrixXd D = covariancenew_.D(false,false);
+  result.mat = D.block(Q_,Q_,newQ_,newQ_);
+  MatrixXd D22 = D.block(0,0,Q_,Q_);
+  D22 = D22.llt().solve(MatrixXd::Identity(Q_,Q_));
+  MatrixXd D12 = D.block(Q_,0,newQ_,Q_);
+  MatrixXd Lu = covariance_.Lu(u_);
+  MatrixXd SSV = D12 * D22 * Lu;
+  result.vec = SSV.rowwise().mean();
+  MatrixXd D121 = D12 * D22 * D12.transpose();
+  result.mat -= D12 * D22 * D12.transpose();
+  return result;
+}
+
+  
+inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
+                      const ArrayXd& newoffset_){
+    glmmr::LinearPredictor newlinpred_(formula_,
+                                       newdata_,
+                                       linpred_.colnames_,
+                                       linpred_.parameters_.array());
+    VectorXd xb = newlinpred_.xb() + newoffset_.matrix();
+    return xb;
+  }
+  
+inline void glmmr::Model::mcmc_sample(int warmup,
+                   int samples,
+                   int adapt){
+    sample(warmup,samples,adapt);
+    if(u_.cols()!=zu_.cols())zu_.resize(Q_,u_.cols());
+    zu_ = ZL_*u_;
+  }
+  
+inline void glmmr::Model::mcmc_set_lambda(double lambda){
+    lambda_ = lambda;
+  }
+  
+inline void glmmr::Model::mcmc_set_max_steps(int max_steps){
+    max_steps_ = max_steps;
+  }
+  
+inline void glmmr::Model::mcmc_set_refresh(int refresh){
+    refresh_ = refresh;
+  }
+  
+inline void glmmr::Model::mcmc_set_target_accept(double target){
+    target_accept_ = target;
+  }
+  
+inline void glmmr::Model::set_trace(int trace){
+    trace_ = trace;
+  }
+  
+inline void glmmr::Model::make_covariance_sparse(){
+    covariance_.set_sparse(true);
+  }
+  
+inline void glmmr::Model::make_covariance_dense(){
+    covariance_.set_sparse(false);
+  }
 
 #endif

@@ -61,7 +61,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           check = function(verbose=TRUE){
                             if(private$hash != private$hash_do()){
                               if(verbose)message("Updating model")
-                              private$generate()
+                              private$genX()
+                              private$hash <- private$hash_do()
                             }},
                           #' @description 
                           #' Create a new MeanFunction object
@@ -242,10 +243,10 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
                             self$formula <- gsub(" ","",self$formula)
                             #need to remove random effect terms from the formula
-                            
                             self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
+                            
                             ## add handling of factors
-                            if(grepl("factor[^ \\[]+[ \\s\\+\\-]",self$formula)){
+                            if(!grepl("factor\\[",self$formula)){
                               rm_int <- grepl("-1",self$formula)
                               cstart <- ifelse(rm_int,1,2)
                               regres <- gregexpr("factor\\(.*\\)",self$formula)
@@ -275,6 +276,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                                   tmpform <- paste0(tmpform, substr(f1,regres[[1]][i]+attr(regres[[1]],"match.length")[i],nchar(f1)))
                                 }
                                 self$formula <- tmpform
+                                # remove any double +
+                                self$formula <- gsub("\\+\\s*\\+","+",self$formula)
                               }
                             }
                             # change the brackets to avoid confusion

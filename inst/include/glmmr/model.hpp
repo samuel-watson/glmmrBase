@@ -3,6 +3,7 @@
 
 #define _USE_MATH_DEFINES
 
+
 #include <boost/math/special_functions/digamma.hpp>
 #include <rbobyqa.h>
 #include "general.h"
@@ -110,11 +111,14 @@ public:
     return (zu_.colwise()+(linpred_.xb()+offset_));
   }
   
+  
   VectorXd xb(){
     return linpred_.xb()+offset_;
   }
   
   double log_likelihood();
+  
+  double full_log_likelihood();
   
   void ml_theta();
   
@@ -136,51 +140,43 @@ public:
   
   MatrixXd hessian(double tol = 1e-4);
   
-  MatrixXd u(){
-    return covariance_.Lu(u_);
+  MatrixXd u(bool scaled = true){
+    if(scaled){
+      return covariance_.Lu(u_);
+    } else {
+      return u_;
+    }
   }
   
   MatrixXd Zu(){
     return zu_;
   }
   
+  vector_matrix predict_re(const ArrayXXd& newdata_,
+               const ArrayXd& newoffset_);
+  
+  VectorXd predict_xb(const ArrayXXd& newdata_,
+                      const ArrayXd& newoffset_);
+  
   void mcmc_sample(int warmup,
                    int samples,
-                   int adapt = 100){
-    sample(warmup,samples,adapt);
-    if(u_.cols()!=zu_.cols())zu_.resize(Q_,u_.cols());
-    zu_ = ZL_*u_;
-  }
+                   int adapt = 100);
   
-  void mcmc_set_lambda(double lambda){
-    lambda_ = lambda;
-  }
+  void mcmc_set_lambda(double lambda);
   
-  void mcmc_set_max_steps(int max_steps){
-    max_steps_ = max_steps;
-  }
+  void mcmc_set_max_steps(int max_steps);
   
-  void mcmc_set_refresh(int refresh){
-    refresh_ = refresh;
-  }
+  void mcmc_set_refresh(int refresh);
   
-  void mcmc_set_target_accept(double target){
-    target_accept_ = target;
-  }
+  void mcmc_set_target_accept(double target);
   
-  void set_trace(int trace){
-    trace_ = trace;
-  }
+  void set_trace(int trace);
   
   double aic();
   
-  void make_covariance_sparse(){
-    covariance_.set_sparse(true);
-  }
+  void make_covariance_sparse();
   
-  void make_covariance_dense(){
-    covariance_.set_sparse(false);
-  }
+  void make_covariance_dense();
   
 private:
   ArrayXd size_m_array;
@@ -251,20 +247,16 @@ private:
     int G;
     bool importance_;
     double ll;
-    double logl;
-    double denomD;
+    double denomD_;
   public:
-    F_likelihood(Model& M, bool importance = false) : 
+    F_likelihood(Model& M,
+                 double denomD = 0,
+                 bool importance = false) : 
     M_(M),
     G(M_.covariance_.npar()), 
     importance_(importance), 
-    ll(0.0), logl(0.0),
-    denomD(0.0) {
-      for(int i = 0; i < M_.u_.cols(); i++){
-        denomD += M_.covariance_.log_likelihood(M_.u_.col(i));
-      }
-      denomD *= 1/M_.u_.cols();
-    }
+    ll(0.0), 
+    denomD_(denomD) {}
     double operator()(const dblvec &par);
   };
   
@@ -323,6 +315,7 @@ private:
 };
 
 }
+
 
 
 #include "likelihood.ipp"

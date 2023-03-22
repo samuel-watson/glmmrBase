@@ -36,17 +36,11 @@ inline double glmmr::Model::F_likelihood::operator()(const dblvec &par) {
   M_.update_beta(beta);
   M_.update_theta(theta);
   if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta")M_.var_par_ = par[M_.P_+G];
-  ll = M_.log_likelihood();
-  logl = 0;
-#pragma omp parallel for reduction (+:logl)
-  for(int i = 0; i < M_.u_.cols(); i++){
-    logl += M_.covariance_.log_likelihood(M_.u_.col(i));
-  }
-  logl *= 1/M_.u_.cols();
+  ll = M_.full_log_likelihood();
   if(importance_){
-    return -1.0 * log(exp(ll + logl)/ exp(denomD));
+    return -1.0 * log(exp(ll)/ exp(denomD_));
   } else {
-    return -1.0*(ll + logl);
+    return -1.0*ll;
   }
 }
 
@@ -81,9 +75,9 @@ inline double glmmr::Model::LA_likelihood_cov::operator()(const dblvec &par) {
   } else {
     M_.update_theta(par);
   }
+  M_.update_W();
   logl = M_.u_.col(0).transpose() * M_.u_.col(0);
   ll = M_.log_likelihood();
-  M_.update_W();
   LZWZL = M_.covariance_.LZWZL(M_.W_);
   LZWdet = glmmr::maths::logdet(LZWZL);
   

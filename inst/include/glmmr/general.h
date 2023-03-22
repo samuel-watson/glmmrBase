@@ -25,8 +25,11 @@ typedef std::vector<intvec> intvec2d;
 typedef std::vector<dblvec2d> dblvec3d;
 typedef std::vector<intvec2d> intvec3d;
 
+// [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
+
+
 const static std::unordered_map<str, double> nvars = {  
   {"gr", 1},
   {"ar1", 1},
@@ -103,5 +106,18 @@ inline void print_sparse(const sparse& A){
 }
 
 }
+
+struct vector_matrix{
+  public:
+  VectorXd vec;
+  MatrixXd mat;
+  vector_matrix(int n): vec(n), mat(n,n) {};
+  vector_matrix(const vector_matrix& x) : vec(x.vec), mat(x.mat) {};
+  vector_matrix& operator=(vector_matrix x){
+    vec = x.vec;
+    mat = x.mat;
+    return *this;
+  };
+};
 
 #endif
