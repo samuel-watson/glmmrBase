@@ -84,6 +84,7 @@ public:
         gen_sigma_blocks();
       };
   
+  
   void set_offset(const VectorXd& offset);
   
   void update_beta(const VectorXd &beta);
@@ -331,71 +332,7 @@ private:
 
 
 
-inline ArrayXd glmmr::Model::optimum_weights(double N, 
-                                             double sigma_sq,
-                                             VectorXd C){
-  if(C.size()!=P_)Rcpp::stop("C is wrong size");
-  
-  ArrayXd weights = ArrayXd::Constant(n_,1.0*n_);
-  weights = weights.inverse();
-  ArrayXd weightsnew(weights);
-  std::vector<MatrixXd> ZDZ;
-  std::vector<MatrixXd> Sigmas;
-  std::vector<MatrixXd> Xs;
-  Rcpp::Rcout << "\n### Preparing data ###";
-  Rcpp::Rcout << "\nThere are " << sigma_blocks_.size() << " independent blocks and " << n_ << " cells.";
-  int maxprint = n_ < 10 ? n_ : 10;
-  for(int i = 0 ; i < sigma_blocks_.size(); i++){
-    sparse ZLs = submat_sparse(covariance_.ZL_sparse(),sigma_blocks_[i].RowIndexes);
-    MatrixXd ZL = sparse_to_dense(ZLs,false);
-    MatrixXd S = ZL * ZL.transpose();
-    ZDZ.push_back(S);
-    Sigmas.push_back(S);
-    ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks_[i].RowIndexes.data(),sigma_blocks_[i].RowIndexes.size());
-    MatrixXd X = glmmr::Eigen_ext::submat(linpred_.X(),rows,ArrayXi::LinSpaced(P_,0,P_-1));
-    Xs.push_back(X);
-  }
-  
-  double tol = 0.0001;
-  double diff = 1;
-  int block_size;
-  MatrixXd M(P_,P_);
-  int iter = 0;
-  int counter;
-  Rcpp::Rcout << "\n### Starting optimisation ###";
-  while(diff > tol && iter < 100){
-    iter++;
-    Rcpp::Rcout << "\nIteration " << iter << " weights: [" << weights.segment(0,maxprint).transpose() << "...]";
-    M.setZero();
-    for(int i = 0 ; i < sigma_blocks_.size(); i++){
-      Sigmas[i] = ZDZ[i];
-      for(int j = 0; j < Sigmas[i].rows(); j++){
-        Sigmas[i](j,j) += sigma_sq/(N*weights(sigma_blocks_[i].RowIndexes[j]));
-      }
-      Sigmas[i] = Sigmas[i].llt().solve(MatrixXd::Identity(Sigmas[i].rows(),Sigmas[i].cols()));
-      M += Xs[i].transpose() * Sigmas[i] * Xs[i];
-    }
-    M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
-    VectorXd Mc = M*C;
-    counter = 0;
-    for(int i = 0 ; i < sigma_blocks_.size(); i++){
-      block_size = sigma_blocks_[i].RowIndexes.size();
-      weightsnew.segment(counter,block_size) = Sigmas[i] * Xs[i] * Mc;
-      counter += block_size;
-    }
-    weightsnew = weightsnew.abs();
-    weightsnew *= 1/weightsnew.sum();
-    diff = ((weights-weightsnew).abs()).maxCoeff();
-    weights = weightsnew;
-    Rcpp::Rcout << " max diff: " << diff;
-  }
-  if(iter<=100){
-    Rcpp::Rcout << "\n### CONVERGED Final weights: [" << weights.segment(0,maxprint).transpose() << "...]";
-  } else {
-    Rcpp::Rcout << "\n### NOT CONVERGED Reached maximum iterations";
-  }
-  return weights;
-}
+
 
 #include "likelihood.ipp"
 #include "mhmcmc.ipp"
