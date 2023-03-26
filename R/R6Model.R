@@ -534,7 +534,10 @@ Model <- R6::R6Class("Model",
                        #' Generates the information matrix of the GLS estimator
                        #' @return A PxP matrix
                        information_matrix = function(){
-                         Matrix::crossprod(self$mean$X,solve(self$Sigma()))%*%self$mean$X
+                         if(is.null(private$ptr)){
+                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                         }
+                         return(.Model__information_matrix(private$ptr))
                        },
                        #' @description
                        #' Estimates the power of the design described by the model using the square root
@@ -608,8 +611,10 @@ Model <- R6::R6Class("Model",
                        #' Returns the covariance matrix Sigma. For non-linear models this is an approximation. See Details.
                        #' @return A matrix.
                        Sigma = function(){
-                         private$genW()
-                         private$genS()
+                         if(is.null(private$ptr)){
+                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                         }
+                         return(.Model__Sigma(private$ptr))
                        },
                        #'@description
                        #'Markov Chain Monte Carlo Maximum Likelihood  model fitting

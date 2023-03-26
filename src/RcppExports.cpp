@@ -546,6 +546,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__Sigma
+SEXP Model__Sigma(SEXP xp, bool inverse);
+RcppExport SEXP _glmmrBase_Model__Sigma(SEXP xpSEXP, SEXP inverseSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type inverse(inverseSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__Sigma(xp, inverse));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__information_matrix
+SEXP Model__information_matrix(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__information_matrix(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__information_matrix(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__hessian
 SEXP Model__hessian(SEXP xp);
 RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
@@ -800,6 +823,20 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// girling_algorithm
+SEXP girling_algorithm(SEXP xp, SEXP N_, SEXP sigma_sq_, SEXP C_);
+RcppExport SEXP _glmmrBase_girling_algorithm(SEXP xpSEXP, SEXP N_SEXP, SEXP sigma_sq_SEXP, SEXP C_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type N_(N_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type sigma_sq_(sigma_sq_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type C_(C_SEXP);
+    rcpp_result_gen = Rcpp::wrap(girling_algorithm(xp, N_, sigma_sq_, C_));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
@@ -849,6 +886,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 1},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 1},
     {"_glmmrBase_Model__laplace_hessian", (DL_FUNC) &_glmmrBase_Model__laplace_hessian, 1},
+    {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 2},
+    {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
@@ -872,6 +911,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 2},
     {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 1},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
+    {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 4},
     {NULL, NULL, 0}
 };
 

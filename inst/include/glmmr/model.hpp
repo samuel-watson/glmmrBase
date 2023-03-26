@@ -33,13 +33,12 @@ public:
   std::string family_; 
   std::string link_;
   VectorXd offset_;
-  const VectorXd y_;
+  const VectorXd& y_;
   int n_;
   int Q_;
   int P_;
   int flink;
   bool attenuate_;
-  MatrixXd Z_;
   
   Model(
     const VectorXd &y,
@@ -82,6 +81,7 @@ public:
           lower_t_.push_back(1e-6);
           upper_t_.push_back(R_PosInf);
         }
+        gen_sigma_blocks();
       };
   
   void set_offset(const VectorXd& offset);
@@ -100,7 +100,7 @@ public:
 
   void update_u(const MatrixXd &u);
   
-  void update_W(int i = 0);
+  void update_W();
   
   double log_prob(const VectorXd &v);
   
@@ -148,9 +148,11 @@ public:
     }
   }
   
-  MatrixXd Zu(){
-    return zu_;
-  }
+  MatrixXd Zu();
+  
+  MatrixXd Sigma(bool inverse = false);
+  
+  MatrixXd information_matrix();
   
   vector_matrix predict_re(const ArrayXXd& newdata_,
                const ArrayXd& newoffset_);
@@ -177,6 +179,8 @@ public:
   void make_covariance_sparse();
   
   void make_covariance_dense();
+  
+  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C);
   
 private:
   ArrayXd size_m_array;
@@ -206,6 +210,15 @@ private:
   int steps_;
   double target_accept_ = 0.9;
   bool verbose_ = true;
+  std::vector<glmmr::SigmaBlock> sigma_blocks_;
+  
+  void gen_sigma_blocks();
+  
+  MatrixXd sigma_block(int b, bool inverse = false);
+  
+  MatrixXd sigma_builder(int b, bool inverse = false);
+  
+  MatrixXd information_matrix_by_block(int b);
   
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   
@@ -317,6 +330,72 @@ private:
 }
 
 
+
+inline ArrayXd glmmr::Model::optimum_weights(double N, 
+                                             double sigma_sq,
+                                             VectorXd C){
+  if(C.size()!=P_)Rcpp::stop("C is wrong size");
+  
+  ArrayXd weights = ArrayXd::Constant(n_,1.0*n_);
+  weights = weights.inverse();
+  ArrayXd weightsnew(weights);
+  std::vector<MatrixXd> ZDZ;
+  std::vector<MatrixXd> Sigmas;
+  std::vector<MatrixXd> Xs;
+  Rcpp::Rcout << "\n### Preparing data ###";
+  Rcpp::Rcout << "\nThere are " << sigma_blocks_.size() << " independent blocks and " << n_ << " cells.";
+  int maxprint = n_ < 10 ? n_ : 10;
+  for(int i = 0 ; i < sigma_blocks_.size(); i++){
+    sparse ZLs = submat_sparse(covariance_.ZL_sparse(),sigma_blocks_[i].RowIndexes);
+    MatrixXd ZL = sparse_to_dense(ZLs,false);
+    MatrixXd S = ZL * ZL.transpose();
+    ZDZ.push_back(S);
+    Sigmas.push_back(S);
+    ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks_[i].RowIndexes.data(),sigma_blocks_[i].RowIndexes.size());
+    MatrixXd X = glmmr::Eigen_ext::submat(linpred_.X(),rows,ArrayXi::LinSpaced(P_,0,P_-1));
+    Xs.push_back(X);
+  }
+  
+  double tol = 0.0001;
+  double diff = 1;
+  int block_size;
+  MatrixXd M(P_,P_);
+  int iter = 0;
+  int counter;
+  Rcpp::Rcout << "\n### Starting optimisation ###";
+  while(diff > tol && iter < 100){
+    iter++;
+    Rcpp::Rcout << "\nIteration " << iter << " weights: [" << weights.segment(0,maxprint).transpose() << "...]";
+    M.setZero();
+    for(int i = 0 ; i < sigma_blocks_.size(); i++){
+      Sigmas[i] = ZDZ[i];
+      for(int j = 0; j < Sigmas[i].rows(); j++){
+        Sigmas[i](j,j) += sigma_sq/(N*weights(sigma_blocks_[i].RowIndexes[j]));
+      }
+      Sigmas[i] = Sigmas[i].llt().solve(MatrixXd::Identity(Sigmas[i].rows(),Sigmas[i].cols()));
+      M += Xs[i].transpose() * Sigmas[i] * Xs[i];
+    }
+    M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
+    VectorXd Mc = M*C;
+    counter = 0;
+    for(int i = 0 ; i < sigma_blocks_.size(); i++){
+      block_size = sigma_blocks_[i].RowIndexes.size();
+      weightsnew.segment(counter,block_size) = Sigmas[i] * Xs[i] * Mc;
+      counter += block_size;
+    }
+    weightsnew = weightsnew.abs();
+    weightsnew *= 1/weightsnew.sum();
+    diff = ((weights-weightsnew).abs()).maxCoeff();
+    weights = weightsnew;
+    Rcpp::Rcout << " max diff: " << diff;
+  }
+  if(iter<=100){
+    Rcpp::Rcout << "\n### CONVERGED Final weights: [" << weights.segment(0,maxprint).transpose() << "...]";
+  } else {
+    Rcpp::Rcout << "\n### NOT CONVERGED Reached maximum iterations";
+  }
+  return weights;
+}
 
 #include "likelihood.ipp"
 #include "mhmcmc.ipp"

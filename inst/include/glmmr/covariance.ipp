@@ -378,10 +378,12 @@ inline MatrixXd glmmr::Covariance::D_builder(int b,
 }
 
 inline sparse glmmr::Covariance::ZL_sparse(){
-  //Rcpp::Rcout << "\nError?: matZ (n,m): (" << matZ.n << ", " << matZ.m << ")";
-  //Rcpp::Rcout << "\nmatL (n,m): (" << matL.n << ", " << matL.m << ")";
   sparse ZLs = matZ * matL;
   return ZLs;
+}
+
+inline sparse glmmr::Covariance::Z_sparse(){
+  return matZ;
 }
 
 inline MatrixXd glmmr::Covariance::ZL(){

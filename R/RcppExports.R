@@ -189,6 +189,14 @@ Covariance__Q <- function(xp) {
     .Call(`_glmmrBase_Model__laplace_hessian`, xp)
 }
 
+.Model__Sigma <- function(xp, inverse) {
+    .Call(`_glmmrBase_Model__Sigma`, xp, inverse)
+}
+
+.Model__information_matrix <- function(xp) {
+    .Call(`_glmmrBase_Model__information_matrix`, xp)
+}
+
 .Model__hessian <- function(xp) {
     .Call(`_glmmrBase_Model__hessian`, xp)
 }
@@ -279,5 +287,9 @@ Covariance__Q <- function(xp) {
 
 .Model__make_dense <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__make_dense`, xp))
+}
+
+.girling_algorithm <- function(xp, N_, sigma_sq_, C_) {
+    .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_)
 }
 

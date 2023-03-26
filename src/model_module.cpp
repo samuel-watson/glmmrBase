@@ -85,7 +85,7 @@ void Model__use_attenuation(SEXP xp, SEXP use_){
 // [[Rcpp::export(.Model__update_W)]]
 void Model__update_W(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  ptr->update_W(0);
+  ptr->update_W();
 }
 
 // [[Rcpp::export(.Model__log_prob)]]
@@ -172,6 +172,20 @@ SEXP Model__laplace_hessian(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd hess = ptr->laplace_hessian();
   return wrap(hess);
+}
+
+// [[Rcpp::export(.Model__Sigma)]]
+SEXP Model__Sigma(SEXP xp, bool inverse){
+  XPtr<glmmr::Model> ptr(xp);
+  Eigen::MatrixXd S = ptr->Sigma(inverse);
+  return wrap(S);
+}
+
+// [[Rcpp::export(.Model__information_matrix)]]
+SEXP Model__information_matrix(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  Eigen::MatrixXd M = ptr->information_matrix();
+  return wrap(M);
 }
 
 // [[Rcpp::export(.Model__hessian)]]
@@ -333,5 +347,16 @@ void Model__make_sparse(SEXP xp){
 void Model__make_dense(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->make_covariance_dense();
+}
+
+// [[Rcpp::export(.girling_algorithm)]]
+SEXP girling_algorithm(SEXP xp, SEXP N_,
+                       SEXP sigma_sq_, SEXP C_){
+  double N = as<double>(N_);
+  double sigma_sq = as<double>(sigma_sq_);
+  Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
+  XPtr<glmmr::Model> ptr(xp);
+  Eigen::ArrayXd w = ptr->optimum_weights(N,sigma_sq,C);
+  return wrap(w);
 }
 

@@ -163,6 +163,8 @@ public:
   }
   
   sparse ZL_sparse();
+  
+  sparse Z_sparse();
 
 private:
   intvec z_;
