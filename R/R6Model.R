@@ -525,9 +525,27 @@ Model <- R6::R6Class("Model",
                        #' )
                        #' des$update_parameters(cov.pars = c(0.1,0.9))
                        update_parameters = function(mean.pars = NULL,
-                                                    cov.pars = NULL){
-                         if(!is.null(mean.pars))self$mean$update_parameters(mean.pars)
-                         if(!is.null(cov.pars))self$covariance$update_parameters(cov.pars)
+                                                    cov.pars = NULL,
+                                                    var.par = NULL){
+                         if(!is.null(mean.pars)){
+                           self$mean$update_parameters(mean.pars)
+                           if(!is.null(private$ptr)){
+                             .Model__update_beta(private$ptr,mean.pars)
+                           }
+                         }
+                         if(!is.null(cov.pars)){
+                           self$covariance$update_parameters(cov.pars)
+                           if(!is.null(private$ptr)){
+                             .Model__update_theta(private$ptr,cov.pars)
+                           }
+                         }
+                         if(!is.null(var.par)){
+                           self$var_par <- var.par
+                           if(!is.null(private$ptr)){
+                             .Model__set_var_par(private$ptr,var.par)
+                           }
+                         }
+                         
                          self$check(FALSE)
                        },
                        #' @description
@@ -609,12 +627,13 @@ Model <- R6::R6Class("Model",
                        #' Returns the (approximate) covariance matrix of y
                        #'
                        #' Returns the covariance matrix Sigma. For non-linear models this is an approximation. See Details.
+                       #' @param inverse Logical indicating whether to provide the covariance matrix or its inverse
                        #' @return A matrix.
-                       Sigma = function(){
+                       Sigma = function(inverse = FALSE){
                          if(is.null(private$ptr)){
                            private$update_ptr(rep(0,nrow(self$mean$data)))
                          }
-                         return(.Model__Sigma(private$ptr))
+                         return(.Model__Sigma(private$ptr,inverse))
                        },
                        #'@description
                        #'Markov Chain Monte Carlo Maximum Likelihood  model fitting
