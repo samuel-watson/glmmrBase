@@ -289,7 +289,7 @@ Covariance__Q <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__make_dense`, xp))
 }
 
-.girling_algorithm <- function(xp, N_, sigma_sq_, C_) {
-    .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_)
+.girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {
+    .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_, tol_)
 }
 

@@ -84,7 +84,6 @@ public:
         gen_sigma_blocks();
       };
   
-  
   void set_offset(const VectorXd& offset);
   
   void update_beta(const VectorXd &beta);
@@ -181,7 +180,8 @@ public:
   
   void make_covariance_dense();
   
-  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C);
+  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
+                          int max_iter = 501);
   
 private:
   ArrayXd size_m_array;

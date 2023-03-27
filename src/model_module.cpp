@@ -351,12 +351,14 @@ void Model__make_dense(SEXP xp){
 
 // [[Rcpp::export(.girling_algorithm)]]
 SEXP girling_algorithm(SEXP xp, SEXP N_,
-                       SEXP sigma_sq_, SEXP C_){
+                       SEXP sigma_sq_, SEXP C_,
+                       SEXP tol_){
   double N = as<double>(N_);
   double sigma_sq = as<double>(sigma_sq_);
+  double tol = as<double>(tol_);
   Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::ArrayXd w = ptr->optimum_weights(N,sigma_sq,C);
+  Eigen::ArrayXd w = ptr->optimum_weights(N,sigma_sq,C,tol);
   return wrap(w);
 }
 

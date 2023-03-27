@@ -88,6 +88,49 @@ submat(const Eigen::MatrixBase<ArgType>& arg, const RowIndexType& row_indices, c
   return MatrixType::NullaryExpr(row_indices.size(), col_indices.size(), Func(arg.derived(), row_indices, col_indices));
 }
 
+inline void removeRow(Eigen::MatrixXd& matrix, 
+               unsigned int rowToRemove)
+{
+  unsigned int numRows = matrix.rows()-1;
+  unsigned int numCols = matrix.cols();
+  
+  if(rowToRemove < numRows)
+    matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = 
+      matrix.bottomRows(numRows-rowToRemove);
+  
+  matrix.conservativeResize(numRows,numCols);
+}
+
+inline void removeColumn(Eigen::MatrixXd& matrix, 
+                  unsigned int colToRemove)
+{
+  unsigned int numRows = matrix.rows();
+  unsigned int numCols = matrix.cols()-1;
+  
+  if( colToRemove < numCols )
+    matrix.block(0,colToRemove,numRows,numCols-colToRemove) = 
+      matrix.rightCols(numCols-colToRemove);
+  
+  matrix.conservativeResize(numRows,numCols);
+}
+
+inline void removeElement(Eigen::VectorXd& matrix, 
+                  unsigned int elemToRemove)
+{
+  unsigned int nSize = matrix.size()-1;
+  
+  if( elemToRemove < nSize )
+    matrix.segment(elemToRemove,nSize-elemToRemove) = 
+      matrix.tail(nSize-elemToRemove);
+  
+  matrix.conservativeResize(nSize);
+}
+
+inline bool issympd(Eigen::MatrixXd& mat){
+  Eigen::LLT<Eigen::MatrixXd> lltOfA(mat);
+  return lltOfA.info() == Eigen::NumericalIssue;
+}
+
 }
 
 class SigmaBlock {
@@ -96,6 +139,7 @@ class SigmaBlock {
     intvec RowIndexes;
     SigmaBlock(){};
     SigmaBlock(const intvec& db) : Dblocks(db) {};
+    SigmaBlock(const SigmaBlock& x): Dblocks(x.Dblocks), RowIndexes(x.RowIndexes) {};
     
     bool operator==(const intvec& x){
       bool element_is_in = false;

@@ -171,7 +171,6 @@ private:
   dblvec3d re_data_;
   intvec3d re_cols_;
   intvec3d re_cols_data_;
-  //dblvec3d z_data_;
   strvec2d fn_;
   intvec re_order_;
   intvec3d re_pars_;
@@ -191,7 +190,6 @@ private:
   sparse mat;
   sparse matZ;
   sparse matL;
-  //dblvec LDLd;
   SparseChol spchol;
   
   MatrixXd get_block(int b);

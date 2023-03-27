@@ -1,10 +1,9 @@
 #ifndef GLMMRSPARSE_H
 #define GLMMRSPARSE_H
 
-//#define MIN(a,b) ((a) < (b) ? (a) : (b))
-
 #include "general.h"
 // extends some of the SparseChol functions and operators to Eigen classes
+
 
 namespace glmmr {
 
