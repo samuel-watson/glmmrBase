@@ -246,7 +246,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
                             
                             ## add handling of factors
-                            if(!grepl("factor\\[",self$formula)){
+                            if(grepl("factor",self$formula) & !grepl("factor\\[",self$formula)){
                               rm_int <- grepl("-1",self$formula)
                               cstart <- ifelse(rm_int,1,2)
                               regres <- gregexpr("factor\\(.*\\)",self$formula)
