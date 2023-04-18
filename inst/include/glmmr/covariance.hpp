@@ -65,8 +65,8 @@ public:
              const ArrayXXd &data,
              const strvec& colnames,
              const ArrayXd& parameters) :
-    form_(formula), data_(data), colnames_(colnames),Q_(0), 
-    parameters_(parameters.data(),parameters.data()+parameters.size()),
+    form_(formula), data_(data), colnames_(colnames),
+    parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
     L_constructor();
@@ -77,8 +77,8 @@ public:
              const ArrayXXd &data,
               const strvec& colnames,
               const ArrayXd& parameters) :
-    form_(form), data_(data), colnames_(colnames),Q_(0), 
-    parameters_(parameters.data(),parameters.data()+parameters.size()),
+    form_(form), data_(data), colnames_(colnames),
+    parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
     L_constructor();
