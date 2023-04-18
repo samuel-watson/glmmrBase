@@ -14,7 +14,6 @@
 #include "sparse.h"
 #include <random>
 
-
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
@@ -33,7 +32,7 @@ public:
   std::string family_; 
   std::string link_;
   VectorXd offset_;
-  const VectorXd& y_;
+  const VectorXd y_;
   int n_;
   int Q_;
   int P_;

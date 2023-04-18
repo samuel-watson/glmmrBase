@@ -5,7 +5,6 @@
 
 namespace glmmr {
 
-//generate instructions for a given function
 inline intvec interpret_re(const std::string& fn,
                                   const intvec& A){
   intvec B;

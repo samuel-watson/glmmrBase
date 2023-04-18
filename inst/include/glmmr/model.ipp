@@ -88,9 +88,8 @@ inline double glmmr::Model::log_prob(const VectorXd &v){
   }
 #pragma omp parallel for reduction (+:lp2)
   for(int i = 0; i < v.size(); i++){
-    lp2 += -0.5*v(i)*v(i); //glmmr::maths::log_likelihood(v(i),0,1,7);
+    lp2 += -0.5*v(i)*v(i); 
   }
-  //lp2 = -0.5*v.transpose()*v -0.5*v.size()*log(2*M_PI);
   return lp1+lp2-0.5*v.size()*log(2*M_PI);
 }
 
@@ -105,167 +104,168 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   
   switch (flink){
   case 1:
-  {
-    size_n_array = size_n_array.exp();
-    if(!beta){
-      size_n_array = y_.array() - size_n_array;
-      size_q_array = ZLt*size_n_array -v.array() ;
-    } else {
-      size_p_array += (linpred_.X().transpose()*(y_-size_n_array.matrix())).array();
+    {
+      size_n_array = size_n_array.exp();
+      if(!beta){
+        size_n_array = y_.array() - size_n_array;
+        size_q_array = ZLt*size_n_array -v.array() ;
+      } else {
+        size_p_array += (linpred_.X().transpose()*(y_-size_n_array.matrix())).array();
+      }
+      break;
     }
-    break;
-  }
   case 2:
-  {
-    size_n_array = size_n_array.inverse();
-    size_n_array = y_.array()*size_n_array;
-    size_n_array -= ArrayXd::Ones(n_);
-    if(beta){
-      size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  ZLt*size_n_array-v.array();
+    {
+      size_n_array = size_n_array.inverse();
+      size_n_array = y_.array()*size_n_array;
+      size_n_array -= ArrayXd::Ones(n_);
+      if(beta){
+        size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array =  ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    break;
-  }
   case 3:
-  {
-    size_n_array = size_n_array.exp();
-    size_n_array += 1.0;
-    size_n_array = size_n_array.array().inverse();
-    size_n_array -= 1.0;
-    size_n_array += y_.array();
-    if(beta){
-      size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  ZLt*size_n_array-v.array();
+    {
+      size_n_array = size_n_array.exp();
+      size_n_array += 1.0;
+      size_n_array = size_n_array.array().inverse();
+      size_n_array -= 1.0;
+      size_n_array += y_.array();
+      if(beta){
+        size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array =  ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    break;
-  }
   case 4:
-  {
-#pragma omp parallel for
-    for(int i = 0; i < n_; i++){
-      if(y_(i)==1){
-        size_n_array(i) = 1;
-      } else if(y_(i)==0){
-        size_n_array(i) = exp(size_n_array(i))/(1-exp(size_n_array(i)));
+    {
+      #pragma omp parallel for
+      for(int i = 0; i < n_; i++){
+        if(y_(i)==1){
+          size_n_array(i) = 1;
+        } else if(y_(i)==0){
+          size_n_array(i) = exp(size_n_array(i))/(1-exp(size_n_array(i)));
+        }
       }
+      if(beta){
+        size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array =  ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    if(beta){
-      size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  ZLt*size_n_array-v.array();
-    }
-    break;
-  }
   case 5:
-  {
-#pragma omp parallel for
-    for(int i = 0; i < n_; i++){
-      if(y_(i)==1){
-        size_n_array(i) = 1/size_n_array(i);
-      } else if(y_(i)==0){
-        size_n_array(i) = -1/(1-size_n_array(i));
+    {
+      #pragma omp parallel for
+      for(int i = 0; i < n_; i++){
+        if(y_(i)==1){
+          size_n_array(i) = 1/size_n_array(i);
+        } else if(y_(i)==0){
+          size_n_array(i) = -1/(1-size_n_array(i));
+        }
       }
+      if(beta){
+        size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array =  ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    if(beta){
-      size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  ZLt*size_n_array-v.array();
-    }
-    break;
-  }
   case 6:
-  {
-#pragma omp parallel for
-    for(int i = 0; i < n_; i++){
-      if(y_(i)==1){
-        size_n_array(i) = (double)R::dnorm(size_n_array(i),0,1,false)/((double)R::pnorm(size_n_array(i),0,1,true,false));
-      } else if(y_(i)==0){
-        size_n_array(i) = -1.0*(double)R::dnorm(size_n_array(i),0,1,false)/(1-(double)R::pnorm(size_n_array(i),0,1,true,false));
+    {
+      #pragma omp parallel for
+      for(int i = 0; i < n_; i++){
+        if(y_(i)==1){
+          size_n_array(i) = (double)R::dnorm(size_n_array(i),0,1,false)/((double)R::pnorm(size_n_array(i),0,1,true,false));
+        } else if(y_(i)==0){
+          size_n_array(i) = -1.0*(double)R::dnorm(size_n_array(i),0,1,false)/(1-(double)R::pnorm(size_n_array(i),0,1,true,false));
+        }
       }
+      if(beta){
+        size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array =  ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    if(beta){
-      size_p_array +=  (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  ZLt*size_n_array-v.array();
-    }
-    break;
-  }
   case 7:
-  {
-    if(beta){
-    size_p_array += ((1.0/(var_par_*var_par_))*(linpred_.X().transpose()*(y_ - size_n_array.matrix()))).array();
-  } else {
-    size_n_array = y_.array() - size_n_array;
-    size_q_array = (ZLt*size_n_array)-v.array();
-    size_q_array *= 1.0/(var_par_*var_par_);
-  }
-  break;
-  }
+    {
+      if(beta){
+        size_p_array += ((1.0/(var_par_*var_par_))*(linpred_.X().transpose()*(y_ - size_n_array.matrix()))).array();
+      } else {
+        size_n_array = y_.array() - size_n_array;
+        size_q_array = (ZLt*size_n_array)-v.array();
+        size_q_array *= 1.0/(var_par_*var_par_);
+      }
+      break;
+    }
   case 8:
-  {
-    if(beta){
-    size_p_array += ((1.0/(var_par_*var_par_))*(linpred_.X().transpose()*(y_ - size_n_array.matrix()))).array();
-  } else {
-    size_n_array = y_.array() - size_n_array;
-    size_q_array = ZLt*size_n_array-v.array();
-    size_q_array *= 1.0/(var_par_*var_par_);
-  }
-  break;
-  }
+    {
+      if(beta){
+        size_p_array += ((1.0/(var_par_*var_par_))*(linpred_.X().transpose()*(y_ - size_n_array.matrix()))).array();
+      } else {
+        size_n_array = y_.array() - size_n_array;
+        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array *= 1.0/(var_par_*var_par_);
+      }
+      break;
+    }
   case 9:
-  {
-    size_n_array *= -1.0;
-    size_n_array = size_n_array.exp();
-    if(beta){
-      size_p_array += (linpred_.X().transpose()*(y_.array()*size_n_array-1).matrix()*var_par_).array();
-    } else {
-      size_n_array *= y_.array();
-      size_q_array = ZLt*size_n_array-v.array();
-      size_q_array *= var_par_;
+    {
+      size_n_array *= -1.0;
+      size_n_array = size_n_array.exp();
+      if(beta){
+        size_p_array += (linpred_.X().transpose()*(y_.array()*size_n_array-1).matrix()*var_par_).array();
+      } else {
+        size_n_array *= y_.array();
+        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array *= var_par_;
+      }
+      break;
     }
-    break;
-  }
   case 10:
-  {
-    size_n_array = size_n_array.inverse();
-    if(beta){
-      size_p_array += (linpred_.X().transpose()*(size_n_array.matrix()-y_)*var_par_).array();
-    } else {
-      size_n_array -= y_.array();
-      size_q_array = ZLt*size_n_array-v.array();
-      size_q_array *= var_par_;
+    {
+      size_n_array = size_n_array.inverse();
+      if(beta){
+        size_p_array += (linpred_.X().transpose()*(size_n_array.matrix()-y_)*var_par_).array();
+      } else {
+        size_n_array -= y_.array();
+        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array *= var_par_;
+      }
+      break;
     }
-    break;
-  }
   case 11:
-  {
-    size_n_array = size_n_array.inverse();
-    if(beta){
-      size_p_array += (linpred_.X().transpose()*((y_.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*var_par_).array();
-    } else {
-      size_n_array *= (y_.array()*size_n_array - ArrayXd::Ones(n_));
-      size_q_array = ZLt*size_n_array-v.array();
-      size_q_array *= var_par_;
+    {
+      size_n_array = size_n_array.inverse();
+      if(beta){
+        size_p_array += (linpred_.X().transpose()*((y_.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*var_par_).array();
+      } else {
+        size_n_array *= (y_.array()*size_n_array - ArrayXd::Ones(n_));
+        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array *= var_par_;
+      }
+      break;
     }
-    break;
-  }
   case 12:
-  {
-#pragma omp parallel for
-    for(int i = 0; i < n_; i++){
-      size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
-      size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * var_par_ * (log(y_(i)) - log(1- y_(i)) - boost::math::digamma(size_n_array(i)*var_par_) + boost::math::digamma((1-size_n_array(i))*var_par_));
+    {
+      #pragma omp parallel for
+      for(int i = 0; i < n_; i++){
+        size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
+        size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * var_par_ * (log(y_(i)) - log(1- y_(i)) - boost::math::digamma(size_n_array(i)*var_par_) + boost::math::digamma((1-size_n_array(i))*var_par_));
+      }
+      if(beta){
+        size_p_array += (linpred_.X().transpose()*size_n_array.matrix()).array();
+      } else {
+        size_q_array = ZLt*size_n_array-v.array();
+      }
+      break;
     }
-    if(beta){
-      size_p_array += (linpred_.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array = ZLt*size_n_array-v.array();
-    }
-    break;
   }
-  }
+  
   return beta ? size_p_array.matrix() : size_q_array.matrix();
 }
 

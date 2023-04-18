@@ -675,31 +675,31 @@ Model <- R6::R6Class("Model",
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
                        #'\dontrun{
-                       #'df <- nelder(~(cl(10)*t(5)) > ind(10))
+                       #' #create example data with six clusters, five time periods, and five people per cluster-period
+                       #' df <- nelder(~(cl(6)*t(5)) > ind(5))
+                       #' # parallel trial design intervention indicator
                        #' df$int <- 0
-                       #' df[df$cl > 5, 'int'] <- 1
+                       #' df[df$cl > 3, 'int'] <- 1 
                        #' # specify parameter values in the call for the data simulation below
-                       #' des <- ModelMCML$new(
-                       #'   covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                       #'                      parameters = c(0.25,0.7)),
-                       #'   mean = list(formula = ~ factor(t) + int - 1,
-                       #'                         parameters = c(rep(0,5),0.2)),
+                       #' des <- Model$new(
+                       #'   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+                       #'   covariance = list(parameters = c(0.25,0.7)),
+                       #'   mean = list(parameters = c(rep(0,5),0.2)),
                        #'   data = df,
-                       #'   family = gaussian()
+                       #'   family = gaussian(),
+                       #'   var_par = 1
                        #' )
                        #' ysim <- des$sim_data() # simulate some data from the model
-                       #' fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE)
+                       #' fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
                        #' #fits the models using Stan
-                       #' fit2 <- des$MCML(y = ysim,method="mcnr")
+                       #' fit2 <- des$MCML(y = ysim, method="mcnr")
                        #'  #adds a simulated likelihood step after the MCEM algorithm
                        #' fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
                        #'
                        #'  # we could use LA to find better starting values
                        #' fit4 <- des$LA(y=ysim)
-                       #' # to set better starting values we can use the update_parameters function
-                       #' des$update_parameters(mean = fit4$coefficients$est[1:6],
-                       #'                      cov = fit4$coefficients$est[7:8])
-                       #' fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
+                       #' # the fit parameter values are stored in the internal model class object
+                       #' fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
                        #'}
                        #'@md
                        MCML = function(y,
@@ -925,22 +925,21 @@ Model <- R6::R6Class("Model",
                        #'@return A `mcml` object
                        #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
-                       #'\dontrun{
-                       #'df <- nelder(~(cl(10)*t(5)) > ind(10))
+                       #' #create example data with six clusters, five time periods, and five people per cluster-period
+                       #' df <- nelder(~(cl(6)*t(5)) > ind(5))
+                       #' # parallel trial design intervention indicator
                        #' df$int <- 0
-                       #' df[df$cl > 5, 'int'] <- 1
+                       #' df[df$cl > 3, 'int'] <- 1 
                        #' # specify parameter values in the call for the data simulation below
-                       #' des <- ModelMCML$new(
-                       #'   covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                       #'                      parameters = c(0.25,0.7)),
-                       #'   mean = list(formula = ~ factor(t) + int - 1,
-                       #'                         parameters = c(rep(0,5),-0.2)),
+                       #' des <- Model$new(
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+                       #'   covariance = list( parameters = c(0.25,0.7)),
+                       #'   mean = list(parameters = c(rep(0,5),-0.2)),
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$LA(y = ysim)
-                       #'}
                        #'@md
                        LA = function(y,
                                      start,
@@ -1096,7 +1095,7 @@ Model <- R6::R6Class("Model",
                        #'it generally produces a larger number of effective samplers per unit time, especially for more complex
                        #'covariance functions.
                        #' @param verbose Logical indicating whether to provide detailed output to the console
-                       #'@return A matrix of samples of the random effects
+                       #' @return A matrix of samples of the random effects
                        mcmc_sample = function(y,usestan = TRUE,verbose=TRUE){
                          private$verify_data(y)
                          private$update_ptr(y)
