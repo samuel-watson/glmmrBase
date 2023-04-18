@@ -46,4 +46,5 @@ test_that("covariance functions", {
   df <- nelder(~(cl(4)*t(5)) > ind(5))
   cptr <- expect_no_error(.Covariance__new("(1|fexp0(t))",as.matrix(df),colnames(df)))
   .Covariance__Update_parameters(cptr,c(0.25))
+  rm(cptr)
 })

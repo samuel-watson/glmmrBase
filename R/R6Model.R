@@ -510,6 +510,7 @@ Model <- R6::R6Class("Model",
                        #'
                        #' @param mean.pars (Optional) Vector of new mean function parameters
                        #' @param cov.pars (Optional) Vector of new covariance function(s) parameters
+                       #' @param var.par (Optional) A scalar value for var_par
                        #' @param verbose Logical indicating whether to provide more detailed feedback
                        #' @examples
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
@@ -1160,6 +1161,7 @@ Model <- R6::R6Class("Model",
                        #' model fit, see member function `$u`
                        #' @param y Vector of outcome data
                        #' @param u Vector of random effects scaled by the Cholesky decomposition of D
+                       #' @param beta Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)
                        #' @return A vector of the gradient
                        log_gradient = function(y,u,beta=FALSE){
                          private$verify_data(y)

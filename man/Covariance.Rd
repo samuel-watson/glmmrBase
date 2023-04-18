@@ -349,6 +349,13 @@ involving D
 \if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sparse}}{Logical. Whether to use sparse methods (TRUE) or not (FALSE)}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 None. Called for effects.
 }

@@ -237,53 +237,52 @@ des$power() #power of 0.90 for the int parameter
 ## ------------------------------------------------
 
 \dontrun{
-df <- nelder(~(cl(10)*t(5)) > ind(10))
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
 df$int <- 0
-df[df$cl > 5, 'int'] <- 1
+df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
-des <- ModelMCML$new(
-  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                     parameters = c(0.25,0.7)),
-  mean = list(formula = ~ factor(t) + int - 1,
-                        parameters = c(rep(0,5),0.2)),
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  covariance = list(parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
-  family = gaussian()
+  family = gaussian(),
+  var_par = 1
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE)
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
-fit2 <- des$MCML(y = ysim,method="mcnr")
+fit2 <- des$MCML(y = ysim, method="mcnr")
  #adds a simulated likelihood step after the MCEM algorithm
 fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
 
  # we could use LA to find better starting values
 fit4 <- des$LA(y=ysim)
-# to set better starting values we can use the update_parameters function
-des$update_parameters(mean = fit4$coefficients$est[1:6],
-                     cov = fit4$coefficients$est[7:8])
-fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
+# the fit parameter values are stored in the internal model class object
+fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
 }
 
 ## ------------------------------------------------
 ## Method `Model$LA`
 ## ------------------------------------------------
 
-\dontrun{
-df <- nelder(~(cl(10)*t(5)) > ind(10))
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
 df$int <- 0
-df[df$cl > 5, 'int'] <- 1
+df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
-des <- ModelMCML$new(
-  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                     parameters = c(0.25,0.7)),
-  mean = list(formula = ~ factor(t) + int - 1,
-                        parameters = c(rep(0,5),-0.2)),
+des <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  covariance = list( parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
   family = stats::binomial()
 )
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
-}
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
@@ -338,6 +337,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \itemize{
 \item \href{#method-Model-use_attenuation}{\code{Model$use_attenuation()}}
 \item \href{#method-Model-fitted}{\code{Model$fitted()}}
+\item \href{#method-Model-predict}{\code{Model$predict()}}
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
 \item \href{#method-Model-n}{\code{Model$n()}}
@@ -355,6 +355,9 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-LA}{\code{Model$LA()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
+\item \href{#method-Model-log_gradient}{\code{Model$log_gradient()}}
+\item \href{#method-Model-u}{\code{Model$u()}}
+\item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -383,8 +386,9 @@ None. Used for effects.
 \if{html}{\out{<a id="method-Model-fitted"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
-Return predicted values. Does not account for the random effects. For simulated values based
-on resampling random effects, see \code{sim_data()}.
+Return fitted values. Does not account for the random effects. For simulated values based
+on resampling random effects, see \code{sim_data()}. To predict the values at a new location see
+\code{predict()}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link", X, u)}\if{html}{\out{</div>}}
 }
@@ -403,6 +407,37 @@ for values on the scale of the response}
 }
 \subsection{Returns}{
 A \link[Matrix]{Matrix} class object containing the predicted values
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-predict"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-predict}{}}}
+\subsection{Method \code{predict()}}{
+Generate predictions at new values
+
+Generates predicted values using a new data set to specify covariance
+values and values for the variables that define the covariance function.
+The function will return a list with the linear predictor, conditional
+distribution of the new random effects term conditional on the current estimates
+of the random effects, and some simulated values of the random effects if requested.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$predict(newdata, offset = rep(0, nrow(newdata)), m = 0)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{newdata}}{A data frame specifying the new data at which to generate predictions}
+
+\item{\code{offset}}{Optional vector of offset values for the new data}
+
+\item{\code{m}}{Number of samples of the random effects to draw}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with the linear predictor, parameters (mean and covariance matrices) for
+the conditional distribution of the random effects, and any random effect samples.
 }
 }
 \if{html}{\out{<hr>}}
@@ -719,7 +754,7 @@ des$check() #updates
 \subsection{Method \code{update_parameters()}}{
 Updates the parameters of the mean function and/or the covariance function
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL, var.par = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -728,6 +763,8 @@ Updates the parameters of the mean function and/or the covariance function
 \item{\code{mean.pars}}{(Optional) Vector of new mean function parameters}
 
 \item{\code{cov.pars}}{(Optional) Vector of new covariance function(s) parameters}
+
+\item{\code{var.par}}{(Optional) A scalar value for var_par}
 
 \item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
@@ -855,9 +892,16 @@ Returns the (approximate) covariance matrix of y
 
 Returns the covariance matrix Sigma. For non-linear models this is an approximation. See Details.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$Sigma()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$Sigma(inverse = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{inverse}}{Logical indicating whether to provide the covariance matrix or its inverse}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 A matrix.
 }
@@ -912,31 +956,31 @@ A \code{mcml} object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-df <- nelder(~(cl(10)*t(5)) > ind(10))
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
 df$int <- 0
-df[df$cl > 5, 'int'] <- 1
+df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
-des <- ModelMCML$new(
-  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                     parameters = c(0.25,0.7)),
-  mean = list(formula = ~ factor(t) + int - 1,
-                        parameters = c(rep(0,5),0.2)),
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  covariance = list(parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
-  family = gaussian()
+  family = gaussian(),
+  var_par = 1
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE)
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
-fit2 <- des$MCML(y = ysim,method="mcnr")
+fit2 <- des$MCML(y = ysim, method="mcnr")
  #adds a simulated likelihood step after the MCEM algorithm
 fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
 
  # we could use LA to find better starting values
 fit4 <- des$LA(y=ysim)
-# to set better starting values we can use the update_parameters function
-des$update_parameters(mean = fit4$coefficients$est[1:6],
-                     cov = fit4$coefficients$est[7:8])
-fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
+# the fit parameter values are stored in the internal model class object
+fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
 }
 }
 \if{html}{\out{</div>}}
@@ -950,7 +994,7 @@ fit5 <- des$MCML(y = ysim,method="mcnr") # it should converge much more quickly
 \subsection{Method \code{LA()}}{
 Maximum Likelihood model fitting with Laplace Approximation
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 20, tol = 0.01)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 40, tol = 0.01)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -975,22 +1019,21 @@ A \code{mcml} object
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-df <- nelder(~(cl(10)*t(5)) > ind(10))
+\preformatted{#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
 df$int <- 0
-df[df$cl > 5, 'int'] <- 1
+df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
-des <- ModelMCML$new(
-  covariance = list( formula = ~ (1|gr(cl)*ar1(t)),
-                     parameters = c(0.25,0.7)),
-  mean = list(formula = ~ factor(t) + int - 1,
-                        parameters = c(rep(0,5),-0.2)),
+des <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  covariance = list( parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
   family = stats::binomial()
 )
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
-}
 }
 \if{html}{\out{</div>}}
 
@@ -1043,6 +1086,79 @@ covariance functions.}
 }
 \subsection{Returns}{
 A matrix of samples of the random effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-log_gradient"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-log_gradient}{}}}
+\subsection{Method \code{log_gradient()}}{
+The gradient of the log-likelihood with respect to either the random effects or
+the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
+Cholesky decomposition of the matrix D. To obtain the random effects from the last
+model fit, see member function \verb{$u}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$log_gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Vector of outcome data}
+
+\item{\code{u}}{Vector of random effects scaled by the Cholesky decomposition of D}
+
+\item{\code{beta}}{Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A vector of the gradient
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-u"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-u}{}}}
+\subsection{Method \code{u()}}{
+Returns the sample of random effects from the last model fit
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$u(scaled = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{scaled}}{Logical indicating whether to return samples on the N(0,I) scale (\code{scaled=FALSE}) or
+N(0,D) scale (\code{scaled=TRUE})}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix of random effect samples
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-log_likelihood"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-log_likelihood}{}}}
+\subsection{Method \code{log_likelihood()}}{
+The log likelihood for the GLMM. The random effects can be left
+unspecified. If no random effects are provided, and there was a previous model fit with the same data \code{y}
+then the random effects will be taken from that model. If there was no
+previous model fit then the random effects are assumed to be all zero.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$log_likelihood(y, u)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A vector of outcome data}
+
+\item{\code{u}}{An optional matrix of random effect samples. This can be a single column.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The log-likelihood of the model parameters
 }
 }
 \if{html}{\out{<hr>}}

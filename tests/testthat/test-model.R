@@ -100,4 +100,5 @@ test_that("overall model class",{
   expect_s3_class(des,"Model")
   pwr <- des$power()
   expect_equal(round(pwr[3,4],2),0.46)
+  rm(des)
 })

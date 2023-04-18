@@ -192,6 +192,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @description
                         #' If this function is called then sparse matrix methods will be used for calculations
                         #' involving D
+                        #' @param sparse Logical. Whether to use sparse methods (TRUE) or not (FALSE)
                         #' @return None. Called for effects.
                         sparse = function(sparse = TRUE){
                           if(sparse){
