@@ -151,23 +151,13 @@ Model <- R6::R6Class("Model",
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
-                       #'
-                       #' mf1 <- MeanFunction$new(
-                       #'   formula = ~ factor(t) + int - 1,
-                       #'   data=df
-                       #' )
-                       #' cov1 <- Covariance$new(
+                       #' 
+                       #' mod <- Model$new(
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
                        #'   data = df,
-                       #'   formula = ~ (1|gr(cl)) + (1|gr(cl,t))
-                       #' )
-                       #' des <- Model$new(
-                       #'   covariance = cov1,
-                       #'   mean = mf1,
-                       #'   family = stats::gaussian(),
-                       #'   var_par = 1
+                       #'   family = stats::gaussian()
                        #' )
                        #'
-                       #' #alternatively we can pass the data directly to Model
                        #' #here we will specify a cohort study and provide parameter values
                        #' df <- nelder(~ind(20) * t(6))
                        #' df$int <- 0
@@ -195,7 +185,7 @@ Model <- R6::R6Class("Model",
                        #'
                        #' #an example of a spatial grid with two time points
                        #' df <- nelder(~ (x(10)*y(10))*t(2))
-                       #' spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t))),#fexp(x,y)*
+                       #' spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
                        #'                          mean = list(formula = ~ 1),
                        #'                          data = df,
                        #'                          family = stats::gaussian())

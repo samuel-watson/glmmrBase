@@ -29,11 +29,11 @@
     .Call(`_glmmrBase_Covariance__D_chol`, xp)
 }
 
-Covariance__B <- function(xp) {
+.Covariance__B <- function(xp) {
     .Call(`_glmmrBase_Covariance__B`, xp)
 }
 
-Covariance__Q <- function(xp) {
+.Covariance__Q <- function(xp) {
     .Call(`_glmmrBase_Covariance__Q`, xp)
 }
 

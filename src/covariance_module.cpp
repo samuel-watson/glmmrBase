@@ -76,14 +76,14 @@ SEXP Covariance__D_chol(SEXP xp){
 //   return wrap(D);
 // }
 
-// [[Rcpp::export(Covariance__B)]]
+// [[Rcpp::export(.Covariance__B)]]
 SEXP Covariance__B(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   int B = ptr->B();
   return Rcpp::wrap(B);
 }
 
-// [[Rcpp::export(Covariance__Q)]]
+// [[Rcpp::export(.Covariance__Q)]]
 SEXP Covariance__Q(SEXP xp){
   Rcpp::XPtr<glmmr::Covariance> ptr(xp);
   int Q = ptr->Q();

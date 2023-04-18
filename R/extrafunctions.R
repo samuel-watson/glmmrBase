@@ -69,3 +69,9 @@ mcnr_family <- function(family){
   type <- which(get(paste0(f1,"_list"))==link)
   return(list(file = paste0("mcml_",f1,".stan"),type=type))
 }
+
+#' Data for model tests
+#'
+#' @name ytest1
+#' @docType data
+NULL

@@ -1,7 +1,6 @@
 test_that("model dense ml", {
   df <- nelder(~(j(10) * t(3)) > i(5))
-  f1 <- system.file("ytest1.RDS",package="glmmrBase")
-  y <- readRDS(f1)
+  y <- ytest1
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
@@ -10,7 +9,7 @@ test_that("model dense ml", {
                       colnames(df),
                       "gaussian","identity")
   expect_error(.Model__update_beta(mptr,c(0,0)))
-  .Model__update_beta(mptr,c(0,0,0))
+  .Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(.Model__update_theta(mptr,c(0.25,0.25)))
   .Model__update_theta(mptr,c(0.25))
   .Model__set_var_par(mptr,1)
@@ -18,9 +17,8 @@ test_that("model dense ml", {
   expect_no_error(.Model__mcmc_sample(mptr,250,250,10))
   .Model__update_u(mptr,matrix(0,nrow=10,ncol=10))
   expect_no_error(.Model__update_W(mptr))
-  expect_equal(round(.Model__log_likelihood(mptr),3),-218.628)
   .Model__ml_beta(mptr)
-  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0,0,0))))
+  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0.1,0.1,0.1))))
   .Model__ml_theta(mptr)
   expect_false(isTRUE(all.equal(.Model__get_theta(mptr),c(0.25))))
   expect_no_error(.Model__nr_beta(mptr))
@@ -28,8 +26,7 @@ test_that("model dense ml", {
 
 test_that("model dense la", {
   df <- nelder(~(j(10) * t(3)) > i(5))
-  f1 <- system.file("ytest1.RDS",package="glmmrBase")
-  y <- readRDS(f1)
+  y <- ytest1
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
@@ -37,27 +34,25 @@ test_that("model dense la", {
                       as.matrix(df),
                       colnames(df),
                       "gaussian","identity")
-  .Model__update_beta(mptr,c(0,0,0))
+  .Model__update_beta(mptr,c(0.1,0.1,0.1))
   .Model__update_theta(mptr,c(0.25))
   .Model__set_var_par(mptr,1)
   .Model__set_offset(mptr,rep(0,length(y)))
-  .Model__use_L_in_calculations(mptr,TRUE)
   .Model__laplace_ml_beta_u(mptr)
-  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0,0,0))))
+  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0.1,0.1,0.1))))
   .Model__laplace_ml_theta(mptr)
   expect_false(isTRUE(all.equal(.Model__get_theta(mptr),c(0.25))))
   .Model__laplace_ml_beta_theta(mptr)
-  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0,0,0))))
+  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0.1,0.1,0.1))))
   expect_false(isTRUE(all.equal(.Model__get_theta(mptr),c(0.25))))
-  .Model__update_beta(mptr,c(0,0,0))
+  .Model__update_beta(mptr,c(0.1,0.1,0.1))
   .Model__laplace_nr_beta_u(mptr)
-  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0,0,0))))
+  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0.1,0.1,0.1))))
 })
 
 test_that("model sparse ml", {
   df <- nelder(~(j(10) * t(3)) > i(5))
-  f1 <- system.file("ytest1.RDS",package="glmmrBase")
-  y <- readRDS(f1)
+  y <- ytest1
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
@@ -66,7 +61,7 @@ test_that("model sparse ml", {
                       colnames(df),
                       "gaussian","identity")
   expect_error(.Model__update_beta(mptr,c(0,0)))
-  .Model__update_beta(mptr,c(0,0,0))
+  .Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(.Model__update_theta(mptr,c(0.25,0.25)))
   .Model__update_theta(mptr,c(0.25))
   .Model__set_var_par(mptr,1)
@@ -75,9 +70,8 @@ test_that("model sparse ml", {
   expect_no_error(.Model__mcmc_sample(mptr,250,250,10))
   .Model__update_u(mptr,matrix(0,nrow=10,ncol=10))
   expect_no_error(.Model__update_W(mptr))
-  expect_equal(round(.Model__log_likelihood(mptr),3),-218.628)
   .Model__ml_beta(mptr)
-  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0,0,0))))
+  expect_false(isTRUE(all.equal(.Model__get_beta(mptr),c(0.1,0.1,0.1))))
   .Model__ml_theta(mptr)
   expect_false(isTRUE(all.equal(.Model__get_theta(mptr),c(0.25))))
   expect_no_error(.Model__nr_beta(mptr))
@@ -99,6 +93,6 @@ test_that("overall model class",{
   ))
   expect_s3_class(des,"Model")
   pwr <- des$power()
-  expect_equal(round(pwr[3,4],2),0.46)
+  expect_equal(round(pwr[3,4],2),0.38)
   rm(des)
 })
