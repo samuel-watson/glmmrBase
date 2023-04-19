@@ -835,7 +835,7 @@ Model <- R6::R6Class("Model",
                                                 cov.pars = theta_new)
                          
                          self$var_par <- var_par_new
-                         u <- .Model__u(private$ptr)
+                         u <- .Model__u(private$ptr, TRUE)
                          invM <- Matrix::solve(self$information_matrix())
                          SE <- sqrt(Matrix::diag(invM))
                          

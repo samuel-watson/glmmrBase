@@ -75,3 +75,9 @@ mcnr_family <- function(family){
 #' @name ytest1
 #' @docType data
 NULL
+
+#' Data for first example in Section 3.12 of JSS paper
+#'
+#' @name yexample312a
+#' @docType data
+NULL
