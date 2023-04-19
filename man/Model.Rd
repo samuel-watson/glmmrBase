@@ -9,61 +9,76 @@ A GLMM Model
 A GLMM Model
 }
 \details{
-An R6 class representing a GLMM model
+A generalised linear mixed model and a range of associated functions
 
-
-For the generalised linear mixed model 
+A detailed vingette for this package is available online \url{arXiv:2303.12657}. Briefly, for the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Zu)}
 \deqn{u \sim MVN(0,D)}
 
-where h is the link function. A Model in comprised of a \link[glmmrBase]{MeanFunction} object, which defines the family F, 
-link function h, and fixed effects design matrix X, and a \link[glmmrBase]{Covariance} object, which defines Z and D. The class provides
-methods for analysis and simulation with these models.
+where h is the link function. The class provides access to all of the matrices above and associated calculations and functions including model fitting, power analysis,
+and various relevant decompositions. The object is an R6 class and so can serve as a parent class for extended functionality.
 
-This class provides methods for generating the matrices described above and data simulation, and serves as a base for extended functionality 
-in related packages.
-
-Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and 
-other functions. For non-Gaussian models, the class uses the approximation proposed by Breslow and Clayton (1993) based on the 
+Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
+other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
 marginal quasilikelihood:
 
 \deqn{\Sigma = W^{-1} + ZDZ^T}
 
-where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
-to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)} 
-(see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). For very large designs, this can be disabled as
-the memory requirements can be prohibitive (use option `skip_sigma`). 
+where \emph{W} is a diagonal matrix with the GLM iterated weights for each observation equal
+to, for individual \emph{i} \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
+(see Table 2.1 in McCullagh and Nelder (1989)). The modification proposed by Zegers et al to the linear predictor to
+improve the accuracy of approximations based on the marginal quasilikelihood is also available, see \code{use_attenuation()}.
 
-See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
 
+The class also includes model fitting with Markov Chain Monte Carlo Maximum Likelihood implementing the algorithms described by McCulloch (1997),
+and fast model fitting using Laplace approximation. Functions for returning related values such as the log gradient, log probability, and other
+matrices are also available.
 
-**Attenuation**
-For calculations such as the information matrix, the first-order approximation to the covariance matrix 
-proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the 
-marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the 
-marginal mean is achieved by "attenuating" the linear predictor. Setting `use` equal to TRUE uses this 
+\strong{Attenuation}
+For calculations such as the information matrix, the first-order approximation to the covariance matrix
+proposed by Breslow and Clayton (1993), described above, is used. The approximation is based on the
+marginal quasilikelihood. Zegers, Liang, and Albert (1988) suggest that a better approximation to the
+marginal mean is achieved by "attenuating" the linear predictor. Setting \code{use} equal to TRUE uses this
 adjustment for calculations using the covariance matrix for non-linear models.
-
 
 Calls the respective print methods of the linked covariance and mean function objects.
 
-
 The matrices X and Z both have n rows, where n is the number of observations in the model/design.
 
-
-**Number of clusters**
-Returns a data frame describing the number of independent clusters or groups at each level in the design. For example,
-if there were cluster-periods nested in clusters, then the top level would be clusters, and the second level would be 
-cluster periods.
-
-
-Using `update_parameters()` is the preferred way of updating the parameters of the 
-mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`. 
+Using \code{update_parameters()} is the preferred way of updating the parameters of the
+mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
-If using direct assignment, call `self$check()` afterwards.
+If using direct assignment, call \code{self$check()} afterwards.
+
+\strong{MCMCML}
+Fits generalised linear mixed models using one of three algorithms: Markov Chain Newton
+Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or Maximum simulated
+likelihood (MSL). All the algorithms are described by McCullagh (1997). For each iteration
+of the algorithm the unobserved random effect terms (\eqn{\gamma}) are simulated
+using Markov Chain Monte Carlo (MCMC) methods (we use Hamiltonian Monte Carlo through Stan),
+and then these values are conditioned on in the subsequent steps to estimate the covariance
+parameters and the mean function parameters (\eqn{\beta}). For all the algorithms,
+the covariance parameter estimates are updated using an expectation maximisation step.
+For the mean function parameters you can either use a Newton Raphson step (MCNR) or
+an expectation maximisation step (MCEM). A simulated likelihood step can be added at the
+end of either MCNR or MCEM, which uses an importance sampling technique to refine the
+parameter estimates.
+
+The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
+tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
+
+Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}
+
+\strong{Laplace approximation}
+Fits generalised linear mixed models using Laplace approximation to the log likelihood. For non-Gaussian models
+the covariance matrix is approximated using the first order approximation based on the marginal
+quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
+can be further adjusted following the proposal of Zeger et al (1988), use the member function \code{use_attenuated()} in this
+class, see \link[glmmrBase]{Model}.
 }
 \examples{
 
@@ -77,22 +92,12 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df
-)
-cov1 <- Covariance$new(
+mod <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
-)
-des <- Model$new(
-  covariance = cov1,
-  mean = mf1,
-  family = stats::gaussian(),
-  var_par = 1
+  family = stats::gaussian()
 )
 
-#alternatively we can pass the data directly to Model
 #here we will specify a cohort study and provide parameter values
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
@@ -107,30 +112,23 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-                  
+
+# or as
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = list(parameters = c(0.25)),
+  mean = list(parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson()
+  )
+
+
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
-                         family = stats::gaussian()) 
-
-## ------------------------------------------------
-## Method `Model$n_cluster`
-## ------------------------------------------------
-
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-des <- Model$new(
-  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
-  mean = list(formula = ~ factor(t) + int - 1),
-  data = df, 
-  family = stats::gaussian(),
-  var_par = 1
-)
-des$n_cluster() ## returns two levels of 10 and 50
+                         family = stats::gaussian())
 
 ## ------------------------------------------------
 ## Method `Model$subset_rows`
@@ -138,7 +136,7 @@ des$n_cluster() ## returns two levels of 10 and 50
 
 #generate a stepped wedge design and remove the first sequence
 des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean_function$data$J!=1)
+ids_to_keep <- which(des$mean$data$J!=1)
 des$subset_rows(ids_to_keep)
 
 ## ------------------------------------------------
@@ -182,14 +180,14 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates 
-des$mean_function$parameters <- c(rnorm(5),0.1)
-des$check() #updates 
+des$check() #updates
+des$mean$parameters <- c(rnorm(5),0.1)
+des$check() #updates
 
 ## ------------------------------------------------
 ## Method `Model$update_parameters`
@@ -203,7 +201,7 @@ des <- Model$new(
     formula = ~ (1|gr(cl)*ar1(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$update_parameters(cov.pars = c(0.1,0.9))
@@ -217,42 +215,119 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
     parameters = c(0.25,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::gaussian(),
   var_par = 1
 )
 des$power() #power of 0.90 for the int parameter
+
+## ------------------------------------------------
+## Method `Model$MCML`
+## ------------------------------------------------
+
+\dontrun{
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 3, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  covariance = list(parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),0.2)),
+  data = df,
+  family = gaussian(),
+  var_par = 1
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
+#fits the models using Stan
+fit2 <- des$MCML(y = ysim, method="mcnr")
+ #adds a simulated likelihood step after the MCEM algorithm
+fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
+
+ # we could use LA to find better starting values
+fit4 <- des$LA(y=ysim)
+# the fit parameter values are stored in the internal model class object
+fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
+}
+
+## ------------------------------------------------
+## Method `Model$LA`
+## ------------------------------------------------
+
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 3, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  covariance = list( parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),-0.2)),
+  data = df,
+  family = stats::binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$LA(y = ysim)
 }
 \references{
-Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models. 
-Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
+Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
+Journal of the American Statistical Association<, 88(421), 9–25. \url{doi:10.1080/01621459.1993.10594284}
 
-Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach. 
-Biometrics, 44(4), 1049.<doi:10.2307/2531734>
+McCullagh P, Nelder JA (1989). Generalized linear models, 2nd Edition. Routledge.
+
+McCulloch CE (1997). “Maximum Likelihood Algorithms for Generalized Linear Mixed Models.”
+Journal of the American statistical Association, 92(437), 162–170.\url{doi:10.2307/2291460}
+
+Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach.
+Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 }
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
+
+\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
+
+\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
 \item{\code{covariance}}{A \link[glmmrBase]{Covariance} object defining the random effects covariance.}
 
-\item{\code{mean_function}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
+\item{\code{mean}}{A \link[glmmrBase]{MeanFunction} object, defining the mean function for the model, including the data and covariate design matrix X.}
 
 \item{\code{family}}{One of the family function used in R's glm functions. See \link[stats]{family} for details}
 
 \item{\code{exp_condition}}{A vector indicting the unique experimental conditions for each observation, see Details.}
 
-\item{\code{Sigma}}{The overall covariance matrix for the observations. Calculated and updated automatically as \eqn{W^{-1} + ZDZ^T} where W is an n x n 
-diagonal matrix with elements on the diagonal equal to the GLM iterated weights. See Details.}
+\item{\code{formula}}{The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
+
+\item{\code{mcmc_options}}{There are five options for MCMC sampling that are specified in this list:
+\itemize{
+\item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
+sampler, this only applies to the first iteration of the MCML algorithm, as the
+values from the previous iteration are carried over.
+\item \code{samps} The number of MCMC samples drawn in the MCML algorithm. For
+smaller tolerance values larger numbers of samples are required. For the internal
+HMC sampler, larger numbers of samples are generally required than if using Stan since
+the samples generally exhibit higher autocorrealtion, especially for more complex
+covariance structures.
+\item \code{lambda} (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
+(equal to number of steps times the step length). Larger values result in lower correlation in samples, but
+require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
+\item \code{refresh} How frequently to print to console MCMC progress if displaying verbose output.
+\item \code{maxsteps} (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
+}}
 }
 \if{html}{\out{</div>}}
 }
@@ -261,10 +336,10 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \itemize{
 \item \href{#method-Model-use_attenuation}{\code{Model$use_attenuation()}}
 \item \href{#method-Model-fitted}{\code{Model$fitted()}}
+\item \href{#method-Model-predict}{\code{Model$predict()}}
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
 \item \href{#method-Model-n}{\code{Model$n()}}
-\item \href{#method-Model-n_cluster}{\code{Model$n_cluster()}}
 \item \href{#method-Model-subset_rows}{\code{Model$subset_rows()}}
 \item \href{#method-Model-subset_cols}{\code{Model$subset_cols()}}
 \item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
@@ -272,6 +347,16 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
+\item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
+\item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
+\item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
+\item \href{#method-Model-MCML}{\code{Model$MCML()}}
+\item \href{#method-Model-LA}{\code{Model$LA()}}
+\item \href{#method-Model-sparse}{\code{Model$sparse()}}
+\item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
+\item \href{#method-Model-log_gradient}{\code{Model$log_gradient()}}
+\item \href{#method-Model-u}{\code{Model$u()}}
+\item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -279,7 +364,7 @@ diagonal matrix with elements on the diagonal equal to the GLM iterated weights.
 \if{html}{\out{<a id="method-Model-use_attenuation"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-use_attenuation}{}}}
 \subsection{Method \code{use_attenuation()}}{
-Sets the model to use or not use "attenuation" when calculating the first-order approximation to 
+Sets the model to use or not use "attenuation" when calculating the first-order approximation to
 the covariance matrix.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$use_attenuation(use)}\if{html}{\out{</div>}}
@@ -300,21 +385,58 @@ None. Used for effects.
 \if{html}{\out{<a id="method-Model-fitted"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
-Return predicted values based on the currently stored parameter values in `mean_function`
+Return fitted values. Does not account for the random effects. For simulated values based
+on resampling random effects, see \code{sim_data()}. To predict the values at a new location see
+\code{predict()}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link", X, u)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{type}}{One of either "`link`" for values on the scale of the link function, or "`response`" 
+\item{\code{type}}{One of either "\code{link}" for values on the scale of the link function, or "\code{response}"
 for values on the scale of the response}
+
+\item{\code{X}}{(Optional) Fixed effects matrix to generate fitted values}
+
+\item{\code{u}}{(Optional) Random effects values at which to generate fitted values}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A \link[Matrix]{Matrix} class object containing the predicted values
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-predict"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-predict}{}}}
+\subsection{Method \code{predict()}}{
+Generate predictions at new values
+
+Generates predicted values using a new data set to specify covariance
+values and values for the variables that define the covariance function.
+The function will return a list with the linear predictor, conditional
+distribution of the new random effects term conditional on the current estimates
+of the random effects, and some simulated values of the random effects if requested.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$predict(newdata, offset = rep(0, nrow(newdata)), m = 0)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{newdata}}{A data frame specifying the new data at which to generate predictions}
+
+\item{\code{offset}}{Optional vector of offset values for the new data}
+
+\item{\code{m}}{Number of samples of the random effects to draw}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A list with the linear predictor, parameters (mean and covariance matrices) for
+the conditional distribution of the random effects, and any random effect samples.
 }
 }
 \if{html}{\out{<hr>}}
@@ -324,43 +446,45 @@ A \link[Matrix]{Matrix} class object containing the predicted values
 Create a new Model object
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$new(
+  formula,
   covariance,
   mean,
   data = NULL,
   family = NULL,
   var_par = NULL,
-  verbose = TRUE,
-  skip.sigma = FALSE
+  offset = NULL,
+  verbose = TRUE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then
+seaparate formulae need to be provided to the covariance and mean arguments below.}
+
 \item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
+that can be passed to \code{Covariance} to create a new object. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.5.}
 
 \item{\code{mean}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-that can be passed to `MeanFunction` to create a new object. At a minimum the list must specify a formula.
+that can be passed to \code{MeanFunction} to create a new object. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.}
 
 \item{\code{data}}{A data frame with the data required for the mean function and covariance objects. This argument
-can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
-object, or as a member of the list of arguments to both `covariance` and `mean`.}
+can be ignored if data are provided to the covariance or mean arguments either via \code{Covariance} and \code{MeanFunction}
+object, or as a member of the list of arguments to both \code{covariance} and \code{mean}.}
 
-\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This 
-argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
-objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial}, 
+\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This
+argument is optional if the family is provided either via a \code{MeanFunction} or \code{MeanFunction}
+objects, or as members of the list of arguments to \code{mean}. Current accepts \link[stats]{binomial},
 \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
-\item{\code{verbose}}{Logical indicating whether to provide detailed output}
+\item{\code{offset}}{A vector of offset values. Optional - could be provided to the argument to mean instead.}
 
-\item{\code{skip.sigma}}{Logical indicating whether to skip the creating of the covariance matrix Sigma. For 
-very large designs with thousands of observations or more, the covariance matrix will be too big to 
-fit in memory, so this option will prevent sigma being created.}
+\item{\code{verbose}}{Logical indicating whether to provide detailed output}
 }
 \if{html}{\out{</div>}}
 }
@@ -375,22 +499,12 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 
-mf1 <- MeanFunction$new(
-  formula = ~ factor(t) + int - 1,
-  data=df
-)
-cov1 <- Covariance$new(
+mod <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
-  formula = ~ (1|gr(cl)) + (1|gr(cl*t))
-)
-des <- Model$new(
-  covariance = cov1,
-  mean = mf1,
-  family = stats::gaussian(),
-  var_par = 1
+  family = stats::gaussian()
 )
 
-#alternatively we can pass the data directly to Model
 #here we will specify a cohort study and provide parameter values
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
@@ -405,13 +519,23 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-                  
+
+# or as
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = list(parameters = c(0.25)),
+  mean = list(parameters = c(1,0.5)),
+  data = df,
+  family = stats::poisson()
+  )
+
+
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
-                         family = stats::gaussian()) 
+                         family = stats::gaussian())
 }
 \if{html}{\out{</div>}}
 
@@ -422,7 +546,7 @@ spt_design <- Model$new(covariance = list( formula = ~(1|fexp(x,y)*ar1(t))),
 \if{html}{\out{<a id="method-Model-print"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-print}{}}}
 \subsection{Method \code{print()}}{
-Print method for `Model` class
+Print method for \code{Model} class
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$print()}\if{html}{\out{</div>}}
 }
@@ -453,51 +577,12 @@ Returns the number of observations in the model
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-n_cluster"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-n_cluster}{}}}
-\subsection{Method \code{n_cluster()}}{
-Returns the number of clusters at each level
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$n_cluster()}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{ignored}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with the level, number of clusters, and variables describing each level.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-des <- Model$new(
-  covariance = list(formula = ~ (1|gr(cl)) + (1|gr(cl*t))),
-  mean = list(formula = ~ factor(t) + int - 1),
-  data = df, 
-  family = stats::gaussian(),
-  var_par = 1
-)
-des$n_cluster() ## returns two levels of 10 and 50
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-subset_rows"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-subset_rows}{}}}
 \subsection{Method \code{subset_rows()}}{
 Subsets the design keeping specified observations only
 
-Given a vector of row indices, the corresponding rows will be kept and the 
+Given a vector of row indices, the corresponding rows will be kept and the
 other rows will be removed from the mean function and covariance
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$subset_rows(index)}\if{html}{\out{</div>}}
@@ -517,7 +602,7 @@ The function updates the object and nothing is returned
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{#generate a stepped wedge design and remove the first sequence
 des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean_function$data$J!=1)
+ids_to_keep <- which(des$mean$data$J!=1)
 des$subset_rows(ids_to_keep)
 }
 \if{html}{\out{</div>}}
@@ -529,7 +614,7 @@ des$subset_rows(ids_to_keep)
 \if{html}{\out{<a id="method-Model-subset_cols"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-subset_cols}{}}}
 \subsection{Method \code{subset_cols()}}{
-Subsets the columns of the design 
+Subsets the columns of the design
 
 Removes the specified columns from the linked mean function object's X matrix.
 \subsection{Usage}{
@@ -563,8 +648,8 @@ des$subset_cols(c(2:8,10))
 \subsection{Method \code{sim_data()}}{
 Generates a realisation of the design
 
-Generates a single vector of outcome data based upon the 
-specified GLMM design
+Generates a single vector of outcome data based upon the
+specified GLMM design.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$sim_data(type = "y")}\if{html}{\out{</div>}}
 }
@@ -574,7 +659,7 @@ specified GLMM design
 \describe{
 \item{\code{type}}{Either 'y' to return just the outcome data, 'data'
 to return a data frame with the simulated outcome data alongside the model data,
-or 'all', which will return a list with simulated outcomes y, matrices X and Z, 
+or 'all', which will return a list with simulated outcomes y, matrices X and Z,
 parameters beta, and the values of the simulated random effects.}
 }
 \if{html}{\out{</div>}}
@@ -638,14 +723,14 @@ des <- Model$new(
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$check() #does nothing
 des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates 
-des$mean_function$parameters <- c(rnorm(5),0.1)
-des$check() #updates 
+des$check() #updates
+des$mean$parameters <- c(rnorm(5),0.1)
+des$check() #updates
 }
 \if{html}{\out{</div>}}
 
@@ -658,7 +743,7 @@ des$check() #updates
 \subsection{Method \code{update_parameters()}}{
 Updates the parameters of the mean function and/or the covariance function
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_parameters(mean.pars = NULL, cov.pars = NULL, var.par = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -667,6 +752,8 @@ Updates the parameters of the mean function and/or the covariance function
 \item{\code{mean.pars}}{(Optional) Vector of new mean function parameters}
 
 \item{\code{cov.pars}}{(Optional) Vector of new covariance function(s) parameters}
+
+\item{\code{var.par}}{(Optional) A scalar value for var_par}
 
 \item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
@@ -682,7 +769,7 @@ des <- Model$new(
     formula = ~ (1|gr(cl)*ar1(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
-  data = df, 
+  data = df,
   family = stats::binomial()
 )
 des$update_parameters(cov.pars = c(0.1,0.9))
@@ -696,7 +783,7 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \if{html}{\out{<a id="method-Model-information_matrix"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-information_matrix}{}}}
 \subsection{Method \code{information_matrix()}}{
-Generates the information matrix
+Generates the information matrix of the GLS estimator
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix()}\if{html}{\out{</div>}}
 }
@@ -712,8 +799,8 @@ A PxP matrix
 Estimates the power of the design described by the model using the square root
 of the relevant element of the GLS variance matrix:
 
- \deqn{(X^T\Sigma^{-1}X)^{-1}}
- 
+\deqn{(X^T\Sigma^{-1}X)^{-1}}
+
 Note that this is equivalent to using the "design effect" for many
 models.
 \subsection{Usage}{
@@ -723,7 +810,7 @@ models.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{alpha}}{Numeric between zero and one indicating the type I error rate. 
+\item{\code{alpha}}{Numeric between zero and one indicating the type I error rate.
 Default of 0.05.}
 
 \item{\code{two.sided}}{Logical indicating whether to use a two sided test}
@@ -744,12 +831,12 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl*t)),
+    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
     parameters = c(0.25,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
-  data = df, 
+  data = df,
   family = stats::gaussian(),
   var_par = 1
 )
@@ -759,6 +846,309 @@ des$power() #power of 0.90 for the int parameter
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-w_matrix"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-w_matrix}{}}}
+\subsection{Method \code{w_matrix()}}{
+Returns the diagonal of the matrix W used to calculate the covariance matrix approximation
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$w_matrix()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector with values of the glm iterated weights
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-dh_deta"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-dh_deta}{}}}
+\subsection{Method \code{dh_deta()}}{
+Returns the derivative of the link function with respect to the linear preditor
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$dh_deta()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-Sigma"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-Sigma}{}}}
+\subsection{Method \code{Sigma()}}{
+Returns the (approximate) covariance matrix of y
+
+Returns the covariance matrix Sigma. For non-linear models this is an approximation. See Details.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$Sigma(inverse = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{inverse}}{Logical indicating whether to provide the covariance matrix or its inverse}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-MCML"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-MCML}{}}}
+\subsection{Method \code{MCML()}}{
+Markov Chain Monte Carlo Maximum Likelihood  model fitting
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
+  y,
+  method = "mcnr",
+  sim.lik.step = FALSE,
+  verbose = TRUE,
+  tol = 0.01,
+  max.iter = 30,
+  sparse = FALSE,
+  usestan = TRUE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A numeric vector of outcome data}
+
+\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, see Details. Default is \code{mcem}.}
+
+\item{\code{sim.lik.step}}{Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
+not do this step), defaults to FALSE.}
+
+\item{\code{verbose}}{Logical indicating whether to provide detailed output, defaults to TRUE.}
+
+\item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
+between iterations at which to stop the algorithm.}
+
+\item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
+
+\item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
+
+\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
+the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
+it generally produces a larger number of effective samplers per unit time, especially for more complex
+covariance functions.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{mcml} object
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 3, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  covariance = list(parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),0.2)),
+  data = df,
+  family = gaussian(),
+  var_par = 1
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
+#fits the models using Stan
+fit2 <- des$MCML(y = ysim, method="mcnr")
+ #adds a simulated likelihood step after the MCEM algorithm
+fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
+
+ # we could use LA to find better starting values
+fit4 <- des$LA(y=ysim)
+# the fit parameter values are stored in the internal model class object
+fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
+}
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-LA"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-LA}{}}}
+\subsection{Method \code{LA()}}{
+Maximum Likelihood model fitting with Laplace Approximation
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 40, tol = 0.01)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A numeric vector of outcome data}
+
+\item{\code{start}}{Optional. A numeric vector indicating starting values for the model parameters.}
+
+\item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
+
+\item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
+
+\item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
+
+\item{\code{tol}}{Maximum difference between successive iterations at which to terminate the algorithm}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{mcml} object
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(6)*t(5)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 3, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  covariance = list( parameters = c(0.25,0.7)),
+  mean = list(parameters = c(rep(0,5),-0.2)),
+  data = df,
+  family = stats::binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+fit1 <- des$LA(y = ysim)
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-sparse"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sparse}{}}}
+\subsection{Method \code{sparse()}}{
+Set whether to use sparse matrix methods for model calculations and fitting.
+By default the model does not use sparse matrix methods.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None, called for effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-mcmc_sample"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-mcmc_sample}{}}}
+\subsection{Method \code{mcmc_sample()}}{
+Generate an MCMC sample of the random effects
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(y, usestan = TRUE, verbose = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Numeric vector of outcome data}
+
+\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
+the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
+it generally produces a larger number of effective samplers per unit time, especially for more complex
+covariance functions.}
+
+\item{\code{verbose}}{Logical indicating whether to provide detailed output to the console}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix of samples of the random effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-log_gradient"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-log_gradient}{}}}
+\subsection{Method \code{log_gradient()}}{
+The gradient of the log-likelihood with respect to either the random effects or
+the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
+Cholesky decomposition of the matrix D. To obtain the random effects from the last
+model fit, see member function \verb{$u}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$log_gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Vector of outcome data}
+
+\item{\code{u}}{Vector of random effects scaled by the Cholesky decomposition of D}
+
+\item{\code{beta}}{Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A vector of the gradient
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-u"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-u}{}}}
+\subsection{Method \code{u()}}{
+Returns the sample of random effects from the last model fit
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$u(scaled = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{scaled}}{Logical indicating whether to return samples on the N(0,I) scale (\code{scaled=FALSE}) or
+N(0,D) scale (\code{scaled=TRUE})}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix of random effect samples
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-log_likelihood"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-log_likelihood}{}}}
+\subsection{Method \code{log_likelihood()}}{
+The log likelihood for the GLMM. The random effects can be left
+unspecified. If no random effects are provided, and there was a previous model fit with the same data \code{y}
+then the random effects will be taken from that model. If there was no
+previous model fit then the random effects are assumed to be all zero.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$log_likelihood(y, u)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{A vector of outcome data}
+
+\item{\code{u}}{An optional matrix of random effect samples. This can be a single column.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The log-likelihood of the model parameters
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-clone"></a>}}

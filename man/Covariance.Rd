@@ -9,54 +9,54 @@ R6 Class representing a covariance function and data
 R6 Class representing a covariance function and data
 }
 \details{
-For the generalised linear mixed model 
+For the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Z\gamma)}
 \deqn{\gamma \sim MVN(0,D)}
 
 where h is the link function, this class defines Z and D. The covariance is defined by a covariance function, data, and parameters.
-A new instance can be generated with $new(). The class will generate the 
-relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a 
+A new instance can be generated with $new(). The class will generate the
+relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 detailed guide on model specification.
 
 
 **Intitialisation**
-A covariance function is specified as an additive formula made up of 
-components with structure \code{(1|f(j))}. The left side of the vertical bar 
-specifies the covariates in the model that have a random effects structure. 
-The right side of the vertical bar specify the covariance function `f` for 
-that term using variable named in the data `j`. 
-Covariance functions on the right side of the vertical bar are multiplied 
-together, i.e. \code{(1|f(j)*g(t))}. 
+A covariance function is specified as an additive formula made up of
+components with structure \code{(1|f(j))}. The left side of the vertical bar
+specifies the covariates in the model that have a random effects structure.
+The right side of the vertical bar specify the covariance function `f` for
+that term using variable named in the data `j`.
+Covariance functions on the right side of the vertical bar are multiplied
+together, i.e. \code{(1|f(j)*g(t))}.
 
 There are several common functions included for a named variable in data \code{x}.
 A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
-* \code{gr(x)}: Indicator function (1 parameter)   
+* \code{gr(x)}: Indicator function (1 parameter)
 * \code{fexp(x)}: Exponential function (2 parameters)
 * \code{ar1(x)}: AR1 function (1 parameter)
 * \code{sqexp(x)}: Squared exponential (1 parameter)
 * \code{matern(x)}: Matern function (2 parameters)
 * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
 
-Parameters are provided to the covariance function as a vector. 
-The parameters in the vector for each function should be provided 
-in the order the covariance functions are written are written. 
+Parameters are provided to the covariance function as a vector.
+The parameters in the vector for each function should be provided
+in the order the covariance functions are written are written.
 For example,
 * Formula: `~(1|gr(j))+(1|gr(j*t))`; parameters: `c(0.25,0.1)`
 * Formula: `~(1|gr(j)*fexp(t))`; parameters: `c(0.25,1,0.5)`
 Note that it is also possible to specify a group membership with two
-variable alternatively as `(1|gr(j)*gr(t))`, for example, but this 
+variable alternatively as `(1|gr(j)*gr(t))`, for example, but this
 will require two parameters to be specified, so it is recommended against.
 
-If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
+If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices
 are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
-If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
+If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of
 parameters is automatic if using the `update_parameters()` member function.
 
 
-Using `update_parameters()` is the preferred way of updating the parameters of the 
-mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
+Using `update_parameters()` is the preferred way of updating the parameters of the
+mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`.
 The function calls check functions to automatically update linked matrices with the new parameters.
 If using direct assignment, call `self$check()` afterwards.
 }
@@ -99,17 +99,7 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
-cov$subset(1:100)                     
-
-## ------------------------------------------------
-## Method `Covariance$sampleD`
-## ------------------------------------------------
-
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
-                      parameters = c(0.05,0.8),
-                      data= df)
-cov$sampleD(c(0.01,0.1))
+cov$subset(1:100)
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -119,9 +109,6 @@ cov$sampleD(c(0.01,0.1))
 \item{\code{formula}}{Covariance function formula.}
 
 \item{\code{parameters}}{Model parameters specified in order of the functions in the formula.}
-
-\item{\code{eff_range}}{The effective range of covariance functions, specified in order of the functions in the formula. Only 
-the functions with compact support require effective range parameters.}
 
 \item{\code{Z}}{Design matrix}
 
@@ -138,9 +125,11 @@ the functions with compact support require effective range parameters.}
 \item \href{#method-Covariance-update_parameters}{\code{Covariance$update_parameters()}}
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
-\item \href{#method-Covariance-sampleD}{\code{Covariance$sampleD()}}
-\item \href{#method-Covariance-get_D_data}{\code{Covariance$get_D_data()}}
 \item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
+\item \href{#method-Covariance-log_likelihood}{\code{Covariance$log_likelihood()}}
+\item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
+\item \href{#method-Covariance-sparse}{\code{Covariance$sparse()}}
+\item \href{#method-Covariance-parameter_table}{\code{Covariance$parameter_table()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -163,13 +152,7 @@ Scalar
 \subsection{Method \code{new()}}{
 Create a new Covariance object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(
-  formula,
-  data = NULL,
-  parameters = NULL,
-  eff_range = NULL,
-  verbose = FALSE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(formula, data = NULL, parameters = NULL, verbose = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -181,9 +164,6 @@ Create a new Covariance object
 
 \item{\code{parameters}}{(Optional) Vector with parameter values for the functions in the model
 formula. See Details.}
-
-\item{\code{eff_range}}{(Optional) Vector with the effective range parameter for covariance
-functions that require it, i.e. those with compact support.}
 
 \item{\code{verbose}}{Logical whether to provide detailed output.}
 }
@@ -243,15 +223,13 @@ cov$check(verbose=FALSE)
 \subsection{Method \code{update_parameters()}}{
 Updates the covariance parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$update_parameters(parameters, verbose = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$update_parameters(parameters)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{parameters}}{A vector of parameters for the covariance function(s). See Details.}
-
-\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
 \if{html}{\out{</div>}}
 }
@@ -306,60 +284,12 @@ Keep specified indices and removes the rest
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
                       parameters = c(0.05,0.8),
                       data= df)
-cov$subset(1:100)                     
+cov$subset(1:100)
 }
 \if{html}{\out{</div>}}
 
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Covariance-sampleD"></a>}}
-\if{latex}{\out{\hypertarget{method-Covariance-sampleD}{}}}
-\subsection{Method \code{sampleD()}}{
-Generate a new D matrix
-
-D is the covariance matrix of the random effects terms in the generalised linear mixed
-model. This function will return a matrix D for a given set of parameters.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$sampleD(parameters)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{parameters}}{list of lists, see `initialize()`}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-matrix
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
-                      parameters = c(0.05,0.8),
-                      data= df)
-cov$sampleD(c(0.01,0.1))
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Covariance-get_D_data"></a>}}
-\if{latex}{\out{\hypertarget{method-Covariance-get_D_data}{}}}
-\subsection{Method \code{get_D_data()}}{
-Returns the list specifying the covariance matrix D
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_D_data()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A list
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Covariance-get_chol_D"></a>}}
@@ -367,20 +297,81 @@ A list
 \subsection{Method \code{get_chol_D()}}{
 Returns the Cholesky decomposition of the covariance matrix D
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D(parameters = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-log_likelihood"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-log_likelihood}{}}}
+\subsection{Method \code{log_likelihood()}}{
+The function returns the values of the multivariate Gaussian log likelihood
+with mean zero and covariance D for a given vector of random effect terms.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$log_likelihood(u)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{parameters}}{(Optional) Vector of parameters, if specified then the Cholesky
-factor is calculated with these parameter values rather than the ones stored in the
-object.}
+\item{\code{u}}{Vector of random effects}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A list of matrices
+Value of the log likelihood
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-simulate_re"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-simulate_re}{}}}
+\subsection{Method \code{simulate_re()}}{
+Simulates a set of random effects from the multivariate Gaussian distribution
+with mean zero and covariance D.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$simulate_re()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector of random effect values
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-sparse"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-sparse}{}}}
+\subsection{Method \code{sparse()}}{
+If this function is called then sparse matrix methods will be used for calculations
+involving D
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{sparse}}{Logical. Whether to use sparse methods (TRUE) or not (FALSE)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None. Called for effects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-parameter_table"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-parameter_table}{}}}
+\subsection{Method \code{parameter_table()}}{
+Returns a table showing which parameters are members of which covariance
+function term.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$parameter_table()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A data frame
 }
 }
 \if{html}{\out{<hr>}}

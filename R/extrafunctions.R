@@ -52,3 +52,44 @@ progress_bar <- function(i,n,len=30){
   msg <- paste0("|",pt1,pt2,"| ",round((i*100/n),0),"%")
   return(msg)
 }
+
+
+#' Returns the file name and type for MCNR function
+#' 
+#' Returns the file name and type for MCNR function
+#' 
+#' @param family family object
+#' @return list with filename and type
+mcnr_family <- function(family){
+  f1 <- family[[1]]
+  link <- family[[2]]
+  gaussian_list <- c("identity")
+  binomial_list <- c("logit","log","identity","probit")
+  poisson_list <- c("log")
+  type <- which(get(paste0(f1,"_list"))==link)
+  return(list(file = paste0("mcml_",f1,".stan"),type=type))
+}
+
+#' Data for model tests
+#'
+#' @name ytest1
+#' @docType data
+NULL
+
+#' Data for first example in Section 3.12 of JSS paper
+#'
+#' @name yexample312a
+#' @docType data
+NULL
+
+#' Data for second example in Section 3.12 of JSS paper
+#'
+#' @name yexample312b
+#' @docType data
+NULL
+
+#' Data for third example in Section 3.12 of JSS paper
+#'
+#' @name yexample312c
+#' @docType data
+NULL

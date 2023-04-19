@@ -21,6 +21,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @field parameters A vector of parameter values for \eqn{\beta} used for simulating data and calculating
                           #' covariance matrix of observations for non-linear models.
                           parameters = NULL,
+                          #' @field offset An optional vector specifying the offset values
+                          offset = NULL,
                           #' @field X the fixed effects design matrix
                           X = NULL,
                           #' @description 
@@ -31,7 +33,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @examples
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
-                          #' df[df$cl <= 5, 'int'] <- 1
+                          #' df[df$cl <= 2, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1)
@@ -59,7 +61,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           check = function(verbose=TRUE){
                             if(private$hash != private$hash_do()){
                               if(verbose)message("Updating model")
-                              private$generate()
+                              private$genX()
+                              private$hash <- private$hash_do()
                             }},
                           #' @description 
                           #' Create a new MeanFunction object
@@ -82,35 +85,40 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param data (Optional) A data frame containing the covariates in the model, named in the model formula
                           #' @param parameters (Optional) A vector with the values of the parameters \eqn{\beta} to use in data simulation and covariance calculations.
                           #' If the parameters are not specified then they are initialised to 0.
+                          #' @param offset A vector of offset values (optional)
                           #' @param verbose Logical indicating whether to report detailed output
                           #' @return A MeanFunction object
                           #' @examples 
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
-                          #' df[df$cl <= 5, 'int'] <- 1
+                          #' df[df$cl <= 2, 'int'] <- 1
                           #' mf1 <- MeanFunction$new(formula = ~ int ,
                           #'                         data=df,
                           #'                         parameters = c(-1,1),
                           #'                         )
                           initialize = function(formula,
-                                                data = NULL,
+                                                data,
                                                 parameters = NULL ,
+                                                offset = NULL,
                                                 verbose = FALSE
                           ){
 
                             allset <- TRUE
-                            self$formula <- as.formula(formula, env=.GlobalEnv)
+                            self$formula <- Reduce(paste,as.character(formula))
+                            if(!is(data,"data.frame"))stop("data must be data frame")
+                            self$data <- data
                             
-                            if(!is.null(data)){
-                              if(!is(data,"data.frame"))stop("data must be data frame")
-                              self$data <- data
-                            } else {
-                              allset <- FALSE
-                            }
+                            private$original_formula <- self$formula
                             
                             if(!is.null(parameters)){
                               self$parameters <- parameters
                             } 
+                            
+                            if(is.null(offset) & !is.null(data)){
+                              self$offset <- rep(0,nrow(self$data))
+                            } 
+                            
+                            
                             
                             if(allset){
                               private$generate(verbose=verbose)
@@ -126,7 +134,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param ... ignored
                           print = function(){
                             cat("\U2BC8 Linear Predictor")
-                            cat("\n     \U2BA1 Formula: ~",as.character(self$formula)[2])
+                            cat("\n     \U2BA1 Formula: ~",self$formula)
                             cat("\n     \U2BA1 Parameters: ",self$parameters)
                           },
                           #' @description 
@@ -140,10 +148,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' 
                           #' @param parameters A vector of parameters for the mean function.
                           #' @param verbose Logical indicating whether to provide more detailed feedback
-                          update_parameters = function(parameters,
-                                                       verbose = FALSE){
+                          update_parameters = function(parameters){
                             self$parameters <- parameters
-                            self$check(verbose)
+                            self$check(FALSE)
                           },
                           #' @description 
                           #' Returns or replaces the column names of the data in the object
@@ -187,6 +194,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           subset_rows = function(index){
                             self$X <- self$X[index,]
                             self$data <- self$data[index,]
+                            self$offset <- self$offset[index]
                           },
                           #' @description 
                           #' Keeps a subset of the columns of X 
@@ -207,90 +215,89 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' mf1$subset_cols(1:2) 
                           subset_cols = function(index){
                             self$X <- self$X[,index]
+                          },
+                          #' @description 
+                          #' Returns the linear predictor 
+                          #' 
+                          #' Returns the linear predictor, X * beta
+                          #' @return A vector
+                          linear_predictor = function(){
+                            xb <- self$X %*% self$parameters + self$offset
+                            if(is(xb,"matrix"))xb <- drop(xb)
+                            if(is(xb,"Matrix"))xb <- Matrix::drop(xb)
+                            return(xb)
                           }
                         ),
                         private = list(
                           mod_string = NULL,
                           form = NULL,
-                          Xb = NULL,
-                          funs = NULL,
-                          vars = NULL,
                           hash = NULL,
+                          original_formula = NULL,
                           hash_do = function(){
                             digest::digest(c(self$formula,self$data,
                                              self$parameters))
                           },
                           generate = function(verbose = FALSE){
-                            
-                            if(length(self$formula)==3)stop("formula should not have dependent variable.")
-                            #check if all parameters in data
-                            if(any(!all.vars(self$formula)%in%colnames(self$data)))stop("variables not in data frame")
-                            
-                            private$genTerms()
+                            self$formula <- private$original_formula
+                            if(grepl("~",self$formula) && length(as.formula(self$formula))==3)stop("formula should not have dependent variable.")
+                            if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
+                            self$formula <- gsub(" ","",self$formula)
+                            if(isTRUE(all.equal("1",self$formula))){
+                              self$data <- cbind(self$data,1)
+                              colnames(self$data)[ncol(self$data)] <- "[Intercept]"
+                              self$formula <- "[Intercept]-1"
+                            } else {
+                              #need to remove random effect terms from the formula
+                              self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
+                              
+                              ## add handling of factors
+                              if(grepl("factor",self$formula) & !grepl("factor\\[",self$formula)){
+                                rm_int <- grepl("-1",self$formula)
+                                cstart <- ifelse(rm_int,1,2)
+                                regres <- gregexpr("factor\\(.*\\)",self$formula)
+                                for(i in 1:length(regres[[1]])){
+                                  tmpstr <- substr(self$formula,regres[[1]][i],regres[[1]][i]+attr(regres[[1]],"match.length")[i]-1)
+                                  tmpdat <- stats::model.matrix(as.formula(paste0("~",tmpstr,"-1")),data=self$data)
+                                  f1 <- self$formula
+                                  for(j in (cstart):ncol(tmpdat)){
+                                    cname1 <- colnames(tmpdat)[j]
+                                    cname1 <- gsub("\\(","\\[",cname1)
+                                    cname1 <- gsub("\\)","\\]",cname1)
+                                    colnames(tmpdat)[j] <- cname1
+                                    if(j==cstart){
+                                      f2 <- cname1
+                                    } else {
+                                      f2 <- paste0(f2," + ",cname1)
+                                    }
+                                  }
+                                  self$data <- cbind(self$data,tmpdat[,cstart:ncol(tmpdat)])
+                                  tmpform <- ""
+                                  if(grepl("[^ \\s\\~]",substr(f1,1,(regres[[1]][i]-1)))){
+                                    tmpform <- paste0(tmpform,substr(f1,1,(regres[[1]][i]-1))," + ",f2)
+                                  } else {
+                                    tmpform <- f2
+                                  }
+                                  if((regres[[1]][i]+attr(regres[[1]],"match.length")[i]) <= nchar(self$formula)){
+                                    tmpform <- paste0(tmpform, substr(f1,regres[[1]][i]+attr(regres[[1]],"match.length")[i],nchar(f1)))
+                                  }
+                                  self$formula <- tmpform
+                                  # remove any double +
+                                  self$formula <- gsub("\\+\\s*\\+","+",self$formula)
+                                }
+                              }
+                              # change the brackets to avoid confusion
+                              self$formula <- gsub("-[ \\s+]1","-1",self$formula)
+                            }
                             private$genX()
                             private$hash <- private$hash_do()
                           },
-                          genTerms = function(){
-                            mf1 <- self$formula[[2]]
-                            checkTerm <- TRUE
-                            iter <- 0
-                            funs <- list()
-                            vars <- list()
-                            while(checkTerm){
-                              iter <- iter + 1
-                              checkTerm <- I(length(mf1)>1 && (mf1[[1]]=="+"|mf1[[1]]=="-"))
-                              if(checkTerm){
-                                vars[[iter]] <- all.vars(mf1[[3]])
-                                if(length(mf1[[3]])==1){
-                                  funs[[iter]] <- "identity"
-                                } else {
-                                  funs[[iter]] <- as.character(mf1[[3]][[1]])
-                                }
-                                if(length(vars[[iter]])==0){
-                                  vars[[iter]] <- funs[[iter]] <- "RMINT"
-                                }
-                                mf1 <- mf1[[2]]
-                              } else {
-                                vars[[iter]] <- all.vars(mf1)
-                                if(length(mf1)==1){
-                                  funs[[iter]] <- "identity"
-                                } else {
-                                  funs[[iter]] <- as.character(mf1[[1]])
-                                }
-                              }
-                            }
-
-                            private$funs <- rev(funs)
-                            private$vars <- rev(vars)
-
-                          },
                           genX = function(){
-                            # generate model matrix X, including linearisation of non-linear terms,
-                            X <- matrix(1,nrow=self$n(),ncol=1)
-                            colnames(X) <- "(Intercept)"
-                            for(i in 1:length(private$funs)){
-                              if(private$funs[[i]]=="RMINT")next
-                              Xadd <- do.call(paste0("d",private$funs[[i]]),list(list(
-                                data = as.matrix(self$data[,private$vars[[i]]]),
-                                pars = self$parameters[[i]]
-                              )))
-                              #add colnames depending on the function
-                              if(private$funs[[i]] == "factor"){
-                                colnames(Xadd) <- paste0(private$vars[[i]],levels(factor(self$data[,private$vars[[i]]])))
-                              } else if(private$funs[[i]] == "identity"){
-                                colnames(Xadd) <- private$vars[[i]]
-                              } else {
-                                colnames(Xadd) <- paste0(private$vars[[i]],ncol(Xadd))
-                              }
-                              
-                              X <- cbind(X,Xadd)
-                            }
-                            if(any(private$funs=="RMINT"))X <- X[,-1]
-                            if(is.null(self$parameters))self$parameters <- rep(0,ncol(X))
-                            if(ncol(X)!=length(unlist(self$parameters)))warning("wrong number of parameters")
-                            private$Xb <- X %*% matrix(unlist(self$parameters[1:ncol(X)]),ncol=1)
-                            self$X <- Matrix::Matrix(X)
-                            
+                            self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
+                            if(!is.null(self$parameters)&ncol(self$X)!=length(self$parameters))stop("wrong length parameter vector")
+                            if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
+                            cnames <- .x_names(self$formula)
+                            if(!grepl("-1",self$formula)) cnames <- c("[Intercept]",cnames)
+                            colnames(self$X) <- cnames
                           }
                           
                         ))
