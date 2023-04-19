@@ -84,12 +84,12 @@ NULL
 
 #' Data for second example in Section 3.12 of JSS paper
 #'
-#' @name yexample312a
+#' @name yexample312b
 #' @docType data
 NULL
 
 #' Data for third example in Section 3.12 of JSS paper
 #'
-#' @name yexample312a
+#' @name yexample312c
 #' @docType data
 NULL
