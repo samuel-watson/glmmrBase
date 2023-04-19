@@ -11,7 +11,7 @@ A GLMM Model
 \details{
 A generalised linear mixed model and a range of associated functions
 
-A detailed vingette for this package is available online \url{arXiv:2303.12657}. Briefly, for the generalised linear mixed model
+A detailed vingette for this package is available online\url{doi:10.48550/arXiv.2303.12657}. Briefly, for the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Zu)}
