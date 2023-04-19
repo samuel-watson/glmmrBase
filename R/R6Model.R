@@ -2,7 +2,7 @@
 #'
 #' A generalised linear mixed model and a range of associated functions
 #' @details
-#' For the generalised linear mixed model
+#' A detailed vingette for this package is available online <arXiv:2303.12657>. Briefly, for the generalised linear mixed model
 #'
 #' \deqn{Y \sim F(\mu,\sigma)}
 #' \deqn{\mu = h^-1(X\beta + Zu)}
@@ -19,15 +19,24 @@
 #'
 #' where _W_ is a diagonal matrix with the GLM iterated weights for each observation equal
 #' to, for individual _i_ \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partial \eta_i}\right) ^2 Var(y|u)}
-#' (see Table 2.1 in McCullagh and Nelder (1989) <ISBN:9780412317606>). The modification proposed by Zegers et al to the linear predictor to
+#' (see Table 2.1 in McCullagh and Nelder (1989)). The modification proposed by Zegers et al to the linear predictor to
 #' improve the accuracy of approximations based on the marginal quasilikelihood is also available, see `use_attenuation()`.
 #'
 #' See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
 #' detailed guide on model specification.
+#' 
+#' The class also includes model fitting with Markov Chain Monte Carlo Maximum Likelihood implementing the algorithms described by McCulloch (1997), 
+#' and fast model fitting using Laplace approximation. Functions for returning related values such as the log gradient, log probability, and other 
+#' matrices are also available.
 #' @references
 #' Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
 #' Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
-#'
+#' 
+#' McCullagh P, Nelder JA (1989). Generalized linear models, 2nd Edition. Routledge.
+#' 
+#' McCulloch CE (1997). “Maximum Likelihood Algorithms for Generalized Linear Mixed Models.” 
+#' Journal of the American statistical Association, 92(437), 162–170.<doi:10.2307/2291460>
+#' 
 #' Zeger, S. L., Liang, K.-Y., Albert, P. S. (1988). Models for Longitudinal Data: A Generalized Estimating Equation Approach.
 #' Biometrics, 44(4), 1049.<doi:10.2307/2531734>
 #' @importFrom Matrix Matrix
