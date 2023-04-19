@@ -81,3 +81,15 @@ NULL
 #' @name yexample312a
 #' @docType data
 NULL
+
+#' Data for second example in Section 3.12 of JSS paper
+#'
+#' @name yexample312a
+#' @docType data
+NULL
+
+#' Data for third example in Section 3.12 of JSS paper
+#'
+#' @name yexample312a
+#' @docType data
+NULL
