@@ -391,7 +391,12 @@ inline double calculate(const intvec& instructions,
       b = stack.top();
       stack.pop();
       stack.push(R::bessel_k(a, b, 1));
-      break; 
+      break;
+    case 16:
+      a = stack.top();
+      stack.pop();
+      stack.push(log(a));
+      break;
     case 20:
       stack.push(10);
       break;

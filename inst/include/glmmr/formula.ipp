@@ -13,16 +13,38 @@ inline void glmmr::Formula::tokenise(){
     formula_.erase(minone,2);
   }
   
-  std::stringstream f1(formula_);
-  str segment;
-  while(std::getline(f1,segment,'+')){
-    tokens_.push_back(segment);
-  }
+  // this code just splits the string at +
+  //std::stringstream f1(formula_);
+  //str segment;
+  //while(std::getline(f1,segment,'+')){
+  //  tokens_.push_back(segment);
+  //}
   
+  // this regex did not work - I can't get it to work!
   // tokenise string - split at + or space except between brackets
   //const std::regex re("([\\+]+)(?![^\\(]*\\|)(?![^\\|]*\\))");
   //std::sregex_token_iterator it{ formula_.begin(), formula_.end(), re, -1 };
   //tokens_ = strvec{ it, {} };
+  
+  // so we have to write our own algorithm to split the tokens
+  int nchar = formula_.size();
+  int cursor = 0;
+  int bracket_count = 0; // to deal with opening of brackets
+  str token;
+  while(cursor < nchar){
+    Rcpp::Rcout << "\nCursor: " << cursor;
+    
+    while(!(formula_[cursor]=='+' && bracket_count == 0) || cursor==nchar){
+      if(formula_[cursor]=='(')bracket_count++;
+      if(formula_[cursor]==')')bracket_count--;
+      token.push_back(formula_[cursor]);
+      cursor++;
+    }
+    Rcpp::Rcout << "\nToken: " << token;
+    tokens_.push_back(token);
+    token.clear();
+    cursor++;
+  }
   
   tokens_.erase(
     std::remove_if(tokens_.begin(),
@@ -70,6 +92,7 @@ inline void glmmr::Formula::tokenise(){
   }
 }
 
+// update this to only capture random effects
 inline void glmmr::Formula::formula_validate(){
   //currently only checks if addition inside re term
   int open = 0;
