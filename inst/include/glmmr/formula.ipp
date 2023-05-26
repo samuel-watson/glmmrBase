@@ -13,61 +13,31 @@ inline void glmmr::Formula::tokenise(){
     formula_.erase(minone,2);
   }
   
-  // this code just splits the string at +
-  //std::stringstream f1(formula_);
-  //str segment;
-  //while(std::getline(f1,segment,'+')){
-  //  tokens_.push_back(segment);
-  //}
-  
-  // this regex did not work - I can't get it to work!
-  // tokenise string - split at + or space except between brackets
-  //const std::regex re("([\\+]+)(?![^\\(]*\\|)(?![^\\|]*\\))");
-  //std::sregex_token_iterator it{ formula_.begin(), formula_.end(), re, -1 };
-  //tokens_ = strvec{ it, {} };
-  
   // so we have to write our own algorithm to split the tokens
-  int nchar = formula_.size();
+  std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
+  int nchar = formula_as_chars.size();
   int cursor = 0;
   int bracket_count = 0; // to deal with opening of brackets
-  str token;
+  
   while(cursor < nchar){
-    Rcpp::Rcout << "\nCursor: " << cursor;
-    
-    while(!(formula_[cursor]=='+' && bracket_count == 0) || cursor==nchar){
-      if(formula_[cursor]=='(')bracket_count++;
-      if(formula_[cursor]==')')bracket_count--;
-      token.push_back(formula_[cursor]);
+    str token;
+    while(!(formula_as_chars[cursor]=='+' && bracket_count == 0) && cursor < nchar){
+      if(formula_as_chars[cursor]=='(')bracket_count++;
+      if(formula_as_chars[cursor]==')')bracket_count--;
+      if(!isspace(formula_as_chars[cursor]))token.push_back(formula_as_chars[cursor]);
       cursor++;
     }
-    Rcpp::Rcout << "\nToken: " << token;
-    tokens_.push_back(token);
-    token.clear();
+    
+    if(token.size()>0){
+      if(token.front() == '(' && token.back()==')'){
+        re_.push_back(token);
+      } else{
+        fe_.push_back(token);
+      }
+    }
+    
     cursor++;
   }
-  
-  tokens_.erase(
-    std::remove_if(tokens_.begin(),
-                   tokens_.end(),
-                   [](std::string const& s) {
-                     return s.size() == 0;
-                   }),
-                   tokens_.end());
-
-  // separate into fixed and random effect components
-  int n = tokens_.size();
-  for(int i = 0; i<n ; i++){
-    if(tokens_[i][0]=='('){
-      if(tokens_[i].back()==')'){
-        re_.push_back(tokens_[i]);
-      } else {
-        Rcpp::stop("Error in formula");
-      }
-    } else {
-      fe_.push_back(tokens_[i]);
-    }
-  }
-
   
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);
@@ -78,7 +48,7 @@ inline void glmmr::Formula::tokenise(){
   re_terms_ = re_;
 
   for(int i = 0; i<m;i++){
-    std::stringstream check1(re_[0]);
+    std::stringstream check1(re_[i]);
     str intermediate;
     re_.erase(re_.begin());
     getline(check1, intermediate, '|');
@@ -86,20 +56,30 @@ inline void glmmr::Formula::tokenise(){
     getline(check1, intermediate, '|');
     re_.push_back(intermediate.substr(0,intermediate.length()-1));
   }
-
+  
   for(int i = 0; i < z_.size(); i++){
     z_[i].erase(std::remove_if(z_[i].begin(), z_[i].end(), [](unsigned char x) { return std::isspace(x); }), z_[i].end());
   }
 }
 
-// update this to only capture random effects
 inline void glmmr::Formula::formula_validate(){
   //currently only checks if addition inside re term
   int open = 0;
+  bool has_a_plus = false;
+  bool has_a_vert = false;
   for(auto ch: formula_){
     if(ch=='(')open++;
-    if(ch==')')open--;
-    if(ch=='+' && open>0)Rcpp::stop("Addition inside re term not currently supported");
+    if(ch==')'){
+      open--;
+      if(open == 0){
+        has_a_plus = false;
+        has_a_vert = false;
+      }
+    }
+    if(ch=='+' && open > 0)has_a_plus = true;
+    if(ch=='|' && open > 0)has_a_vert = true;
+    
+    if(has_a_plus && has_a_vert)Rcpp::stop("Addition inside re term not currently supported");
   }
 }
 

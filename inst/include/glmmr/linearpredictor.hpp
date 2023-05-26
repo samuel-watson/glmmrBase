@@ -10,90 +10,111 @@ namespace glmmr {
 
 class LinearPredictor {
 public:
-  const Eigen::ArrayXXd data_;
-  const strvec colnames_;
-  Eigen::VectorXd parameters_;
+  //const Eigen::ArrayXXd data_;
+  //const strvec colnames_;data_(data), colnames_(colnames), 
+  dblvec parameters_;
 
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames) :
-    data_(data), colnames_(colnames), 
-    parameters_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1), 
+    colnames_(colnames),  
     form_(form),
     P_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1),
     n_(data.rows()),
-    X_(n_,P_) {
-    parameters_.setZero();
-    parse();
-  };
+    X_(Eigen::MatrixXd::Zero(n_,P_)) {
+      parse(data,colnames);
+    };
 
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const dblvec& parameters) :
-    data_(data), colnames_(colnames), 
-    parameters_(parameters.size()), 
+    colnames_(colnames), 
     form_(form),
     P_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1),
     n_(data.rows()),
-    X_(n_,P_) {
-    for(int i = 0; i < parameters.size(); i++)parameters_(i) = parameters[i];
-    parse();
-  };
+    X_(Eigen::MatrixXd::Zero(n_,P_)) {
+      parse(data,colnames);
+      update_parameters(parameters);
+    };
 
   LinearPredictor(const glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const Eigen::ArrayXd& parameters) :
-    data_(data), colnames_(colnames), 
-    parameters_(parameters.matrix()), 
+    colnames_(colnames), 
     form_(form),
     P_(form.RM_INT ? form.fe_.size() : form.fe_.size()+1),
     n_(data.rows()),
-    X_(n_,P_) {
-    parse();
-  };
+    X_(Eigen::MatrixXd::Zero(n_,P_)) {
+      parse(data,colnames);
+      update_parameters(parameters);
+    };
 
   void update_parameters(const dblvec& parameters){
     if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
-    for(int i = 0; i < P_; i++)parameters_(i) = parameters[i];
+    parameters_ = parameters;
+    // update the parameters in the components
+    int par_counter = 0;
+    int par_fn;
+    for(int i = 0; i < n_fe_components_; i++){
+      par_fn = x_components[i].pars();
+      dblvec newpars(par_fn);
+      for(int j = 0; j < par_fn; j++)newpars[j] = parameters_[par_counter+j];
+      for(auto j: newpars)Rcpp::Rcout << j;
+      x_components[i].update_parameters(newpars);
+      par_counter += par_fn;
+    }
   };
 
   void update_parameters(const Eigen::ArrayXd& parameters){
     if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
-    parameters_ = parameters;
-  };
-  
-  void update_parameters2(const dblvec& parameters){
-    if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
-    for(int i = 0; i < P_; i++)parameters_(i) = parameters[i];
-    int par_iterator = 0;
-    for(int j = 0; j < n_fe_components_; j++){
-      int n_par = x_components[j].pars();
-      dblvec newpar(parameters.begin()+par_iterator,parameters.begin()+par_iterator+n_par-1);
-      x_components[j].update_parameters(newpar);
-      par_iterator += n_par;
-    }
+    dblvec new_parameters(parameters.data(),parameters.data()+parameters.size());
+    update_parameters(new_parameters);
   };
 
   int P(){
     return P_;
   }
-
-  void parse();
   
-  void parse2();
+  strvec colnames(){
+    return colnames_;
+  }
+  
+  void parse(const ArrayXXd& data,
+              const strvec& colnames);
 
-  Eigen::VectorXd xb(){
-    return X_*parameters_;
+  VectorXd xb(){
+    //return X_*parameters_;
+    VectorXd xb = VectorXd::Zero(n_);
+    for(int i = 0; i < n_fe_components_; i++){
+      xb += x_components[i].xb();
+    }
+    return xb;
   }
 
-  Eigen::MatrixXd X(){
+  MatrixXd X(){
     return X_;
+  }
+  
+  VectorXd parameter_vector(){
+    VectorXd pars = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(parameters_.data(),parameters_.size());
+    return pars;
+  }
+  
+  bool any_nonlinear(){
+    int i=0;
+    bool any_nonlin = false;
+    while(!any_nonlin && i<n_fe_components_){
+      any_nonlin = x_components[i].nonlinear();
+      i++;
+    }
+    return any_nonlin;
   }
 
 private:
   const glmmr::Formula& form_;
+  strvec colnames_;
   int P_;
   int n_fe_components_;
   int n_;
@@ -103,27 +124,9 @@ private:
 };
 }
 
-inline void glmmr::LinearPredictor::parse(){
-  glmmr::print_vec_1d<strvec>(form_.fe_);
-  P_ = form_.RM_INT ? form_.fe_.size() : form_.fe_.size()+1;
-  int int_log = form_.RM_INT ? 0 : 1;
-  if(!form_.RM_INT) X_.col(0) = Eigen::VectorXd::Ones(X_.rows());
-  if(form_.fe_.size()>0){
-    for(int i = 0; i<form_.fe_.size(); i++){
-      auto colidx = std::find(colnames_.begin(),colnames_.end(),form_.fe_[i]);
-      if(colidx == colnames_.end()){
-        Rcpp::stop("X variable not in colnames");
-      } else {
-        int colidxi = colidx - colnames_.begin();
-        x_cols_.push_back(colidxi);
-        X_.col(i+int_log) = data_.col(colidxi);
-      }
-    }
-  }
-}
 
-
-inline void glmmr::LinearPredictor::parse2(){
+inline void glmmr::LinearPredictor::parse(const ArrayXXd& data,
+                                           const strvec& colnames){
   int parcounter = 0;
   P_ = 0;
   if(!form_.RM_INT){
@@ -132,14 +135,19 @@ inline void glmmr::LinearPredictor::parse2(){
     parcounter++;
     P_++;
   }
+  
   for(int i = 0; i<form_.fe_.size(); i++){
-    glmmr::xbFormula f1(form_.fe_[i],data_,colnames_);
-    x_components.push_back(f1);
-    int npar = f1.pars();
-    P_+=npar;
+    glmmr::xbFormula f2(form_.fe_[i],data,colnames);
+    x_components.push_back(f2);
+    P_ += f2.pars();
   }
   
   n_fe_components_ = x_components.size();
+  if(parameters_.size()>0){
+    if(parameters_.size()!=P_)Rcpp::stop("Linear predictor parameter vector size not equal to number of parameters");
+  } else {
+    parameters_.resize(P_);
+  }
 }
 
 

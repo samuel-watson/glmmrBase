@@ -13,8 +13,8 @@ inline intvec interpret_re(const std::string& fn,
     B = {2,2,5};
     break;
   case 2:
-    B.push_back(2);
     B.insert(B.end(), A.begin(), A.end());
+    B.push_back(2);
     B.push_back(8);
     break;
   case 3:
@@ -63,7 +63,7 @@ inline intvec interpret_re(const std::string& fn,
     }
   case 8:
     {
-      const intvec C1 = {2,12,22,2,21,4,8,6,22,2,5,7,2};
+      const intvec C1 = {2,12,2,21,4,22,8,6,22,2,5,7,2};
       const intvec C2 = {6,5,2,8,5,2,22,2,5,7,2};
       const intvec C3 = {6,5,15,5};
       B.insert(B.end(), C1.begin(), C1.end());
@@ -75,7 +75,8 @@ inline intvec interpret_re(const std::string& fn,
     }
   case 9:
     {
-      const intvec C = {21,4,2,8,5};
+      const intvec C = {21,4,8,5};
+      B.push_back(2);
       B.push_back(2);
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), C.begin(), C.end());
@@ -84,8 +85,8 @@ inline intvec interpret_re(const std::string& fn,
   case 10:
     {
       const intvec C1 = {2,2,21,3};
-      const intvec C2 = {5,21,3,5};
-      const intvec C3 = {21,4,2,21,3,8,5};
+      const intvec C2 = {5,21,3,5,2,21,3};
+      const intvec C3 = {21,4,8,5};
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), C2.begin(), C2.end());
@@ -97,8 +98,8 @@ inline intvec interpret_re(const std::string& fn,
     {
       const intvec C1 = {2,21};
       const intvec C2 = {22,2,3,5,3,23,21,4,21,2,22,3,2,22,3,5,4,5};
-      const intvec C3 = {5,5,3,5};
-      const intvec C4 = {21,4,2,22,3,8,5};
+      const intvec C3 = {5,5,3,5,2,22,3};
+      const intvec C4 = {21,4,8,5};
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), C2.begin(), C2.end());
@@ -111,8 +112,8 @@ inline intvec interpret_re(const std::string& fn,
     }
   case 12:
     {
-      const intvec C1 = {2,2,12,22,2,21,4,8,6,5};
-      const intvec C2 = {2,8,5,2};
+      const intvec C1 = {2,2,12,2,21,4,22,8,6,5,2};
+      const intvec C2 = {8,5,2};
       const intvec C3 = {15,5};
       const intvec C4 = {5,20,20,5,20,27,3,3,4,5,22,20,21,3,6};
       const intvec C5 = {5,3,21,3,5};
@@ -133,10 +134,11 @@ inline intvec interpret_re(const std::string& fn,
     }
   case 13:
     {
-      const intvec C1 = {2,8,21,4,23,10,8,2,5};
+      const intvec C1 = {8,21,4,23,10,8,2,5};
       const intvec C2 = {30,5,14};
       const intvec C3 = {21,4,5};
       const intvec C4 = {30,13,30,21,6,5,3,5};
+      B.push_back(2);
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), A.begin(), A.end());
@@ -148,12 +150,13 @@ inline intvec interpret_re(const std::string& fn,
     }
   case 14:
     {
-      const intvec C1 = {2,8,10,9,2,22,30};
+      const intvec C1 = {8,10,9,2,22,30};
       const intvec C2 = {5,5,22,30};
       const intvec C3 = {5,5,13,6};
       const intvec C4 = {21,4,5,22,30};
       const intvec C5 = {5,5,22,30};
       const intvec C6 = {5,5,14,21,4,6,30,21,6,5,3,5};
+      B.push_back(2);
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), A.begin(), A.end());
@@ -230,13 +233,13 @@ inline intvec interpret_re_par(const std::string& fn,
     break;
   case 9:
     B.push_back(par_idx[0]);
-    addA();
     B.push_back(par_idx[1]);
+    addA();
     break;
   case 10:
     addPar2(0);
-    addA();
     B.push_back(par_idx[1]);
+    addA();
     break;
   case 11:
     B.push_back(par_idx[0]);
@@ -244,14 +247,14 @@ inline intvec interpret_re_par(const std::string& fn,
     addPar2(1);
     addA();
     addA();
-    addA();
     B.push_back(par_idx[1]);
+    addA();
     break;
   case 12:
     B.push_back(par_idx[0]);
     addPar2(1);
-    addA();
     addPar2(0);
+    addA();
     addA();
     addA();
     addA();
@@ -259,16 +262,16 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     break;
   case 13:
-    addA();
     B.push_back(par_idx[1]);
+    addA();
     B.push_back(par_idx[0]);
     addA();
     addA();
     addA();
     break;
   case 14:
-    addA();
     B.push_back(par_idx[1]);
+    addA();
     B.push_back(par_idx[0]);
     addA();
     addA();
@@ -350,7 +353,7 @@ inline double calculate(const intvec& instructions,
         stack.pop();
         b = stack.top();
         stack.pop();
-        double out = pow(b,a);
+        double out = pow(a,b);
         stack.push(out);
         break;
       }

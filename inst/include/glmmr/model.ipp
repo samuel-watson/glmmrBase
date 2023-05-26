@@ -364,7 +364,7 @@ inline double glmmr::Model::full_log_likelihood(){
 inline dblvec glmmr::Model::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
   if(beta){
-  for(int i =0 ; i < P_; i++)start.push_back(linpred_.parameters_(i));
+  for(int i =0 ; i < P_; i++)start.push_back(linpred_.parameters_[i]);
     
     if(theta){
       for(int i=0; i< covariance_.npar(); i++) {
@@ -522,7 +522,7 @@ inline void glmmr::Model::nr_beta(){
   XtWXm = XtWXm.inverse();
   VectorXd Wum = Wu.rowwise().mean();
   VectorXd bincr = XtWXm * (linpred_.X().transpose()) * Wum;
-  update_beta(linpred_.parameters_ + bincr);
+  update_beta(linpred_.parameter_vector() + bincr);
   var_par_ = sigmas.mean();
 }
 
@@ -547,7 +547,7 @@ inline void glmmr::Model::laplace_nr_beta_u(){
   VectorXd vgrad = log_gradient(u_.col(0));
   VectorXd vincr = LZWZL * vgrad;
   update_u(u_.colwise()+vincr);
-  update_beta(linpred_.parameters_ + bincr);
+  update_beta(linpred_.parameter_vector() + bincr);
   var_par_ = sigmas;
 }
 
@@ -726,8 +726,8 @@ inline vector_matrix glmmr::Model::predict_re(const ArrayXXd& newdata_,
                                    covariance_.parameters_);
   glmmr::LinearPredictor newlinpred_(formula_,
                                      mergedata,
-                                     linpred_.colnames_,
-                                     linpred_.parameters_.array());
+                                     linpred_.colnames(),
+                                     linpred_.parameters_);
   // //generate sigma
   int newQ_ = covariancenewnew_.Q();
   vector_matrix result(newQ_);
@@ -751,8 +751,8 @@ inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
                       const ArrayXd& newoffset_){
     glmmr::LinearPredictor newlinpred_(formula_,
                                        newdata_,
-                                       linpred_.colnames_,
-                                       linpred_.parameters_.array());
+                                       linpred_.colnames(),
+                                       linpred_.parameters_);
     VectorXd xb = newlinpred_.xb() + newoffset_.matrix();
     return xb;
   }

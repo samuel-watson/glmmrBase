@@ -289,6 +289,22 @@
     invisible(.Call(`_glmmrBase_Model__make_dense`, xp))
 }
 
+.Form_test <- function(formula) {
+    .Call(`_glmmrBase_Form__test`, formula)
+}
+
+.Linpred_test <- function(formula_, data_, colnames_) {
+    .Call(`_glmmrBase_Linpred__test`, formula_, data_, colnames_)
+}
+
+.Linpred__update_pars <- function(xp, parameters_) {
+    invisible(.Call(`_glmmrBase_Linpred__update_pars`, xp, parameters_))
+}
+
+.Linpred__xb <- function(xp) {
+    .Call(`_glmmrBase_Linpred__xb`, xp)
+}
+
 .girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {
     .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_, tol_)
 }

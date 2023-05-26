@@ -249,7 +249,7 @@ void Model__set_trace(SEXP xp, SEXP trace_){
 // [[Rcpp::export(.Model__get_beta)]]
 SEXP Model__get_beta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::VectorXd beta = ptr->linpred_.parameters_;
+  Eigen::VectorXd beta = ptr->linpred_.parameter_vector();
   return wrap(beta);
 }
 
@@ -347,6 +347,40 @@ void Model__make_sparse(SEXP xp){
 void Model__make_dense(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->make_covariance_dense();
+}
+
+// [[Rcpp::export(.Form_test)]]
+SEXP Form__test(SEXP formula){
+  std::string formula_ = as<std::string>(formula);
+  XPtr<glmmr::Formula> ptr(new glmmr::Formula(formula_));
+  return ptr;
+}
+
+// [[Rcpp::export(.Linpred_test)]]
+SEXP Linpred__test(SEXP formula_,
+                SEXP data_,
+                SEXP colnames_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  glmmr::Formula f1(formula);
+  XPtr<glmmr::LinearPredictor> ptr(new glmmr::LinearPredictor(f1,data,colnames));
+  return ptr;
+}
+
+// [[Rcpp::export(.Linpred__update_pars)]]
+void Linpred__update_pars(SEXP xp,
+                          SEXP parameters_){
+  std::vector<double> parameters = as<std::vector<double>>(parameters_);
+  XPtr<glmmr::LinearPredictor> ptr(xp);
+  ptr->update_parameters(parameters);
+}
+
+// [[Rcpp::export(.Linpred__xb)]]
+SEXP Linpred__xb(SEXP xp){
+  XPtr<glmmr::LinearPredictor> ptr(xp);
+  Eigen::VectorXd xb = ptr->xb();
+  return wrap(xb);
 }
 
 // [[Rcpp::export(.girling_algorithm)]]

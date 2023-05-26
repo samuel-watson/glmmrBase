@@ -59,7 +59,7 @@ public:
   }
   
 private:
-  strvec tokens_;
+  //strvec tokens_;
   strvec re_terms_;
 };
 

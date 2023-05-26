@@ -9,8 +9,10 @@
 #include <regex>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <stack>
 #include <SparseChol.h>
+#include <set>
 #include "algo.h"
 
 using namespace Eigen;
@@ -28,7 +30,6 @@ typedef std::vector<intvec2d> intvec3d;
 // [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
-
 
 const static std::unordered_map<str, double> nvars = {  
   {"gr", 1},
@@ -105,13 +106,25 @@ inline void print_sparse(const sparse& A){
   for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
-//check if string is a number
 inline bool is_number(const std::string& s)
 {
   std::string::const_iterator it = s.begin();
   while (it != s.end() && std::isdigit(*it)) ++it;
   return !s.empty() && it == s.end();
 }
+
+inline bool isalnum_or_uscore(const char& s)
+{
+  return (isalnum(s) || s=='_');
+}
+
+template<typename T>
+inline bool expect_number_of_unique_elements(const std::vector<T> vec,
+                                             int n){
+  int vec_size = std::set<T>(vec.begin(),vec.end()).size();
+  return vec_size==n;
+}
+
 
 }
 
