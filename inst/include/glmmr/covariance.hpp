@@ -169,16 +169,10 @@ public:
 private:
   intvec z_;
   dblvec3d re_data_;
-  intvec3d re_cols_;
   intvec3d re_cols_data_;
   strvec2d fn_;
-  intvec re_order_;
-  intvec3d re_pars_;
   intvec2d re_rpn_;
   intvec2d re_index_;
-  intvec2d re_obs_index_;
-  intvec re_fn_par_link_;
-  intvec re_count_;
   int Q_;
   int n_;
   int B_;

@@ -292,15 +292,8 @@ inline double calculate(const intvec& instructions,
   int idx_iter = 0;
   double a,b,var;
   std::stack<double> stack;
-  // Rcpp::Rcout << "\nIdx: " << i << " " << j;
-  // if(i==0 && j==0){
-  //   glmmr::print_vec_1d<intvec>(indexes);
-  //   glmmr::print_vec_2d<dblvec2d>(data);
-  // }
   
   for(int k = 0; k < instructions.size(); k++){
-    //Rcpp::Rcout << "\nInstruction: " << k << " = " << instructions[k];
-
     switch(instructions[k]){
     case 0:
       stack.push(data[i][indexes[idx_iter]]);

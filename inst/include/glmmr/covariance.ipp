@@ -2,6 +2,12 @@
 #define COVARIANCE_IPP
 
 inline void glmmr::Covariance::parse(){
+  intvec3d re_cols_;
+  intvec re_order_;
+  intvec3d re_pars_;
+  intvec re_fn_par_link_;
+  intvec re_count_;
+
   // now process each step of the random effect terms
   if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
   int nre = form_.re_.size();
@@ -278,6 +284,7 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
 
 inline void glmmr::Covariance::Z_constructor(){
 
+  intvec2d re_obs_index_;
   if(Q_==0)Rcpp::stop("Random effects not initialised");
   MatrixXd Z(data_.rows(),Q_);
   Z.setZero();

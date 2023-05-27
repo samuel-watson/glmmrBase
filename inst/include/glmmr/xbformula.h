@@ -58,6 +58,14 @@ class xbFormula {
       return xb_out;
     }
     
+    double xb(int i){
+      return glmmr::calculate(instructions_,
+                              indexes_,
+                              parameters_,
+                              data_,
+                              i,i);
+    }
+    
     // add a function for creating a linearised X 
     VectorXd X(){
       VectorXd x_out(n_);
@@ -90,6 +98,7 @@ class xbFormula {
     bool nonlinear(){
       return nonlinear_;
     }
+    
     
   private:
     std::vector<char> formula_;
@@ -332,6 +341,8 @@ class xbFormula {
       glmmr::print_vec_1d<intvec>(instructions);
       glmmr::print_vec_1d<strvec>(parnames);
     }
+    
+    
 };
 
 }

@@ -869,6 +869,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Linpred__dxb
+SEXP Linpred__dxb(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__dxb(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__dxb(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // girling_algorithm
 SEXP girling_algorithm(SEXP xp, SEXP N_, SEXP sigma_sq_, SEXP C_, SEXP tol_);
 RcppExport SEXP _glmmrBase_girling_algorithm(SEXP xpSEXP, SEXP N_SEXP, SEXP sigma_sq_SEXP, SEXP C_SEXP, SEXP tol_SEXP) {
@@ -962,6 +973,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Linpred__test", (DL_FUNC) &_glmmrBase_Linpred__test, 3},
     {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
     {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},
+    {"_glmmrBase_Linpred__dxb", (DL_FUNC) &_glmmrBase_Linpred__dxb, 1},
     {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 5},
     {NULL, NULL, 0}
 };

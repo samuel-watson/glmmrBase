@@ -14,6 +14,7 @@
 #include <SparseChol.h>
 #include <set>
 #include "algo.h"
+#include <boost/math/differentiation/autodiff.hpp>
 
 using namespace Eigen;
 
