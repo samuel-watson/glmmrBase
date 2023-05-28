@@ -7,37 +7,43 @@ inline void glmmr::Formula::tokenise(){
   // remove -1 and set RM_INT is true if its there
   RM_INT = false;
   formula_.erase(std::remove_if(formula_.begin(), formula_.end(), [](unsigned char x) { return std::isspace(x); }), formula_.end());
+  
   auto minone = formula_.find("-1");
   if(minone != str::npos){
     RM_INT = true;
     formula_.erase(minone,2);
+  } else {
+    str add_intercept = "b_intercept*1";
+    for(int i = 0; i < add_intercept.size(); i++){
+      linear_predictor_.push_back(add_intercept[cursor]);
+    }
   }
   
   // so we have to write our own algorithm to split the tokens
   std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
+  std::vector<char> re_token;
   int nchar = formula_as_chars.size();
   int cursor = 0;
   int bracket_count = 0; // to deal with opening of brackets
   
   while(cursor < nchar){
-    str token;
-    while(!(formula_as_chars[cursor]=='+' && bracket_count == 0) && cursor < nchar){
-      if(formula_as_chars[cursor]=='(')bracket_count++;
-      if(formula_as_chars[cursor]==')')bracket_count--;
-      if(!isspace(formula_as_chars[cursor]))token.push_back(formula_as_chars[cursor]);
+    if(formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='('){
+      bracket_count++;
       cursor++;
-    }
-    
-    if(token.size()>0){
-      if(token.front() == '(' && token.back()==')'){
-        re_.push_back(token);
-      } else{
-        fe_.push_back(token);
+      while(bracket_count > 0){
+        if(formula_as_chars[cursor+1]=='(')bracket_count++;
+        if(formula_as_chars[cursor+1]==')')bracket_count--;
+        re_token.push_back(formula_as_chars[cursor]);
       }
+      str re_new(re_token.begin(),re_token.end());
+      re_.push_back(re_new);
+      re_token.clear();
+    } else {
+      linear_predictor_.push_back(formula_as_chars[cursor]);
     }
-    
     cursor++;
   }
+  
   
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);

@@ -11,22 +11,31 @@ class calculator {
     intvec indexes;
     dblvec2d data;
     dblvec parameters;
+    strvec parameter_names;
+    int data_count;
+    int par_count;
+    bool any_nonlinear;
     
     calculator(){};
     
-    double calculate(const int i, const int j, int order = 0);
+    void resize(int n){
+      data.clear();
+      data.resize(n);
+    };
     
-    VectorXd calculate(int order = 0);
+    double calculate(const int i, const int j = 0);
     
-    MatrixXd jacobian();
+    //VectorXd calculate(int order = 0);
     
-    MatrixXd hessian();
+    //MatrixXd jacobian();
+    
+    //MatrixXd hessian();
     
 };
 
 }
 
-inline glmmr::calculator::calculate(const int i, const int j, int order){
+inline double glmmr::calculator::calculate(const int i, const int j){
   int idx_iter = 0;
   double a,b,var;
   std::stack<double> stack;
