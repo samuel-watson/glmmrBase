@@ -16,14 +16,20 @@ inline void parse_formula(std::vector<char>& formula,
   int n = data.rows();
   std::vector<char> s1;
   std::vector<char> s2;
-  
+  // REMOVE AFTER DEBUG
+  Rcpp::Rcout << "\nFormula: ";
+  for(auto ch: formula)Rcpp::Rcout << ch;
   // step 1: split at first +
   while(!has_found_symbol && cursor < nchar){
-    if(cursor==0 && (formula[cursor]=='+' || formula[cursor]=='-'))Rcpp::stop("Error in formula, plus/minus symbol in wrong place");
-    s1.push_back(formula[cursor]);
+    if(cursor==0 && (formula[cursor]=='+' || formula[cursor]=='-'))Rcpp::stop("Error in formula, multiply/divide symbol in wrong place");
     if(formula[cursor]=='(')bracket_count++;
     if(formula[cursor]==')')bracket_count--;
-    if((formula[cursor+1]=='+' || formula[cursor+1]=='-') && bracket_count == 0)has_found_symbol = true;
+    if((formula[cursor]=='+' || formula[cursor]=='-') && bracket_count == 0){
+      has_found_symbol = true;
+      break;
+    } else {
+      s1.push_back(formula[cursor]);
+    }
     cursor++;
   }
   if(has_found_symbol){
@@ -60,7 +66,6 @@ inline void parse_formula(std::vector<char>& formula,
         s2.push_back(s2_parname[j]);
       }
     }
-    
     parse_formula(s1,calc,data,colnames);
     parse_formula(s2,calc,data,colnames);
   } else {
@@ -69,12 +74,17 @@ inline void parse_formula(std::vector<char>& formula,
     s2.clear();
     cursor=0;
     bracket_count = 0;
+    has_found_symbol = false;
     while(!has_found_symbol && cursor < nchar){
       if(cursor==0 && (formula[cursor]=='*' || formula[cursor]=='/'))Rcpp::stop("Error in formula, multiply/divide symbol in wrong place");
-      s1.push_back(formula[cursor]);
       if(formula[cursor]=='(')bracket_count++;
       if(formula[cursor]==')')bracket_count--;
-      if((formula[cursor+1]=='*' || formula[cursor+1]=='/') && bracket_count == 0)has_found_symbol = true;
+      if((formula[cursor]=='*' || formula[cursor]=='/') && bracket_count == 0){
+        has_found_symbol = true;
+        break;
+      } else {
+        s1.push_back(formula[cursor]);
+      }
       cursor++;
     }
     if(has_found_symbol){
@@ -86,11 +96,13 @@ inline void parse_formula(std::vector<char>& formula,
       } else {
         Rcpp::stop("Oops, something has gone wrong (f2)");
       }
+      
       cursor++;
       while(cursor < nchar){
         s2.push_back(formula[cursor]);
         cursor++;
       }
+      
       parse_formula(s1,calc,data,colnames);
       parse_formula(s2,calc,data,colnames);
     } else {
@@ -100,11 +112,15 @@ inline void parse_formula(std::vector<char>& formula,
       cursor=0;
       bracket_count = 0;
       while(!has_found_symbol && cursor < nchar){
-        if(cursor==0 && formula[cursor]=='^')Rcpp::stop("Error in formula, power symbol in wrong place");
-        s1.push_back(formula[cursor]);
+        if(cursor==0 && formula[cursor]=='^')Rcpp::stop("Error in formula, multiply/divide symbol in wrong place");
         if(formula[cursor]=='(')bracket_count++;
         if(formula[cursor]==')')bracket_count--;
-        if(formula[cursor+1]=='^' && bracket_count == 0)has_found_symbol = true;
+        if(formula[cursor]=='^' && bracket_count == 0){
+          has_found_symbol = true;
+          break;
+        } else {
+          s1.push_back(formula[cursor]);
+        }
         cursor++;
       }
       if(has_found_symbol){
@@ -120,6 +136,7 @@ inline void parse_formula(std::vector<char>& formula,
           s2.push_back(formula[cursor]);
           cursor++;
         }
+        
         parse_formula(s1,calc,data,colnames);
         parse_formula(s2,calc,data,colnames);
       } else {
@@ -130,10 +147,15 @@ inline void parse_formula(std::vector<char>& formula,
         bracket_count = 0;
         while(!has_found_symbol && cursor < nchar){
           if(cursor==0 && formula[cursor]=='(')break;
-          s1.push_back(formula[cursor]);
-          if(formula[cursor+1]=='(')has_found_symbol = true;
+          if(formula[cursor]=='('){
+            has_found_symbol = true;
+            break;
+          } else {
+            s1.push_back(formula[cursor]);
+          }
           cursor++;
         }
+        str token_as_str(s1.begin(),s1.end());
         if(has_found_symbol){
           calc.any_nonlinear = true;
           cursor++;
@@ -145,9 +167,9 @@ inline void parse_formula(std::vector<char>& formula,
           }
           if(formula[cursor]!=')')Rcpp::stop("Matching bracket missing");
           // process s1 as function (if size > 0)
+          
           if(s1.size()>0){
             calc.any_nonlinear = true;
-            str token_as_str(s1.begin(),s1.end());
             if(token_as_str == "exp"){
               calc.instructions.push_back(9);
             } else if(token_as_str == "log"){
@@ -162,10 +184,10 @@ inline void parse_formula(std::vector<char>& formula,
               Rcpp::stop("String " + token_as_str + " is not a recognised function");
             }
           }
+          
           parse_formula(s2,calc,data,colnames);
         } else {
           // no brackets - now check data
-          str token_as_str(s1.begin(),s1.end());
           auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str);
           if(colidx != colnames.end()){
             // token is the name of a variable
@@ -175,6 +197,30 @@ inline void parse_formula(std::vector<char>& formula,
             calc.data_count++;
             for(int i = 0; i < n; i++){
               calc.data[i].push_back(data(i,column_index));
+            }
+          } else if(glmmr::is_number(token_as_str)) {
+            // add an integer to the stack
+            int p = s1.size();
+            int addint;
+            
+            if(p > 1){
+              for(int i = 0; i < (p-1); i++){
+                calc.instructions.push_back(3);
+              }
+            }
+            
+            for(int k = 1; k <= p; k++){
+              int number = s1[p-k] - '0';
+              addint = number + 20;
+              if(k==1){
+                calc.instructions.push_back(addint);
+              } else {
+                calc.instructions.push_back(5);
+                calc.instructions.push_back(addint);
+                calc.instructions.push_back(6);
+                calc.instructions.push_back(k-1);
+                calc.instructions.push_back(20);
+              }
             }
           } else {
             // interpret any other string as the name of a parameter

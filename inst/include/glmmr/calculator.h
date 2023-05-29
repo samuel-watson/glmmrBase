@@ -12,8 +12,8 @@ class calculator {
     dblvec2d data;
     dblvec parameters;
     strvec parameter_names;
-    int data_count;
-    int parameter_count;
+    int data_count = 0;
+    int parameter_count = 0;
     bool any_nonlinear;
     
     calculator(){};

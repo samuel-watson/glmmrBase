@@ -25,6 +25,9 @@ public:
     X_(Eigen::MatrixXd::Zero(n_,1)) {
       //parse(data,colnames);
       form_.calculate_linear_predictor(calc_,data,colnames);
+    glmmr::print_vec_1d<intvec>(calc_.instructions);
+    glmmr::print_vec_1d<intvec>(calc_.indexes);
+    glmmr::print_vec_1d<strvec>(calc_.parameter_names);
       P_ = calc_.parameter_names.size();
     };
 
@@ -37,6 +40,7 @@ public:
     n_(data.rows()),
     X_(Eigen::MatrixXd::Zero(n_,1)) {
       form_.calculate_linear_predictor(calc_,data,colnames);
+      
       //parse(data,colnames);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();

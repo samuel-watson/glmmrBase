@@ -13,9 +13,10 @@ inline void glmmr::Formula::tokenise(){
     RM_INT = true;
     formula_.erase(minone,2);
   } else {
-    str add_intercept = "b_intercept*1";
-    for(int i = 0; i < add_intercept.size(); i++){
-      linear_predictor_.push_back(add_intercept[i]);
+    str add_intercept = "b_intercept*1+";
+    std::vector<char> add_intercept_vec(add_intercept.begin(),add_intercept.end());
+    for(int i = 0; i < add_intercept_vec.size(); i++){
+      linear_predictor_.push_back(add_intercept_vec[i]);
     }
   }
   
@@ -29,11 +30,13 @@ inline void glmmr::Formula::tokenise(){
   while(cursor < nchar){
     if(formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='('){
       bracket_count++;
-      cursor++;
+      cursor+=2;
+      re_token.push_back('(');
       while(bracket_count > 0){
-        if(formula_as_chars[cursor+1]=='(')bracket_count++;
-        if(formula_as_chars[cursor+1]==')')bracket_count--;
+        if(formula_as_chars[cursor]=='(')bracket_count++;
+        if(formula_as_chars[cursor]==')')bracket_count--;
         re_token.push_back(formula_as_chars[cursor]);
+        cursor++;
       }
       str re_new(re_token.begin(),re_token.end());
       re_.push_back(re_new);
@@ -44,6 +47,8 @@ inline void glmmr::Formula::tokenise(){
     cursor++;
   }
   
+  Rcpp::Rcout << "\nLinpred: ";
+  for(auto ch: linear_predictor_)Rcpp::Rcout << ch;
   
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);

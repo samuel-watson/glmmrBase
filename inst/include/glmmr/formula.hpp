@@ -12,7 +12,6 @@ class Formula {
 public:
   str formula_;
   std::vector<char> linear_predictor_;
-  //strvec fe_;
   strvec re_;
   strvec z_;
   intvec re_order_;
@@ -45,6 +44,8 @@ public:
                          calculator,
                          data,
                          colnames);
+    std::reverse(calculator.instructions.begin(),calculator.instructions.end());
+    std::reverse(calculator.indexes.begin(),calculator.indexes.end());
   }
    
   strvec re(){
