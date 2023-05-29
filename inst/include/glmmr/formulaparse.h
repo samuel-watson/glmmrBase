@@ -3,7 +3,9 @@
 
 #include "general.h"
 
-inline void parse_formula(const std::vector<char>& formula,
+namespace glmmr{
+
+inline void parse_formula(std::vector<char>& formula,
                           glmmr::calculator& calc,
                           const ArrayXXd& data,
                           const strvec& colnames){
@@ -157,7 +159,7 @@ inline void parse_formula(const std::vector<char>& formula,
             } else if(token_as_str == "cos"){
               calc.instructions.push_back(14);
             } else {
-              Rcpp::stop("String " + s1 + " is not a recognised function");
+              Rcpp::stop("String " + token_as_str + " is not a recognised function");
             }
           }
           parse_formula(s2,calc,data,colnames);
@@ -186,5 +188,9 @@ inline void parse_formula(const std::vector<char>& formula,
     }
   }
 }
+
+}
+
+
 
 #endif

@@ -81,10 +81,6 @@
     .Call(`_glmmrBase_genX`, formula, data, colnames)
 }
 
-.x_names <- function(formula) {
-    .Call(`_glmmrBase_x_names`, formula)
-}
-
 .re_names <- function(formula) {
     .Call(`_glmmrBase_re_names`, formula)
 }
@@ -303,10 +299,6 @@
 
 .Linpred__xb <- function(xp) {
     .Call(`_glmmrBase_Linpred__xb`, xp)
-}
-
-.Linpred__dxb <- function(xp) {
-    .Call(`_glmmrBase_Linpred__dxb`, xp)
 }
 
 .girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {

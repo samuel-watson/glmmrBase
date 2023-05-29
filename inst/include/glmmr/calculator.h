@@ -13,7 +13,7 @@ class calculator {
     dblvec parameters;
     strvec parameter_names;
     int data_count;
-    int par_count;
+    int parameter_count;
     bool any_nonlinear;
     
     calculator(){};

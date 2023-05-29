@@ -40,7 +40,7 @@ public:
   void calculate_linear_predictor(glmmr::calculator& calculator,
                                   const ArrayXXd& data,
                                   const strvec& colnames){
-    linear_predictor_calculator.resize(data.rows());
+    calculator.resize(data.rows());
     glmmr::parse_formula(linear_predictor_,
                          calculator,
                          data,

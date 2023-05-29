@@ -383,12 +383,12 @@ SEXP Linpred__xb(SEXP xp){
   return wrap(xb);
 }
 
-// [[Rcpp::export(.Linpred__dxb)]]
-SEXP Linpred__dxb(SEXP xp){
-  XPtr<glmmr::LinearPredictor> ptr(xp);
-  Eigen::ArrayXXd xb = ptr->deriv();
-  return wrap(xb);
-}
+// // [[Rcpp::export(.Linpred__dxb)]]
+// SEXP Linpred__dxb(SEXP xp){
+//   XPtr<glmmr::LinearPredictor> ptr(xp);
+//   Eigen::ArrayXXd xb = ptr->deriv();
+//   return wrap(xb);
+// }
 
 // [[Rcpp::export(.girling_algorithm)]]
 SEXP girling_algorithm(SEXP xp, SEXP N_,

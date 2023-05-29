@@ -11,11 +11,11 @@ Eigen::MatrixXd genX(const std::string& formula,
  return lin.X();
 }
 
-// [[Rcpp::export(.x_names)]]
-std::vector<std::string> x_names(const std::string& formula){
-  glmmr::Formula form(formula);
-  return form.fe_;
-}
+// // [[Rcpp::export(.x_names)]]
+// std::vector<std::string> x_names(const std::string& formula){
+//   glmmr::Formula form(formula);
+//   return form.fe_;
+// }
 
 // [[Rcpp::export(.re_names)]]
 std::vector<std::string> re_names(const std::string& formula){

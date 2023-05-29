@@ -15,7 +15,7 @@ inline void glmmr::Formula::tokenise(){
   } else {
     str add_intercept = "b_intercept*1";
     for(int i = 0; i < add_intercept.size(); i++){
-      linear_predictor_.push_back(add_intercept[cursor]);
+      linear_predictor_.push_back(add_intercept[i]);
     }
   }
   

@@ -3,6 +3,7 @@
 
 #include "general.h"
 #include "interpreter.h"
+#include "calculator.h"
 #include "formula.hpp"
 //#include "xbformula.h"
 
@@ -15,7 +16,7 @@ public:
   dblvec parameters_;
   glmmr::calculator calc_;
 
-  LinearPredictor(const glmmr::Formula& form,
+  LinearPredictor(glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames) :
     colnames_(colnames),  
@@ -27,7 +28,7 @@ public:
       P_ = calc_.parameter_names.size();
     };
 
-  LinearPredictor(const glmmr::Formula& form,
+  LinearPredictor(glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const dblvec& parameters) :
@@ -41,7 +42,7 @@ public:
       P_ = calc_.parameter_names.size();
     };
 
-  LinearPredictor(const glmmr::Formula& form,
+  LinearPredictor(glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const Eigen::ArrayXd& parameters) :
@@ -96,17 +97,11 @@ public:
   }
   
   bool any_nonlinear(){
-    int i=0;
-    bool any_nonlin = false;
-    while(!any_nonlin && i<n_fe_components_){
-      any_nonlin = x_components[i].nonlinear();
-      i++;
-    }
-    return any_nonlin;
+    return calc_.any_nonlinear;
   }
 
 private:
-  const glmmr::Formula& form_;
+  glmmr::Formula& form_;
   strvec colnames_;
   int P_;
   int n_fe_components_;
