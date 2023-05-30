@@ -5,7 +5,6 @@
 #include "interpreter.h"
 #include "calculator.h"
 #include "formula.hpp"
-//#include "xbformula.h"
 
 namespace glmmr {
 
@@ -23,11 +22,10 @@ public:
     form_(form),
     n_(data.rows()),
     X_(Eigen::MatrixXd::Zero(n_,1)) {
-      //parse(data,colnames);
       form_.calculate_linear_predictor(calc_,data,colnames);
-    glmmr::print_vec_1d<intvec>(calc_.instructions);
-    glmmr::print_vec_1d<intvec>(calc_.indexes);
-    glmmr::print_vec_1d<strvec>(calc_.parameter_names);
+      glmmr::print_vec_1d<intvec>(calc_.instructions);
+      glmmr::print_vec_1d<intvec>(calc_.indexes);
+      glmmr::print_vec_1d<strvec>(calc_.parameter_names);
       P_ = calc_.parameter_names.size();
     };
 
@@ -40,8 +38,6 @@ public:
     n_(data.rows()),
     X_(Eigen::MatrixXd::Zero(n_,1)) {
       form_.calculate_linear_predictor(calc_,data,colnames);
-      
-      //parse(data,colnames);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
     };
@@ -84,14 +80,14 @@ public:
   //             const strvec& colnames);
 
   VectorXd xb(){
-    VectorXd xb = VectorXd::Zero(n_);
-    for(int i = 0; i < n_; i++){
-      xb(i) = calc_.calculate(i);
-    }
+    VectorXd xb = calc_.calculate();
     return xb;
   }
 
   MatrixXd X(){
+    if(calc_.any_nonlinear){
+      X_ = calc_.jacobian();
+    }
     return X_;
   }
   
@@ -112,6 +108,10 @@ private:
   int n_;
   intvec x_cols_;
   Eigen::MatrixXd X_;
+  
+  void generate_X(){
+    X_ = calc_.jacobian();
+  }
 };
 }
 

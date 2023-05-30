@@ -40,10 +40,10 @@ public:
                                   const ArrayXXd& data,
                                   const strvec& colnames){
     calculator.resize(data.rows());
-    glmmr::parse_formula(linear_predictor_,
-                         calculator,
-                         data,
-                         colnames);
+    bool outparse = glmmr::parse_formula(linear_predictor_,
+                                          calculator,
+                                          data,
+                                          colnames);
     std::reverse(calculator.instructions.begin(),calculator.instructions.end());
     std::reverse(calculator.indexes.begin(),calculator.indexes.end());
   }

@@ -14,7 +14,7 @@ class calculator {
     strvec parameter_names;
     int data_count = 0;
     int parameter_count = 0;
-    bool any_nonlinear;
+    bool any_nonlinear = false;
     
     calculator(){};
     
@@ -23,168 +23,72 @@ class calculator {
       data.resize(n);
     };
     
-    double calculate(const int i, const int j = 0);
+    double calculate(const int i, const int j = 0,int order = 0);
     
-    //VectorXd calculate(int order = 0);
+    VectorXd calculate(){
+      int n = data.size();
+      if(n==0)Rcpp::stop("No data");
+      VectorXd x(n);
+      for(int i = 0; i < n; i++){
+        x(i) = calculate(i);
+      }
+      return x;
+    };
     
-    //MatrixXd jacobian();
+    VectorXd first_derivative(int i){
+      double out = calculate(i,0,1);
+      VectorXd d = Map<VectorXd, Unaligned>(first_deriv.data(), first_deriv.size());
+      return d;
+    };
     
-    //MatrixXd hessian();
+    MatrixXd second_derivative(int i){
+      double out = calculate(i,0,2);
+      MatrixXd h(parameter_count, parameter_count);
+      int index_count = 0;
+      for(int j = 0; j < parameter_count; j++){
+        for(int k = j; k < parameter_count; k++){
+          h(k,j) = second_deriv[index_count];
+          if(j != k) h(j,k) = h(k,j);
+          index_count++;
+        }
+      }
+      return h;
+    };
     
+    MatrixXd jacobian(){
+      int n = data.size();
+      if(n==0)Rcpp::stop("No data initialised in calculator");
+      MatrixXd J(n,parameter_count);
+      double x;
+      for(int i = 0; i<n ; i++){
+        J.row(i) = (first_derivative(i)).transpose();
+      }
+      return J;
+    };
+    
+    MatrixXd hessian(){
+      int n = data.size();
+      if(n==0)Rcpp::stop("No data initialised in calculator");
+      MatrixXd H = MatrixXd::Zero(parameter_count,parameter_count);
+      double x;
+      for(int i = 0; i<n ; i++){
+        H += second_derivative(i);
+      }
+      H *= (1/n);
+      return H;
+    };
+    
+  private:
+    dblvec first_deriv;
+    dblvec second_deriv;
 };
 
 }
 
-inline double glmmr::calculator::calculate(const int i, const int j){
-  int idx_iter = 0;
-  double a,b,var;
-  std::stack<double> stack;
-  
-  for(int k = 0; k < instructions.size(); k++){
-    switch(instructions[k]){
-    case 0:
-      stack.push(data[i][indexes[idx_iter]]);
-      idx_iter++;
-      break;
-    case 1:
-      stack.push(data[j][indexes[idx_iter]]);
-      idx_iter++;
-      break;
-    case 2:
-      stack.push(parameters[indexes[idx_iter]]);
-      idx_iter++;
-      break;
-    case 3:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(a+b);
-      break;
-    case 4:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(a-b);
-      break;
-    case 5:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(a*b);
-      break;
-    case 6:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(a/b);
-      break;
-    case 7:
-      a = stack.top();
-      stack.pop();
-      stack.push(sqrt(a));
-      break;
-    case 8:
-      {
-        a = stack.top();
-        stack.pop();
-        b = stack.top();
-        stack.pop();
-        double out = pow(a,b);
-        stack.push(out);
-        break;
-      }
-    case 9:
-      a = stack.top();
-      stack.pop();
-      stack.push(exp(a));
-      break;
-    case 10:
-      a = stack.top();
-      stack.pop();
-      stack.push(-1*a);
-      break;
-    case 11:
-      a = stack.top();
-      stack.pop();
-      b = R::bessel_k(a, 1, 1);
-      stack.push(b);
-      break;
-    case 12:
-      a = stack.top();
-      stack.pop();
-      stack.push(tgamma(a));
-      break;
-    case 13:
-      a = stack.top();
-      stack.pop();
-      stack.push(sin(a));
-      break;
-    case 14:
-      a = stack.top();
-      stack.pop();
-      stack.push(cos(a));
-      break;
-    case 15:
-      a = stack.top();
-      stack.pop();
-      b = stack.top();
-      stack.pop();
-      stack.push(R::bessel_k(a, b, 1));
-      break;
-    case 16:
-      a = stack.top();
-      stack.pop();
-      stack.push(log(a));
-      break;
-    case 20:
-      stack.push(10);
-      break;
-    case 21:
-      stack.push(1);
-      break;
-    case 22:
-      stack.push(2);
-      break;
-    case 23:
-      stack.push(3);
-      break;
-    case 24:
-      stack.push(4);
-      break;
-    case 25:
-      stack.push(5);
-      break;
-    case 26:
-      stack.push(6);
-      break;
-    case 27:
-      stack.push(7);
-      break;
-    case 28:
-      stack.push(8);
-      break;
-    case 29:
-      stack.push(9);
-      break;
-    case 30:
-      stack.push(M_PI);
-      break;
-    }
-    if(stack.size() == 0)Rcpp::stop("Error stack empty!");
-    //var = stack.top();
-    //Rcpp::Rcout << " | Top: " << var;
-  }
-  return stack.top();
-}
-
 inline double glmmr::calculator::calculate(const int i, 
                                            const int j,
-                                           int order = 0){
-  if(order > 2)Rcpp::stop("Only up to second order derivatives allowed.")
+                                           int order){
+  if(order > 2)Rcpp::stop("Only up to second order derivatives allowed.");
   int idx_iter = 0;
   double a,b,var;
   std::stack<double> stack;
@@ -198,6 +102,22 @@ inline double glmmr::calculator::calculate(const int i,
     second_dx.resize(parameter_count*(parameter_count + 1)/2);
   }
   
+  auto addZeroDx = [&] (){
+    for(int i = 0; i < parameter_count; i++){
+      first_dx[i].push(0.0);
+    }
+  };
+  
+  auto addZeroDx2 = [&] (){
+    int index_count = 0;
+    for(int i = 0; i < parameter_count; i++){
+      for(int j = i; j < parameter_count; j++){
+        second_dx[index_count].push(0.0);
+        index_count++;
+      }
+    }
+  };
+  
   for(int k = 0; k < instructions.size(); k++){
     switch(instructions[k]){
     case 0:
@@ -205,18 +125,10 @@ inline double glmmr::calculator::calculate(const int i,
         //push data (i)
         stack.push(data[i][indexes[idx_iter]]);
         if(order > 0){
-          for(int i = 0; i < parameter_count; i++){
-            first_dx[i].push(0.0);
-          }
+          addZeroDx();
         }
         if(order == 2){
-          int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
-              second_dx[index_count].push(0.0);
-              index_count++;
-            }
-          }
+          addZeroDx2();
         }
         idx_iter++;
         break;
@@ -226,18 +138,10 @@ inline double glmmr::calculator::calculate(const int i,
         // push data (j)
         stack.push(data[j][indexes[idx_iter]]);
         if(order > 0){
-          for(int i = 0; i < parameter_count; i++){
-            first_dx[i].push(0.0);
-          }
+          addZeroDx();
         }
         if(order == 2){
-          int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
-              second_dx[index_count].push(0.0);
-              index_count++;
-            }
-          }
+          addZeroDx2();
         }
         idx_iter++;
         break;
@@ -256,13 +160,7 @@ inline double glmmr::calculator::calculate(const int i,
           }
         }
         if(order == 2){
-          int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
-              second_dx[index_count].push(0.0);
-              index_count++;
-            }
-          }
+          addZeroDx2();
         }
         idx_iter++;
         break;
@@ -437,89 +335,388 @@ inline double glmmr::calculator::calculate(const int i,
         stack.pop();
         double out = pow(a,b);
         stack.push(out);
+        if(order > 0){
+          dblvec a_top_dx;
+          dblvec b_top_dx;
+          for(int i = 0; i < parameter_count; i++){
+            a_top_dx.push_back(first_dx[i].top());
+            first_dx[i].pop();
+            b_top_dx.push_back(first_dx[i].top());
+            first_dx[i].pop();
+            double result = pow(a,b)*b_top_dx.back()*log(a) + pow(a,b-1)*b*a_top_dx.back();
+            first_dx[i].push(result);
+          }
+          if(order == 2){
+            int index_count = 0;
+            for(int i = 0; i < parameter_count; i++){
+              for(int j = i; j < parameter_count; j++){
+                double adx2 = second_dx[index_count].top();
+                second_dx[index_count].pop();
+                double bdx2 = second_dx[index_count].top();
+                second_dx[index_count].pop();
+                double result1 = first_dx[j].top()*b_top_dx[i]*log(a) + stack.top()*(bdx2*log(a) + b_top_dx[i]*(1/a)*a_top_dx[j]);
+                double result2 = pow(a,b-1)*b_top_dx[j]*log(a) + pow(a,b-2)*(b-1)*a_top_dx[j];
+                double result3 = result2*b*a_top_dx[i] + pow(a,b-1)*(b*adx2+b_top_dx[j]*a_top_dx[i]);
+                second_dx[index_count].push(result1 + result3);
+                index_count++;
+              }
+            }
+          }
+        }
+        
         break;
       }
     case 9:
       a = stack.top();
       stack.pop();
       stack.push(exp(a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = stack.top()*a_top_dx.back();
+          first_dx[i].push(result);
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = stack.top()*(a_top_dx[i]*a_top_dx[j] + adx2);
+              second_dx[index_count].push(result);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 10:
       a = stack.top();
       stack.pop();
       stack.push(-1*a);
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = -1.0*a_top_dx.back();
+          first_dx[i].push(result);
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              second_dx[index_count].push(-1*adx2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 11:
       a = stack.top();
       stack.pop();
-      b = R::bessel_k(a, 1, 1);
+      b = boost::math::cyl_bessel_k(1,a);
       stack.push(b);
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = -0.5*boost::math::cyl_bessel_k(0,a)-0.5*boost::math::cyl_bessel_k(2,a);
+          first_dx[i].push(result*a_top_dx.back());
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = 0.25*boost::math::cyl_bessel_k(-1,a)+0.5*boost::math::cyl_bessel_k(1,a)+0.25*boost::math::cyl_bessel_k(3,a);
+              double result1 = -0.5*boost::math::cyl_bessel_k(0,a)-0.5*boost::math::cyl_bessel_k(2,a);
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 12:
       a = stack.top();
       stack.pop();
       stack.push(tgamma(a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = stack.top()*boost::math::polygamma(0,a);
+          first_dx[i].push(result*a_top_dx.back());
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = stack.top()*boost::math::polygamma(0,a)*boost::math::polygamma(0,a) + stack.top()*boost::math::polygamma(1,a);
+              double result1 = stack.top()*boost::math::polygamma(0,a);
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 13:
       a = stack.top();
       stack.pop();
       stack.push(sin(a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = cos(a)*a_top_dx.back();
+          first_dx[i].push(result);
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = -1.0*sin(a);
+              double result1 = cos(a);
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 14:
       a = stack.top();
       stack.pop();
       stack.push(cos(a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = -1.0*sin(a)*a_top_dx.back();
+          first_dx[i].push(result);
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = -1.0*cos(a);
+              double result1 = -1.0*sin(a);
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 15:
       a = stack.top();
       stack.pop();
       b = stack.top();
       stack.pop();
-      stack.push(R::bessel_k(a, b, 1));
+      stack.push(boost::math::cyl_bessel_k(b,a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = -0.5*boost::math::cyl_bessel_k(b-1,a)-0.5*boost::math::cyl_bessel_k(b+1,a);
+          first_dx[i].push(result*a_top_dx.back());
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = 0.25*boost::math::cyl_bessel_k(b-2,a)+0.5*boost::math::cyl_bessel_k(b,a)+0.25*boost::math::cyl_bessel_k(b+2,a);
+              double result1 = -0.5*boost::math::cyl_bessel_k(b-1,a)-0.5*boost::math::cyl_bessel_k(b+1,a);
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 16:
       a = stack.top();
       stack.pop();
       stack.push(log(a));
+      if(order > 0){
+        dblvec a_top_dx;
+        for(int i = 0; i < parameter_count; i++){
+          a_top_dx.push_back(first_dx[i].top());
+          first_dx[i].pop();
+          double result = (1/a)*a_top_dx.back();
+          first_dx[i].push(result);
+        }
+        if(order == 2){
+          int index_count = 0;
+          for(int i = 0; i < parameter_count; i++){
+            for(int j = i; j < parameter_count; j++){
+              double adx2 = second_dx[index_count].top();
+              second_dx[index_count].pop();
+              double result = -1.0/(a*a);
+              double result1 = 1/a;
+              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              second_dx[index_count].push(result2);
+              index_count++;
+            }
+          }
+        }
+      }
       break;
     case 20:
       stack.push(10);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 21:
       stack.push(1);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 22:
       stack.push(2);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 23:
       stack.push(3);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 24:
       stack.push(4);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 25:
       stack.push(5);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 26:
       stack.push(6);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 27:
       stack.push(7);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 28:
       stack.push(8);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 29:
       stack.push(9);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     case 30:
       stack.push(M_PI);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
       break;
     }
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
     //var = stack.top();
     //Rcpp::Rcout << " | Top: " << var;
   }
+  
+  if(order > 0){
+    if(first_deriv.size()!=first_dx.size()){
+      first_deriv.clear();
+      first_deriv.resize(first_dx.size());
+    }
+    for(int i = 0; i < parameter_count; i++){
+      first_deriv[i] = first_dx[i].top();
+    }
+  }
+  
+  if(order == 2){
+    if(second_deriv.size()!=second_dx.size()){
+      second_deriv.clear();
+      second_deriv.resize(second_dx.size());
+    }
+    int index_count = 0;
+    for(int i = 0; i < parameter_count; i++){
+      for(int j = i; j < parameter_count; j++){
+        second_deriv[index_count] = second_dx[index_count].top();
+        index_count++;
+      }
+    }
+  }
+  
   return stack.top();
 }
 

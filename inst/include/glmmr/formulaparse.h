@@ -5,10 +5,12 @@
 
 namespace glmmr{
 
-inline void parse_formula(std::vector<char>& formula,
+inline bool parse_formula(std::vector<char>& formula,
                           glmmr::calculator& calc,
                           const ArrayXXd& data,
                           const strvec& colnames){
+  bool added_a_parameter = false;
+  bool s1_check, s2_check;
   int bracket_count = 0;
   int cursor = 0;
   int nchar = formula.size();
@@ -103,8 +105,9 @@ inline void parse_formula(std::vector<char>& formula,
         cursor++;
       }
       
-      parse_formula(s1,calc,data,colnames);
-      parse_formula(s2,calc,data,colnames);
+      s1_check = parse_formula(s1,calc,data,colnames);
+      s2_check = parse_formula(s2,calc,data,colnames);
+      if(s1_check && s2_check)calc.any_nonlinear = true;
     } else {
       // no * to split at, try pow
       s1.clear();
@@ -137,8 +140,9 @@ inline void parse_formula(std::vector<char>& formula,
           cursor++;
         }
         
-        parse_formula(s1,calc,data,colnames);
-        parse_formula(s2,calc,data,colnames);
+        s1_check = parse_formula(s1,calc,data,colnames);
+        s2_check = parse_formula(s2,calc,data,colnames);
+        if(s1_check || s2_check)calc.any_nonlinear = true;
       } else {
         // no pow, try brackets
         s1.clear();
@@ -186,6 +190,8 @@ inline void parse_formula(std::vector<char>& formula,
           }
           
           parse_formula(s2,calc,data,colnames);
+          s2_check = parse_formula(s2,calc,data,colnames);
+          if(s2_check)calc.any_nonlinear = true;
         } else {
           // no brackets - now check data
           auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str);
@@ -228,11 +234,13 @@ inline void parse_formula(std::vector<char>& formula,
             calc.parameter_names.push_back(token_as_str);
             calc.indexes.push_back(calc.parameter_count);
             calc.parameter_count++;
+            added_a_parameter = true;
           }
         }
       }
     }
   }
+  return added_a_parameter;
 }
 
 }

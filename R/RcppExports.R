@@ -301,6 +301,10 @@
     .Call(`_glmmrBase_Linpred__xb`, xp)
 }
 
+.Linpred__x <- function(xp) {
+    .Call(`_glmmrBase_Linpred__x`, xp)
+}
+
 .girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {
     .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_, tol_)
 }

@@ -14,7 +14,9 @@
 #include <SparseChol.h>
 #include <set>
 #include "algo.h"
-#include <boost/math/differentiation/autodiff.hpp>
+#include <boost/math/special_functions/bessel.hpp>
+#include <boost/math/special_functions/polygamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
 
 using namespace Eigen;
 

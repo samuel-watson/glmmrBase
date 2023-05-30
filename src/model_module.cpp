@@ -383,6 +383,13 @@ SEXP Linpred__xb(SEXP xp){
   return wrap(xb);
 }
 
+// [[Rcpp::export(.Linpred__x)]]
+SEXP Linpred__x(SEXP xp){
+  XPtr<glmmr::LinearPredictor> ptr(xp);
+  Eigen::MatrixXd X = ptr->X();
+  return wrap(X);
+}
+
 // // [[Rcpp::export(.Linpred__dxb)]]
 // SEXP Linpred__dxb(SEXP xp){
 //   XPtr<glmmr::LinearPredictor> ptr(xp);
