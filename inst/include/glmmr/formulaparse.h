@@ -189,7 +189,6 @@ inline bool parse_formula(std::vector<char>& formula,
             }
           }
           
-          parse_formula(s2,calc,data,colnames);
           s2_check = parse_formula(s2,calc,data,colnames);
           if(s2_check)calc.any_nonlinear = true;
         } else {

@@ -10,8 +10,6 @@ namespace glmmr {
 
 class LinearPredictor {
 public:
-  //const Eigen::ArrayXXd data_;
-  //const strvec colnames_;data_(data), colnames_(colnames), 
   dblvec parameters_;
   glmmr::calculator calc_;
 
@@ -27,6 +25,8 @@ public:
       glmmr::print_vec_1d<intvec>(calc_.indexes);
       glmmr::print_vec_1d<strvec>(calc_.parameter_names);
       P_ = calc_.parameter_names.size();
+      X_.conservativeResize(n_,P_);
+      X_.setZero();
     };
 
   LinearPredictor(glmmr::Formula& form,
@@ -40,6 +40,9 @@ public:
       form_.calculate_linear_predictor(calc_,data,colnames);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
+      X_.conservativeResize(n_,P_);
+      X_ = calc_.jacobian();
+      x_set_ = true;
     };
 
   LinearPredictor(glmmr::Formula& form,
@@ -51,15 +54,22 @@ public:
     n_(data.rows()),
     X_(Eigen::MatrixXd::Zero(n_,1)) {
       form_.calculate_linear_predictor(calc_,data,colnames);
-      //parse(data,colnames);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
+      X_.conservativeResize(n_,P_);
+      X_ = calc_.jacobian();
+      x_set_ = true;
     };
 
   void update_parameters(const dblvec& parameters){
     if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
     parameters_ = parameters;
     calc_.parameters = parameters;
+    if(!x_set_){
+      X_ = calc_.jacobian();
+      x_set_ = true;
+      Rcpp::Rcout << "\nX: \n" << X_.topRows(15);
+    }
   };
 
   void update_parameters(const Eigen::ArrayXd& parameters){
@@ -75,9 +85,6 @@ public:
   strvec colnames(){
     return colnames_;
   }
-  
-  // void parse(const ArrayXXd& data,
-  //             const strvec& colnames);
 
   VectorXd xb(){
     VectorXd xb = calc_.calculate();
@@ -108,38 +115,8 @@ private:
   int n_;
   intvec x_cols_;
   Eigen::MatrixXd X_;
-  
-  void generate_X(){
-    X_ = calc_.jacobian();
-  }
+  bool x_set_ = false;
 };
 }
-
-
-// inline void glmmr::LinearPredictor::parse(const ArrayXXd& data,
-//                                            const strvec& colnames){
-//   int parcounter = 0;
-//   P_ = 0;
-//   if(!form_.RM_INT){
-//     glmmr::xbFormula f1(n_);
-//     x_components.push_back(f1);
-//     parcounter++;
-//     P_++;
-//   }
-//   
-//   for(int i = 0; i<form_.fe_.size(); i++){
-//     glmmr::xbFormula f2(form_.fe_[i],data,colnames);
-//     x_components.push_back(f2);
-//     P_ += f2.pars();
-//   }
-//   
-//   n_fe_components_ = x_components.size();
-//   if(parameters_.size()>0){
-//     if(parameters_.size()!=P_)Rcpp::stop("Linear predictor parameter vector size not equal to number of parameters");
-//   } else {
-//     parameters_.resize(P_);
-//   }
-// }
-
 
 #endif

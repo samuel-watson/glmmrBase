@@ -59,7 +59,7 @@ class calculator {
       int n = data.size();
       if(n==0)Rcpp::stop("No data initialised in calculator");
       MatrixXd J(n,parameter_count);
-      double x;
+//#pragma omp parallel for
       for(int i = 0; i<n ; i++){
         J.row(i) = (first_derivative(i)).transpose();
       }
@@ -70,7 +70,6 @@ class calculator {
       int n = data.size();
       if(n==0)Rcpp::stop("No data initialised in calculator");
       MatrixXd H = MatrixXd::Zero(parameter_count,parameter_count);
-      double x;
       for(int i = 0; i<n ; i++){
         H += second_derivative(i);
       }
@@ -103,21 +102,22 @@ inline double glmmr::calculator::calculate(const int i,
   }
   
   auto addZeroDx = [&] (){
-    for(int i = 0; i < parameter_count; i++){
-      first_dx[i].push(0.0);
+    for(int idx = 0; idx < parameter_count; idx++){
+      first_dx[idx].push(0.0);
     }
   };
   
   auto addZeroDx2 = [&] (){
     int index_count = 0;
-    for(int i = 0; i < parameter_count; i++){
-      for(int j = i; j < parameter_count; j++){
+    for(int idx = 0; idx < parameter_count; idx++){
+      for(int jdx = idx; jdx < parameter_count; jdx++){
         second_dx[index_count].push(0.0);
         index_count++;
       }
     }
   };
-  
+        
+            
   for(int k = 0; k < instructions.size(); k++){
     switch(instructions[k]){
     case 0:
@@ -151,11 +151,11 @@ inline double glmmr::calculator::calculate(const int i,
         // push parameter
         stack.push(parameters[indexes[idx_iter]]);
         if(order > 0){
-          for(int i = 0; i < parameter_count; i++){
-            if(i == indexes[idx_iter]){
-              first_dx[i].push(1.0);
+          for(int idx = 0; idx < parameter_count; idx++){
+            if(idx == indexes[idx_iter]){
+              first_dx[idx].push(1.0);
             } else {
-              first_dx[i].push(0.0);
+              first_dx[idx].push(0.0);
             }
           }
         }
@@ -174,18 +174,18 @@ inline double glmmr::calculator::calculate(const int i,
         stack.pop();
         stack.push(a+b);
         if(order > 0){
-          for(int i = 0; i < parameter_count; i++){
-            a = first_dx[i].top();
-            first_dx[i].pop();
-            b = first_dx[i].top();
-            first_dx[i].pop();
-            first_dx[i].push(a+b);
+          for(int idx = 0; idx < parameter_count; idx++){
+            a = first_dx[idx].top();
+            first_dx[idx].pop();
+            b = first_dx[idx].top();
+            first_dx[idx].pop();
+            first_dx[idx].push(a+b);
           }
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               a = second_dx[index_count].top();
               second_dx[index_count].pop();
               b = second_dx[index_count].top();
@@ -206,18 +206,18 @@ inline double glmmr::calculator::calculate(const int i,
         stack.pop();
         stack.push(a-b);
         if(order > 0){
-          for(int i = 0; i < parameter_count; i++){
-            a = first_dx[i].top();
-            first_dx[i].pop();
-            b = first_dx[i].top();
-            first_dx[i].pop();
-            first_dx[i].push(a-b);
+          for(int idx = 0; idx < parameter_count; idx++){
+            a = first_dx[idx].top();
+            first_dx[idx].pop();
+            b = first_dx[idx].top();
+            first_dx[idx].pop();
+            first_dx[idx].push(a-b);
           }
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               a = second_dx[index_count].top();
               second_dx[index_count].pop();
               b = second_dx[index_count].top();
@@ -240,22 +240,22 @@ inline double glmmr::calculator::calculate(const int i,
         if(order > 0){
           dblvec a_top_dx;
           dblvec b_top_dx;
-          for(int i = 0; i < parameter_count; i++){
-            a_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
-            b_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
-            first_dx[i].push(a*b_top_dx.back() + b*a_top_dx.back());
+          for(int idx = 0; idx < parameter_count; idx++){
+            a_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
+            b_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
+            first_dx[idx].push(a*b_top_dx.back() + b*a_top_dx.back());
           }
           if(order == 2){
             int index_count = 0;
-            for(int i = 0; i < parameter_count; i++){
-              for(int j = i; j < parameter_count; j++){
+            for(int idx = 0; idx < parameter_count; idx++){
+              for(int jdx = idx; jdx < parameter_count; jdx++){
                 double adx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
                 double bdx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
-                double result = a*bdx2 + b*adx2 + a_top_dx[i]*b_top_dx[j] + a_top_dx[j]*b_top_dx[i];
+                double result = a*bdx2 + b*adx2 + a_top_dx[idx]*b_top_dx[jdx] + a_top_dx[jdx]*b_top_dx[idx];
                 second_dx[index_count].push(result);
                 index_count++;
               }
@@ -275,24 +275,23 @@ inline double glmmr::calculator::calculate(const int i,
         if(order > 0){
           dblvec a_top_dx;
           dblvec b_top_dx;
-          for(int i = 0; i < parameter_count; i++){
-            a_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
-            b_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
+          for(int idx = 0; idx < parameter_count; idx++){
+            a_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
+            b_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
             double result = (b*a_top_dx.back() - a*b_top_dx.back())/(b*b);
-            first_dx[i].push(result);
+            first_dx[idx].push(result);
           }
           if(order == 2){
             int index_count = 0;
-            for(int i = 0; i < parameter_count; i++){
-              for(int j = i; j < parameter_count; j++){
+            for(int idx = 0; idx < parameter_count; idx++){
+              for(int jdx = idx; jdx < parameter_count; jdx++){
                 double adx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
                 double bdx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
-                //a*bdx2 + b*adx2 + a_top_dx[i]*b_top_dx[j] + a_top_dx[j]*b_top_dx[i];
-                double result = (adx2*b - a_top_dx[i]*b_top_dx[j]- a_top_dx[j]*b_top_dx[i])/(b*b) - (a*bdx2*b - 2*b_top_dx[i]*b_top_dx[j])/(b*b*b);
+                double result = (adx2*b - a_top_dx[idx]*b_top_dx[jdx]- a_top_dx[jdx]*b_top_dx[idx])/(b*b) - (a*bdx2*b - 2*b_top_dx[idx]*b_top_dx[jdx])/(b*b*b);
                 second_dx[index_count].push(result);
                 index_count++;
               }
@@ -307,19 +306,19 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(sqrt(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = 0.5*pow(a,-0.5)*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
-              double result = 0.5*pow(a,-0.5)*adx2 - 0.25*a_top_dx[i]*a_top_dx[j]*pow(a,-3/2);
+              double result = 0.5*pow(a,-0.5)*adx2 - 0.25*a_top_dx[idx]*a_top_dx[jdx]*pow(a,-3/2);
               second_dx[index_count].push(result);
               index_count++;
             }
@@ -338,32 +337,32 @@ inline double glmmr::calculator::calculate(const int i,
         if(order > 0){
           dblvec a_top_dx;
           dblvec b_top_dx;
-          for(int i = 0; i < parameter_count; i++){
-            a_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
-            b_top_dx.push_back(first_dx[i].top());
-            first_dx[i].pop();
+          for(int idx = 0; idx < parameter_count; idx++){
+            a_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
+            b_top_dx.push_back(first_dx[idx].top());
+            first_dx[idx].pop();
             double result = pow(a,b)*b_top_dx.back()*log(a) + pow(a,b-1)*b*a_top_dx.back();
-            first_dx[i].push(result);
+            first_dx[idx].push(result);
           }
           if(order == 2){
             int index_count = 0;
-            for(int i = 0; i < parameter_count; i++){
-              for(int j = i; j < parameter_count; j++){
+            for(int idx = 0; idx < parameter_count; idx++){
+              for(int jdx = idx; jdx < parameter_count; jdx++){
                 double adx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
                 double bdx2 = second_dx[index_count].top();
                 second_dx[index_count].pop();
-                double result1 = first_dx[j].top()*b_top_dx[i]*log(a) + stack.top()*(bdx2*log(a) + b_top_dx[i]*(1/a)*a_top_dx[j]);
-                double result2 = pow(a,b-1)*b_top_dx[j]*log(a) + pow(a,b-2)*(b-1)*a_top_dx[j];
-                double result3 = result2*b*a_top_dx[i] + pow(a,b-1)*(b*adx2+b_top_dx[j]*a_top_dx[i]);
+                double result1 = first_dx[jdx].top()*b_top_dx[idx]*log(a) + stack.top()*(bdx2*log(a) + b_top_dx[idx]*(1/a)*a_top_dx[jdx]);
+                double result2 = pow(a,b-1)*b_top_dx[jdx]*log(a) + pow(a,b-2)*(b-1)*a_top_dx[jdx];
+                double result3 = result2*b*a_top_dx[idx] + pow(a,b-1)*(b*adx2+b_top_dx[jdx]*a_top_dx[idx]);
                 second_dx[index_count].push(result1 + result3);
                 index_count++;
               }
             }
           }
         }
-        
+
         break;
       }
     case 9:
@@ -372,19 +371,19 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(exp(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = stack.top()*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
-              double result = stack.top()*(a_top_dx[i]*a_top_dx[j] + adx2);
+              double result = stack.top()*(a_top_dx[idx]*a_top_dx[jdx] + adx2);
               second_dx[index_count].push(result);
               index_count++;
             }
@@ -398,16 +397,16 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(-1*a);
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = -1.0*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               second_dx[index_count].push(-1*adx2);
@@ -424,21 +423,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(b);
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = -0.5*boost::math::cyl_bessel_k(0,a)-0.5*boost::math::cyl_bessel_k(2,a);
-          first_dx[i].push(result*a_top_dx.back());
+          first_dx[idx].push(result*a_top_dx.back());
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = 0.25*boost::math::cyl_bessel_k(-1,a)+0.5*boost::math::cyl_bessel_k(1,a)+0.25*boost::math::cyl_bessel_k(3,a);
               double result1 = -0.5*boost::math::cyl_bessel_k(0,a)-0.5*boost::math::cyl_bessel_k(2,a);
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -452,21 +451,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(tgamma(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = stack.top()*boost::math::polygamma(0,a);
-          first_dx[i].push(result*a_top_dx.back());
+          first_dx[idx].push(result*a_top_dx.back());
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = stack.top()*boost::math::polygamma(0,a)*boost::math::polygamma(0,a) + stack.top()*boost::math::polygamma(1,a);
               double result1 = stack.top()*boost::math::polygamma(0,a);
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -480,21 +479,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(sin(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = cos(a)*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = -1.0*sin(a);
               double result1 = cos(a);
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -508,21 +507,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(cos(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = -1.0*sin(a)*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = -1.0*cos(a);
               double result1 = -1.0*sin(a);
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -538,21 +537,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(boost::math::cyl_bessel_k(b,a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = -0.5*boost::math::cyl_bessel_k(b-1,a)-0.5*boost::math::cyl_bessel_k(b+1,a);
-          first_dx[i].push(result*a_top_dx.back());
+          first_dx[idx].push(result*a_top_dx.back());
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = 0.25*boost::math::cyl_bessel_k(b-2,a)+0.5*boost::math::cyl_bessel_k(b,a)+0.25*boost::math::cyl_bessel_k(b+2,a);
               double result1 = -0.5*boost::math::cyl_bessel_k(b-1,a)-0.5*boost::math::cyl_bessel_k(b+1,a);
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -566,21 +565,21 @@ inline double glmmr::calculator::calculate(const int i,
       stack.push(log(a));
       if(order > 0){
         dblvec a_top_dx;
-        for(int i = 0; i < parameter_count; i++){
-          a_top_dx.push_back(first_dx[i].top());
-          first_dx[i].pop();
+        for(int idx = 0; idx < parameter_count; idx++){
+          a_top_dx.push_back(first_dx[idx].top());
+          first_dx[idx].pop();
           double result = (1/a)*a_top_dx.back();
-          first_dx[i].push(result);
+          first_dx[idx].push(result);
         }
         if(order == 2){
           int index_count = 0;
-          for(int i = 0; i < parameter_count; i++){
-            for(int j = i; j < parameter_count; j++){
+          for(int idx = 0; idx < parameter_count; idx++){
+            for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
               double result = -1.0/(a*a);
               double result1 = 1/a;
-              double result2 = result*a_top_dx[i]*a_top_dx[j]+result1*adx2;
+              double result2 = result*a_top_dx[idx]*a_top_dx[jdx]+result1*adx2;
               second_dx[index_count].push(result2);
               index_count++;
             }
@@ -688,34 +687,38 @@ inline double glmmr::calculator::calculate(const int i,
       }
       break;
     }
+
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
+
     //var = stack.top();
     //Rcpp::Rcout << " | Top: " << var;
   }
-  
+
   if(order > 0){
     if(first_deriv.size()!=first_dx.size()){
       first_deriv.clear();
       first_deriv.resize(first_dx.size());
     }
-    for(int i = 0; i < parameter_count; i++){
-      first_deriv[i] = first_dx[i].top();
+    for(int idx = 0; idx < parameter_count; idx++){
+      if(first_dx[idx].size()==0)Rcpp::stop("Error derivative stack empty");
+      first_deriv[idx] = first_dx[idx].top();
     }
-  }
-  
-  if(order == 2){
-    if(second_deriv.size()!=second_dx.size()){
-      second_deriv.clear();
-      second_deriv.resize(second_dx.size());
-    }
-    int index_count = 0;
-    for(int i = 0; i < parameter_count; i++){
-      for(int j = i; j < parameter_count; j++){
-        second_deriv[index_count] = second_dx[index_count].top();
-        index_count++;
+    if(order == 2){
+      if(second_deriv.size()!=second_dx.size()){
+        second_deriv.clear();
+        second_deriv.resize(second_dx.size());
+      }
+      int index_count = 0;
+      for(int idx = 0; idx < parameter_count; idx++){
+        for(int jdx = idx; jdx < parameter_count; jdx++){
+          if(second_dx[idx].size()==0)Rcpp::stop("Error second derivative stack empty");
+          second_deriv[index_count] = second_dx[index_count].top();
+          index_count++;
+        }
       }
     }
   }
+  
   
   return stack.top();
 }
