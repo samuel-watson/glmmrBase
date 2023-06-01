@@ -20,15 +20,15 @@ public:
   const strvec colnames_;
   dblvec parameters_;
   dblvec other_pars_;
-  //mat(intvec({0,1})), matZ(intvec({0,1}))
+  
   Covariance(const str& formula,
              const ArrayXXd &data,
              const strvec& colnames) :
     form_(formula), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) { 
-    Z_constructor();
-  };
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -36,8 +36,8 @@ public:
     form_(form), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {
-    Z_constructor();
-  };
+      Z_constructor();
+    };
 
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -46,9 +46,9 @@ public:
     form_(formula), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -57,9 +57,9 @@ public:
     form_(form), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -69,9 +69,9 @@ public:
     parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -137,7 +137,7 @@ public:
   double log_determinant();
 
   int block_dim(int b){
-    return re_data_[b].size();
+    return calc_[b].data.size();
   };
 
   void make_sparse();
@@ -167,12 +167,11 @@ public:
   sparse Z_sparse();
 
 private:
+  std::vector<glmmr::calculator> calc_;
   intvec z_;
-  dblvec3d re_data_;
+  intvec3d re_pars_;
   intvec3d re_cols_data_;
   strvec2d fn_;
-  intvec2d re_rpn_;
-  intvec2d re_index_;
   intvec re_fn_par_link_;
   intvec re_count_;
   int Q_;
@@ -187,6 +186,8 @@ private:
   sparse matZ;
   sparse matL;
   SparseChol spchol;
+  
+  void update_parameters_in_calculators();
   
   MatrixXd get_block(int b);
   

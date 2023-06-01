@@ -26,27 +26,33 @@ inline void glmmr::Formula::tokenise(){
   int nchar = formula_as_chars.size();
   int cursor = 0;
   int bracket_count = 0; // to deal with opening of brackets
+  if(formula_as_chars[0]=='+')Rcpp::stop("Cannot start a formula with +");
   
   while(cursor < nchar){
-    if(formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='('){
-      bracket_count++;
-      cursor+=2;
-      re_token.push_back('(');
-      while(bracket_count > 0){
-        if(formula_as_chars[cursor]=='(')bracket_count++;
-        if(formula_as_chars[cursor]==')')bracket_count--;
-        re_token.push_back(formula_as_chars[cursor]);
-        cursor++;
-      }
-      str re_new(re_token.begin(),re_token.end());
-      re_.push_back(re_new);
-      re_token.clear();
+    if((formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='(') || 
+          (cursor==0 && formula_as_chars[cursor]=='(')){
+        Rcpp::Rcout << "\nCursor: " << cursor;
+        if(formula_as_chars[cursor]=='+')cursor++;
+        bracket_count++;
+        re_token.push_back('(');
+        while(bracket_count > 0 && cursor < nchar){
+          cursor++;
+          if(formula_as_chars[cursor]=='(')bracket_count++;
+          if(formula_as_chars[cursor]==')')bracket_count--;
+          re_token.push_back(formula_as_chars[cursor]);
+        }
+        Rcpp::Rcout << "\nToken: ";
+        for(auto ch: re_token) Rcpp::Rcout << ch;
+        str re_new(re_token.begin(),re_token.end());
+        re_.push_back(re_new);
+        re_token.clear();
     } else {
       linear_predictor_.push_back(formula_as_chars[cursor]);
     }
     cursor++;
   }
   
+  if(linear_predictor_.back()=='+')linear_predictor_.pop_back();
   Rcpp::Rcout << "\nLinpred: ";
   for(auto ch: linear_predictor_)Rcpp::Rcout << ch;
   

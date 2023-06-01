@@ -23,31 +23,31 @@ class calculator {
       data.resize(n);
     };
     
-    double calculate(const int i, const int j = 0,int order = 0);
+    dblvec calculate(const int i, const int j = 0,int order = 0);
     
-    VectorXd calculate(){
+    VectorXd linear_predictor(){
       int n = data.size();
       if(n==0)Rcpp::stop("No data");
       VectorXd x(n);
       for(int i = 0; i < n; i++){
-        x(i) = calculate(i);
+        x(i) = calculate(i)[0];
       }
       return x;
     };
     
     VectorXd first_derivative(int i){
-      double out = calculate(i,0,1);
-      VectorXd d = Map<VectorXd, Unaligned>(first_deriv.data(), first_deriv.size());
+      dblvec out = calculate(i,0,1);
+      VectorXd d = Map<VectorXd, Unaligned>(out.data(), out.size());
       return d;
     };
     
     MatrixXd second_derivative(int i){
-      double out = calculate(i,0,2);
+      dblvec out = calculate(i,0,2);
       MatrixXd h(parameter_count, parameter_count);
       int index_count = 0;
       for(int j = 0; j < parameter_count; j++){
         for(int k = j; k < parameter_count; k++){
-          h(k,j) = second_deriv[index_count];
+          h(k,j) = out[index_count];
           if(j != k) h(j,k) = h(k,j);
           index_count++;
         }
@@ -59,7 +59,7 @@ class calculator {
       int n = data.size();
       if(n==0)Rcpp::stop("No data initialised in calculator");
       MatrixXd J(n,parameter_count);
-//#pragma omp parallel for
+#pragma omp parallel for
       for(int i = 0; i<n ; i++){
         J.row(i) = (first_derivative(i)).transpose();
       }
@@ -77,14 +77,11 @@ class calculator {
       return H;
     };
     
-  private:
-    dblvec first_deriv;
-    dblvec second_deriv;
 };
 
 }
 
-inline double glmmr::calculator::calculate(const int i, 
+inline dblvec glmmr::calculator::calculate(const int i, 
                                            const int j,
                                            int order){
   if(order > 2)Rcpp::stop("Only up to second order derivatives allowed.");
@@ -689,38 +686,30 @@ inline double glmmr::calculator::calculate(const int i,
     }
 
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
-
-    //var = stack.top();
-    //Rcpp::Rcout << " | Top: " << var;
   }
-
-  if(order > 0){
-    if(first_deriv.size()!=first_dx.size()){
-      first_deriv.clear();
-      first_deriv.resize(first_dx.size());
-    }
+  
+  dblvec result;
+  if(order == 0){
+    result.push_back(stack.top());
+  }
+  if(order == 1){
     for(int idx = 0; idx < parameter_count; idx++){
       if(first_dx[idx].size()==0)Rcpp::stop("Error derivative stack empty");
-      first_deriv[idx] = first_dx[idx].top();
+      result.push_back(first_dx[idx].top());
     }
-    if(order == 2){
-      if(second_deriv.size()!=second_dx.size()){
-        second_deriv.clear();
-        second_deriv.resize(second_dx.size());
-      }
-      int index_count = 0;
-      for(int idx = 0; idx < parameter_count; idx++){
-        for(int jdx = idx; jdx < parameter_count; jdx++){
-          if(second_dx[idx].size()==0)Rcpp::stop("Error second derivative stack empty");
-          second_deriv[index_count] = second_dx[index_count].top();
-          index_count++;
-        }
+  }
+  if(order == 2){
+    int index_count = 0;
+    for(int idx = 0; idx < parameter_count; idx++){
+      for(int jdx = idx; jdx < parameter_count; jdx++){
+        if(second_dx[index_count].size()==0)Rcpp::stop("Error second derivative stack empty");
+        result.push_back(second_dx[index_count].top());
+        index_count++;
       }
     }
   }
   
-  
-  return stack.top();
+  return result;
 }
 
 #endif

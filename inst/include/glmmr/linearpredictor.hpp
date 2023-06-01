@@ -6,6 +6,7 @@
 #include "calculator.h"
 #include "formula.hpp"
 
+
 namespace glmmr {
 
 class LinearPredictor {
@@ -87,7 +88,7 @@ public:
   }
 
   VectorXd xb(){
-    VectorXd xb = calc_.calculate();
+    VectorXd xb = calc_.linear_predictor();
     return xb;
   }
 
