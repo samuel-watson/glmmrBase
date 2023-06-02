@@ -3,7 +3,6 @@
 
 #define _USE_MATH_DEFINES
 
-
 #include <boost/math/special_functions/digamma.hpp>
 #include <rbobyqa.h>
 #include "general.h"
@@ -11,6 +10,7 @@
 #include "openmpheader.h"
 #include "covariance.hpp"
 #include "linearpredictor.hpp"
+#include "calculator.h"
 #include "sparse.h"
 #include <random>
 
@@ -81,6 +81,7 @@ public:
           upper_t_.push_back(R_PosInf);
         }
         gen_sigma_blocks();
+        setup_calculator();
       };
   
   void set_offset(const VectorXd& offset);
@@ -100,6 +101,8 @@ public:
   void update_u(const MatrixXd &u);
   
   void update_W();
+  
+  void update_var_par(const double& v);
   
   double log_prob(const VectorXd &v);
   
@@ -187,6 +190,7 @@ private:
   ArrayXd size_q_array;
   ArrayXd size_n_array;
   ArrayXd size_p_array;
+  glmmr::calculator calc_;
   sparse ZL_;
   MatrixXd u_;
   MatrixXd zu_;
@@ -211,6 +215,8 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
+  
+  void setup_calculator();
   
   void gen_sigma_blocks();
   
@@ -329,7 +335,16 @@ private:
 
 }
 
-
+inline void glmmr::Model::setup_calculator(){
+  calc_ = linpred_.calc_;
+  glmmr::linear_predictor_to_link(calc_,link_);
+  glmmr::link_to_likelihood(calc_,family_,y_);
+  calc_.var_par = var_par_;
+  Rcpp::Rcout << "\nInstructions: ";
+  glmmr::print_vec_1d<intvec>(calc_.instructions);
+  Rcpp::Rcout << "\nIndexes: ";
+  glmmr::print_vec_1d<intvec>(calc_.indexes);
+}
 
 
 

@@ -10,16 +10,20 @@ inline void glmmr::Model::set_offset(const VectorXd& offset){
 inline void glmmr::Model::update_beta(const VectorXd &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta.array());
+    dblvec new_parameters(beta.data(),beta.data()+beta.size());
+    calc_.parameters = new_parameters;
 }
 
 inline void glmmr::Model::update_beta(const dblvec &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta);
+    calc_.parameters = beta;
 }
 
 inline void glmmr::Model::update_beta_extern(const dblvec &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta);
+    calc_.parameters = beta;
 }
 
 inline void glmmr::Model::update_theta(const VectorXd &theta){
@@ -75,6 +79,11 @@ inline void glmmr::Model::update_W(){
   W_ = glmmr::maths::dhdmu(size_n_array,family_,link_);
   W_.noalias() = (W_.array().inverse()).matrix();
   W_ *= 1/nvar_par;
+}
+
+inline void glmmr::Model::update_var_par(const double& v){
+  var_par_ = v;
+  calc_.var_par = v;
 }
 
 inline double glmmr::Model::log_prob(const VectorXd &v){
@@ -335,16 +344,17 @@ inline MatrixXd glmmr::Model::information_matrix_by_block(int b){
   return M;
 }
 
-inline double glmmr::Model::log_likelihood() { 
+inline double glmmr::Model::log_likelihood() {
   double ll = 0;
-  size_n_array = xb();
+  //size_n_array = xb();
   
-#pragma omp parallel for reduction (+:ll)
+//#pragma omp parallel for reduction (+:ll)
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
-      ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
+      ll += calc_.calculate(i,0,0,offset_(i)+zu_(i,j))[0];
     }
   }
+  
   return ll/zu_.cols();
 }
 

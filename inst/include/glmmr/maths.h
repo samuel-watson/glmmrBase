@@ -74,7 +74,8 @@ inline Eigen::VectorXd mod_inv_func(Eigen::VectorXd mu,
     {"logit",1},
     {"log",2},
     {"probit",3},
-    {"identity",4}
+    {"identity",4},
+    {"inverse",5}
   };
   switch (string_to_case.at(link)) {
   case 1:
@@ -87,6 +88,9 @@ inline Eigen::VectorXd mod_inv_func(Eigen::VectorXd mu,
     mu = gaussian_cdf_vec(mu);
     break;
   case 4:
+    break;
+  case 5:
+    mu = mu.array().inverse().matrix();
     break;
   }
   return mu;

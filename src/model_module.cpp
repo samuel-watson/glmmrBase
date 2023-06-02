@@ -278,7 +278,7 @@ SEXP Model__get_var_par(SEXP xp){
 void Model__set_var_par(SEXP xp, SEXP var_par_){
   double var_par = as<double>(var_par_);
   XPtr<glmmr::Model> ptr(xp);
-  ptr->var_par_ = var_par;
+  ptr->update_var_par(var_par);
 }
 
 // [[Rcpp::export(.Model__L)]]
