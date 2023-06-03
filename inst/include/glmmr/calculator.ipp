@@ -1,100 +1,5 @@
-#ifndef CALCULATOR_H
-#define CALCULATOR_H
-
-#include "general.h"
-
-namespace glmmr {
-
-class calculator {
-  public:
-    intvec instructions;
-    intvec indexes;
-    dblvec2d data;
-    dblvec parameters;
-    strvec parameter_names;
-    double var_par = 0;
-    int data_count = 0;
-    int parameter_count = 0;
-    bool any_nonlinear = false;
-    
-    calculator(){};
-    
-    void resize(int n){
-      data.clear();
-      data.resize(n);
-    };
-    
-    dblvec calculate(const int i, const int j = 0,int order = 0, double extraData = 0.0);
-    
-    calculator& operator= (const glmmr::calculator& calc){
-      instructions = calc.instructions;
-      indexes = calc.indexes;
-      data = calc.data;
-      parameters = calc.parameters;
-      parameter_names = calc.parameter_names;
-      var_par = calc.var_par;
-      data_count = calc.data_count;
-      parameter_count = calc.parameter_count;
-      any_nonlinear = calc.any_nonlinear;
-      return *this;
-    };
-    
-    VectorXd linear_predictor(){
-      int n = data.size();
-      if(n==0)Rcpp::stop("No data");
-      VectorXd x(n);
-#pragma omp parallel for
-      for(int i = 0; i < n; i++){
-        x(i) = calculate(i)[0];
-      }
-      return x;
-    };
-    
-    VectorXd first_derivative(int i){
-      dblvec out = calculate(i,0,1);
-      VectorXd d = Map<VectorXd, Unaligned>(out.data(), out.size());
-      return d;
-    };
-    
-    MatrixXd second_derivative(int i){
-      dblvec out = calculate(i,0,2);
-      MatrixXd h(parameter_count, parameter_count);
-      int index_count = 0;
-      for(int j = 0; j < parameter_count; j++){
-        for(int k = j; k < parameter_count; k++){
-          h(k,j) = out[index_count];
-          if(j != k) h(j,k) = h(k,j);
-          index_count++;
-        }
-      }
-      return h;
-    };
-    
-    MatrixXd jacobian(){
-      int n = data.size();
-      if(n==0)Rcpp::stop("No data initialised in calculator");
-      MatrixXd J(n,parameter_count);
-#pragma omp parallel for
-      for(int i = 0; i<n ; i++){
-        J.row(i) = (first_derivative(i)).transpose();
-      }
-      return J;
-    };
-    
-    MatrixXd hessian(){
-      int n = data.size();
-      if(n==0)Rcpp::stop("No data initialised in calculator");
-      MatrixXd H = MatrixXd::Zero(parameter_count,parameter_count);
-      for(int i = 0; i<n ; i++){
-        H += second_derivative(i);
-      }
-      H *= (1/n);
-      return H;
-    };
-    
-};
-
-}
+#ifndef CALCULATOR_IPP
+#define CALCULATOR_IPP
 
 inline dblvec glmmr::calculator::calculate(const int i, 
                                            const int j,
@@ -129,207 +34,207 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
     }
   };
-        
-            
+  
+  
   for(int k = 0; k < instructions.size(); k++){
     switch(instructions[k]){
     case 0:
-      {
-        //push data (i)
-        //DEBUG
-        
-        if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-        if(indexes[idx_iter] >= data[i].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[i].size()));
-        stack.push(data[i][indexes[idx_iter]]);
-        if(order > 0){
-          addZeroDx();
-        }
-        if(order == 2){
-          addZeroDx2();
-        }
-        idx_iter++;
-        break;
-      }
+  {
+    //push data (i)
+    //DEBUG
+    
+    if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+    if(indexes[idx_iter] >= data[i].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[i].size()));
+    stack.push(data[i][indexes[idx_iter]]);
+    if(order > 0){
+      addZeroDx();
+    }
+    if(order == 2){
+      addZeroDx2();
+    }
+    idx_iter++;
+    break;
+  }
     case 1:
-      {
-        // push data (j)
-        //DEBUG
-        if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-        if(indexes[idx_iter] >= data[i].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[j].size()));
-        
-        stack.push(data[j][indexes[idx_iter]]);
-        if(order > 0){
-          addZeroDx();
-        }
-        if(order == 2){
-          addZeroDx2();
-        }
-        idx_iter++;
-        break;
-      }
+  {
+    // push data (j)
+    //DEBUG
+    if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+    if(indexes[idx_iter] >= data[i].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[j].size()));
+    
+    stack.push(data[j][indexes[idx_iter]]);
+    if(order > 0){
+      addZeroDx();
+    }
+    if(order == 2){
+      addZeroDx2();
+    }
+    idx_iter++;
+    break;
+  }
     case 2:
-      {
-        // push parameter
-        //DEBUG
-        if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-        if(indexes[idx_iter] >= parameters.size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
-        
-        stack.push(parameters[indexes[idx_iter]]);
-        if(order > 0){
-          for(int idx = 0; idx < parameter_count; idx++){
-            if(idx == indexes[idx_iter]){
-              first_dx[idx].push(1.0);
-            } else {
-              first_dx[idx].push(0.0);
-            }
-          }
+  {
+    // push parameter
+    //DEBUG
+    if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+    if(indexes[idx_iter] >= parameters.size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
+    
+    stack.push(parameters[indexes[idx_iter]]);
+    if(order > 0){
+      for(int idx = 0; idx < parameter_count; idx++){
+        if(idx == indexes[idx_iter]){
+          first_dx[idx].push(1.0);
+        } else {
+          first_dx[idx].push(0.0);
         }
-        if(order == 2){
-          addZeroDx2();
-        }
-        idx_iter++;
-        break;
       }
+    }
+    if(order == 2){
+      addZeroDx2();
+    }
+    idx_iter++;
+    break;
+  }
     case 3:
-      {
-        // add
-        if(stack.size()<2)Rcpp::stop("Stack too small (3)");
-        a = stack.top();
-        stack.pop();
-        b = stack.top();
-        stack.pop();
-        stack.push(a+b);
-        if(order > 0){
-          for(int idx = 0; idx < parameter_count; idx++){
-            a = first_dx[idx].top();
-            first_dx[idx].pop();
-            b = first_dx[idx].top();
-            first_dx[idx].pop();
-            first_dx[idx].push(a+b);
-          }
-        }
-        if(order == 2){
-          int index_count = 0;
-          for(int idx = 0; idx < parameter_count; idx++){
-            for(int jdx = idx; jdx < parameter_count; jdx++){
-              a = second_dx[index_count].top();
-              second_dx[index_count].pop();
-              b = second_dx[index_count].top();
-              second_dx[index_count].pop();
-              second_dx[index_count].push(a+b);
-              index_count++;
-            }
-          }
-        }
-        break;
+  {
+    // add
+    if(stack.size()<2)Rcpp::stop("Stack too small (3)");
+    a = stack.top();
+    stack.pop();
+    b = stack.top();
+    stack.pop();
+    stack.push(a+b);
+    if(order > 0){
+      for(int idx = 0; idx < parameter_count; idx++){
+        a = first_dx[idx].top();
+        first_dx[idx].pop();
+        b = first_dx[idx].top();
+        first_dx[idx].pop();
+        first_dx[idx].push(a+b);
       }
+    }
+    if(order == 2){
+      int index_count = 0;
+      for(int idx = 0; idx < parameter_count; idx++){
+        for(int jdx = idx; jdx < parameter_count; jdx++){
+          a = second_dx[index_count].top();
+          second_dx[index_count].pop();
+          b = second_dx[index_count].top();
+          second_dx[index_count].pop();
+          second_dx[index_count].push(a+b);
+          index_count++;
+        }
+      }
+    }
+    break;
+  }
     case 4:
-      {
-        // subtract
-        if(stack.size()<2)Rcpp::stop("Stack too small (4)");
-        a = stack.top();
-        stack.pop();
-        b = stack.top();
-        stack.pop();
-        stack.push(a-b);
-        if(order > 0){
-          for(int idx = 0; idx < parameter_count; idx++){
-            a = first_dx[idx].top();
-            first_dx[idx].pop();
-            b = first_dx[idx].top();
-            first_dx[idx].pop();
-            first_dx[idx].push(a-b);
-          }
-        }
-        if(order == 2){
-          int index_count = 0;
-          for(int idx = 0; idx < parameter_count; idx++){
-            for(int jdx = idx; jdx < parameter_count; jdx++){
-              a = second_dx[index_count].top();
-              second_dx[index_count].pop();
-              b = second_dx[index_count].top();
-              second_dx[index_count].pop();
-              second_dx[index_count].push(a-b);
-              index_count++;
-            }
-          }
-        }
-        break;
+  {
+    // subtract
+    if(stack.size()<2)Rcpp::stop("Stack too small (4)");
+    a = stack.top();
+    stack.pop();
+    b = stack.top();
+    stack.pop();
+    stack.push(a-b);
+    if(order > 0){
+      for(int idx = 0; idx < parameter_count; idx++){
+        a = first_dx[idx].top();
+        first_dx[idx].pop();
+        b = first_dx[idx].top();
+        first_dx[idx].pop();
+        first_dx[idx].push(a-b);
       }
+    }
+    if(order == 2){
+      int index_count = 0;
+      for(int idx = 0; idx < parameter_count; idx++){
+        for(int jdx = idx; jdx < parameter_count; jdx++){
+          a = second_dx[index_count].top();
+          second_dx[index_count].pop();
+          b = second_dx[index_count].top();
+          second_dx[index_count].pop();
+          second_dx[index_count].push(a-b);
+          index_count++;
+        }
+      }
+    }
+    break;
+  }
     case 5:
-      {
-        // multiply
-        if(stack.size()<2)Rcpp::stop("Stack too small (5)");
-        a = stack.top();
-        stack.pop();
-        b = stack.top();
-        stack.pop();
-        stack.push(a*b);
-        if(order > 0){
-          dblvec a_top_dx;
-          dblvec b_top_dx;
-          for(int idx = 0; idx < parameter_count; idx++){
-            a_top_dx.push_back(first_dx[idx].top());
-            first_dx[idx].pop();
-            b_top_dx.push_back(first_dx[idx].top());
-            first_dx[idx].pop();
-            first_dx[idx].push(a*b_top_dx.back() + b*a_top_dx.back());
-          }
-          if(order == 2){
-            int index_count = 0;
-            for(int idx = 0; idx < parameter_count; idx++){
-              for(int jdx = idx; jdx < parameter_count; jdx++){
-                double adx2 = second_dx[index_count].top();
-                second_dx[index_count].pop();
-                double bdx2 = second_dx[index_count].top();
-                second_dx[index_count].pop();
-                double result = a*bdx2 + b*adx2 + a_top_dx[idx]*b_top_dx[jdx] + a_top_dx[jdx]*b_top_dx[idx];
-                second_dx[index_count].push(result);
-                index_count++;
-              }
-            }
+  {
+    // multiply
+    if(stack.size()<2)Rcpp::stop("Stack too small (5)");
+    a = stack.top();
+    stack.pop();
+    b = stack.top();
+    stack.pop();
+    stack.push(a*b);
+    if(order > 0){
+      dblvec a_top_dx;
+      dblvec b_top_dx;
+      for(int idx = 0; idx < parameter_count; idx++){
+        a_top_dx.push_back(first_dx[idx].top());
+        first_dx[idx].pop();
+        b_top_dx.push_back(first_dx[idx].top());
+        first_dx[idx].pop();
+        first_dx[idx].push(a*b_top_dx.back() + b*a_top_dx.back());
+      }
+      if(order == 2){
+        int index_count = 0;
+        for(int idx = 0; idx < parameter_count; idx++){
+          for(int jdx = idx; jdx < parameter_count; jdx++){
+            double adx2 = second_dx[index_count].top();
+            second_dx[index_count].pop();
+            double bdx2 = second_dx[index_count].top();
+            second_dx[index_count].pop();
+            double result = a*bdx2 + b*adx2 + a_top_dx[idx]*b_top_dx[jdx] + a_top_dx[jdx]*b_top_dx[idx];
+            second_dx[index_count].push(result);
+            index_count++;
           }
         }
-        break;
       }
+    }
+    break;
+  }
     case 6:
-      {
-        //division
-        if(stack.size()<2)Rcpp::stop("Stack too small (6)");
-        a = stack.top();
-        stack.pop();
-        b = stack.top();
-        if(b == 0)Rcpp::stop("Divide by zero (6)");
-        stack.pop();
-        stack.push(a/b);
-        if(order > 0){
-          dblvec a_top_dx;
-          dblvec b_top_dx;
-          for(int idx = 0; idx < parameter_count; idx++){
-            a_top_dx.push_back(first_dx[idx].top());
-            first_dx[idx].pop();
-            b_top_dx.push_back(first_dx[idx].top());
-            first_dx[idx].pop();
-            double result = (b*a_top_dx.back() - a*b_top_dx.back())/(b*b);
-            first_dx[idx].push(result);
-          }
-          if(order == 2){
-            int index_count = 0;
-            for(int idx = 0; idx < parameter_count; idx++){
-              for(int jdx = idx; jdx < parameter_count; jdx++){
-                double adx2 = second_dx[index_count].top();
-                second_dx[index_count].pop();
-                double bdx2 = second_dx[index_count].top();
-                second_dx[index_count].pop();
-                double result = (adx2*b - a_top_dx[idx]*b_top_dx[jdx]- a_top_dx[jdx]*b_top_dx[idx])/(b*b) - (a*bdx2*b - 2*b_top_dx[idx]*b_top_dx[jdx])/(b*b*b);
-                second_dx[index_count].push(result);
-                index_count++;
-              }
-            }
+  {
+    //division
+    if(stack.size()<2)Rcpp::stop("Stack too small (6)");
+    a = stack.top();
+    stack.pop();
+    b = stack.top();
+    if(b == 0)Rcpp::stop("Divide by zero (6)");
+    stack.pop();
+    stack.push(a/b);
+    if(order > 0){
+      dblvec a_top_dx;
+      dblvec b_top_dx;
+      for(int idx = 0; idx < parameter_count; idx++){
+        a_top_dx.push_back(first_dx[idx].top());
+        first_dx[idx].pop();
+        b_top_dx.push_back(first_dx[idx].top());
+        first_dx[idx].pop();
+        double result = (b*a_top_dx.back() - a*b_top_dx.back())/(b*b);
+        first_dx[idx].push(result);
+      }
+      if(order == 2){
+        int index_count = 0;
+        for(int idx = 0; idx < parameter_count; idx++){
+          for(int jdx = idx; jdx < parameter_count; jdx++){
+            double adx2 = second_dx[index_count].top();
+            second_dx[index_count].pop();
+            double bdx2 = second_dx[index_count].top();
+            second_dx[index_count].pop();
+            double result = (adx2*b - a_top_dx[idx]*b_top_dx[jdx]- a_top_dx[jdx]*b_top_dx[idx])/(b*b) - (a*bdx2*b - 2*b_top_dx[idx]*b_top_dx[jdx])/(b*b*b);
+            second_dx[index_count].push(result);
+            index_count++;
           }
         }
-        break;
       }
+    }
+    break;
+  }
     case 7:
       if(stack.size()==0)Rcpp::stop("Stack too small (7)");
       a = stack.top();
@@ -394,7 +299,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-
+        
         break;
       }
     case 9:
@@ -664,7 +569,6 @@ inline dblvec glmmr::calculator::calculate(const int i,
         if(order == 2){
           addZeroDx2();
         }
-        idx_iter++;
         break;
       }
     case 20:
@@ -854,15 +758,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
       
     }
-
+    
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
   }
   
   dblvec result;
-  if(order == 0){
-    result.push_back(stack.top());
-  }
-  if(order == 1){
+  result.push_back(stack.top());
+  if(order > 0){
     for(int idx = 0; idx < parameter_count; idx++){
       if(first_dx[idx].size()==0)Rcpp::stop("Error derivative stack empty");
       result.push_back(first_dx[idx].top());

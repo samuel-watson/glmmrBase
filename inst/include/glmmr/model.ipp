@@ -7,6 +7,17 @@ inline void glmmr::Model::set_offset(const VectorXd& offset){
     offset_ = offset;
 }
 
+inline void glmmr::Model::setup_calculator(){
+  calc_ = linpred_.calc_;
+  glmmr::linear_predictor_to_link(calc_,link_);
+  glmmr::link_to_likelihood(calc_,family_,y_);
+  calc_.var_par = var_par_;
+  Rcpp::Rcout << "\nInstructions: ";
+  glmmr::print_vec_1d<intvec>(calc_.instructions);
+  Rcpp::Rcout << "\nIndexes: ";
+  glmmr::print_vec_1d<intvec>(calc_.indexes);
+}
+
 inline void glmmr::Model::update_beta(const VectorXd &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta.array());
@@ -348,10 +359,11 @@ inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   //size_n_array = xb();
   
-//#pragma omp parallel for reduction (+:ll)
+#pragma omp parallel for reduction (+:ll)
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
-      ll += calc_.calculate(i,0,0,offset_(i)+zu_(i,j))[0];
+      double ozu = offset_(i)+zu_(i,j);
+      ll += calc_.calculate(i,0,0,ozu)[0];
     }
   }
   
@@ -683,21 +695,25 @@ inline MatrixXd glmmr::Model::laplace_hessian(double tol){
   return hess;
 }
 
-inline MatrixXd glmmr::Model::hessian(double tol){
-  int npars = P_+covariance_.npar();
-  F_likelihood fhdl(*this);
-  fhdl.os.usebounds_ = 1;
-  dblvec start = get_start_values(true,true,false);
-  dblvec upper = get_upper_values(true,true,false);
-  dblvec lower = get_lower_values(true,true,false);
-  fhdl.os.lower_ = lower;
-  fhdl.os.upper_ = upper;
-  dblvec ndep;
-  for(int i = 0; i < npars; i++) ndep.push_back(tol);
-  fhdl.os.ndeps_ = ndep;
-  dblvec hessian(npars * npars,0.0);
-  fhdl.Hessian(start,hessian);
-  MatrixXd hess = Map<MatrixXd>(hessian.data(),npars,npars);
+inline MatrixXd glmmr::Model::hessian(){
+  //int npars = P_+covariance_.npar();double tol
+  //F_likelihood fhdl(*this);
+  //fhdl.os.usebounds_ = 1;
+  //dblvec start = get_start_values(true,true,false);
+  //dblvec upper = get_upper_values(true,true,false);
+  //dblvec lower = get_lower_values(true,true,false);
+  //fhdl.os.lower_ = lower;
+  //fhdl.os.upper_ = upper;
+  //dblvec ndep;
+  //for(int i = 0; i < npars; i++) ndep.push_back(tol);
+  //fhdl.os.ndeps_ = ndep;
+  //dblvec hessian(npars * npars,0.0);
+  //fhdl.Hessian(start,hessian);
+  //MatrixXd hess = Map<MatrixXd>(hessian.data(),npars,npars);
+  //return hess;
+  MatrixXd zuOffset_ = zu_;
+  zuOffset_.colwise() += offset_;
+  MatrixXd hess = calc_.hessian(zuOffset_);
   return hess;
 }
 

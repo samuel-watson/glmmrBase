@@ -2,7 +2,7 @@
 #define INTERPRETER_H
 
 #include "general.h"
-#include "calculator.h"
+#include "calculator.hpp"
 
 namespace glmmr {
 

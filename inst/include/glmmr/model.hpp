@@ -10,7 +10,7 @@
 #include "openmpheader.h"
 #include "covariance.hpp"
 #include "linearpredictor.hpp"
-#include "calculator.h"
+#include "calculator.hpp"
 #include "sparse.h"
 #include <random>
 
@@ -140,7 +140,7 @@ public:
   
   MatrixXd laplace_hessian(double tol = 1e-4);
   
-  MatrixXd hessian(double tol = 1e-4);
+  MatrixXd hessian();//double tol = 1e-4
   
   MatrixXd u(bool scaled = true){
     if(scaled){
@@ -335,16 +335,7 @@ private:
 
 }
 
-inline void glmmr::Model::setup_calculator(){
-  calc_ = linpred_.calc_;
-  glmmr::linear_predictor_to_link(calc_,link_);
-  glmmr::link_to_likelihood(calc_,family_,y_);
-  calc_.var_par = var_par_;
-  Rcpp::Rcout << "\nInstructions: ";
-  glmmr::print_vec_1d<intvec>(calc_.instructions);
-  Rcpp::Rcout << "\nIndexes: ";
-  glmmr::print_vec_1d<intvec>(calc_.indexes);
-}
+
 
 
 

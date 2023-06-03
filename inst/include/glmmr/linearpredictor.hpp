@@ -3,7 +3,7 @@
 
 #include "general.h"
 #include "interpreter.h"
-#include "calculator.h"
+#include "calculator.hpp"
 #include "formula.hpp"
 
 
