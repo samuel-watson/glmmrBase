@@ -197,6 +197,10 @@
     .Call(`_glmmrBase_Model__hessian`, xp)
 }
 
+.Model__obs_information_matrix <- function(xp) {
+    .Call(`_glmmrBase_Model__obs_information_matrix`, xp)
+}
+
 .Model__u <- function(xp, scaled_) {
     .Call(`_glmmrBase_Model__u`, xp, scaled_)
 }

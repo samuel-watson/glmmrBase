@@ -145,4 +145,17 @@ struct vector_matrix{
   };
 };
 
+struct matrix_matrix{
+public:
+  MatrixXd mat1;
+  MatrixXd mat2;
+  matrix_matrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
+  matrix_matrix(const matrix_matrix& x) : mat1(x.mat1), mat2(x.mat2) {};
+  matrix_matrix& operator=(matrix_matrix x){
+    mat1 = x.mat1;
+    mat2 = x.mat2;
+    return *this;
+  };
+};
+
 #endif

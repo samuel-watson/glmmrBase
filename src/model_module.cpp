@@ -8,6 +8,14 @@ SEXP wrap(const vector_matrix& x){
       Rcpp::Named("mat") = Rcpp::wrap(x.mat)
   ));
 }
+
+template<>
+SEXP wrap(const matrix_matrix& x){
+  return Rcpp::wrap(Rcpp::List::create(
+      Rcpp::Named("mat1") = Rcpp::wrap(x.mat1),
+      Rcpp::Named("mat2") = Rcpp::wrap(x.mat2)
+  ));
+}
 }
 
 using namespace Rcpp;
@@ -161,6 +169,7 @@ void Model__nr_beta(SEXP xp){
   ptr->nr_beta();
 }
 
+
 // [[Rcpp::export(.Model__laplace_nr_beta_u)]]
 void Model__laplace_nr_beta_u(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
@@ -191,8 +200,15 @@ SEXP Model__information_matrix(SEXP xp){
 // [[Rcpp::export(.Model__hessian)]]
 SEXP Model__hessian(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd hess = ptr->hessian();
+  matrix_matrix hess = ptr->hessian();
   return wrap(hess);
+}
+
+// [[Rcpp::export(.Model__obs_information_matrix)]]
+SEXP Model__obs_information_matrix(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  MatrixXd infomat = ptr->observed_information_matrix();
+  return wrap(infomat);
 }
 
 // [[Rcpp::export(.Model__u)]]

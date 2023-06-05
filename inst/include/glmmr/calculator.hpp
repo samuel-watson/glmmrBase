@@ -148,7 +148,7 @@ class calculator {
           } 
         }
       }
-      VectorXd Hmean = H.rowwise().mean();
+      VectorXd Hmean = H.rowwise().sum();
       MatrixXd H0 = MatrixXd::Zero(parameter_count, parameter_count);
       int index_count = 0;
       for(int j = 0; j < parameter_count; j++){
@@ -161,8 +161,8 @@ class calculator {
       return H0;
     };
     
-    vector_matrix jacobian_and_hessian(const MatrixXd& extraData){
-      vector_matrix result(parameter_count);
+    matrix_matrix jacobian_and_hessian(const MatrixXd& extraData){
+      matrix_matrix result(parameter_count,data.size(),parameter_count,parameter_count);
       int n = data.size();
       if(n==0)Rcpp::stop("No data initialised in calculator");
       if(extraData.rows()!=n)Rcpp::stop("Extra data not of length n");
@@ -175,16 +175,16 @@ class calculator {
         dblvec out;
         for(int k = 0; k < iter; k++){
           out = calculate(i,0,2,extraData(i,k));
-          for(int j = 0; j < n2d; j++){
-            H(j,i) += out[parameter_count + 1 + j];
+          for(int j = 0; j < parameter_count; j++){
+            J(j,i) += out[1+j]/iter;
           }
-          J.col(i) += Map<VectorXd, Unaligned>(out.data()+1, out.size()-1);
+          for(int j = 0; j < n2d; j++){
+            H(j,i) += out[parameter_count + 1 + j]/iter;
+          }
         }
-        H.col(i) *= 1/iter;
-        J.col(i) *= 1/iter;
       }
-      VectorXd Hmean = H.rowwise().mean();
-      VectorXd Jmean = J.rowwise().mean();
+      VectorXd Hmean = H.rowwise().sum();
+      //VectorXd Jmean = J.rowwise().mean();
       MatrixXd H0 = MatrixXd::Zero(parameter_count, parameter_count);
       int index_count = 0;
       for(int j = 0; j < parameter_count; j++){
@@ -194,8 +194,8 @@ class calculator {
           index_count++;
         }
       }
-      result.mat = H0;
-      result.vec = Jmean;
+      result.mat1 = H0;
+      result.mat2 = J;
       return result;
     };
     

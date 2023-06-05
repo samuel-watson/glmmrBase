@@ -242,52 +242,53 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             if(grepl("~",self$formula) && length(as.formula(self$formula))==3)stop("formula should not have dependent variable.")
                             if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
                             self$formula <- gsub(" ","",self$formula)
-                            if(isTRUE(all.equal("1",self$formula))){
-                              self$data <- cbind(self$data,1)
-                              colnames(self$data)[ncol(self$data)] <- "[Intercept]"
-                              self$formula <- "[Intercept]-1"
-                            } else {
-                              #need to remove random effect terms from the formula
-                              self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
-                              
-                              ## add handling of factors
-                              if(grepl("factor",self$formula) & !grepl("factor\\[",self$formula)){
-                                rm_int <- grepl("-1",self$formula)
-                                cstart <- ifelse(rm_int,1,2)
-                                regres <- gregexpr("factor\\(.*\\)",self$formula)
-                                for(i in 1:length(regres[[1]])){
-                                  tmpstr <- substr(self$formula,regres[[1]][i],regres[[1]][i]+attr(regres[[1]],"match.length")[i]-1)
-                                  tmpdat <- stats::model.matrix(as.formula(paste0("~",tmpstr,"-1")),data=self$data)
-                                  f1 <- self$formula
-                                  for(j in (cstart):ncol(tmpdat)){
-                                    cname1 <- colnames(tmpdat)[j]
-                                    cname1 <- gsub("\\(","\\[",cname1)
-                                    cname1 <- gsub("\\)","\\]",cname1)
-                                    colnames(tmpdat)[j] <- cname1
-                                    if(j==cstart){
-                                      f2 <- cname1
-                                    } else {
-                                      f2 <- paste0(f2," + ",cname1)
-                                    }
-                                  }
-                                  self$data <- cbind(self$data,tmpdat[,cstart:ncol(tmpdat)])
-                                  tmpform <- ""
-                                  if(grepl("[^ \\s\\~]",substr(f1,1,(regres[[1]][i]-1)))){
-                                    tmpform <- paste0(tmpform,substr(f1,1,(regres[[1]][i]-1))," + ",f2)
-                                  } else {
-                                    tmpform <- f2
-                                  }
-                                  if((regres[[1]][i]+attr(regres[[1]],"match.length")[i]) <= nchar(self$formula)){
-                                    tmpform <- paste0(tmpform, substr(f1,regres[[1]][i]+attr(regres[[1]],"match.length")[i],nchar(f1)))
-                                  }
-                                  self$formula <- tmpform
-                                  # remove any double +
-                                  self$formula <- gsub("\\+\\s*\\+","+",self$formula)
-                                }
-                              }
-                              # change the brackets to avoid confusion
-                              self$formula <- gsub("-[ \\s+]1","-1",self$formula)
-                            }
+                            self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
+                            # if(isTRUE(all.equal("1",self$formula))){
+                            #   self$data <- cbind(self$data,1)
+                            #   colnames(self$data)[ncol(self$data)] <- "[Intercept]"
+                            #   self$formula <- "[Intercept]-1"
+                            # } else {
+                            #   #need to remove random effect terms from the formula
+                            #   self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
+                            #   
+                            #   ## add handling of factors
+                            #   if(grepl("factor",self$formula) & !grepl("factor\\[",self$formula)){
+                            #     rm_int <- grepl("-1",self$formula)
+                            #     cstart <- ifelse(rm_int,1,2)
+                            #     regres <- gregexpr("factor\\(.*\\)",self$formula)
+                            #     for(i in 1:length(regres[[1]])){
+                            #       tmpstr <- substr(self$formula,regres[[1]][i],regres[[1]][i]+attr(regres[[1]],"match.length")[i]-1)
+                            #       tmpdat <- stats::model.matrix(as.formula(paste0("~",tmpstr,"-1")),data=self$data)
+                            #       f1 <- self$formula
+                            #       for(j in (cstart):ncol(tmpdat)){
+                            #         cname1 <- colnames(tmpdat)[j]
+                            #         cname1 <- gsub("\\(","\\[",cname1)
+                            #         cname1 <- gsub("\\)","\\]",cname1)
+                            #         colnames(tmpdat)[j] <- cname1
+                            #         if(j==cstart){
+                            #           f2 <- cname1
+                            #         } else {
+                            #           f2 <- paste0(f2," + ",cname1)
+                            #         }
+                            #       }
+                            #       self$data <- cbind(self$data,tmpdat[,cstart:ncol(tmpdat)])
+                            #       tmpform <- ""
+                            #       if(grepl("[^ \\s\\~]",substr(f1,1,(regres[[1]][i]-1)))){
+                            #         tmpform <- paste0(tmpform,substr(f1,1,(regres[[1]][i]-1))," + ",f2)
+                            #       } else {
+                            #         tmpform <- f2
+                            #       }
+                            #       if((regres[[1]][i]+attr(regres[[1]],"match.length")[i]) <= nchar(self$formula)){
+                            #         tmpform <- paste0(tmpform, substr(f1,regres[[1]][i]+attr(regres[[1]],"match.length")[i],nchar(f1)))
+                            #       }
+                            #       self$formula <- tmpform
+                            #       # remove any double +
+                            #       self$formula <- gsub("\\+\\s*\\+","+",self$formula)
+                            #     }
+                            #   }
+                            #   # change the brackets to avoid confusion
+                            #   self$formula <- gsub("-[ \\s+]1","-1",self$formula)
+                            # }
                             private$genX()
                             private$hash <- private$hash_do()
                           },

@@ -173,24 +173,63 @@ inline bool parse_formula(std::vector<char>& formula,
           // process s1 as function (if size > 0)
           
           if(s1.size()>0){
-            calc.any_nonlinear = true;
-            if(token_as_str == "exp"){
-              calc.instructions.push_back(9);
-            } else if(token_as_str == "log"){
-              calc.instructions.push_back(16);
-            } else if(token_as_str == "sqrt"){
-              calc.instructions.push_back(7);
-            } else if(token_as_str == "sin"){
-              calc.instructions.push_back(13);
-            } else if(token_as_str == "cos"){
-              calc.instructions.push_back(14);
+            if(token_as_str == "factor"){
+              // rewrite s2 to have all the unique values of s2 variable
+              // 1. check
+              str token_as_str2(s2.begin(),s2.end());
+              auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str2);
+              
+              if(colidx != colnames.end()){
+                int column_index = colidx - colnames.begin();
+                dblvec unique_values(data.col(column_index).data(),data.col(column_index).data()+data.rows());
+                std::sort(unique_values.begin(),unique_values.end());
+                auto last = std::unique(unique_values.begin(),unique_values.end());
+                unique_values.erase(last,unique_values.end());
+                //check for intercept
+                auto findintercept = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"b_intercept");
+                int factorrange = findintercept == calc.parameter_names.end() ? unique_values.size() : unique_values.size()-1;
+                bool itemsinxb = calc.instructions.size() > 0;
+                for(int i = 0; i < factorrange; i++){
+                  if(i > 0 || (i==0 && itemsinxb))calc.instructions.push_back(3);
+                  calc.instructions.push_back(5);
+                  for(int j = 0; j < data.rows(); j++){
+                    //data
+                    calc.data[i].push_back(data(j,column_index)==unique_values[i] ? 1.0 : 0.0);
+                  }
+                  calc.indexes.push_back(calc.data_count);
+                  calc.data_count++;
+                  calc.instructions.push_back(0);
+                  // parameter
+                  calc.instructions.push_back(2);
+                  str parname = "b_" + token_as_str2 + "_" + std::to_string(unique_values[i]);
+                  calc.parameter_names.push_back(parname);
+                  calc.indexes.push_back(calc.parameter_count);
+                  calc.parameter_count++;
+                }
+                added_a_parameter = true;
+              } else {
+                Rcpp::stop("Factor variable " + token_as_str + " not in data");
+              }
             } else {
-              Rcpp::stop("String " + token_as_str + " is not a recognised function");
+              calc.any_nonlinear = true;
+              if(token_as_str == "exp"){
+                calc.instructions.push_back(9);
+              } else if(token_as_str == "log"){
+                calc.instructions.push_back(16);
+              } else if(token_as_str == "sqrt"){
+                calc.instructions.push_back(7);
+              } else if(token_as_str == "sin"){
+                calc.instructions.push_back(13);
+              } else if(token_as_str == "cos"){
+                calc.instructions.push_back(14);
+              } else {
+                Rcpp::stop("String " + token_as_str + " is not a recognised function");
+              }
             }
-          }
-          
-          s2_check = parse_formula(s2,calc,data,colnames);
-          if(s2_check)calc.any_nonlinear = true;
+            
+            s2_check = parse_formula(s2,calc,data,colnames);
+            if(s2_check)calc.any_nonlinear = true;
+            }
         } else {
           // no brackets - now check data
           auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str);

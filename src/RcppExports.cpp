@@ -569,6 +569,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__obs_information_matrix
+SEXP Model__obs_information_matrix(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__obs_information_matrix(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__obs_information_matrix(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__u
 SEXP Model__u(SEXP xp, bool scaled_);
 RcppExport SEXP _glmmrBase_Model__u(SEXP xpSEXP, SEXP scaled_SEXP) {
@@ -935,6 +946,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 2},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
+    {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
     {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},

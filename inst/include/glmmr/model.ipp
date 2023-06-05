@@ -504,74 +504,7 @@ inline void glmmr::Model::laplace_ml_beta_theta(){
   opt.minimize(ldl, start);
 }
 
-inline void glmmr::Model::nr_beta(){
-  
-  int niter = u_.cols();
-  ArrayXd sigmas(niter);
-  
-  MatrixXd XtXW = MatrixXd::Zero(P_*niter,P_);
-  MatrixXd Wu = MatrixXd::Zero(n_,niter);
-  
-  double nvar_par = 1.0;
-  if(family_=="gaussian"){
-    nvar_par *= var_par_*var_par_;
-  } else if(family_=="Gamma"){
-    nvar_par *= 1/var_par_;
-  } else if(family_=="beta"){
-    nvar_par *= (1+var_par_);
-  } else if(family_=="binomial"){
-    nvar_par *= 1/var_par_;
-  }
-  MatrixXd zd = linpred();
-  
-#pragma omp parallel for
-  for(int i = 0; i < niter; ++i){
-    VectorXd w = glmmr::maths::dhdmu(zd.col(i),family_,link_);
-    w = (w.array().inverse()).matrix();
-    w *= nvar_par;
-    VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
-    ArrayXd resid = (y_ - zdu);
-    sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
-    XtXW.block(P_*i, 0, P_, P_) = linpred_.X().transpose() * w.asDiagonal() * linpred_.X();
-    VectorXd dmu = glmmr::maths::detadmu(zd.col(i),link_);
-    w = w.cwiseProduct(dmu);
-    w = w.cwiseProduct(resid.matrix());
-    Wu.col(i) = w;
-  }
-  XtXW *= (double)1/niter;
-  MatrixXd XtWXm = XtXW.block(0,0,P_,P_);
-  for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P_*i,0,P_,P_);
-  XtWXm = XtWXm.inverse();
-  VectorXd Wum = Wu.rowwise().mean();
-  VectorXd bincr = XtWXm * (linpred_.X().transpose()) * Wum;
-  update_beta(linpred_.parameter_vector() + bincr);
-  var_par_ = sigmas.mean();
-}
 
-inline void glmmr::Model::laplace_nr_beta_u(){
-  double sigmas;
-  update_W();
-  VectorXd zd = (linpred()).col(0);
-  VectorXd dmu =  glmmr::maths::detadmu(zd,link_);
-  
-  MatrixXd LZWZL = covariance_.LZWZL(W_);
-  LZWZL = LZWZL.llt().solve(MatrixXd::Identity(LZWZL.rows(),LZWZL.cols()));
-  VectorXd zdu =  glmmr::maths::mod_inv_func(zd, link_);
-  ArrayXd resid = (y_ - zdu).array();
-  sigmas = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
-  
-  MatrixXd XtXW = (linpred_.X()).transpose() * W_.asDiagonal() * linpred_.X();
-  VectorXd w = W_;
-  w = w.cwiseProduct(dmu);
-  w = w.cwiseProduct(resid.matrix());
-  XtXW = XtXW.inverse();
-  VectorXd bincr = XtXW * (linpred_.X()).transpose() * w;
-  VectorXd vgrad = log_gradient(u_.col(0));
-  VectorXd vincr = LZWZL * vgrad;
-  update_u(u_.colwise()+vincr);
-  update_beta(linpred_.parameter_vector() + bincr);
-  var_par_ = sigmas;
-}
 
 
 inline VectorXd glmmr::Model::new_proposal(const VectorXd& u0_,
@@ -695,27 +628,24 @@ inline MatrixXd glmmr::Model::laplace_hessian(double tol){
   return hess;
 }
 
-inline MatrixXd glmmr::Model::hessian(){
-  //int npars = P_+covariance_.npar();double tol
-  //F_likelihood fhdl(*this);
-  //fhdl.os.usebounds_ = 1;
-  //dblvec start = get_start_values(true,true,false);
-  //dblvec upper = get_upper_values(true,true,false);
-  //dblvec lower = get_lower_values(true,true,false);
-  //fhdl.os.lower_ = lower;
-  //fhdl.os.upper_ = upper;
-  //dblvec ndep;
-  //for(int i = 0; i < npars; i++) ndep.push_back(tol);
-  //fhdl.os.ndeps_ = ndep;
-  //dblvec hessian(npars * npars,0.0);
-  //fhdl.Hessian(start,hessian);
-  //MatrixXd hess = Map<MatrixXd>(hessian.data(),npars,npars);
-  //return hess;
+inline matrix_matrix glmmr::Model::hessian(){
   MatrixXd zuOffset_ = zu_;
   zuOffset_.colwise() += offset_;
-  MatrixXd hess = calc_.hessian(zuOffset_);
+  matrix_matrix hess = calc_.jacobian_and_hessian(zuOffset_);
   return hess;
 }
+
+inline MatrixXd glmmr::Model::observed_information_matrix(){
+  MatrixXd zuOffset_ = zu_;
+  zuOffset_.colwise() += offset_;
+  matrix_matrix hess = calc_.jacobian_and_hessian(zuOffset_);
+  MatrixXd grad_prod = hess.mat2 * hess.mat2.transpose();
+  MatrixXd I = MatrixXd::Identity(hess.mat1.rows(),hess.mat1.rows());
+  MatrixXd infomat = hess.mat1.llt().solve(I);
+  infomat = infomat * grad_prod * infomat;
+  return infomat;
+}
+
 
 inline double glmmr::Model::aic(){
   MatrixXd Lu = covariance_.Lu(u_);
