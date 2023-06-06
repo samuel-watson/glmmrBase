@@ -113,6 +113,7 @@ public:
     return npars_;
   };
 
+  
   int B(){
     return B_;
   }
@@ -137,7 +138,7 @@ public:
   double log_determinant();
 
   int block_dim(int b){
-    return calc_[b].data.size();
+    return re_data_[b].rows();//calc_[b].data.size();
   };
 
   void make_sparse();
@@ -172,6 +173,8 @@ private:
   intvec3d re_pars_;
   intvec3d re_cols_data_;
   strvec2d fn_;
+  dblvec2d par_for_calcs_;
+  std::vector<MatrixXd> re_data_;
   intvec re_fn_par_link_;
   intvec re_count_;
   int Q_;

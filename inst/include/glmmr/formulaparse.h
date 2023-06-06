@@ -8,7 +8,10 @@ namespace glmmr{
 inline bool parse_formula(std::vector<char>& formula,
                           glmmr::calculator& calc,
                           const ArrayXXd& data,
-                          const strvec& colnames){
+                          const strvec& colnames,
+                          MatrixXd& Xdata){
+  
+  if(data.rows() != Xdata.rows())Rcpp::stop("Mismatched size of data and Xdata");
   bool added_a_parameter = false;
   bool s1_check, s2_check;
   int bracket_count = 0;
@@ -68,8 +71,8 @@ inline bool parse_formula(std::vector<char>& formula,
         s2.push_back(s2_parname[j]);
       }
     }
-    parse_formula(s1,calc,data,colnames);
-    parse_formula(s2,calc,data,colnames);
+    parse_formula(s1,calc,data,colnames,Xdata);
+    parse_formula(s2,calc,data,colnames,Xdata);
   } else {
     // no +/- to split at, try *//
     s1.clear();
@@ -105,8 +108,8 @@ inline bool parse_formula(std::vector<char>& formula,
         cursor++;
       }
       
-      s1_check = parse_formula(s1,calc,data,colnames);
-      s2_check = parse_formula(s2,calc,data,colnames);
+      s1_check = parse_formula(s1,calc,data,colnames,Xdata);
+      s2_check = parse_formula(s2,calc,data,colnames,Xdata);
       if(s1_check && s2_check)calc.any_nonlinear = true;
     } else {
       // no * to split at, try pow
@@ -140,8 +143,8 @@ inline bool parse_formula(std::vector<char>& formula,
           cursor++;
         }
         
-        s1_check = parse_formula(s1,calc,data,colnames);
-        s2_check = parse_formula(s2,calc,data,colnames);
+        s1_check = parse_formula(s1,calc,data,colnames,Xdata);
+        s2_check = parse_formula(s2,calc,data,colnames,Xdata);
         if(s1_check || s2_check)calc.any_nonlinear = true;
       } else {
         // no pow, try brackets
@@ -192,9 +195,10 @@ inline bool parse_formula(std::vector<char>& formula,
                 for(int i = 0; i < factorrange; i++){
                   if(i < (factorrange - 1))calc.instructions.push_back(3);
                   calc.instructions.push_back(5);
+                  if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);
                   for(int j = 0; j < data.rows(); j++){
-                    //data
-                    calc.data[j].push_back(data(j,column_index)==unique_values[i] ? 1.0 : 0.0);
+                    //calc.data[j].push_back(data(j,column_index)==unique_values[i] ? 1.0 : 0.0);
+                    Xdata(j,calc.data_count) = data(j,column_index)==unique_values[i] ? 1.0 : 0.0;
                   }
                   calc.indexes.push_back(calc.data_count);
                   calc.data_count++;
@@ -226,7 +230,7 @@ inline bool parse_formula(std::vector<char>& formula,
                 Rcpp::stop("String " + token_as_str + " is not a recognised function");
               }
               
-              s2_check = parse_formula(s2,calc,data,colnames);
+              s2_check = parse_formula(s2,calc,data,colnames,Xdata);
               if(s2_check)calc.any_nonlinear = true;
             }
           }
@@ -238,10 +242,13 @@ inline bool parse_formula(std::vector<char>& formula,
             calc.instructions.push_back(0);
             int column_index = colidx - colnames.begin();
             calc.indexes.push_back(calc.data_count);
+            if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);
+            
+            Xdata.col(calc.data_count) = data.col(column_index);
+            // for(int i = 0; i < n; i++){
+            //   calc.data[i].push_back(data(i,column_index));
+            // }
             calc.data_count++;
-            for(int i = 0; i < n; i++){
-              calc.data[i].push_back(data(i,column_index));
-            }
           } else if(glmmr::is_number(token_as_str)) {
             // add an integer to the stack
             int p = s1.size();

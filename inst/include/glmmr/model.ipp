@@ -8,33 +8,53 @@ inline void glmmr::Model::set_offset(const VectorXd& offset){
 }
 
 inline void glmmr::Model::setup_calculator(){
+  dblvec yvec(y_.data(),y_.data()+y_.size());
   calc_ = linpred_.calc_;
   glmmr::linear_predictor_to_link(calc_,link_);
-  glmmr::link_to_likelihood(calc_,family_,y_);
+  glmmr::link_to_likelihood(calc_,family_);
+  calc_.y = yvec;
   calc_.var_par = var_par_;
   Rcpp::Rcout << "\nInstructions: ";
   glmmr::print_vec_1d<intvec>(calc_.instructions);
   Rcpp::Rcout << "\nIndexes: ";
   glmmr::print_vec_1d<intvec>(calc_.indexes);
+  
+  // re calculators
+  glmmr::re_linear_predictor(vcalc_,Q_);
+  glmmr::linear_predictor_to_link(vcalc_,link_);
+  glmmr::link_to_likelihood(vcalc_,family_);
+  vcalc_.y = yvec;
+  vcalc_.var_par = var_par_;
+  glmmr::re_vv(vvcalc_,Q_);
+  
+  Rcpp::Rcout << "\nvInstructions: ";
+  glmmr::print_vec_1d<intvec>(vcalc_.instructions);
+  Rcpp::Rcout << "\nvIndexes: ";
+  glmmr::print_vec_1d<intvec>(vcalc_.indexes);
+  
+  Rcpp::Rcout << "\nvvInstructions: ";
+  glmmr::print_vec_1d<intvec>(vvcalc_.instructions);
+  Rcpp::Rcout << "\nvvIndexes: ";
+  glmmr::print_vec_1d<intvec>(vvcalc_.indexes);
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta.array());
     dblvec new_parameters(beta.data(),beta.data()+beta.size());
-    calc_.parameters = new_parameters;
+    //calc_.parameters = new_parameters;
 }
 
 inline void glmmr::Model::update_beta(const dblvec &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta);
-    calc_.parameters = beta;
+    //calc_.parameters = beta;
 }
 
 inline void glmmr::Model::update_beta_extern(const dblvec &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta);
-    calc_.parameters = beta;
+    //calc_.parameters = beta;
 }
 
 inline void glmmr::Model::update_theta(const VectorXd &theta){
@@ -363,7 +383,7 @@ inline double glmmr::Model::log_likelihood() {
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
       double ozu = offset_(i)+zu_(i,j);
-      ll += calc_.calculate(i,0,0,ozu)[0];
+      ll += calc_.calculate(i,linpred_.parameters_,linpred_.Xdata_,0,0,ozu)[0];
     }
   }
   
@@ -629,16 +649,36 @@ inline MatrixXd glmmr::Model::laplace_hessian(double tol){
 }
 
 inline matrix_matrix glmmr::Model::hessian(){
-  MatrixXd zuOffset_ = zu_;
-  zuOffset_.colwise() += offset_;
-  matrix_matrix hess = calc_.jacobian_and_hessian(zuOffset_);
+  // MatrixXd zuOffset_ = zu_;
+  // zuOffset_.colwise() += offset_;
+  // matrix_matrix hess = calc_.jacobian_and_hessian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
+  // return hess;
+  
+  //dblvec uu(u_.col(0).data(),u_.col(0).data()+u_.rows());
+  //glmmr::print_vec_1d<dblvec>(uu);
+  //MatrixXd ZL = sparse_to_dense(ZL_,false);
+  //Rcpp::Rcout << "\nZL: \n" << ZL.topRows(2);
+  //Rcpp::Rcout << "\nxb : \n" << xbOffset_.head(10).transpose();
+  //matrix_matrix tmp(1,1,1,1);
+  //MatrixXd p(1,1);
+  //p.setZero();
+  //tmp.mat1 = p;
+  //tmp.mat2 = p;
+  //return tmp;
+  VectorXd xbOffset_ = linpred_.xb() + offset_;
+  matrix_matrix hess = vcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()),sparse_to_dense(ZL_,false),Map<MatrixXd>(xbOffset_.data(),xbOffset_.size(),1));
+  
+  vector_matrix vvhess = vvcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()));
+  
+  hess.mat1 += vvhess.mat;
+  hess.mat2.colwise() += vvhess.vec;
   return hess;
 }
 
 inline MatrixXd glmmr::Model::observed_information_matrix(){
   MatrixXd zuOffset_ = zu_;
   zuOffset_.colwise() += offset_;
-  matrix_matrix hess = calc_.jacobian_and_hessian(zuOffset_);
+  matrix_matrix hess = calc_.jacobian_and_hessian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
   MatrixXd grad_prod = hess.mat2 * hess.mat2.transpose();
   MatrixXd I = MatrixXd::Identity(hess.mat1.rows(),hess.mat1.rows());
   hess.mat1 *= -1.0;

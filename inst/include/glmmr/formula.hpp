@@ -38,12 +38,14 @@ public:
   
   void calculate_linear_predictor(glmmr::calculator& calculator,
                                   const ArrayXXd& data,
-                                  const strvec& colnames){
-    calculator.resize(data.rows());
+                                  const strvec& colnames,
+                                  MatrixXd& Xdata){
+    //calculator.resize(data.rows());
     bool outparse = glmmr::parse_formula(linear_predictor_,
                                           calculator,
                                           data,
-                                          colnames);
+                                          colnames,
+                                          Xdata);
     std::reverse(calculator.instructions.begin(),calculator.instructions.end());
     std::reverse(calculator.indexes.begin(),calculator.indexes.end());
   }

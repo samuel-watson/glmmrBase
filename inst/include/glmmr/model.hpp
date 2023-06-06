@@ -14,6 +14,7 @@
 #include "sparse.h"
 #include <random>
 
+
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
@@ -193,6 +194,8 @@ private:
   ArrayXd size_n_array;
   ArrayXd size_p_array;
   glmmr::calculator calc_;
+  glmmr::calculator vcalc_;
+  glmmr::calculator vvcalc_;
   sparse ZL_;
   MatrixXd u_;
   MatrixXd zu_;
@@ -343,7 +346,7 @@ inline void glmmr::Model::nr_beta(){
   ArrayXd sigmas(niter);
   MatrixXd zuOffset_ = zu_;
   zuOffset_.colwise() += offset_;
-  matrix_matrix deriv = calc_.jacobian_and_hessian(zuOffset_);
+  matrix_matrix deriv = calc_.jacobian_and_hessian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
   VectorXd Jsum = deriv.mat2.rowwise().sum();
   MatrixXd I = MatrixXd::Identity(deriv.mat1.rows(),deriv.mat1.rows());
   deriv.mat1 *= -1.0;

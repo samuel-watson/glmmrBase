@@ -288,6 +288,42 @@ inline intvec interpret_re_par(const std::string& fn,
   return B;
 }
 
+
+inline void re_linear_predictor(glmmr::calculator& calc,
+                                const int& Q){
+  intvec re_instruct;
+  intvec re_seq = {0,2,5,3};
+  re_instruct.push_back(18);
+  for(int i = 0; i < Q; i++){
+    re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
+    calc.parameter_names.push_back("v_"+std::to_string(i));
+    calc.indexes.push_back(i);
+    calc.indexes.push_back(i);
+  }
+  calc.parameter_count = Q;
+  calc.instructions = re_instruct;
+  calc.data_count = Q;
+}
+
+inline void re_vv(glmmr::calculator& calc,
+                  const int& Q){
+  intvec v_instruct = {2,17};
+  intvec v_seq = {2,17,3};
+  calc.indexes.push_back(0);
+  calc.parameter_names.push_back("v_0");
+  for(int i = 1; i < Q; i++){
+    v_instruct.insert(v_instruct.end(),v_seq.begin(),v_seq.end());
+    calc.parameter_names.push_back("v_"+std::to_string(i));
+    calc.indexes.push_back(i);
+  }
+  intvec v_seq2 = {22,21,6,5,10};
+  v_instruct.insert(v_instruct.end(),v_seq2.begin(),v_seq2.end());
+  calc.instructions = v_instruct;
+  calc.parameter_count = Q;
+  calc.data_count = 0;
+  
+}
+
 inline void linear_predictor_to_link(glmmr::calculator& calc,
                                      const str& link){
   intvec out;
@@ -374,8 +410,8 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
 }
 
 inline void link_to_likelihood(glmmr::calculator& calc,
-                               const str& family,
-                               const VectorXd& y){
+                               const str& family){
+  
   intvec out;
   intvec idx;
   const static std::unordered_map<std::string, int> family_to_case{
@@ -386,33 +422,28 @@ inline void link_to_likelihood(glmmr::calculator& calc,
     {"beta",5}
   };
   
-  for(int i = 0; i < y.size(); i++){
-    calc.data[i].push_back(y(i));
-  }
-  int data_dim = calc.data[0].size() - 1;
-  
   
   switch (family_to_case.at(family)){
     case 1:
       {
-        intvec gaus_instruct = {0,4,6,17,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,3,10};
+        intvec gaus_instruct = {19,4,6,17,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,3,10};
         out.push_back(41);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         break;
       }
     case 2:
       {
-        intvec binom_instruct = {16,5,0,21,4};
+        intvec binom_instruct = {16,5,19,21,4};
         intvec binom_instruct2 = {21,4,16,5,3};
-        out.push_back(0);
-        idx.push_back(data_dim);
+        out.push_back(19);
+        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
@@ -420,13 +451,13 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 3:
       {
-        intvec poisson_instruct = {0,40,3,0};
+        intvec poisson_instruct = {19,40,3,19};
         intvec poisson_instruct2 = {16,5,4};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct.begin(),poisson_instruct.end());
-        idx.push_back(data_dim);
-        idx.push_back(data_dim);
+        // idx.push_back(data_dim);
+        // idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct2.begin(),poisson_instruct2.end());
@@ -434,34 +465,34 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 4:
       {
-        intvec gamma_instruct = {41,0,5,6};
-        intvec gamma_instruct2 = {41,0,5,6,16,41,5,4,41,12,0,5,21,6,1,6,3};
+        intvec gamma_instruct = {41,19,5,6};
+        intvec gamma_instruct2 = {41,19,5,6,16,41,5,4,41,12,19,5,21,6,1,6,3};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
-        idx.push_back(data_dim);
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         break;
       }
     case 5:
       {
-        intvec beta_instruct = {41,4,0,16,5,21};
-        intvec beta_instruct2 = {21,4,41,5,4,0,21,4,16,5,3};
+        intvec beta_instruct = {41,4,19,16,5,21};
+        intvec beta_instruct2 = {21,4,41,5,4,19,21,4,16,5,3};
         intvec beta_instruct3 = {41,5,12,16,10,3};
         intvec beta_instruct4 = {21,4,41,5,12,16,10,3,41,12,16,3};
         out.push_back(21);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct2.begin(),beta_instruct2.end());
-        idx.push_back(data_dim);
+        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct3.begin(),beta_instruct3.end());

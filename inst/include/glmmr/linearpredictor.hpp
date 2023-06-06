@@ -13,6 +13,7 @@ class LinearPredictor {
 public:
   dblvec parameters_;
   glmmr::calculator calc_;
+  MatrixXd Xdata_;
 
   LinearPredictor(glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
@@ -20,8 +21,9 @@ public:
     colnames_(colnames),  
     form_(form),
     n_(data.rows()),
-    X_(Eigen::MatrixXd::Zero(n_,1)) {
-      form_.calculate_linear_predictor(calc_,data,colnames);
+    X_(MatrixXd::Zero(n_,1)),
+    Xdata_(data.rows(),1){
+      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       glmmr::print_vec_1d<intvec>(calc_.instructions);
       glmmr::print_vec_1d<intvec>(calc_.indexes);
       glmmr::print_vec_1d<strvec>(calc_.parameter_names);
@@ -37,12 +39,13 @@ public:
     colnames_(colnames), 
     form_(form),
     n_(data.rows()),
-    X_(Eigen::MatrixXd::Zero(n_,1)) {
-      form_.calculate_linear_predictor(calc_,data,colnames);
+    X_(MatrixXd::Zero(n_,1)),
+    Xdata_(data.rows(),1) {
+      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
       X_.conservativeResize(n_,P_);
-      X_ = calc_.jacobian();
+      X_ = calc_.jacobian(parameters_,Xdata_);
       x_set_ = true;
     };
 
@@ -53,21 +56,21 @@ public:
     colnames_(colnames), 
     form_(form),
     n_(data.rows()),
-    X_(Eigen::MatrixXd::Zero(n_,1)) {
-      form_.calculate_linear_predictor(calc_,data,colnames);
+    X_(MatrixXd::Zero(n_,1)),
+    Xdata_(data.rows(),1) {
+      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
       X_.conservativeResize(n_,P_);
-      X_ = calc_.jacobian();
+      X_ = calc_.jacobian(parameters_,Xdata_);
       x_set_ = true;
     };
 
   void update_parameters(const dblvec& parameters){
     if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
     parameters_ = parameters;
-    calc_.parameters = parameters;
     if(!x_set_){
-      X_ = calc_.jacobian();
+      X_ = calc_.jacobian(parameters_,Xdata_);
       x_set_ = true;
       Rcpp::Rcout << "\nX: \n" << X_.topRows(15);
     }
@@ -88,13 +91,13 @@ public:
   }
 
   VectorXd xb(){
-    VectorXd xb = calc_.linear_predictor();
+    VectorXd xb = calc_.linear_predictor(parameters_,Xdata_);
     return xb;
   }
 
   MatrixXd X(){
     if(calc_.any_nonlinear){
-      X_ = calc_.jacobian();
+      X_ = calc_.jacobian(parameters_,Xdata_);
     }
     return X_;
   }
@@ -115,7 +118,7 @@ private:
   int n_fe_components_;
   int n_;
   intvec x_cols_;
-  Eigen::MatrixXd X_;
+  MatrixXd X_;
   bool x_set_ = false;
 };
 }

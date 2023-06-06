@@ -5,6 +5,7 @@ inline void glmmr::Covariance::parse(){
   intvec3d re_cols_;
   intvec re_order_;
   strvec2d re_par_names_;
+  dblvec3d re_temp_data_;
 
   // now process each step of the random effect terms
   if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
@@ -102,9 +103,10 @@ inline void glmmr::Covariance::parse(){
     int currresize = calc_.size();
     
     calc_.resize(currresize+groups.size());
+    re_temp_data_.resize(currresize+groups.size());
     re_cols_.resize(currresize+groups.size());
     re_cols_data_.resize(currresize+groups.size());
-    // // for each group, create a new z data including the group
+    // for each group, create a new z data including the group
     
     int fn_var_counter = 0;
     for(int m = 0; m < fnvars.size(); m++){
@@ -138,15 +140,17 @@ inline void glmmr::Covariance::parse(){
           //newrecols[m] = m;
         }
         
-        if(std::find(calc_[gridx + currresize].data.begin(),
-              calc_[gridx + currresize].data.end(),allvals) == calc_[gridx + currresize].data.end()){
-                calc_[gridx + currresize].data.push_back(allvals);
+        if(std::find(re_temp_data_[gridx + currresize].begin(),
+              re_temp_data_[gridx + currresize].end(),allvals) == re_temp_data_[gridx + currresize].end()){
+              re_temp_data_[gridx + currresize].push_back(allvals);
+              //calc_[gridx + currresize].data.push_back(allvals);
                 //re_cols_[gridx + currresize].push_back(newrecols);
-                re_cols_data_[gridx + currresize].push_back(allcols);
+              re_cols_data_[gridx + currresize].push_back(allcols);
         }
       }
 
   }
+  
   
   // get parameter indexes
   re_pars_.resize(fn_.size());
@@ -231,6 +235,7 @@ inline void glmmr::Covariance::parse(){
     calc_[i].instructions = fn_instruct;
     calc_[i].indexes = fn_par;
     calc_[i].parameter_names = re_par_names_[i];
+    calc_[i].parameter_count = re_par_names_[i].size();
     //re_rpn_.push_back(fn_instruct);
     //re_index_.push_back(fn_par);
   }
@@ -239,27 +244,28 @@ inline void glmmr::Covariance::parse(){
   //get the number of random effects
   Q_ = 0;
   for(int i = 0; i < calc_.size(); i++){
-    Q_ += calc_[i].data.size();
+    Q_ += re_temp_data_[i].size();
   }
   re_count_.resize(form_.re_terms().size());
   std::fill(re_count_.begin(), re_count_.end(), 0);
   for(int i = 0; i < calc_.size(); i++){
-    re_count_[re_order_[i]] += calc_[i].data.size();
+    re_count_[re_order_[i]] += re_temp_data_[i].size();
+    MatrixXd newredata(re_temp_data_[i].size(),re_temp_data_[i][0].size());
+    for(int j = 0; j < re_temp_data_[i].size(); j++){
+      for(int k = 0; k < re_temp_data_[i][0].size(); k++){
+        newredata(j,k) = re_temp_data_[i][j][k];
+      }
+    }
+    re_data_.push_back(newredata);
   }
 
   B_ = calc_.size();
-  n_ = data_.rows(); 
+  n_ = data_.rows();
   
-  Rcpp::Rcout << "\nCalc size: " << calc_.size();
-  glmmr::print_vec_1d<intvec>(calc_[0].instructions);
-  glmmr::print_vec_2d<dblvec2d>(calc_[0].data);
-  glmmr::print_vec_1d<intvec>(calc_[0].indexes);
-  glmmr::print_vec_1d<strvec>(calc_[0].parameter_names);
 }
 
 inline void glmmr::Covariance::update_parameters_in_calculators(){
-  //glmmr::print_vec_3d<intvec3d>(re_pars_);
-  //glmmr::print_vec_1d<dblvec>(parameters_);
+  if(par_for_calcs_.size()==0)par_for_calcs_.resize(B_);
   for(int i = 0; i < B_; i++){
       dblvec par_for_calc;
       for(int j = 0; j < re_pars_[i].size(); j++){
@@ -267,10 +273,7 @@ inline void glmmr::Covariance::update_parameters_in_calculators(){
           par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
         }
       }
-      //Rcpp::Rcout << "\nPars: ";
-      //glmmr::print_vec_1d<strvec>(calc_[i].parameter_names);
-      calc_[i].parameters = par_for_calc;
-      //glmmr::print_vec_1d<dblvec>(calc_[i].parameters);
+    par_for_calcs_[i] = par_for_calc;
   }
 }
 
@@ -321,8 +324,7 @@ inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
   };
 
 inline double glmmr::Covariance::get_val(int b, int i, int j){
-  //return glmmr::calculate(re_rpn_[b],re_index_[b],parameters_,re_data_[b],i,j);
-  return calc_[b].calculate(i,j)[0];
+  return calc_[b].calculate(i,par_for_calcs_[b],re_data_[b],j)[0];
 }
 
 inline MatrixXd glmmr::Covariance::get_block(int b){
@@ -330,7 +332,7 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
   if(parameters_.size()==0)Rcpp::stop("no parameters");
   if(b > B_-1)Rcpp::stop("b is too large");
 
-  int dim = calc_[b].data.size();
+  int dim = re_data_[b].rows();//calc_[b].data.size();
   MatrixXd D(dim,dim);
   D.setZero();
   //diagonal
@@ -360,14 +362,16 @@ inline void glmmr::Covariance::Z_constructor(){
   double val;
   re_obs_index_.resize(B_);
   for(i = 0; i < B_; i++){
-     for(j = 0; j < calc_[i].data.size(); j++){
-       nvar = calc_[i].data[j].size();
+     for(j = 0; j < re_data_[i].rows(); j++){
+       nvar = re_data_[i].cols();
        dblvec vals(nvar);
+       dblvec valscomp(nvar);
        for(k = 0; k < data_.rows(); k++){
           for(m = 0; m < nvar; m++){
             vals[m] = data_(k,re_cols_data_[i][j][m]);
+            valscomp[m] = re_data_[i](j,m);
           }
-          if(calc_[i].data[j]==vals){
+          if(valscomp==vals){
             re_obs_index_[i].push_back(k);
             Z(k,zcount) = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
           }
@@ -384,7 +388,7 @@ inline MatrixXd glmmr::Covariance::Z(){
 }
 
 inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
-  int n = calc_[b].data.size();;
+  int n = re_data_[b].rows();
   std::vector<double> L(n * n, 0.0);
 
   for (int j = 0; j < n; j++) {
@@ -411,7 +415,7 @@ inline VectorXd glmmr::Covariance::sim_re(){
   if(!isSparse){
     for(int i=0; i< B(); i++){
       MatrixXd L = get_chol_block(i);
-      ndim = calc_[i].data.size();
+      ndim = re_data_[i].rows();
       Rcpp::NumericVector z = Rcpp::rnorm(ndim);
       Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
       samps.segment(idx,ndim) = L*zz;
