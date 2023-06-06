@@ -346,6 +346,7 @@ inline void glmmr::Model::nr_beta(){
   matrix_matrix deriv = calc_.jacobian_and_hessian(zuOffset_);
   VectorXd Jsum = deriv.mat2.rowwise().sum();
   MatrixXd I = MatrixXd::Identity(deriv.mat1.rows(),deriv.mat1.rows());
+  deriv.mat1 *= -1.0;
   MatrixXd infomat = deriv.mat1.llt().solve(I);
   update_beta(linpred_.parameter_vector() + infomat*Jsum);
   MatrixXd zd = linpred();

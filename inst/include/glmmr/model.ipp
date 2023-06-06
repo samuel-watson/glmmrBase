@@ -641,6 +641,7 @@ inline MatrixXd glmmr::Model::observed_information_matrix(){
   matrix_matrix hess = calc_.jacobian_and_hessian(zuOffset_);
   MatrixXd grad_prod = hess.mat2 * hess.mat2.transpose();
   MatrixXd I = MatrixXd::Identity(hess.mat1.rows(),hess.mat1.rows());
+  hess.mat1 *= -1.0;
   MatrixXd infomat = hess.mat1.llt().solve(I);
   infomat = infomat * grad_prod * infomat;
   return infomat;

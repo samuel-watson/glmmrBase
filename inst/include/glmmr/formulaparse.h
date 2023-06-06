@@ -188,20 +188,20 @@ inline bool parse_formula(std::vector<char>& formula,
                 //check for intercept
                 auto findintercept = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"b_intercept");
                 int factorrange = findintercept == calc.parameter_names.end() ? unique_values.size() : unique_values.size()-1;
-                bool itemsinxb = calc.instructions.size() > 0;
+                //bool itemsinxb = calc.instructions.size() > 0;
                 for(int i = 0; i < factorrange; i++){
-                  if(i > 0 || (i==0 && itemsinxb))calc.instructions.push_back(3);
+                  if(i < (factorrange - 1))calc.instructions.push_back(3);
                   calc.instructions.push_back(5);
                   for(int j = 0; j < data.rows(); j++){
                     //data
-                    calc.data[i].push_back(data(j,column_index)==unique_values[i] ? 1.0 : 0.0);
+                    calc.data[j].push_back(data(j,column_index)==unique_values[i] ? 1.0 : 0.0);
                   }
                   calc.indexes.push_back(calc.data_count);
                   calc.data_count++;
                   calc.instructions.push_back(0);
                   // parameter
                   calc.instructions.push_back(2);
-                  str parname = "b_" + token_as_str2 + "_" + std::to_string(unique_values[i]);
+                  str parname = "b_" + token_as_str2 + "_" + std::to_string(unique_values[i])[0];
                   calc.parameter_names.push_back(parname);
                   calc.indexes.push_back(calc.parameter_count);
                   calc.parameter_count++;
@@ -225,11 +225,11 @@ inline bool parse_formula(std::vector<char>& formula,
               } else {
                 Rcpp::stop("String " + token_as_str + " is not a recognised function");
               }
+              
+              s2_check = parse_formula(s2,calc,data,colnames);
+              if(s2_check)calc.any_nonlinear = true;
             }
-            
-            s2_check = parse_formula(s2,calc,data,colnames);
-            if(s2_check)calc.any_nonlinear = true;
-            }
+          }
         } else {
           // no brackets - now check data
           auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str);

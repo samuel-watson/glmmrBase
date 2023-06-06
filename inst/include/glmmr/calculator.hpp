@@ -74,6 +74,7 @@ class calculator {
       int n = data.size();
       if(n==0)Rcpp::stop("No data initialised in calculator");
       MatrixXd J(n,parameter_count);
+      J.setZero();
 #pragma omp parallel for
       for(int i = 0; i<n ; i++){
         J.row(i) = (first_derivative(i)).transpose();

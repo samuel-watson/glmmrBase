@@ -60,7 +60,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     // push data (j)
     //DEBUG
     if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
-    if(indexes[idx_iter] >= data[i].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[j].size()));
+    if(indexes[idx_iter] >= data[j].size())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data[j].size()));
     
     stack.push(data[j][indexes[idx_iter]]);
     if(order > 0){
