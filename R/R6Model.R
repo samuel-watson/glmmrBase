@@ -550,12 +550,18 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description
                        #' Generates the information matrix of the GLS estimator
+                       #' @param observed Logical indicating whether to return the expected information matrix (the GLS information)
+                       #' matrix (TRUE, default) or the observed information matrix derived from the Hessian matrix (FALSE)
                        #' @return A PxP matrix
-                       information_matrix = function(){
+                       information_matrix = function(observed = FALSE){
                          if(is.null(private$ptr)){
                            private$update_ptr(rep(0,nrow(self$mean$data)))
                          }
-                         return(.Model__information_matrix(private$ptr))
+                         if(observed){
+                           return(.Model__obs_information_matrix(private$ptr))
+                         } else {
+                           return(.Model__information_matrix(private$ptr))
+                         }
                        },
                        #' @description
                        #' Estimates the power of the design described by the model using the square root
@@ -666,6 +672,7 @@ Model <- R6::R6Class("Model",
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
+                       #'@param gls.standard.errors Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)
                        #'@param sparse Logical indicating whether to use sparse matrix methods
                        #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
@@ -708,6 +715,7 @@ Model <- R6::R6Class("Model",
                                        verbose=TRUE,
                                        tol = 1e-2,
                                        max.iter = 30,
+                                       gls.standard.errors = FALSE,
                                        sparse = FALSE,
                                        usestan = TRUE){
                          private$verify_data(y)
@@ -845,8 +853,12 @@ Model <- R6::R6Class("Model",
                          
                          self$var_par <- var_par_new
                          u <- .Model__u(private$ptr, TRUE)
-                         invM <- Matrix::solve(self$information_matrix())
-                         SE <- sqrt(Matrix::diag(invM))
+                         if(gls.standard.errors){
+                           M <- self$information_matrix()
+                         } else {
+                           M <- Matrix::solve(.Model__obs_information_matrix(mptr))
+                         }
+                         SE <- sqrt(Matrix::diag(Matrix::solve(M)))
                          
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          
@@ -920,6 +932,7 @@ Model <- R6::R6Class("Model",
                        #'@param start Optional. A numeric vector indicating starting values for the model parameters.
                        #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
                        #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
+                       #'@param gls.standard.errors Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@return A `mcml` object
@@ -945,6 +958,7 @@ Model <- R6::R6Class("Model",
                                      start,
                                      method = "nr",
                                      verbose = FALSE,
+                                     gls.standard.errors = FALSE,
                                      max.iter = 40,
                                      tol = 1e-2){
                          private$verify_data(y)
@@ -1009,8 +1023,13 @@ Model <- R6::R6Class("Model",
                          
                          self$var_par <- var_par_new
                          u <- .Model__u(private$ptr,TRUE)
-                         invM <- Matrix::solve(self$information_matrix())
-                         SE <- sqrt(Matrix::diag(invM))
+                         if(gls.standard.errors){
+                           M <- self$information_matrix()
+                         } else {
+                           M <- Matrix::solve(.Model__obs_information_matrix(mptr))
+                         }
+                         #invM <- Matrix::solve(self$information_matrix())
+                         SE <- sqrt(Matrix::diag(Matrix::solve(M)))
                          
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          

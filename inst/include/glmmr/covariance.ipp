@@ -217,8 +217,6 @@ inline void glmmr::Covariance::parse(){
       }
       intvec B = glmmr::interpret_re(fn_[i][j],A);
       intvec re_par_less_min_ = re_pars_[i][j];
-      Rcpp::Rcout << "\nRe par " << i << ", " << j << ": ";
-      glmmr::print_vec_1d<intvec>(re_cols_[i][j]);
       for(int k = 0; k < re_pars_[i][j].size(); k++)re_pars_[i][j][k] -= minvalue;
       
       

@@ -181,10 +181,6 @@
     invisible(.Call(`_glmmrBase_Model__laplace_nr_beta_u`, xp))
 }
 
-.Model__laplace_hessian <- function(xp) {
-    .Call(`_glmmrBase_Model__laplace_hessian`, xp)
-}
-
 .Model__Sigma <- function(xp, inverse) {
     .Call(`_glmmrBase_Model__Sigma`, xp, inverse)
 }
@@ -199,6 +195,10 @@
 
 .Model__obs_information_matrix <- function(xp) {
     .Call(`_glmmrBase_Model__obs_information_matrix`, xp)
+}
+
+.Model__re_obs_information_matrix <- function(xp) {
+    .Call(`_glmmrBase_Model__re_obs_information_matrix`, xp)
 }
 
 .Model__u <- function(xp, scaled_) {
@@ -287,6 +287,14 @@
 
 .Model__make_dense <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__make_dense`, xp))
+}
+
+.Model__beta_parameter_names <- function(xp) {
+    .Call(`_glmmrBase_Model__beta_parameter_names`, xp)
+}
+
+.Model__theta_parameter_names <- function(xp) {
+    .Call(`_glmmrBase_Model__beta_parameter_names`, xp)
 }
 
 .Form_test <- function(formula) {

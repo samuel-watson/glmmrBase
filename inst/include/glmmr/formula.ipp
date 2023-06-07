@@ -31,7 +31,6 @@ inline void glmmr::Formula::tokenise(){
   while(cursor < nchar){
     if((formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='(') || 
           (cursor==0 && formula_as_chars[cursor]=='(')){
-        Rcpp::Rcout << "\nCursor: " << cursor;
         if(formula_as_chars[cursor]=='+')cursor++;
         bracket_count++;
         re_token.push_back('(');
@@ -41,8 +40,7 @@ inline void glmmr::Formula::tokenise(){
           if(formula_as_chars[cursor]==')')bracket_count--;
           re_token.push_back(formula_as_chars[cursor]);
         }
-        Rcpp::Rcout << "\nToken: ";
-        for(auto ch: re_token) Rcpp::Rcout << ch;
+        
         str re_new(re_token.begin(),re_token.end());
         re_.push_back(re_new);
         re_token.clear();
@@ -53,8 +51,6 @@ inline void glmmr::Formula::tokenise(){
   }
   
   if(linear_predictor_.back()=='+')linear_predictor_.pop_back();
-  Rcpp::Rcout << "\nLinpred: ";
-  for(auto ch: linear_predictor_)Rcpp::Rcout << ch;
   
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);

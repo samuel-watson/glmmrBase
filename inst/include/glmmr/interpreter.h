@@ -293,8 +293,13 @@ inline void re_linear_predictor(glmmr::calculator& calc,
                                 const int& Q){
   intvec re_instruct;
   intvec re_seq = {0,2,5,3};
-  re_instruct.push_back(18);
-  for(int i = 0; i < Q; i++){
+  re_instruct.push_back(0);
+  re_instruct.push_back(2);
+  re_instruct.push_back(5);
+  calc.parameter_names.push_back("v_"+std::to_string(0));
+  calc.indexes.push_back(0);
+  calc.indexes.push_back(0);
+  for(int i = 1; i < Q; i++){
     re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
     calc.parameter_names.push_back("v_"+std::to_string(i));
     calc.indexes.push_back(i);

@@ -10,8 +10,6 @@ class calculator {
     intvec instructions;
     intvec indexes;
     dblvec y;
-    //dblvec2d data;
-    //dblvec parameters;
     strvec parameter_names;
     double var_par = 0;
     int data_count = 0;
@@ -19,11 +17,6 @@ class calculator {
     bool any_nonlinear = false;
     
     calculator() {};
-    
-    // void resize(int n){
-    //   data.clear();
-    //   data.resize(n);
-    // };
     
     dblvec calculate(const int i, 
                      const dblvec& parameters, 
@@ -35,8 +28,6 @@ class calculator {
     calculator& operator= (const glmmr::calculator& calc){
       instructions = calc.instructions;
       indexes = calc.indexes;
-      //data = calc.data;
-      //parameters = calc.parameters;
       parameter_names = calc.parameter_names;
       var_par = calc.var_par;
       data_count = calc.data_count;
@@ -91,6 +82,20 @@ class calculator {
 #pragma omp parallel for
       for(int i = 0; i<n ; i++){
         J.row(i) = (first_derivative(i,parameters,data)).transpose();
+      }
+      return J;
+    };
+    
+    MatrixXd jacobian(const dblvec& parameters,
+                      const MatrixXd& data,
+                      const VectorXd& extraData){
+      int n = data.rows();
+      if(n==0)Rcpp::stop("No data initialised in calculator");
+      MatrixXd J(n,parameter_count);
+      J.setZero();
+#pragma omp parallel for
+      for(int i = 0; i<n ; i++){
+        J.row(i) = (first_derivative(i,parameters,data,extraData(i))).transpose();
       }
       return J;
     };

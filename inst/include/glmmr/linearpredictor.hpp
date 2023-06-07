@@ -27,9 +27,16 @@ public:
       glmmr::print_vec_1d<intvec>(calc_.instructions);
       glmmr::print_vec_1d<intvec>(calc_.indexes);
       glmmr::print_vec_1d<strvec>(calc_.parameter_names);
+      Rcpp::Rcout << "\nAny nonlinear: " << calc_.any_nonlinear;
       P_ = calc_.parameter_names.size();
+      parameters_.resize(P_);
+      std::fill(parameters_.begin(),parameters_.end(),0.0);
       X_.conservativeResize(n_,P_);
-      X_.setZero();
+      if(!calc_.any_nonlinear){
+        X_ = calc_.jacobian(parameters_,Xdata_);
+      } else {
+        X_.setZero();
+      }
     };
 
   LinearPredictor(glmmr::Formula& form,
@@ -72,7 +79,6 @@ public:
     if(!x_set_){
       X_ = calc_.jacobian(parameters_,Xdata_);
       x_set_ = true;
-      Rcpp::Rcout << "\nX: \n" << X_.topRows(15);
     }
   };
 
@@ -100,6 +106,10 @@ public:
       X_ = calc_.jacobian(parameters_,Xdata_);
     }
     return X_;
+  }
+  
+  strvec parameter_names(){
+    return calc_.parameter_names;
   }
   
   VectorXd parameter_vector(){

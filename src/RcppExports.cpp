@@ -524,17 +524,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__laplace_hessian
-SEXP Model__laplace_hessian(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__laplace_hessian(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__laplace_hessian(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Model__Sigma
 SEXP Model__Sigma(SEXP xp, bool inverse);
 RcppExport SEXP _glmmrBase_Model__Sigma(SEXP xpSEXP, SEXP inverseSEXP) {
@@ -577,6 +566,17 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__obs_information_matrix(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__re_obs_information_matrix
+SEXP Model__re_obs_information_matrix(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__re_obs_information_matrix(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__re_obs_information_matrix(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -823,6 +823,28 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__beta_parameter_names
+SEXP Model__beta_parameter_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__beta_parameter_names(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__beta_parameter_names(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__beta_parameter_names
+SEXP Model__beta_parameter_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__beta_parameter_names(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__beta_parameter_names(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Form__test
 SEXP Form__test(SEXP formula);
 RcppExport SEXP _glmmrBase_Form__test(SEXP formulaSEXP) {
@@ -942,11 +964,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 1},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 1},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 1},
-    {"_glmmrBase_Model__laplace_hessian", (DL_FUNC) &_glmmrBase_Model__laplace_hessian, 1},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 2},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
+    {"_glmmrBase_Model__re_obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__re_obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
     {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
@@ -969,6 +991,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 2},
     {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 1},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
+    {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
+    {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
     {"_glmmrBase_Form__test", (DL_FUNC) &_glmmrBase_Form__test, 1},
     {"_glmmrBase_Linpred__test", (DL_FUNC) &_glmmrBase_Linpred__test, 3},
     {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},

@@ -176,12 +176,12 @@ void Model__laplace_nr_beta_u(SEXP xp){
   ptr->laplace_nr_beta_u();
 }
 
-// [[Rcpp::export(.Model__laplace_hessian)]]
-SEXP Model__laplace_hessian(SEXP xp){
-  XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd hess = ptr->laplace_hessian();
-  return wrap(hess);
-}
+// // [[Rcpp::export(.Model__laplace_hessian)]]
+// SEXP Model__laplace_hessian(SEXP xp){
+//   XPtr<glmmr::Model> ptr(xp);
+//   Eigen::MatrixXd hess = ptr->laplace_hessian();
+//   return wrap(hess);
+// }
 
 // [[Rcpp::export(.Model__Sigma)]]
 SEXP Model__Sigma(SEXP xp, bool inverse){
@@ -200,7 +200,7 @@ SEXP Model__information_matrix(SEXP xp){
 // [[Rcpp::export(.Model__hessian)]]
 SEXP Model__hessian(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  matrix_matrix hess = ptr->hessian();
+  vector_matrix hess = ptr->re_score();
   return wrap(hess);
 }
 
@@ -208,6 +208,13 @@ SEXP Model__hessian(SEXP xp){
 SEXP Model__obs_information_matrix(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   MatrixXd infomat = ptr->observed_information_matrix();
+  return wrap(infomat);
+}
+
+// [[Rcpp::export(.Model__re_obs_information_matrix)]]
+SEXP Model__re_obs_information_matrix(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  MatrixXd infomat = ptr->re_observed_information_matrix();
   return wrap(infomat);
 }
 
@@ -365,6 +372,20 @@ void Model__make_dense(SEXP xp){
   ptr->make_covariance_dense();
 }
 
+// [[Rcpp::export(.Model__beta_parameter_names)]]
+SEXP Model__beta_parameter_names(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  strvec parnames = ptr->linpred_.parameter_names();
+  return wrap(parnames);
+}
+
+// [[Rcpp::export(.Model__theta_parameter_names)]]
+SEXP Model__theta_parameter_names(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  strvec parnames = ptr->covariance_.parameter_names();
+  return wrap(parnames);
+}
+
 // [[Rcpp::export(.Form_test)]]
 SEXP Form__test(SEXP formula){
   std::string formula_ = as<std::string>(formula);
@@ -406,12 +427,7 @@ SEXP Linpred__x(SEXP xp){
   return wrap(X);
 }
 
-// // [[Rcpp::export(.Linpred__dxb)]]
-// SEXP Linpred__dxb(SEXP xp){
-//   XPtr<glmmr::LinearPredictor> ptr(xp);
-//   Eigen::ArrayXXd xb = ptr->deriv();
-//   return wrap(xb);
-// }
+
 
 // [[Rcpp::export(.girling_algorithm)]]
 SEXP girling_algorithm(SEXP xp, SEXP N_,

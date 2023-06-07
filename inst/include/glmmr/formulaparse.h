@@ -130,7 +130,6 @@ inline bool parse_formula(std::vector<char>& formula,
         cursor++;
       }
       if(has_found_symbol){
-        calc.any_nonlinear = true;
         // split at ^
         if(formula[cursor]=='^'){
           calc.instructions.push_back(8);
@@ -164,7 +163,6 @@ inline bool parse_formula(std::vector<char>& formula,
         }
         str token_as_str(s1.begin(),s1.end());
         if(has_found_symbol){
-          calc.any_nonlinear = true;
           cursor++;
           while(!(bracket_count == 0 && formula[cursor]==')') && cursor < nchar){
             s2.push_back(formula[cursor]);
@@ -215,7 +213,6 @@ inline bool parse_formula(std::vector<char>& formula,
                 Rcpp::stop("Factor variable " + token_as_str + " not in data");
               }
             } else {
-              calc.any_nonlinear = true;
               if(token_as_str == "exp"){
                 calc.instructions.push_back(9);
               } else if(token_as_str == "log"){
