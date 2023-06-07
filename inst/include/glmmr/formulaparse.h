@@ -22,8 +22,8 @@ inline bool parse_formula(std::vector<char>& formula,
   std::vector<char> s1;
   std::vector<char> s2;
   // REMOVE AFTER DEBUG
-  Rcpp::Rcout << "\nFormula: ";
-  for(auto ch: formula)Rcpp::Rcout << ch;
+  // Rcpp::Rcout << "\nFormula: ";
+  // for(auto ch: formula)Rcpp::Rcout << ch;
   // step 1: split at first +
   while(!has_found_symbol && cursor < nchar){
     if(cursor==0 && (formula[cursor]=='+' || formula[cursor]=='-'))Rcpp::stop("Error in formula, multiply/divide symbol in wrong place");

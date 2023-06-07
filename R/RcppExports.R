@@ -294,7 +294,7 @@
 }
 
 .Model__theta_parameter_names <- function(xp) {
-    .Call(`_glmmrBase_Model__beta_parameter_names`, xp)
+    .Call(`_glmmrBase_Model__theta_parameter_names`, xp)
 }
 
 .Form_test <- function(formula) {

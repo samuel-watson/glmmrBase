@@ -856,7 +856,7 @@ Model <- R6::R6Class("Model",
                          if(gls.standard.errors){
                            M <- self$information_matrix()
                          } else {
-                           M <- Matrix::solve(.Model__obs_information_matrix(mptr))
+                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))
                          }
                          SE <- sqrt(Matrix::diag(Matrix::solve(M)))
                          
@@ -1026,7 +1026,7 @@ Model <- R6::R6Class("Model",
                          if(gls.standard.errors){
                            M <- self$information_matrix()
                          } else {
-                           M <- Matrix::solve(.Model__obs_information_matrix(mptr))
+                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))
                          }
                          #invM <- Matrix::solve(self$information_matrix())
                          SE <- sqrt(Matrix::diag(Matrix::solve(M)))

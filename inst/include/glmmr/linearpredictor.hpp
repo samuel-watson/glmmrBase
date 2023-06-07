@@ -24,10 +24,6 @@ public:
     X_(MatrixXd::Zero(n_,1)),
     Xdata_(data.rows(),1){
       form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
-      glmmr::print_vec_1d<intvec>(calc_.instructions);
-      glmmr::print_vec_1d<intvec>(calc_.indexes);
-      glmmr::print_vec_1d<strvec>(calc_.parameter_names);
-      Rcpp::Rcout << "\nAny nonlinear: " << calc_.any_nonlinear;
       P_ = calc_.parameter_names.size();
       parameters_.resize(P_);
       std::fill(parameters_.begin(),parameters_.end(),0.0);

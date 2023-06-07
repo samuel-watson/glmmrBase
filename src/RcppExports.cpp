@@ -834,14 +834,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__beta_parameter_names
-SEXP Model__beta_parameter_names(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__beta_parameter_names(SEXP xpSEXP) {
+// Model__theta_parameter_names
+SEXP Model__theta_parameter_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__theta_parameter_names(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__beta_parameter_names(xp));
+    rcpp_result_gen = Rcpp::wrap(Model__theta_parameter_names(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -992,7 +992,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 1},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
-    {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
+    {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 1},
     {"_glmmrBase_Form__test", (DL_FUNC) &_glmmrBase_Form__test, 1},
     {"_glmmrBase_Linpred__test", (DL_FUNC) &_glmmrBase_Linpred__test, 3},
     {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
