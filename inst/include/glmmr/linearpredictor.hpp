@@ -6,7 +6,6 @@
 #include "calculator.hpp"
 #include "formula.hpp"
 
-
 namespace glmmr {
 
 class LinearPredictor {

@@ -845,27 +845,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Form__test
-SEXP Form__test(SEXP formula);
-RcppExport SEXP _glmmrBase_Form__test(SEXP formulaSEXP) {
+// Model__hess_and_grad
+SEXP Model__hess_and_grad(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__hess_and_grad(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type formula(formulaSEXP);
-    rcpp_result_gen = Rcpp::wrap(Form__test(formula));
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__hess_and_grad(xp));
     return rcpp_result_gen;
 END_RCPP
 }
-// Linpred__test
-SEXP Linpred__test(SEXP formula_, SEXP data_, SEXP colnames_);
-RcppExport SEXP _glmmrBase_Linpred__test(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
+// Linpred__new
+SEXP Linpred__new(SEXP formula_, SEXP data_, SEXP colnames_);
+RcppExport SEXP _glmmrBase_Linpred__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__test(formula_, data_, colnames_));
+    rcpp_result_gen = Rcpp::wrap(Linpred__new(formula_, data_, colnames_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -899,6 +899,17 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     rcpp_result_gen = Rcpp::wrap(Linpred__x(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Linpred__any_nonlinear
+SEXP Linpred__any_nonlinear(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__any_nonlinear(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__any_nonlinear(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -993,11 +1004,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 1},
-    {"_glmmrBase_Form__test", (DL_FUNC) &_glmmrBase_Form__test, 1},
-    {"_glmmrBase_Linpred__test", (DL_FUNC) &_glmmrBase_Linpred__test, 3},
+    {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 1},
+    {"_glmmrBase_Linpred__new", (DL_FUNC) &_glmmrBase_Linpred__new, 3},
     {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
     {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},
     {"_glmmrBase_Linpred__x", (DL_FUNC) &_glmmrBase_Linpred__x, 1},
+    {"_glmmrBase_Linpred__any_nonlinear", (DL_FUNC) &_glmmrBase_Linpred__any_nonlinear, 1},
     {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 5},
     {NULL, NULL, 0}
 };

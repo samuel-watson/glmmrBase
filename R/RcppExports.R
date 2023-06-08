@@ -297,12 +297,12 @@
     .Call(`_glmmrBase_Model__theta_parameter_names`, xp)
 }
 
-.Form_test <- function(formula) {
-    .Call(`_glmmrBase_Form__test`, formula)
+.Model__hess_and_grad <- function(xp) {
+    .Call(`_glmmrBase_Model__hess_and_grad`, xp)
 }
 
-.Linpred_test <- function(formula_, data_, colnames_) {
-    .Call(`_glmmrBase_Linpred__test`, formula_, data_, colnames_)
+.Linpred__new <- function(formula_, data_, colnames_) {
+    .Call(`_glmmrBase_Linpred__new`, formula_, data_, colnames_)
 }
 
 .Linpred__update_pars <- function(xp, parameters_) {
@@ -315,6 +315,10 @@
 
 .Linpred__x <- function(xp) {
     .Call(`_glmmrBase_Linpred__x`, xp)
+}
+
+.Linpred__any_nonlinear <- function(xp) {
+    .Call(`_glmmrBase_Linpred__any_nonlinear`, xp)
 }
 
 .girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {

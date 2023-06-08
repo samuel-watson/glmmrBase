@@ -20,32 +20,44 @@ inline void glmmr::Formula::tokenise(){
     }
   }
   
-  // so we have to write our own algorithm to split the tokens
+  // split the tokens
   std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
-  std::vector<char> re_token;
+  // split at plus and then sort
   int nchar = formula_as_chars.size();
   int cursor = 0;
   int bracket_count = 0; // to deal with opening of brackets
   if(formula_as_chars[0]=='+')Rcpp::stop("Cannot start a formula with +");
+  std::vector<char> temp_token;
   
-  while(cursor < nchar){
-    if((formula_as_chars[cursor]=='+' && formula_as_chars[cursor+1]=='(') || 
-          (cursor==0 && formula_as_chars[cursor]=='(')){
-        if(formula_as_chars[cursor]=='+')cursor++;
-        bracket_count++;
-        re_token.push_back('(');
-        while(bracket_count > 0 && cursor < nchar){
-          cursor++;
-          if(formula_as_chars[cursor]=='(')bracket_count++;
-          if(formula_as_chars[cursor]==')')bracket_count--;
-          re_token.push_back(formula_as_chars[cursor]);
+  while(cursor <= nchar){
+    if((formula_as_chars[cursor]=='+' && bracket_count == 0) || cursor == (nchar)){
+      if(temp_token[0]!='('){
+        linear_predictor_.insert(linear_predictor_.end(),temp_token.begin(),temp_token.end());
+        linear_predictor_.push_back('+');
+      } else {
+        if(temp_token.back()!=')')Rcpp::stop("Invalid formula, no closing bracket");
+        int mm = temp_token.size();
+        int cursor_re = 1;
+        std::vector<char> temp_token_re;
+        while(cursor_re < mm){
+          if(temp_token[cursor_re]=='|'){
+            str re_new(temp_token_re.begin(),temp_token_re.end());
+            z_.push_back(re_new);
+            temp_token_re.clear();
+          } else if(cursor_re == mm-1){
+            str re_new(temp_token_re.begin(),temp_token_re.end());
+            re_.push_back(re_new);
+          } else {
+            temp_token_re.push_back(temp_token[cursor_re]);
+          }
+          cursor_re++;
         }
-        
-        str re_new(re_token.begin(),re_token.end());
-        re_.push_back(re_new);
-        re_token.clear();
+      }
+      temp_token.clear();
     } else {
-      linear_predictor_.push_back(formula_as_chars[cursor]);
+      if(formula_as_chars[cursor]=='(')bracket_count++;
+      if(formula_as_chars[cursor]==')')bracket_count--;
+      temp_token.push_back(formula_as_chars[cursor]);
     }
     cursor++;
   }
@@ -59,20 +71,7 @@ inline void glmmr::Formula::tokenise(){
   // // random effects: separate right and left hand sides
   int m = re_.size();
   re_terms_ = re_;
-
-  for(int i = 0; i<m;i++){
-    std::stringstream check1(re_[i]);
-    str intermediate;
-    re_.erase(re_.begin());
-    getline(check1, intermediate, '|');
-    z_.push_back(intermediate.substr(1,intermediate.length()-1));
-    getline(check1, intermediate, '|');
-    re_.push_back(intermediate.substr(0,intermediate.length()-1));
-  }
   
-  for(int i = 0; i < z_.size(); i++){
-    z_[i].erase(std::remove_if(z_[i].begin(), z_[i].end(), [](unsigned char x) { return std::isspace(x); }), z_[i].end());
-  }
 }
 
 inline void glmmr::Formula::formula_validate(){

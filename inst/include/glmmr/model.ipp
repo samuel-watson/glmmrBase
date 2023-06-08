@@ -315,13 +315,18 @@ inline void glmmr::Model::laplace_ml_beta_u(){
   dblvec start = get_start_values(true,false,false);
   for(int i = 0; i< Q_; i++)start.push_back(u_(i,0));
   opt.minimize(ldl, start);
+  
+  VectorXd zd = (linpred()).col(0);
+  VectorXd zdu =  glmmr::maths::mod_inv_func(zd, link_);
+  ArrayXd resid = (y_ - zdu).array();
+  update_var_par(std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1)));
 }
 
 inline void glmmr::Model::laplace_ml_theta(){
   LA_likelihood_cov ldl(*this);
   Rbobyqa<LA_likelihood_cov,dblvec> opt;
-  dblvec lower = get_lower_values(false,true);
-  dblvec start = get_start_values(false,true);
+  dblvec lower = get_lower_values(false,true,false);
+  dblvec start = get_start_values(false,true,false);
   opt.set_lower(lower);
   opt.minimize(ldl, start);
 }
@@ -471,6 +476,13 @@ inline vector_matrix glmmr::Model::b_score(){
   return out;
 }
 
+inline matrix_matrix glmmr::Model::hess_and_grad(){
+  MatrixXd zuOffset_ = zu_;
+  zuOffset_.colwise() += offset_;
+  matrix_matrix hess = calc_.jacobian_and_hessian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
+  return hess;
+}
+
 inline vector_matrix glmmr::Model::re_score(){
   VectorXd xbOffset_ = linpred_.xb() + offset_;
   matrix_matrix hess = vcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()),sparse_to_dense(ZL_,false),Map<MatrixXd>(xbOffset_.data(),xbOffset_.size(),1));
@@ -581,8 +593,11 @@ inline void glmmr::Model::nr_beta(){
     ArrayXd resid = (y_ - zdu);
     sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
   }
-  var_par_ = sigmas.mean();
-  
+  update_var_par(sigmas.mean());
+// using explicit matrices, code below
+// this uses the W approximation, as well as a first order approximation if
+// the linear predictor is non-linear in parameters
+
 //   MatrixXd XtXW = MatrixXd::Zero(P_*niter,P_);
 //   MatrixXd Wu = MatrixXd::Zero(n_,niter);
 // 
@@ -640,6 +655,11 @@ inline void glmmr::Model::laplace_nr_beta_u(){
   VectorXd bincr = XtXW * (linpred_.X()).transpose() * w;
   VectorXd vgrad = log_gradient(u_.col(0));
   VectorXd vincr = LZWZL * vgrad;
+  
+  // the code below uses the autodiff approach to the score algorithm
+  // but is slower than the above method with matrices and approximations
+  // since this is an approximation anyway, the quicker method is favoured
+  
   // vector_matrix score = b_score();
   // MatrixXd I = MatrixXd::Identity(P_,P_);
   // MatrixXd infomat = score.mat.llt().solve(I);
@@ -650,7 +670,7 @@ inline void glmmr::Model::laplace_nr_beta_u(){
   // update_u(u_.colwise()+infomatre*uscore.vec);
   update_u(u_.colwise()+vincr);
   update_beta(linpred_.parameter_vector() + bincr);
-  var_par_ = sigmas;
+  update_var_par(sigmas);
 }
 
 inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
@@ -832,6 +852,8 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   }
     }
   }
+  
+  // we can use autodiff here, but the above method is faster
   // else {
   //   VectorXd xbOffset_ = linpred_.xb() + offset_;
   //   MatrixXd J = vcalc_.jacobian(dblvec(v.data(),v.data()+v.size()),

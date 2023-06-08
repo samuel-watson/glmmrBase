@@ -386,15 +386,15 @@ SEXP Model__theta_parameter_names(SEXP xp){
   return wrap(parnames);
 }
 
-// [[Rcpp::export(.Form_test)]]
-SEXP Form__test(SEXP formula){
-  std::string formula_ = as<std::string>(formula);
-  XPtr<glmmr::Formula> ptr(new glmmr::Formula(formula_));
-  return ptr;
+// [[Rcpp::export(.Model__hess_and_grad)]]
+SEXP Model__hess_and_grad(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  matrix_matrix parnames = ptr->hess_and_grad();
+  return wrap(parnames);
 }
 
-// [[Rcpp::export(.Linpred_test)]]
-SEXP Linpred__test(SEXP formula_,
+// [[Rcpp::export(.Linpred__new)]]
+SEXP Linpred__new(SEXP formula_,
                 SEXP data_,
                 SEXP colnames_){
   std::string formula = as<std::string>(formula_);
@@ -427,7 +427,12 @@ SEXP Linpred__x(SEXP xp){
   return wrap(X);
 }
 
-
+// [[Rcpp::export(.Linpred__any_nonlinear)]]
+SEXP Linpred__any_nonlinear(SEXP xp){
+  XPtr<glmmr::LinearPredictor> ptr(xp);
+  bool anl = ptr->any_nonlinear();
+  return wrap(anl);
+}
 
 // [[Rcpp::export(.girling_algorithm)]]
 SEXP girling_algorithm(SEXP xp, SEXP N_,

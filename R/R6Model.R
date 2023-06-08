@@ -211,6 +211,9 @@ Model <- R6::R6Class("Model",
                            stop("No family specified.")
                          } else {
                            self$family <- family
+                           if(family[[1]] %in% c("gaussian","gamma","beta") & is.null(var_par)){
+                             self$var_par <- 1
+                           }
                          }
 
                          if(!missing(formula)){
@@ -394,9 +397,8 @@ Model <- R6::R6Class("Model",
                        #' ysim <- des$sim_data()
                        sim_data = function(type = "y"){
                          re <- self$covariance$simulate_re()
-                         mu <- drop(as.matrix(self$mean$X)%*%self$mean$parameters) +
-                           drop(as.matrix(self$covariance$Z)%*%re) +
-                           self$mean$offset
+                         xb <- self$mean$linear_predictor()
+                         mu <- xb + drop(as.matrix(self$covariance$Z)%*%re)
 
                          f <- self$family
                          if(f[1]=="poisson"){
@@ -863,13 +865,16 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          
                          repar_table <- self$covariance$parameter_table()
-                         
+                         beta_names <- .Model__beta_parameter_names(private$ptr)
+                         theta_names <- .Model__theta_parameter_names(private$ptr)
                          
                          if(var_par_family){
-                           mf_pars_names <- c(colnames(self$mean$X),repar_table$term,"sigma")
+                           #mf_pars_names <- c(colnames(self$mean$X),repar_table$term,"sigma")
+                           mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
-                           mf_pars_names <- c(colnames(self$mean$X),repar_table$term)
+                           #mf_pars_names <- c(colnames(self$mean$X),repar_table$term)
+                           mf_pars_names <- c(beta_names,theta_names)
                            SE <- c(SE,rep(NA,length(theta_new)))
                          }
                          
@@ -1032,15 +1037,15 @@ Model <- R6::R6Class("Model",
                          SE <- sqrt(Matrix::diag(Matrix::solve(M)))
                          
                          if(verbose)cat("\n\nCalculating standard errors...\n")
-                         
                          repar_table <- self$covariance$parameter_table()
-                         
+                         beta_names <- .Model__beta_parameter_names(private$ptr)
+                         theta_names <- .Model__theta_parameter_names(private$ptr)
                          
                          if(var_par_family){
-                           mf_pars_names <- c(colnames(self$mean$X),repar_table$term,"sigma")
+                           mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
-                           mf_pars_names <- c(colnames(self$mean$X),repar_table$term)
+                           mf_pars_names <- c(beta_names,theta_names)
                            SE <- c(SE,rep(NA,length(theta_new)))
                          }
                          

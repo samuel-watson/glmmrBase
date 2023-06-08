@@ -100,32 +100,24 @@ MeanFunction <- R6::R6Class("MeanFunction",
                                                 data,
                                                 parameters = NULL ,
                                                 offset = NULL,
-                                                verbose = FALSE
-                          ){
+                                                verbose = FALSE){
 
-                            allset <- TRUE
                             self$formula <- Reduce(paste,as.character(formula))
                             if(!is(data,"data.frame"))stop("data must be data frame")
                             self$data <- data
                             
                             private$original_formula <- self$formula
                             
-                            if(!is.null(parameters)){
-                              self$parameters <- parameters
-                            } 
-                            
                             if(is.null(offset) & !is.null(data)){
                               self$offset <- rep(0,nrow(self$data))
                             } 
                             
+                            private$generate(verbose=verbose)
+                            if(!is.null(parameters)){
+                              self$update_parameters(parameters)
+                            } 
                             
-                            
-                            if(allset){
-                              private$generate(verbose=verbose)
-                            } else {
-                              private$hash <- digest::digest(1)
-                            }
-                            if(verbose & allset)self$print()
+                            if(verbose)self$print()
                             
                             },
                           #' @description 
@@ -150,6 +142,8 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param verbose Logical indicating whether to provide more detailed feedback
                           update_parameters = function(parameters){
                             self$parameters <- parameters
+                            .Linpred__update_pars(private$ptr,self$parameters)
+                            if(.Linpred__any_nonlinear(private$ptr))self$X <- .Linpred__x(prviate$ptr)
                             self$check(FALSE)
                           },
                           #' @description 
@@ -222,7 +216,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' Returns the linear predictor, X * beta
                           #' @return A vector
                           linear_predictor = function(){
-                            xb <- self$X %*% self$parameters + self$offset
+                            xb <- .Linpred__xb(private$ptr) + self$offset #self$X %*% self$parameters + self$offset
                             if(is(xb,"matrix"))xb <- drop(xb)
                             if(is(xb,"Matrix"))xb <- Matrix::drop(xb)
                             return(xb)
@@ -233,8 +227,15 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           form = NULL,
                           hash = NULL,
                           original_formula = NULL,
+                          ptr = NULL,
+                          update_ptr = function(){
+                            private$ptr <- .Linpred__new(self$formula,
+                                                  as.matrix(self$data),
+                                                  colnames(self$data))
+                          },
                           hash_do = function(){
-                            digest::digest(c(self$formula,self$data,
+                            digest::digest(c(self$formula,
+                                             self$data,
                                              self$parameters))
                           },
                           generate = function(verbose = FALSE){
@@ -243,64 +244,19 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             if(grepl("~",self$formula))self$formula <- gsub("~","",self$formula)
                             self$formula <- gsub(" ","",self$formula)
                             self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
-                            # if(isTRUE(all.equal("1",self$formula))){
-                            #   self$data <- cbind(self$data,1)
-                            #   colnames(self$data)[ncol(self$data)] <- "[Intercept]"
-                            #   self$formula <- "[Intercept]-1"
-                            # } else {
-                            #   #need to remove random effect terms from the formula
-                            #   self$formula <- gsub("\\+\\([^ \\+]\\|.*\\)","",self$formula,perl = T)
-                            #   
-                            #   ## add handling of factors
-                            #   if(grepl("factor",self$formula) & !grepl("factor\\[",self$formula)){
-                            #     rm_int <- grepl("-1",self$formula)
-                            #     cstart <- ifelse(rm_int,1,2)
-                            #     regres <- gregexpr("factor\\(.*\\)",self$formula)
-                            #     for(i in 1:length(regres[[1]])){
-                            #       tmpstr <- substr(self$formula,regres[[1]][i],regres[[1]][i]+attr(regres[[1]],"match.length")[i]-1)
-                            #       tmpdat <- stats::model.matrix(as.formula(paste0("~",tmpstr,"-1")),data=self$data)
-                            #       f1 <- self$formula
-                            #       for(j in (cstart):ncol(tmpdat)){
-                            #         cname1 <- colnames(tmpdat)[j]
-                            #         cname1 <- gsub("\\(","\\[",cname1)
-                            #         cname1 <- gsub("\\)","\\]",cname1)
-                            #         colnames(tmpdat)[j] <- cname1
-                            #         if(j==cstart){
-                            #           f2 <- cname1
-                            #         } else {
-                            #           f2 <- paste0(f2," + ",cname1)
-                            #         }
-                            #       }
-                            #       self$data <- cbind(self$data,tmpdat[,cstart:ncol(tmpdat)])
-                            #       tmpform <- ""
-                            #       if(grepl("[^ \\s\\~]",substr(f1,1,(regres[[1]][i]-1)))){
-                            #         tmpform <- paste0(tmpform,substr(f1,1,(regres[[1]][i]-1))," + ",f2)
-                            #       } else {
-                            #         tmpform <- f2
-                            #       }
-                            #       if((regres[[1]][i]+attr(regres[[1]],"match.length")[i]) <= nchar(self$formula)){
-                            #         tmpform <- paste0(tmpform, substr(f1,regres[[1]][i]+attr(regres[[1]],"match.length")[i],nchar(f1)))
-                            #       }
-                            #       self$formula <- tmpform
-                            #       # remove any double +
-                            #       self$formula <- gsub("\\+\\s*\\+","+",self$formula)
-                            #     }
-                            #   }
-                            #   # change the brackets to avoid confusion
-                            #   self$formula <- gsub("-[ \\s+]1","-1",self$formula)
-                            # }
+                            private$update_ptr()
                             private$genX()
                             private$hash <- private$hash_do()
                           },
                           genX = function(){
-                            self$X <- .genX(self$formula,as.matrix(self$data),colnames(self$data))
+                            self$X <- .Linpred__x(private$ptr)
                             if(!is.null(self$parameters)&ncol(self$X)!=length(self$parameters))stop("wrong length parameter vector")
-                            if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
+                            #if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
                             #cnames <- .x_names(self$formula)
                             #FIX THIS
-                            cnames <- paste0("x_",1:ncol(self$X))
-                            if(!grepl("-1",self$formula)) cnames <- c("[Intercept]",cnames)
-                            colnames(self$X) <- cnames
+                            # cnames <- paste0("x_",1:ncol(self$X))
+                            # if(!grepl("-1",self$formula)) cnames <- c("[Intercept]",cnames)
+                            # colnames(self$X) <- cnames
                           }
                           
                         ))

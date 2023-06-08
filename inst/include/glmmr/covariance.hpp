@@ -9,6 +9,7 @@
 #include "formula.hpp"
 #include "sparse.h"
 
+
 using namespace Eigen;
 
 namespace glmmr {
@@ -167,15 +168,8 @@ public:
   
   sparse Z_sparse();
   
-  strvec parameter_names(){
-    strvec parnames;
-    for(int i = 0; i < B_; i++){
-      parnames.insert(parnames.end(),calc_[i].parameter_names.begin(),calc_[i].parameter_names.end());
-    }
-    auto last = std::unique(parnames.begin(),parnames.end());
-    parnames.erase(last, parnames.end());
-    return parnames;
-  };
+  
+  strvec parameter_names();
 
 private:
   std::vector<glmmr::calculator> calc_;

@@ -11,12 +11,14 @@ inline void glmmr::Covariance::parse(){
   if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
   
   int nre = form_.re_.size();
+  
   for(int i = 0; i < nre; i++){
     strvec fn;
     intvec2d fnvars;
     std::stringstream check1(form_.re_[i]);
     std::string intermediate;
     int iter = 0;
+    
     while(getline(check1, intermediate, '*')){
       intvec fnvars1;
       fnvars.push_back(fnvars1);
@@ -165,17 +167,16 @@ inline void glmmr::Covariance::parse(){
         if(firsti){
           intvec2d parcount1;
           strvec parnames2;
-          str fn_name = "v.";
+          str fn_name = "";
           for(int k = 0; k < fn_[j].size(); k++) fn_name += fn_[j][k];
           for(int k = 0; k < fn_[j].size(); k++){
-          // add validator
            if(glmmr::validate_fn(fn_[j][k]))Rcpp::stop("Function " + fn_[j][k] + " not valid");
             auto parget = nvars.find(fn_[j][k]);
             int npars = parget->second;
             intvec parcount2;
             for(int l = 0; l < npars; l++){
               parcount2.push_back(l+npars_);
-              parnames2.push_back(fn_name+".("+fn_[j][k]+")."+std::to_string(l));
+              parnames2.push_back(fn_name+"."+std::to_string(i)+".("+fn_[j][k]+")."+std::to_string(l));
               re_fn_par_link_.push_back(i);
             }
             parcount1.push_back(parcount2);
@@ -217,7 +218,7 @@ inline void glmmr::Covariance::parse(){
       }
       intvec B = glmmr::interpret_re(fn_[i][j],A);
       intvec re_par_less_min_ = re_pars_[i][j];
-      for(int k = 0; k < re_pars_[i][j].size(); k++)re_pars_[i][j][k] -= minvalue;
+      for(int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       
       
       
@@ -234,11 +235,8 @@ inline void glmmr::Covariance::parse(){
     calc_[i].indexes = fn_par;
     calc_[i].parameter_names = re_par_names_[i];
     calc_[i].parameter_count = re_par_names_[i].size();
-    //re_rpn_.push_back(fn_instruct);
-    //re_index_.push_back(fn_par);
   }
   
- 
   //get the number of random effects
   Q_ = 0;
   for(int i = 0; i < calc_.size(); i++){
@@ -644,6 +642,16 @@ inline bool glmmr::Covariance::any_group_re(){
   }
   return gr;
 }
+
+inline strvec glmmr::Covariance::parameter_names(){
+    strvec parnames;
+    for(int i = 0; i < B_; i++){
+      parnames.insert(parnames.end(),calc_[i].parameter_names.begin(),calc_[i].parameter_names.end());
+    }
+    auto last = std::unique(parnames.begin(),parnames.end());
+    parnames.erase(last, parnames.end());
+    return parnames;
+  };
 
 
 

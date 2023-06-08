@@ -18,6 +18,7 @@
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
 
+
 namespace glmmr {
 
 using namespace rminqa;
@@ -143,6 +144,8 @@ public:
   vector_matrix b_score();
   
   vector_matrix re_score();
+  
+  matrix_matrix hess_and_grad();
   
   MatrixXd observed_information_matrix();
   
