@@ -811,7 +811,7 @@ Model <- R6::R6Class("Model",
                            if(trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
-                           if(method=="mcnr"){
+                           if(method=="mcem"){
                              .Model__ml_beta(private$ptr)
                            } else {
                              .Model__nr_beta(private$ptr)

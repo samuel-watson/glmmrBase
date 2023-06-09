@@ -14,15 +14,16 @@ inline double glmmr::Model::D_likelihood::operator()(const dblvec &par) {
 
 
 inline double glmmr::Model::L_likelihood::operator()(const dblvec &par) {
-  if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
-    auto first = par.begin();
-    auto last = par.begin() + M_.P_;
-    dblvec par2(first, last);
-    M_.update_beta(par2);
-    M_.update_var_par(par[M_.P_]);
-  } else {
-    M_.update_beta(par);
-  }
+  //if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
+    //auto first = par.begin();
+    //auto last = par.begin() + M_.P_;
+    //dblvec par2(first, last);
+    //M_.update_beta(par2);
+    //M_.update_var_par(par[M_.P_]);
+  //} else {
+  //  M_.update_beta(par);
+  //}
+  M_.update_beta(par);
   ll = M_.log_likelihood();
   return -1*ll;
 }
@@ -92,9 +93,9 @@ inline double glmmr::Model::LA_likelihood_btheta::operator()(const dblvec &par) 
   dblvec beta(start,end1);
   dblvec theta(end1,end2);
   
-  if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
-    M_.update_var_par(par[par.size()-1]);
-  } 
+  //if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
+  //  M_.update_var_par(par[par.size()-1]);
+  //} 
   
   M_.update_beta(beta);
   M_.update_theta(theta);

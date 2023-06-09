@@ -785,9 +785,17 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \subsection{Method \code{information_matrix()}}{
 Generates the information matrix of the GLS estimator
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(observed = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{observed}}{Logical indicating whether to return the expected information matrix (the GLS information)
+matrix (TRUE, default) or the observed information matrix derived from the Hessian matrix (FALSE)}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 A PxP matrix
 }
@@ -908,6 +916,7 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   verbose = TRUE,
   tol = 0.01,
   max.iter = 30,
+  gls.standard.errors = FALSE,
   sparse = FALSE,
   usestan = TRUE
 )}\if{html}{\out{</div>}}
@@ -929,6 +938,8 @@ not do this step), defaults to FALSE.}
 between iterations at which to stop the algorithm.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
+
+\item{\code{gls.standard.errors}}{Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
@@ -983,7 +994,15 @@ fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
 \subsection{Method \code{LA()}}{
 Maximum Likelihood model fitting with Laplace Approximation
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 40, tol = 0.01)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(
+  y,
+  start,
+  method = "nr",
+  verbose = FALSE,
+  gls.standard.errors = FALSE,
+  max.iter = 40,
+  tol = 0.01
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -996,6 +1015,8 @@ Maximum Likelihood model fitting with Laplace Approximation
 \item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
 
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
+
+\item{\code{gls.standard.errors}}{Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 

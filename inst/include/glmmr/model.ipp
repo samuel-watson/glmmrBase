@@ -272,6 +272,21 @@ inline dblvec glmmr::Model::get_upper_values(bool beta, bool theta, bool var){
   return upper;
 }
 
+inline void glmmr::Model::calculate_var_par(){
+  if(family_=="gaussian" || family_=="Gamma" || family_=="beta"){
+    int niter = u_.cols();
+    ArrayXd sigmas(niter);
+    MatrixXd zd = linpred();
+#pragma omp parallel for
+    for(int i = 0; i < niter; ++i){
+      VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
+      ArrayXd resid = (y_ - zdu);
+      sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
+    }
+    update_var_par(sigmas.mean());
+  }
+}
+
 inline void glmmr::Model::ml_theta(){
   MatrixXd Lu = covariance_.Lu(u_);
   D_likelihood ddl(*this,Lu);
@@ -286,10 +301,13 @@ inline void glmmr::Model::ml_beta(){
   L_likelihood ldl(*this);
   Rbobyqa<L_likelihood,dblvec> opt;
   opt.control.iprint = trace_;
-  dblvec start = get_start_values(true,false);
-  dblvec lower = get_lower_values(true,false);
+  dblvec start = get_start_values(true,false,false);
+  dblvec lower = get_lower_values(true,false,false);
   opt.set_lower(lower);
   opt.minimize(ldl, start);
+  
+  calculate_var_par();
+  
 }
 
 inline void glmmr::Model::ml_all(){
@@ -301,11 +319,13 @@ inline void glmmr::Model::ml_all(){
   denomD *= 1/Lu.cols();
   F_likelihood dl(*this,denomD,true);
   Rbobyqa<F_likelihood,dblvec> opt;
-  dblvec start = get_start_values(true,true);
-  dblvec lower = get_lower_values(true,true);
+  dblvec start = get_start_values(true,true,false);
+  dblvec lower = get_lower_values(true,true,false);
   opt.set_lower(lower);
   opt.control.iprint = trace_;
   opt.minimize(dl, start);
+  
+  calculate_var_par();
 }
 
 inline void glmmr::Model::laplace_ml_beta_u(){
@@ -315,11 +335,8 @@ inline void glmmr::Model::laplace_ml_beta_u(){
   dblvec start = get_start_values(true,false,false);
   for(int i = 0; i< Q_; i++)start.push_back(u_(i,0));
   opt.minimize(ldl, start);
-  
-  VectorXd zd = (linpred()).col(0);
-  VectorXd zdu =  glmmr::maths::mod_inv_func(zd, link_);
-  ArrayXd resid = (y_ - zdu).array();
-  update_var_par(std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1)));
+
+  calculate_var_par();
 }
 
 inline void glmmr::Model::laplace_ml_theta(){
@@ -334,11 +351,13 @@ inline void glmmr::Model::laplace_ml_theta(){
 inline void glmmr::Model::laplace_ml_beta_theta(){
   LA_likelihood_btheta ldl(*this);
   Rbobyqa<LA_likelihood_btheta,dblvec> opt;
-  dblvec lower = get_lower_values(true,true);
-  dblvec start = get_start_values(true,true);
+  dblvec lower = get_lower_values(true,true,false);
+  dblvec start = get_start_values(true,true,false);
   opt.set_lower(lower);
   opt.control.iprint = trace_;
   opt.minimize(ldl, start);
+  
+  calculate_var_par();
 }
 
 

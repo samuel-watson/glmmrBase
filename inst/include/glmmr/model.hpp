@@ -18,7 +18,6 @@
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
 
-
 namespace glmmr {
 
 using namespace rminqa;
@@ -245,6 +244,8 @@ private:
   
   VectorXd new_proposal(const VectorXd& u0_, bool adapt, 
                         int iter, double rand);
+  
+  void calculate_var_par();
   
   void sample(int warmup,
                   int nsamp,
