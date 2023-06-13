@@ -56,12 +56,9 @@ class calculator {
                       const MatrixXd& data,
                       const VectorXd& extraData);
     
-    MatrixXd hessian(const dblvec& parameters,
-                     const MatrixXd& data);
-    
-    MatrixXd hessian(const dblvec& parameters,
-                     const MatrixXd& data, 
-                     const MatrixXd& extraData);
+    MatrixXd jacobian(const dblvec& parameters,
+                      const MatrixXd& data,
+                      const MatrixXd& extraData);
     
     matrix_matrix jacobian_and_hessian(const dblvec& parameters,
                                        const MatrixXd& data,

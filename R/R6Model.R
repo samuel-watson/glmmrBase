@@ -552,18 +552,27 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description
                        #' Generates the information matrix of the GLS estimator
-                       #' @param observed Logical indicating whether to return the expected information matrix (the GLS information)
-                       #' matrix (TRUE, default) or the observed information matrix derived from the Hessian matrix (FALSE)
+                       #' @param include.re logical indicating whether to return the information matrix including the random effects components (TRUE), 
+                       #' or the GLS information matrix for beta only.
                        #' @return A PxP matrix
-                       information_matrix = function(observed = FALSE){
+                       information_matrix = function(include.re = FALSE){
                          if(is.null(private$ptr)){
                            private$update_ptr(rep(0,nrow(self$mean$data)))
                          }
-                         if(observed){
+                         if(include.re){
                            return(.Model__obs_information_matrix(private$ptr))
                          } else {
                            return(.Model__information_matrix(private$ptr))
                          }
+                       },
+                       #' @description 
+                       #' Returns the robust sandwich matrix
+                       #' @return A PxP matrix
+                       sandwich = function(){
+                         if(is.null(private$ptr)){
+                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                         }
+                         return(.Model__sandwich(private$ptr))
                        },
                        #' @description
                        #' Estimates the power of the design described by the model using the square root
@@ -674,7 +683,7 @@ Model <- R6::R6Class("Model",
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
-                       #'@param gls.standard.errors Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)
+                       #'@param robust logical indicating whether to return robust sandwich estimator standard errors
                        #'@param sparse Logical indicating whether to use sparse matrix methods
                        #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
@@ -717,7 +726,7 @@ Model <- R6::R6Class("Model",
                                        verbose=TRUE,
                                        tol = 1e-2,
                                        max.iter = 30,
-                                       gls.standard.errors = FALSE,
+                                       robust = FALSE,
                                        sparse = FALSE,
                                        usestan = TRUE){
                          private$verify_data(y)
@@ -853,17 +862,16 @@ Model <- R6::R6Class("Model",
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
                          
+                         if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- .Model__u(private$ptr, TRUE)
-                         if(gls.standard.errors){
-                           M <- self$information_matrix()
+                         if(!robust){
+                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
                          } else {
-                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))
+                           M <- .Model__sandwich(private$ptr)
                          }
-                         SE <- sqrt(Matrix::diag(Matrix::solve(M)))
-                         
-                         if(verbose)cat("\n\nCalculating standard errors...\n")
-                         
+                         SE <- sqrt(Matrix::diag(M))
+                    
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- .Model__beta_parameter_names(private$ptr)
                          theta_names <- .Model__theta_parameter_names(private$ptr)
@@ -937,7 +945,7 @@ Model <- R6::R6Class("Model",
                        #'@param start Optional. A numeric vector indicating starting values for the model parameters.
                        #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
                        #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
-                       #'@param gls.standard.errors Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)
+                       #'@param robust logical indicating whether to return robust sandwich estimator standard errors
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@return A `mcml` object
@@ -963,7 +971,7 @@ Model <- R6::R6Class("Model",
                                      start,
                                      method = "nr",
                                      verbose = FALSE,
-                                     gls.standard.errors = FALSE,
+                                     robust = FALSE,
                                      max.iter = 40,
                                      tol = 1e-2){
                          private$verify_data(y)
@@ -1028,13 +1036,12 @@ Model <- R6::R6Class("Model",
                          
                          self$var_par <- var_par_new
                          u <- .Model__u(private$ptr,TRUE)
-                         if(gls.standard.errors){
-                           M <- self$information_matrix()
+                         if(!robust){
+                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
                          } else {
-                           M <- Matrix::solve(.Model__obs_information_matrix(private$ptr))
+                           M <- .Model__sandwich(private$ptr)
                          }
-                         #invM <- Matrix::solve(self$information_matrix())
-                         SE <- sqrt(Matrix::diag(Matrix::solve(M)))
+                         SE <- sqrt(Matrix::diag(M))
                          
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          repar_table <- self$covariance$parameter_table()

@@ -197,10 +197,6 @@
     .Call(`_glmmrBase_Model__obs_information_matrix`, xp)
 }
 
-.Model__re_obs_information_matrix <- function(xp) {
-    .Call(`_glmmrBase_Model__re_obs_information_matrix`, xp)
-}
-
 .Model__u <- function(xp, scaled_) {
     .Call(`_glmmrBase_Model__u`, xp, scaled_)
 }
@@ -299,6 +295,10 @@
 
 .Model__hess_and_grad <- function(xp) {
     .Call(`_glmmrBase_Model__hess_and_grad`, xp)
+}
+
+.Model__sandwich <- function(xp) {
+    .Call(`_glmmrBase_Model__sandwich`, xp)
 }
 
 .Linpred__new <- function(formula_, data_, colnames_) {

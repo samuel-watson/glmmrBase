@@ -1,6 +1,7 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
+// includes
 #include <RcppEigen.h>
 #include <vector>
 #include <string>
@@ -17,6 +18,9 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/polygamma.hpp>
 #include <boost/math/special_functions/gamma.hpp>
+#include <random>
+#include <boost/math/special_functions/digamma.hpp>
+#include <rbobyqa.h>
 
 using namespace Eigen;
 
@@ -31,6 +35,8 @@ typedef std::vector<dblvec2d> dblvec3d;
 typedef std::vector<intvec2d> intvec3d;
 
 // [[Rcpp::depends(RcppEigen)]]
+
+// functions and objects
 
 namespace glmmr {
 
@@ -127,8 +133,6 @@ inline bool expect_number_of_unique_elements(const std::vector<T> vec,
   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
   return vec_size==n;
 }
-
-
 
 }
 

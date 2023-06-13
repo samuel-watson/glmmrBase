@@ -16,12 +16,12 @@ inline void glmmr::Model::setup_calculator(){
   calc_.var_par = var_par_;
   
   // re calculators
+  vcalc_ = linpred_.calc_;
   glmmr::re_linear_predictor(vcalc_,Q_);
   glmmr::linear_predictor_to_link(vcalc_,link_);
   glmmr::link_to_likelihood(vcalc_,family_);
   vcalc_.y = yvec;
   vcalc_.var_par = var_par_;
-  glmmr::re_vv(vvcalc_,Q_);
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
@@ -191,7 +191,7 @@ inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   //size_n_array = xb();
   
-#pragma omp parallel for reduction (+:ll)
+#pragma omp parallel for reduction (+:ll) collapse(2)
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
       double ozu = offset_(i)+zu_(i,j);
@@ -471,19 +471,6 @@ inline void glmmr::Model::sample(int warmup,
   // return samples_.matrix();//.array();//remove L
 }
 
-//inline MatrixXd glmmr::Model::laplace_hessian(double tol){
-//  LA_likelihood_btheta hdl(*this);
-//  int nvar = P_ + covariance_.npar();
-//  if(family_=="gaussian"||family_=="Gamma"||family_=="beta")nvar++;
-//  dblvec ndep(nvar,tol);
-//  hdl.os.ndeps_ = ndep;
-//  dblvec hessian(nvar * nvar,0.0);
-//  dblvec start = get_start_values(true,true,false);
-//  hdl.Hessian(start,hessian);
-//  MatrixXd hess = Map<MatrixXd>(hessian.data(),nvar,nvar);
-//  return hess;
-//}
-
 inline vector_matrix glmmr::Model::b_score(){
   MatrixXd zuOffset_ = zu_;
   zuOffset_.colwise() += offset_;
@@ -506,10 +493,6 @@ inline vector_matrix glmmr::Model::re_score(){
   VectorXd xbOffset_ = linpred_.xb() + offset_;
   matrix_matrix hess = vcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()),sparse_to_dense(ZL_,false),Map<MatrixXd>(xbOffset_.data(),xbOffset_.size(),1));
   
-  //vector_matrix vvhess = vvcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()));
-  //vvhess.vec += hess.mat2.rowwise().sum();
-  //vvhess.mat += hess.mat1;
-  
   vector_matrix out(Q_);
   hess.mat1 *= -1.0;
   out.mat = hess.mat1 + MatrixXd::Identity(Q_,Q_);
@@ -519,28 +502,48 @@ inline vector_matrix glmmr::Model::re_score(){
 }
 
 inline MatrixXd glmmr::Model::observed_information_matrix(){
+// this works but its too slow doing all the cross partial derivatives
+  //MatrixXd XZ(n_,P_+Q_);
+  //int iter = zu_.cols();
+  //XZ.leftCols(P_) = linpred_.X();
+  //XZ.rightCols(Q_) = sparse_to_dense(ZL_,false);
+  //MatrixXd result = MatrixXd::Zero(P_+Q_,P_+Q_);
+  //MatrixXd I = MatrixXd::Identity(P_+Q_,P_+Q_);
+  //dblvec params(P_+Q_);
+  //std::copy_n(linpred_.parameters_.begin(),P_,params.begin());
+  //for(int i = 0; i < iter; i++){
+  //  for(int j = 0; j < Q_; j++){
+  //    params[P_+j] = u_(j,i);
+  //  }
+  //  matrix_matrix hess = vcalc_.jacobian_and_hessian(params,XZ,Map<MatrixXd>(offset_.data(),offset_.size(),1));
+  //  result += hess.mat1;
+  //}
+  //result *= (1.0/iter);
+  //return result;
+  update_W();
+  MatrixXd XtXW = (linpred_.X()).transpose() * W_.asDiagonal() * linpred_.X();
+  MatrixXd ZL = sparse_to_dense(ZL_,false);
+  MatrixXd XtWZL = (linpred_.X()).transpose() * W_.asDiagonal() * ZL;
+  MatrixXd ZLWLZ = ZL.transpose() * W_.asDiagonal() * ZL;
+  ZLWLZ += MatrixXd::Identity(Q_,Q_);
+  MatrixXd infomat(P_+Q_,P_+Q_);
+  infomat.topLeftCorner(P_,P_) = XtXW;
+  infomat.topRightCorner(P_,Q_) = XtWZL;
+  infomat.bottomLeftCorner(Q_,P_) = XtWZL.transpose();
+  infomat.bottomRightCorner(Q_,Q_) = ZLWLZ;
+  return infomat;
+}
+
+inline MatrixXd glmmr::Model::sandwich_matrix(){
+  MatrixXd infomat = observed_information_matrix();
+  infomat = infomat.llt().solve(MatrixXd::Identity(P_+Q_,P_+Q_));
+  infomat.conservativeResize(P_,P_);
   MatrixXd zuOffset_ = zu_;
   zuOffset_.colwise() += offset_;
-  matrix_matrix hess = calc_.jacobian_and_hessian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
-  MatrixXd grad_prod = hess.mat2 * hess.mat2.transpose();
-  MatrixXd I = MatrixXd::Identity(hess.mat1.rows(),hess.mat1.rows());
-  hess.mat1 *= -1.0;
-  MatrixXd infomat = hess.mat1.llt().solve(I);
-  infomat = infomat * grad_prod * infomat;
-  return infomat;
+  MatrixXd J = calc_.jacobian(linpred_.parameters_,linpred_.Xdata_,zuOffset_);
+  MatrixXd sandwich = infomat * (J * J.transpose()) * infomat;
+  return sandwich;
 }
-
-inline MatrixXd glmmr::Model::re_observed_information_matrix(){
-  VectorXd xbOffset_ = linpred_.xb() + offset_;
-  matrix_matrix hess = vcalc_.jacobian_and_hessian(dblvec(u_.col(0).data(),u_.col(0).data()+u_.rows()),sparse_to_dense(ZL_,false),Map<MatrixXd>(xbOffset_.data(),xbOffset_.size(),1));
-  MatrixXd grad_prod = hess.mat2 * hess.mat2.transpose();
-  MatrixXd I = MatrixXd::Identity(hess.mat1.rows(),hess.mat1.rows());
-  hess.mat1 *= -1.0;
-  MatrixXd infomat = hess.mat1.llt().solve(I);
-  infomat = infomat * grad_prod * infomat;
-  return infomat;
-}
-
 
 inline double glmmr::Model::aic(){
   MatrixXd Lu = covariance_.Lu(u_);
@@ -660,36 +663,27 @@ inline void glmmr::Model::laplace_nr_beta_u(){
   update_W();
   VectorXd zd = (linpred()).col(0);
   VectorXd dmu =  glmmr::maths::detadmu(zd,link_);
-  MatrixXd LZWZL = covariance_.LZWZL(W_);
-  LZWZL = LZWZL.llt().solve(MatrixXd::Identity(LZWZL.rows(),LZWZL.cols()));
+  MatrixXd infomat = observed_information_matrix();
+  infomat = infomat.llt().solve(MatrixXd::Identity(P_+Q_,P_+Q_));
   VectorXd zdu =  glmmr::maths::mod_inv_func(zd, link_);
   ArrayXd resid = (y_ - zdu).array();
   double sigmas = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
-  // 
-  MatrixXd XtXW = (linpred_.X()).transpose() * W_.asDiagonal() * linpred_.X();
   VectorXd w = W_;
   w = w.cwiseProduct(dmu);
   w = w.cwiseProduct(resid.matrix());
-  XtXW = XtXW.inverse();
-  VectorXd bincr = XtXW * (linpred_.X()).transpose() * w;
-  VectorXd vgrad = log_gradient(u_.col(0));
-  VectorXd vincr = LZWZL * vgrad;
+  VectorXd params(P_+Q_);
+  params.head(P_) = linpred_.parameter_vector();
+  params.tail(Q_) = u_.col(0);
+  VectorXd pderiv(P_+Q_);
+  pderiv.head(P_) = (linpred_.X()).transpose() * w;
+  pderiv.tail(Q_) = log_gradient(u_.col(0));
   
-  // the code below uses the autodiff approach to the score algorithm
-  // but is slower than the above method with matrices and approximations
-  // since this is an approximation anyway, the quicker method is favoured
+  params += infomat*pderiv;
   
-  // vector_matrix score = b_score();
-  // MatrixXd I = MatrixXd::Identity(P_,P_);
-  // MatrixXd infomat = score.mat.llt().solve(I);
-  // update_beta(linpred_.parameter_vector() + infomat*score.vec);
-  // vector_matrix uscore = re_score();
-  // MatrixXd Ire = MatrixXd::Identity(Q_,Q_);
-  // MatrixXd infomatre = uscore.mat.llt().solve(Ire);
-  // update_u(u_.colwise()+infomatre*uscore.vec);
-  update_u(u_.colwise()+vincr);
-  update_beta(linpred_.parameter_vector() + bincr);
+  update_beta(params.head(P_));
+  update_u(params.tail(Q_));
   update_var_par(sigmas);
+  
 }
 
 inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,

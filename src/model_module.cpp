@@ -211,13 +211,6 @@ SEXP Model__obs_information_matrix(SEXP xp){
   return wrap(infomat);
 }
 
-// [[Rcpp::export(.Model__re_obs_information_matrix)]]
-SEXP Model__re_obs_information_matrix(SEXP xp){
-  XPtr<glmmr::Model> ptr(xp);
-  MatrixXd infomat = ptr->re_observed_information_matrix();
-  return wrap(infomat);
-}
-
 // [[Rcpp::export(.Model__u)]]
 SEXP Model__u(SEXP xp, bool scaled_){
   XPtr<glmmr::Model> ptr(xp);
@@ -391,6 +384,13 @@ SEXP Model__hess_and_grad(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   matrix_matrix parnames = ptr->hess_and_grad();
   return wrap(parnames);
+}
+
+// [[Rcpp::export(.Model__sandwich)]]
+SEXP Model__sandwich(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  Eigen::MatrixXd sandwich = ptr->sandwich_matrix();
+  return wrap(sandwich);
 }
 
 // [[Rcpp::export(.Linpred__new)]]

@@ -569,17 +569,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__re_obs_information_matrix
-SEXP Model__re_obs_information_matrix(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__re_obs_information_matrix(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__re_obs_information_matrix(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Model__u
 SEXP Model__u(SEXP xp, bool scaled_);
 RcppExport SEXP _glmmrBase_Model__u(SEXP xpSEXP, SEXP scaled_SEXP) {
@@ -856,6 +845,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__sandwich
+SEXP Model__sandwich(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__sandwich(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__sandwich(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Linpred__new
 SEXP Linpred__new(SEXP formula_, SEXP data_, SEXP colnames_);
 RcppExport SEXP _glmmrBase_Linpred__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
@@ -979,7 +979,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
-    {"_glmmrBase_Model__re_obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__re_obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
     {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
@@ -1005,6 +1004,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 1},
     {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 1},
+    {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 1},
     {"_glmmrBase_Linpred__new", (DL_FUNC) &_glmmrBase_Linpred__new, 3},
     {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
     {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},

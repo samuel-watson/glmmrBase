@@ -346,6 +346,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-check}{\code{Model$check()}}
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
+\item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
@@ -785,17 +786,30 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \subsection{Method \code{information_matrix()}}{
 Generates the information matrix of the GLS estimator
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(observed = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{observed}}{Logical indicating whether to return the expected information matrix (the GLS information)
-matrix (TRUE, default) or the observed information matrix derived from the Hessian matrix (FALSE)}
+\item{\code{include.re}}{logical indicating whether to return the information matrix including the random effects components (TRUE),
+or the GLS information matrix for beta only.}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+A PxP matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-sandwich"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sandwich}{}}}
+\subsection{Method \code{sandwich()}}{
+Returns the robust sandwich matrix
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich()}\if{html}{\out{</div>}}
+}
+
 \subsection{Returns}{
 A PxP matrix
 }
@@ -916,7 +930,7 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   verbose = TRUE,
   tol = 0.01,
   max.iter = 30,
-  gls.standard.errors = FALSE,
+  robust = FALSE,
   sparse = FALSE,
   usestan = TRUE
 )}\if{html}{\out{</div>}}
@@ -939,7 +953,7 @@ between iterations at which to stop the algorithm.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
 
-\item{\code{gls.standard.errors}}{Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)}
+\item{\code{robust}}{logical indicating whether to return robust sandwich estimator standard errors}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
@@ -999,7 +1013,7 @@ Maximum Likelihood model fitting with Laplace Approximation
   start,
   method = "nr",
   verbose = FALSE,
-  gls.standard.errors = FALSE,
+  robust = FALSE,
   max.iter = 40,
   tol = 0.01
 )}\if{html}{\out{</div>}}
@@ -1016,7 +1030,7 @@ Maximum Likelihood model fitting with Laplace Approximation
 
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
 
-\item{\code{gls.standard.errors}}{Logical. Returns GLS standard errors (TRUE) or standard errors calculated from the Hessian (FALSE, default)}
+\item{\code{robust}}{logical indicating whether to return robust sandwich estimator standard errors}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 

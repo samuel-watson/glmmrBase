@@ -64,63 +64,28 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   }
   return J;
 };
-    
-inline MatrixXd glmmr::calculator::hessian(const dblvec& parameters,
-                     const MatrixXd& data){
-  int n = data.rows();
-  if(n==0)Rcpp::stop("No data initialised in calculator");
-  int n2d = parameter_count*(parameter_count + 1)/2;
-  MatrixXd H(n2d,n);
-#pragma omp parallel for
-  for(int i = 0; i<n ; i++){
-    dblvec out = calculate(i,parameters,data,0,2);
-    for(int j = 0; j < n2d; j++){
-      H(j,i) = out[parameter_count + 1 + j];
-    }
-  }
-  VectorXd Hmean = H.rowwise().mean();
-  MatrixXd H0 = MatrixXd::Zero(parameter_count, parameter_count);
-  int index_count = 0;
-  for(int j = 0; j < parameter_count; j++){
-    for(int k = j; k < parameter_count; k++){
-      H0(k,j) = Hmean[index_count];
-      if(j != k) H0(j,k) = H0(k,j);
-      index_count++;
-    }
-  }
-  return H0;
-};
-    
-inline MatrixXd glmmr::calculator::hessian(const dblvec& parameters,
-                     const MatrixXd& data, 
-                     const MatrixXd& extraData){
+
+inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
+                      const MatrixXd& data,
+                      const MatrixXd& extraData){
   int n = data.rows();
   if(n==0)Rcpp::stop("No data initialised in calculator");
   if(extraData.rows()!=n)Rcpp::stop("Extra data not of length n");
   int iter = extraData.cols();
-  int n2d = parameter_count*(parameter_count + 1)/2;
-  MatrixXd H = MatrixXd::Zero(n2d,n);
+  MatrixXd J = MatrixXd::Zero(parameter_count,n);
 #pragma omp parallel for
   for(int i = 0; i<n ; i++){
+    dblvec out;
     for(int k = 0; k < iter; k++){
-      dblvec out = calculate(i,parameters,data,0,2,extraData(i,k));
-      for(int j = 0; j < n2d; j++){
-        H(j,i) += out[parameter_count + 1 + j]/iter;
-      } 
+      out = calculate(i,parameters,data,0,1,extraData(i,k));
+      for(int j = 0; j < parameter_count; j++){
+        J(j,i) += out[1+j]/iter;
+      }
     }
   }
-  VectorXd Hmean = H.rowwise().sum();
-  MatrixXd H0 = MatrixXd::Zero(parameter_count, parameter_count);
-  int index_count = 0;
-  for(int j = 0; j < parameter_count; j++){
-    for(int k = j; k < parameter_count; k++){
-      H0(k,j) = Hmean(index_count);
-      if(j != k) H0(j,k) = H0(k,j);
-      index_count++;
-    }
-  }
-  return H0;
+  return J;
 };
+  
     
 inline matrix_matrix glmmr::calculator::jacobian_and_hessian(const dblvec& parameters,
                                        const MatrixXd& data,
@@ -930,18 +895,22 @@ inline dblvec glmmr::calculator::calculate(const int i,
         if(stack.size()==0)Rcpp::stop("Stack too small (40)");
         a = stack.top();
         stack.pop();
+        // Ramanujan approximation
         if(a == 0){
           stack.push(0);
         } else {
           double result = a*log(a) - a + log(a*(1+4*a*(1+2*a)))/6 + log(3.141593)/2;
           stack.push(result);
         }
-        if(order > 0){
-          addZeroDx();
-        }
-        if(order == 2){
-          addZeroDx2();
-        }
+        // NOTE: this function is only ever used in Poisson log likelihood and so the top of the derivative
+        // stacks should be 0, so we don't need to do anything. However, this should be updated if ever this
+        // function is used more broadly.
+        //if(order > 0){
+        //  addZeroDx();
+        //}
+        //if(order == 2){
+        //  addZeroDx2();
+        //}
         break;
       }
     case 41:

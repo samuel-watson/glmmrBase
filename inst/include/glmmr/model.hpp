@@ -3,8 +3,6 @@
 
 #define _USE_MATH_DEFINES
 
-#include <boost/math/special_functions/digamma.hpp>
-#include <rbobyqa.h>
 #include "general.h"
 #include "maths.h"
 #include "openmpheader.h"
@@ -12,7 +10,7 @@
 #include "linearpredictor.hpp"
 #include "calculator.hpp"
 #include "sparse.h"
-#include <random>
+
 
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
@@ -148,8 +146,6 @@ public:
   
   MatrixXd observed_information_matrix();
   
-  MatrixXd re_observed_information_matrix();
-  
   MatrixXd u(bool scaled = true){
     if(scaled){
       return covariance_.Lu(u_);
@@ -169,6 +165,8 @@ public:
   
   VectorXd predict_xb(const ArrayXXd& newdata_,
                       const ArrayXd& newoffset_);
+  
+  MatrixXd sandwich_matrix();
   
   void mcmc_sample(int warmup,
                    int samples,
@@ -200,7 +198,6 @@ private:
   ArrayXd size_p_array;
   glmmr::calculator calc_;
   glmmr::calculator vcalc_;
-  glmmr::calculator vvcalc_;
   sparse ZL_;
   MatrixXd u_;
   MatrixXd zu_;

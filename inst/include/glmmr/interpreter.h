@@ -288,46 +288,40 @@ inline intvec interpret_re_par(const std::string& fn,
   return B;
 }
 
-
 inline void re_linear_predictor(glmmr::calculator& calc,
                                 const int& Q){
+  
   intvec re_instruct;
   intvec re_seq = {0,2,5,3};
-  re_instruct.push_back(0);
-  re_instruct.push_back(2);
-  re_instruct.push_back(5);
-  calc.parameter_names.push_back("v_"+std::to_string(0));
-  calc.indexes.push_back(0);
-  calc.indexes.push_back(0);
-  for(int i = 1; i < Q; i++){
+  for(int i = 0; i < Q; i++){
     re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
     calc.parameter_names.push_back("v_"+std::to_string(i));
-    calc.indexes.push_back(i);
-    calc.indexes.push_back(i);
+    calc.indexes.push_back(i+calc.data_count);
+    calc.indexes.push_back(i+calc.data_count);
   }
-  calc.parameter_count = Q;
-  calc.instructions = re_instruct;
-  calc.data_count = Q;
+  calc.parameter_count += Q;
+  calc.instructions.insert(calc.instructions.end(),re_instruct.begin(),re_instruct.end());
+  calc.data_count += Q;
 }
 
-inline void re_vv(glmmr::calculator& calc,
-                  const int& Q){
-  intvec v_instruct = {2,17};
-  intvec v_seq = {2,17,3};
-  calc.indexes.push_back(0);
-  calc.parameter_names.push_back("v_0");
-  for(int i = 1; i < Q; i++){
-    v_instruct.insert(v_instruct.end(),v_seq.begin(),v_seq.end());
-    calc.parameter_names.push_back("v_"+std::to_string(i));
-    calc.indexes.push_back(i);
-  }
-  intvec v_seq2 = {22,21,6,5,10};
-  v_instruct.insert(v_instruct.end(),v_seq2.begin(),v_seq2.end());
-  calc.instructions = v_instruct;
-  calc.parameter_count = Q;
-  calc.data_count = 0;
-  
-}
+// inline void re_vv(glmmr::calculator& calc,
+//                   const int& Q){
+//   intvec v_instruct = {2,17};
+//   intvec v_seq = {2,17,3};
+//   calc.indexes.push_back(0);
+//   calc.parameter_names.push_back("v_0");
+//   for(int i = 1; i < Q; i++){
+//     v_instruct.insert(v_instruct.end(),v_seq.begin(),v_seq.end());
+//     calc.parameter_names.push_back("v_"+std::to_string(i));
+//     calc.indexes.push_back(i);
+//   }
+//   intvec v_seq2 = {22,21,6,5,10};
+//   v_instruct.insert(v_instruct.end(),v_seq2.begin(),v_seq2.end());
+//   calc.instructions = v_instruct;
+//   calc.parameter_count = Q;
+//   calc.data_count = 0;
+//   
+// }
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,
                                      const str& link){
@@ -352,7 +346,7 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
   case 2:
     {
       out = calc.instructions;
-      out.push_back(16);
+      out.push_back(9);
       break;
     }
   case 3:
@@ -436,7 +430,6 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
-        //idx.push_back(data_dim);
         break;
       }
     case 2:
@@ -444,11 +437,9 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         intvec binom_instruct = {16,5,19,21,4};
         intvec binom_instruct2 = {21,4,16,5,3};
         out.push_back(19);
-        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
-        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
@@ -461,8 +452,6 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct.begin(),poisson_instruct.end());
-        // idx.push_back(data_dim);
-        // idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct2.begin(),poisson_instruct2.end());
@@ -475,12 +464,9 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
-        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
-        //idx.push_back(data_dim);
-        //idx.push_back(data_dim);
         break;
       }
     case 5:
@@ -493,11 +479,9 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
-        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct2.begin(),beta_instruct2.end());
-        //idx.push_back(data_dim);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct3.begin(),beta_instruct3.end());
