@@ -17,11 +17,12 @@ public:
   LinearPredictor(glmmr::Formula& form,
              const Eigen::ArrayXXd &data,
              const strvec& colnames) :
+    Xdata_(data.rows(),1),
     colnames_(colnames),  
     form_(form),
     n_(data.rows()),
-    X_(MatrixXd::Zero(n_,1)),
-    Xdata_(data.rows(),1){
+    X_(MatrixXd::Zero(n_,1))
+    {
       form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       P_ = calc_.parameter_names.size();
       parameters_.resize(P_);
@@ -38,11 +39,12 @@ public:
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const dblvec& parameters) :
+    Xdata_(data.rows(),1),
     colnames_(colnames), 
     form_(form),
     n_(data.rows()),
-    X_(MatrixXd::Zero(n_,1)),
-    Xdata_(data.rows(),1) {
+    X_(MatrixXd::Zero(n_,1))
+     {
       form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
@@ -55,11 +57,12 @@ public:
              const Eigen::ArrayXXd &data,
              const strvec& colnames,
              const Eigen::ArrayXd& parameters) :
+    Xdata_(data.rows(),1),
     colnames_(colnames), 
     form_(form),
     n_(data.rows()),
-    X_(MatrixXd::Zero(n_,1)),
-    Xdata_(data.rows(),1) {
+    X_(MatrixXd::Zero(n_,1))
+     {
       form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
       update_parameters(parameters);
       P_ = calc_.parameter_names.size();
@@ -124,8 +127,8 @@ public:
   }
 
 private:
-  glmmr::Formula& form_;
   strvec colnames_;
+  glmmr::Formula& form_;
   int P_;
   int n_fe_components_;
   int n_;

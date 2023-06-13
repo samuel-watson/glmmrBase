@@ -117,9 +117,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
                             if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
                             private$genD()
-                          } else {
-                            if(verbose)message("Covariance up to date")
-                          }
+                          } 
                           invisible(self)
                         },
                         #' @description
@@ -133,6 +131,10 @@ Covariance <- R6::R6Class("Covariance",
                         #'
                         #' @param parameters A vector of parameters for the covariance function(s). See Details.
                         update_parameters = function(parameters){
+                          if(is.null(private$ptr)){
+                            if(is.null(self$data))stop("No data")
+                            private$cov_form()
+                          }
                           self$parameters <- parameters
                           Covariance__Update_parameters(private$ptr,parameters)
                           self$check(FALSE)

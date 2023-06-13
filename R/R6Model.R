@@ -266,13 +266,14 @@ Model <- R6::R6Class("Model",
                              self$covariance <- Covariance$new(
                                formula= covariance$formula
                              )
-                             if(!is.null(covariance$parameters))self$covariance$parameters <- covariance$parameters
-                             if(!is.null(covariance$eff_range))self$covariance$eff_range <- covariance$eff_range
                              if(is.null(covariance$data)){
                                self$covariance$data <- data
                              } else {
                                self$covariance$data <- covariance$data
                              }
+                             if(!is.null(covariance$parameters))self$covariance$update_parameters(covariance$parameters)
+                             if(!is.null(covariance$eff_range))self$covariance$eff_range <- covariance$eff_range
+                             
                            }
                            if(is(mean,"R6")){
                              if(is(mean,"MeanFunction")){
@@ -294,7 +295,7 @@ Model <- R6::R6Class("Model",
                                  data = mean$data
                                )
                              }
-                             if(!is.null(mean$parameters))self$mean$parameters <- mean$parameters
+                             if(!is.null(mean$parameters))self$mean$update_parameters(mean$parameters)
                            }
                            if(is.null(offset)){
                              self$mean$offset <- rep(0,nrow(self$mean$data))
@@ -620,8 +621,7 @@ Model <- R6::R6Class("Model",
                            }
                          }
 
-                         res <- data.frame(Parameter = names(self$mean$parameters),
-                                           Value = self$mean$parameters,
+                         res <- data.frame(Value = self$mean$parameters,
                                            SE = v0,
                                            Power = pwr)
                          return(res)
@@ -874,14 +874,12 @@ Model <- R6::R6Class("Model",
                     
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
-                         theta_names <- Model__theta_parameter_names(private$ptr)
+                         theta_names <- unique(Model__theta_parameter_names(private$ptr))
                          
                          if(var_par_family){
-                           #mf_pars_names <- c(colnames(self$mean$X),repar_table$term,"sigma")
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
-                           #mf_pars_names <- c(colnames(self$mean$X),repar_table$term)
                            mf_pars_names <- c(beta_names,theta_names)
                            SE <- c(SE,rep(NA,length(theta_new)))
                          }
@@ -1046,7 +1044,7 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
-                         theta_names <- Model__theta_parameter_names(private$ptr)
+                         theta_names <- unique(Model__theta_parameter_names(private$ptr))
                          
                          if(var_par_family){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
