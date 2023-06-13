@@ -92,7 +92,14 @@ public:
   }
 
   VectorXd xb(){
-    VectorXd xb = calc_.linear_predictor(parameters_,Xdata_);
+    VectorXd xb(n_);
+    if(calc_.any_nonlinear){
+      xb = calc_.linear_predictor(parameters_,Xdata_);
+    } else {
+      Map<VectorXd> beta(parameters_.data(),parameters_.size());
+      xb = X_ * beta;
+    }
+    
     return xb;
   }
 

@@ -20,7 +20,7 @@ SEXP wrap(const matrix_matrix& x){
 
 using namespace Rcpp;
 
-// [[Rcpp::export(.Model__new)]]
+// [[Rcpp::export]]
 SEXP Model__new(SEXP y_,SEXP formula_, SEXP data_, SEXP colnames_,
                 SEXP family_, SEXP link_){
   Eigen::VectorXd y = as<Eigen::VectorXd>(y_);
@@ -33,35 +33,35 @@ SEXP Model__new(SEXP y_,SEXP formula_, SEXP data_, SEXP colnames_,
   return ptr;
 }
 
-// [[Rcpp::export(.Model__set_offset)]]
+// [[Rcpp::export]]
 void Model__set_offset(SEXP xp, SEXP offset_){
   Eigen::VectorXd offset = as<Eigen::VectorXd>(offset_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->set_offset(offset);
 }
 
-// [[Rcpp::export(.Model__update_beta)]]
+// [[Rcpp::export]]
 void Model__update_beta(SEXP xp, SEXP beta_){
   std::vector<double> beta = as<std::vector<double> >(beta_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_beta_extern(beta);
 }
 
-// [[Rcpp::export(.Model__update_theta)]]
+// [[Rcpp::export]]
 void Model__update_theta(SEXP xp, SEXP theta_){
   std::vector<double> theta = as<std::vector<double> >(theta_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_theta_extern(theta);
 }
 
-// [[Rcpp::export(.Model__update_u)]]
+// [[Rcpp::export]]
 void Model__update_u(SEXP xp, SEXP u_){
   Eigen::MatrixXd u = as<Eigen::MatrixXd>(u_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_u(u);
 }
 
-// [[Rcpp::export(.Model__predict)]]
+// [[Rcpp::export]]
 SEXP Model__predict(SEXP xp, SEXP newdata_,
                           SEXP newoffset_,
                           int m){
@@ -83,20 +83,20 @@ SEXP Model__predict(SEXP xp, SEXP newdata_,
   );
 }
 
-// [[Rcpp::export(.Model__use_attenuation)]]
+// [[Rcpp::export]]
 void Model__use_attenuation(SEXP xp, SEXP use_){
   bool use = as<bool>(use_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->attenuate_ = use;
 }
 
-// [[Rcpp::export(.Model__update_W)]]
+// [[Rcpp::export]]
 void Model__update_W(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_W();
 }
 
-// [[Rcpp::export(.Model__log_prob)]]
+// [[Rcpp::export]]
 SEXP Model__log_prob(SEXP xp, SEXP v_){
   Eigen::VectorXd v = as<Eigen::VectorXd>(v_);
   XPtr<glmmr::Model> ptr(xp);
@@ -104,7 +104,7 @@ SEXP Model__log_prob(SEXP xp, SEXP v_){
   return wrap(logprob);
 }
 
-// [[Rcpp::export(.Model__log_gradient)]]
+// [[Rcpp::export]]
 SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP beta_){
   Eigen::VectorXd v = as<Eigen::VectorXd>(v_);
   bool beta = as<bool>(beta_);
@@ -113,140 +113,132 @@ SEXP Model__log_gradient(SEXP xp, SEXP v_, SEXP beta_){
   return wrap(loggrad);
 }
 
-// [[Rcpp::export(.Model__linear_predictor)]]
+// [[Rcpp::export]]
 SEXP Model__linear_predictor(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd linpred = ptr->linpred();
   return wrap(linpred);
 }
 
-// [[Rcpp::export(.Model__log_likelihood)]]
+// [[Rcpp::export]]
 SEXP Model__log_likelihood(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   double logl = ptr->log_likelihood();
   return wrap(logl);
 }
 
-// [[Rcpp::export(.Model__ml_theta)]]
+// [[Rcpp::export]]
 void Model__ml_theta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->ml_theta();
 }
 
-// [[Rcpp::export(.Model__ml_beta)]]
+// [[Rcpp::export]]
 void Model__ml_beta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->ml_beta();
 }
 
-// [[Rcpp::export(.Model__ml_all)]]
+// [[Rcpp::export]]
 void Model__ml_all(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->ml_all();
 }
 
-// [[Rcpp::export(.Model__laplace_ml_beta_u)]]
+// [[Rcpp::export]]
 void Model__laplace_ml_beta_u(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->laplace_ml_beta_u();
 }
 
-// [[Rcpp::export(.Model__laplace_ml_theta)]]
+// [[Rcpp::export]]
 void Model__laplace_ml_theta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->laplace_ml_theta();
 }
 
-// [[Rcpp::export(.Model__laplace_ml_beta_theta)]]
+// [[Rcpp::export]]
 void Model__laplace_ml_beta_theta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->laplace_ml_beta_theta();
 }
 
-// [[Rcpp::export(.Model__nr_beta)]]
+// [[Rcpp::export]]
 void Model__nr_beta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->nr_beta();
 }
 
-
-// [[Rcpp::export(.Model__laplace_nr_beta_u)]]
+// [[Rcpp::export]]
 void Model__laplace_nr_beta_u(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->laplace_nr_beta_u();
 }
 
-// // [[Rcpp::export(.Model__laplace_hessian)]]
-// SEXP Model__laplace_hessian(SEXP xp){
-//   XPtr<glmmr::Model> ptr(xp);
-//   Eigen::MatrixXd hess = ptr->laplace_hessian();
-//   return wrap(hess);
-// }
-
-// [[Rcpp::export(.Model__Sigma)]]
+// [[Rcpp::export]]
 SEXP Model__Sigma(SEXP xp, bool inverse){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd S = ptr->Sigma(inverse);
   return wrap(S);
 }
 
-// [[Rcpp::export(.Model__information_matrix)]]
+// [[Rcpp::export]]
 SEXP Model__information_matrix(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd M = ptr->information_matrix();
   return wrap(M);
 }
 
-// [[Rcpp::export(.Model__hessian)]]
+// [[Rcpp::export]]
 SEXP Model__hessian(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   vector_matrix hess = ptr->re_score();
   return wrap(hess);
 }
 
-// [[Rcpp::export(.Model__obs_information_matrix)]]
+// [[Rcpp::export]]
 SEXP Model__obs_information_matrix(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   MatrixXd infomat = ptr->observed_information_matrix();
   return wrap(infomat);
 }
 
-// [[Rcpp::export(.Model__u)]]
+// [[Rcpp::export]]
 SEXP Model__u(SEXP xp, bool scaled_){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd u = ptr->u(scaled_);
   return wrap(u);
 }
 
-// [[Rcpp::export(.Model__Zu)]]
+// [[Rcpp::export]]
 SEXP Model__Zu(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd Zu = ptr->Zu();
   return wrap(Zu);
 }
 
-// [[Rcpp::export(.Model__P)]]
+// [[Rcpp::export]]
 SEXP Model__P(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   int u = ptr->P_;
   return wrap(u);
 }
 
-// [[Rcpp::export(.Model__Q)]]
+// [[Rcpp::export]]
 SEXP Model__Q(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   int Q = ptr->Q_;
   return wrap(Q);
 }
 
-// [[Rcpp::export(.Model__X)]]
+// [[Rcpp::export]]
 SEXP Model__X(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd X = ptr->linpred_.X();
   return wrap(X);
 }
 
-// [[Rcpp::export(.Model__mcmc_sample)]]
+// [[Rcpp::export]]
 void Model__mcmc_sample(SEXP xp, SEXP warmup_, SEXP samples_, SEXP adapt_){
   int warmup = as<int>(warmup_);
   int samples = as<int>(samples_);
@@ -255,195 +247,142 @@ void Model__mcmc_sample(SEXP xp, SEXP warmup_, SEXP samples_, SEXP adapt_){
   ptr->mcmc_sample(warmup,samples,adapt);
 }
 
-// [[Rcpp::export(.Model__set_trace)]]
+// [[Rcpp::export]]
 void Model__set_trace(SEXP xp, SEXP trace_){
   int trace = as<int>(trace_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->set_trace(trace);
 }
 
-// [[Rcpp::export(.Model__get_beta)]]
+// [[Rcpp::export]]
 SEXP Model__get_beta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::VectorXd beta = ptr->linpred_.parameter_vector();
   return wrap(beta);
 }
 
-// [[Rcpp::export(.Model__y)]]
+// [[Rcpp::export]]
 SEXP Model__y(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::VectorXd y = ptr->y_;
   return wrap(y);
 }
 
-// [[Rcpp::export(.Model__get_theta)]]
+// [[Rcpp::export]]
 SEXP Model__get_theta(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   std::vector<double> theta = ptr->covariance_.parameters_;
   return wrap(theta);
 }
 
-// [[Rcpp::export(.Model__get_var_par)]]
+// [[Rcpp::export]]
 SEXP Model__get_var_par(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   double theta = ptr->var_par_;
   return wrap(theta);
 }
 
-// [[Rcpp::export(.Model__set_var_par)]]
+// [[Rcpp::export]]
 void Model__set_var_par(SEXP xp, SEXP var_par_){
   double var_par = as<double>(var_par_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_var_par(var_par);
 }
 
-// [[Rcpp::export(.Model__L)]]
+// [[Rcpp::export]]
 SEXP Model__L(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd L = ptr->covariance_.D(true,false);
   return wrap(L);
 }
 
-// [[Rcpp::export(.Model__ZL)]]
+// [[Rcpp::export]]
 SEXP Model__ZL(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd ZL = ptr->covariance_.ZL();
   return wrap(ZL);
 }
 
-// [[Rcpp::export(.Model__xb)]]
+// [[Rcpp::export]]
 SEXP Model__xb(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::VectorXd xb = ptr->xb();
   return wrap(xb);
 }
 
-// [[Rcpp::export(.Model__aic)]]
+// [[Rcpp::export]]
 SEXP Model__aic(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   double aic = ptr->aic();
   return wrap(aic);
 }
 
-// [[Rcpp::export(.Model__mcmc_set_lambda)]]
+// [[Rcpp::export]]
 void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_){
   double lambda = as<double>(lambda_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->mcmc_set_lambda(lambda);
 }
 
-// [[Rcpp::export(.Model__mcmc_set_max_steps)]]
+// [[Rcpp::export]]
 void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_){
   int max_steps = as<int>(max_steps_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->mcmc_set_max_steps(max_steps);
 }
 
-// [[Rcpp::export(.Model__mcmc_set_refresh)]]
+// [[Rcpp::export]]
 void Model__mcmc_set_refresh(SEXP xp, SEXP refresh_){
   int refresh = as<int>(refresh_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->mcmc_set_refresh(refresh);
 }
 
-// [[Rcpp::export(.Model__mcmc_set_target_accept)]]
+// [[Rcpp::export]]
 void Model__mcmc_set_target_accept(SEXP xp, SEXP target_){
   double target = as<double>(target_);
   XPtr<glmmr::Model> ptr(xp);
   ptr->mcmc_set_target_accept(target);
 }
 
-// [[Rcpp::export(.Model__make_sparse)]]
+// [[Rcpp::export]]
 void Model__make_sparse(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->make_covariance_sparse();
 }
 
-// [[Rcpp::export(.Model__make_dense)]]
+// [[Rcpp::export]]
 void Model__make_dense(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->make_covariance_dense();
 }
 
-// [[Rcpp::export(.Model__beta_parameter_names)]]
+// [[Rcpp::export]]
 SEXP Model__beta_parameter_names(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   strvec parnames = ptr->linpred_.parameter_names();
   return wrap(parnames);
 }
 
-// [[Rcpp::export(.Model__theta_parameter_names)]]
+// [[Rcpp::export]]
 SEXP Model__theta_parameter_names(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   strvec parnames = ptr->covariance_.parameter_names();
   return wrap(parnames);
 }
 
-// [[Rcpp::export(.Model__hess_and_grad)]]
+// [[Rcpp::export]]
 SEXP Model__hess_and_grad(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   matrix_matrix parnames = ptr->hess_and_grad();
   return wrap(parnames);
 }
 
-// [[Rcpp::export(.Model__sandwich)]]
+// [[Rcpp::export]]
 SEXP Model__sandwich(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   Eigen::MatrixXd sandwich = ptr->sandwich_matrix();
   return wrap(sandwich);
 }
 
-// [[Rcpp::export(.Linpred__new)]]
-SEXP Linpred__new(SEXP formula_,
-                SEXP data_,
-                SEXP colnames_){
-  std::string formula = as<std::string>(formula_);
-  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
-  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
-  glmmr::Formula f1(formula);
-  XPtr<glmmr::LinearPredictor> ptr(new glmmr::LinearPredictor(f1,data,colnames));
-  return ptr;
-}
-
-// [[Rcpp::export(.Linpred__update_pars)]]
-void Linpred__update_pars(SEXP xp,
-                          SEXP parameters_){
-  std::vector<double> parameters = as<std::vector<double>>(parameters_);
-  XPtr<glmmr::LinearPredictor> ptr(xp);
-  ptr->update_parameters(parameters);
-}
-
-// [[Rcpp::export(.Linpred__xb)]]
-SEXP Linpred__xb(SEXP xp){
-  XPtr<glmmr::LinearPredictor> ptr(xp);
-  Eigen::VectorXd xb = ptr->xb();
-  return wrap(xb);
-}
-
-// [[Rcpp::export(.Linpred__x)]]
-SEXP Linpred__x(SEXP xp){
-  XPtr<glmmr::LinearPredictor> ptr(xp);
-  Eigen::MatrixXd X = ptr->X();
-  return wrap(X);
-}
-
-// [[Rcpp::export(.Linpred__any_nonlinear)]]
-SEXP Linpred__any_nonlinear(SEXP xp){
-  XPtr<glmmr::LinearPredictor> ptr(xp);
-  bool anl = ptr->any_nonlinear();
-  return wrap(anl);
-}
-
-// [[Rcpp::export(.girling_algorithm)]]
-SEXP girling_algorithm(SEXP xp, SEXP N_,
-                       SEXP sigma_sq_, SEXP C_,
-                       SEXP tol_){
-  double N = as<double>(N_);
-  double sigma_sq = as<double>(sigma_sq_);
-  double tol = as<double>(tol_);
-  Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
-  XPtr<glmmr::Model> ptr(xp);
-  Eigen::ArrayXd w = ptr->optimum_weights(N,sigma_sq,C,tol);
-  return wrap(w);
-}
 

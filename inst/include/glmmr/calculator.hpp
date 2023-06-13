@@ -3,6 +3,7 @@
 
 #include "general.h"
 
+
 namespace glmmr {
 
 class calculator {

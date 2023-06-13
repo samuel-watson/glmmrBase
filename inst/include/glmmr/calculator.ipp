@@ -98,11 +98,10 @@ inline matrix_matrix glmmr::calculator::jacobian_and_hessian(const dblvec& param
   int n2d = parameter_count*(parameter_count + 1)/2;
   MatrixXd H = MatrixXd::Zero(n2d,n);
   MatrixXd J = MatrixXd::Zero(parameter_count,n);
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
   for(int i = 0; i<n ; i++){
-    dblvec out;
     for(int k = 0; k < iter; k++){
-      out = calculate(i,parameters,data,0,2,extraData(i,k));
+      dblvec out = calculate(i,parameters,data,0,2,extraData(i,k));
       for(int j = 0; j < parameter_count; j++){
         J(j,i) += out[1+j]/iter;
       }

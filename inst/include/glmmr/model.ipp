@@ -189,15 +189,23 @@ inline MatrixXd glmmr::Model::information_matrix_by_block(int b){
 
 inline double glmmr::Model::log_likelihood() {
   double ll = 0;
-  //size_n_array = xb();
-  
+  size_n_array = xb();
 #pragma omp parallel for reduction (+:ll) collapse(2)
-  for(int j=0; j<zu_.cols() ; j++){
-    for(int i = 0; i<n_; i++){
-      double ozu = offset_(i)+zu_(i,j);
-      ll += calc_.calculate(i,linpred_.parameters_,linpred_.Xdata_,0,0,ozu)[0];
+    for(int j=0; j<zu_.cols() ; j++){
+      for(int i = 0; i<n_; i++){
+        ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
+      }
     }
-  }
+  
+  // to use the calculator object instead... seems to be generally slower so have opted 
+  // for specific formulae above. Will try to optimise this in future versions
+ // #pragma omp parallel for reduction (+:ll) collapse(2)
+  //  for(int j=0; j<zu_.cols() ; j++){
+  //    for(int i = 0; i<n_; i++){
+  //      double ozu = offset_(i)+zu_(i,j);
+  //      ll += calc_.calculate(i,linpred_.parameters_,linpred_.Xdata_,0,0,ozu)[0];
+  //    }
+  //  }
   
   return ll/zu_.cols();
 }
@@ -601,62 +609,58 @@ inline vector_matrix glmmr::Model::predict_re(const ArrayXXd& newdata_,
 }
 
 inline void glmmr::Model::nr_beta(){
-  
   int niter = u_.cols();
-  ArrayXd sigmas(niter);
-  vector_matrix score = b_score();
-  MatrixXd I = MatrixXd::Identity(P_,P_);
-  MatrixXd infomat = score.mat.llt().solve(I);
-  update_beta(linpred_.parameter_vector() + infomat*score.vec);
   MatrixXd zd = linpred();
+  ArrayXd sigmas(niter);
+   
+  if(linpred_.calc_.any_nonlinear){
+    vector_matrix score = b_score();
+    MatrixXd infomat = score.mat.llt().solve(MatrixXd::Identity(P_,P_));
+    update_beta(linpred_.parameter_vector() + infomat*score.vec);
+  } else {
+   MatrixXd XtXW = MatrixXd::Zero(P_*niter,P_);
+   MatrixXd Wu = MatrixXd::Zero(n_,niter);
+ 
+   double nvar_par = 1.0;
+   if(family_=="gaussian"){
+     nvar_par *= var_par_*var_par_;
+   } else if(family_=="Gamma"){
+     nvar_par *= 1/var_par_;
+   } else if(family_=="beta"){
+     nvar_par *= (1+var_par_);
+   } else if(family_=="binomial"){
+     nvar_par *= 1/var_par_;
+   }
+ 
 #pragma omp parallel for
-  for(int i = 0; i < niter; ++i){
-    VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
-    ArrayXd resid = (y_ - zdu);
-    sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
+   for(int i = 0; i < niter; ++i){
+     VectorXd w = glmmr::maths::dhdmu(zd.col(i),family_,link_);
+     w = (w.array().inverse()).matrix();
+     w *= nvar_par;
+     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
+     ArrayXd resid = (y_ - zdu);
+     XtXW.block(P_*i, 0, P_, P_) = linpred_.X().transpose() * w.asDiagonal() * linpred_.X();
+     VectorXd dmu = glmmr::maths::detadmu(zd.col(i),link_);
+     w = w.cwiseProduct(dmu);
+     w = w.cwiseProduct(resid.matrix());
+     Wu.col(i) = w;
+   }
+   XtXW *= (double)1/niter;
+   MatrixXd XtWXm = XtXW.block(0,0,P_,P_);
+   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P_*i,0,P_,P_);
+   XtWXm = XtWXm.inverse();
+   VectorXd Wum = Wu.rowwise().mean();
+   VectorXd bincr = XtWXm * (linpred_.X().transpose()) * Wum;
+   update_beta(linpred_.parameter_vector() + bincr);
   }
-  update_var_par(sigmas.mean());
-// using explicit matrices, code below
-// this uses the W approximation, as well as a first order approximation if
-// the linear predictor is non-linear in parameters
-
-//   MatrixXd XtXW = MatrixXd::Zero(P_*niter,P_);
-//   MatrixXd Wu = MatrixXd::Zero(n_,niter);
-// 
-//   double nvar_par = 1.0;
-//   if(family_=="gaussian"){
-//     nvar_par *= var_par_*var_par_;
-//   } else if(family_=="Gamma"){
-//     nvar_par *= 1/var_par_;
-//   } else if(family_=="beta"){
-//     nvar_par *= (1+var_par_);
-//   } else if(family_=="binomial"){
-//     nvar_par *= 1/var_par_;
-//   }
-//   MatrixXd zd = linpred();
-// 
-// #pragma omp parallel for
-//   for(int i = 0; i < niter; ++i){
-//     VectorXd w = glmmr::maths::dhdmu(zd.col(i),family_,link_);
-//     w = (w.array().inverse()).matrix();
-//     w *= nvar_par;
-//     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
-//     ArrayXd resid = (y_ - zdu);
-//     sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
-//     XtXW.block(P_*i, 0, P_, P_) = linpred_.X().transpose() * w.asDiagonal() * linpred_.X();
-//     VectorXd dmu = glmmr::maths::detadmu(zd.col(i),link_);
-//     w = w.cwiseProduct(dmu);
-//     w = w.cwiseProduct(resid.matrix());
-//     Wu.col(i) = w;
-//   }
-//   XtXW *= (double)1/niter;
-//   MatrixXd XtWXm = XtXW.block(0,0,P_,P_);
-//   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P_*i,0,P_,P_);
-//   XtWXm = XtWXm.inverse();
-//   VectorXd Wum = Wu.rowwise().mean();
-//   VectorXd bincr = XtWXm * (linpred_.X().transpose()) * Wum;
-//   update_beta(linpred_.parameter_vector() + bincr);
-//   var_par_ = sigmas.mean();
+  
+#pragma omp parallel for
+    for(int i = 0; i < niter; ++i){
+      VectorXd zdu1 = glmmr::maths::mod_inv_func(zd.col(i), link_);
+      ArrayXd resid = (y_ - zdu1);
+      sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
+    }
+    update_var_par(sigmas.mean());
 }
 
 inline void glmmr::Model::laplace_nr_beta_u(){

@@ -142,8 +142,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param verbose Logical indicating whether to provide more detailed feedback
                           update_parameters = function(parameters){
                             self$parameters <- parameters
-                            .Linpred__update_pars(private$ptr,self$parameters)
-                            if(.Linpred__any_nonlinear(private$ptr))self$X <- .Linpred__x(prviate$ptr)
+                            names(self$parameters) <- Linpred__beta_names(private$ptr)
+                            Linpred__update_pars(private$ptr,self$parameters)
+                            if(Linpred__any_nonlinear(private$ptr))self$X <- Linpred__x(prviate$ptr)
                             self$check(FALSE)
                           },
                           #' @description 
@@ -216,7 +217,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' Returns the linear predictor, X * beta
                           #' @return A vector
                           linear_predictor = function(){
-                            xb <- .Linpred__xb(private$ptr) + self$offset #self$X %*% self$parameters + self$offset
+                            xb <- Linpred__xb(private$ptr) + self$offset #self$X %*% self$parameters + self$offset
                             if(is(xb,"matrix"))xb <- drop(xb)
                             if(is(xb,"Matrix"))xb <- Matrix::drop(xb)
                             return(xb)
@@ -229,7 +230,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           original_formula = NULL,
                           ptr = NULL,
                           update_ptr = function(){
-                            private$ptr <- .Linpred__new(self$formula,
+                            private$ptr <- Linpred__new(self$formula,
                                                   as.matrix(self$data),
                                                   colnames(self$data))
                           },
@@ -249,7 +250,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             private$hash <- private$hash_do()
                           },
                           genX = function(){
-                            self$X <- .Linpred__x(private$ptr)
+                            self$X <- Linpred__x(private$ptr)
                             if(!is.null(self$parameters)&ncol(self$X)!=length(self$parameters))stop("wrong length parameter vector")
                             #if(is.null(self$parameters))self$parameters <- rep(0,ncol(self$X))
                             #cnames <- .x_names(self$formula)

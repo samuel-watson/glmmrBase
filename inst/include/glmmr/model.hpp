@@ -347,7 +347,6 @@ private:
 
 
 #include "likelihood.ipp"
-#include "mhmcmc.ipp"
 #include "model.ipp"
 
 #endif
