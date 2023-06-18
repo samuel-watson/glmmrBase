@@ -121,10 +121,6 @@ Model__update_u <- function(xp, u_) {
     invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_))
 }
 
-Model__predict <- function(xp, newdata_, newoffset_, m) {
-    .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m)
-}
-
 Model__use_attenuation <- function(xp, use_) {
     invisible(.Call(`_glmmrBase_Model__use_attenuation`, xp, use_))
 }
@@ -187,10 +183,6 @@ Model__Sigma <- function(xp, inverse) {
 
 Model__information_matrix <- function(xp) {
     .Call(`_glmmrBase_Model__information_matrix`, xp)
-}
-
-Model__hessian <- function(xp) {
-    .Call(`_glmmrBase_Model__hessian`, xp)
 }
 
 Model__obs_information_matrix <- function(xp) {
@@ -299,6 +291,22 @@ Model__hess_and_grad <- function(xp) {
 
 Model__sandwich <- function(xp) {
     .Call(`_glmmrBase_Model__sandwich`, xp)
+}
+
+Model__infomat_theta <- function(xp) {
+    .Call(`_glmmrBase_Model__infomat_theta`, xp)
+}
+
+Model__kenward_roger <- function(xp) {
+    .Call(`_glmmrBase_Model__kenward_roger`, xp)
+}
+
+Model__hessian <- function(xp) {
+    .Call(`_glmmrBase_Model__hessian`, xp)
+}
+
+Model__predict <- function(xp, newdata_, newoffset_, m) {
+    .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m)
 }
 
 re_names <- function(formula) {

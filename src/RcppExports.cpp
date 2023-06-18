@@ -350,20 +350,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__predict
-SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
-RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type newdata_(newdata_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type newoffset_(newoffset_SEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Model__use_attenuation
 void Model__use_attenuation(SEXP xp, SEXP use_);
 RcppExport SEXP _glmmrBase_Model__use_attenuation(SEXP xpSEXP, SEXP use_SEXP) {
@@ -532,17 +518,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__information_matrix(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Model__hessian
-SEXP Model__hessian(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__hessian(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -844,6 +819,53 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__infomat_theta
+SEXP Model__infomat_theta(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__infomat_theta(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__infomat_theta(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__kenward_roger
+SEXP Model__kenward_roger(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__kenward_roger(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__kenward_roger(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__hessian
+SEXP Model__hessian(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__hessian(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__predict
+SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
+RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newdata_(newdata_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newoffset_(newoffset_SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
+    return rcpp_result_gen;
+END_RCPP
+}
 // re_names
 std::vector<std::string> re_names(const std::string& formula);
 RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP) {
@@ -958,7 +980,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 2},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 2},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 2},
-    {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 2},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 1},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 2},
@@ -975,7 +996,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 1},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 2},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
-    {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
@@ -1003,6 +1023,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 1},
     {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 1},
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 1},
+    {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 1},
+    {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 1},
+    {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
+    {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},

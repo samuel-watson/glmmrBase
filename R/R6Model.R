@@ -871,17 +871,27 @@ Model <- R6::R6Class("Model",
                            M <- Model__sandwich(private$ptr)
                          }
                          SE <- sqrt(Matrix::diag(M))
+                         
+                         SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
                     
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
                          theta_names <- unique(Model__theta_parameter_names(private$ptr))
                          
-                         if(var_par_family){
+                         # if(var_par_family){
+                         #   mf_pars_names <- c(beta_names,theta_names,"sigma")
+                         #   SE <- c(SE,rep(NA,length(theta_new)+1))
+                         # } else {
+                         #   mf_pars_names <- c(beta_names,theta_names)
+                         #   SE <- c(SE,rep(NA,length(theta_new)))
+                         # }
+                         
+                         if(self$family%in%c("gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
                            mf_pars_names <- c(beta_names,theta_names)
-                           SE <- c(SE,rep(NA,length(theta_new)))
+                           SE <- c(SE,SE_theta)
                          }
                          
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
@@ -1041,17 +1051,27 @@ Model <- R6::R6Class("Model",
                          }
                          SE <- sqrt(Matrix::diag(M))
                          
+                         SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
                          theta_names <- unique(Model__theta_parameter_names(private$ptr))
                          
-                         if(var_par_family){
+                         # if(var_par_family){
+                         #   mf_pars_names <- c(beta_names,theta_names,"sigma")
+                         #   SE <- c(SE,rep(NA,length(theta_new)+1))
+                         # } else {
+                         #   mf_pars_names <- c(beta_names,theta_names)
+                         #   SE <- c(SE,rep(NA,length(theta_new)))
+                         # }
+                         
+                         if(self$family%in%c("gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
                            mf_pars_names <- c(beta_names,theta_names)
-                           SE <- c(SE,rep(NA,length(theta_new)))
+                           SE <- c(SE,SE_theta)
                          }
                          
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),

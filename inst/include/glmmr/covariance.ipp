@@ -328,7 +328,7 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
   if(parameters_.size()==0)Rcpp::stop("no parameters");
   if(b > B_-1)Rcpp::stop("b is too large");
 
-  int dim = re_data_[b].rows();//calc_[b].data.size();
+  int dim = re_data_[b].rows();
   MatrixXd D(dim,dim);
   D.setZero();
   //diagonal
