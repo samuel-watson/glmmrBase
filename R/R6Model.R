@@ -886,7 +886,7 @@ Model <- R6::R6Class("Model",
                          #   SE <- c(SE,rep(NA,length(theta_new)))
                          # }
                          
-                         if(self$family%in%c("gamma","beta")){
+                         if(self$family[[1]]%in%c("gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
@@ -1066,7 +1066,7 @@ Model <- R6::R6Class("Model",
                          #   SE <- c(SE,rep(NA,length(theta_new)))
                          # }
                          
-                         if(self$family%in%c("gamma","beta")){
+                         if(self$family[[1]]%in%c("gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
