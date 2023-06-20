@@ -683,7 +683,8 @@ Model <- R6::R6Class("Model",
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
-                       #'@param robust logical indicating whether to return robust sandwich estimator standard errors
+                       #'@param se String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+                       #' "robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.
                        #'@param sparse Logical indicating whether to use sparse matrix methods
                        #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
@@ -726,13 +727,14 @@ Model <- R6::R6Class("Model",
                                        verbose=TRUE,
                                        tol = 1e-2,
                                        max.iter = 30,
-                                       robust = FALSE,
+                                       se = "gls",
                                        sparse = FALSE,
                                        usestan = TRUE){
                          private$verify_data(y)
                          private$update_ptr(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
+                         if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          
                          if(!usestan){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
@@ -865,10 +867,16 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr, TRUE)
-                         if(!robust){
+                         if(se == "gls"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                         } else {
+                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         } else if(se == "robust"){
                            M <- Model__sandwich(private$ptr)
+                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         } else if(se == "kr"){
+                           Mout <- Model__kenward_roger(private$ptr)
+                           M <- Mout[[1]]
+                           SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(Matrix::diag(M))
                          
@@ -876,21 +884,14 @@ Model <- R6::R6Class("Model",
                     
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
-                         theta_names <- unique(Model__theta_parameter_names(private$ptr))
+                         theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
                          
-                         # if(var_par_family){
-                         #   mf_pars_names <- c(beta_names,theta_names,"sigma")
-                         #   SE <- c(SE,rep(NA,length(theta_new)+1))
-                         # } else {
-                         #   mf_pars_names <- c(beta_names,theta_names)
-                         #   SE <- c(SE,rep(NA,length(theta_new)))
-                         # }
-                         
-                         if(self$family[[1]]%in%c("gamma","beta")){
+                         if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
                            mf_pars_names <- c(beta_names,theta_names)
+                           if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
                            SE <- c(SE,SE_theta)
                          }
                          
@@ -902,7 +903,6 @@ Model <- R6::R6Class("Model",
                          res$upper <- res$est + qnorm(1-0.05/2)*res$SE
                          
                          repar_table <- repar_table[!duplicated(repar_table$id),]
-                         
                          rownames(u) <- rep(repar_table$term,repar_table$count)
                          
                          aic <- Model__aic(private$ptr)
@@ -923,7 +923,9 @@ Model <- R6::R6Class("Model",
                                      tol = tol,
                                      sim_lik = sim.lik.step,
                                      aic = aic,
+                                     se=se,
                                      Rsq = c(cond = condR2,marg=margR2),
+                                     logl = Model__log_likelihood(private$ptr),
                                      mean_form = self$mean$formula,
                                      cov_form = self$covariance$formula,
                                      family = self$family[[1]],
@@ -953,7 +955,8 @@ Model <- R6::R6Class("Model",
                        #'@param start Optional. A numeric vector indicating starting values for the model parameters.
                        #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
                        #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
-                       #'@param robust logical indicating whether to return robust sandwich estimator standard errors
+                       #'@param se String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+                       #' "robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@return A `mcml` object
@@ -979,14 +982,13 @@ Model <- R6::R6Class("Model",
                                      start,
                                      method = "nr",
                                      verbose = FALSE,
-                                     robust = FALSE,
+                                     se = "gls",
                                      max.iter = 40,
                                      tol = 1e-2){
                          private$verify_data(y)
                          private$update_ptr(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
-                         # initialise u to random values as algorithm can fail if all zeros
-                         # Model__update_u(private$ptr,matrix(rnorm(ncol(self$covariance$Z)),nrow=ncol(self$covariance$Z),ncol=1))
+                         if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
                          
@@ -1031,12 +1033,12 @@ Model <- R6::R6Class("Model",
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          
-                         Model__laplace_ml_beta_theta(private$ptr)
+                         #Model__laplace_ml_beta_theta(private$ptr)
                          beta_new <- Model__get_beta(private$ptr)
                          theta_new <- Model__get_theta(private$ptr)
                          var_par_new <- Model__get_var_par(private$ptr)
                          all_pars_new <- c(beta_new,theta_new)
-                         if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
+                         if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                          
                          
                          self$update_parameters(mean.pars = beta_new,
@@ -1044,33 +1046,31 @@ Model <- R6::R6Class("Model",
                          
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr,TRUE)
-                         if(!robust){
+                         if(verbose)cat("\n\nCalculating standard errors...\n")
+                         
+                         if(se == "gls"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                         } else {
+                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         } else if(se == "robust"){
                            M <- Model__sandwich(private$ptr)
+                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         } else if(se == "kr"){
+                           Mout <- Model__kenward_roger(private$ptr)
+                           M <- Mout[[1]]
+                           SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(Matrix::diag(M))
                          
-                         SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
-                         
-                         if(verbose)cat("\n\nCalculating standard errors...\n")
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
-                         theta_names <- unique(Model__theta_parameter_names(private$ptr))
+                         theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
                          
-                         # if(var_par_family){
-                         #   mf_pars_names <- c(beta_names,theta_names,"sigma")
-                         #   SE <- c(SE,rep(NA,length(theta_new)+1))
-                         # } else {
-                         #   mf_pars_names <- c(beta_names,theta_names)
-                         #   SE <- c(SE,rep(NA,length(theta_new)))
-                         # }
-                         
-                         if(self$family[[1]]%in%c("gamma","beta")){
+                         if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
                            mf_pars_names <- c(beta_names,theta_names)
+                           if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
                            SE <- c(SE,SE_theta)
                          }
                          
@@ -1082,7 +1082,6 @@ Model <- R6::R6Class("Model",
                          res$upper <- res$est + qnorm(1-0.05/2)*res$SE
                          
                          repar_table <- repar_table[!duplicated(repar_table$id),]
-                         
                          rownames(u) <- rep(repar_table$term,repar_table$count)
                          
                          aic <- Model__aic(private$ptr)
@@ -1104,9 +1103,11 @@ Model <- R6::R6Class("Model",
                                      tol = tol,
                                      sim_lik = FALSE,
                                      aic = aic,
+                                     se =se ,
                                      Rsq = c(cond = condR2,marg=margR2),
                                      mean_form = self$mean$formula,
                                      cov_form = self$covariance$formula,
+                                     logl = Model__log_likelihood(private$ptr),
                                      family = self$family[[1]],
                                      link = self$family[[2]],
                                      re.samps = u,
@@ -1211,11 +1212,25 @@ Model <- R6::R6Class("Model",
                        #' @param u Vector of random effects scaled by the Cholesky decomposition of D
                        #' @param beta Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)
                        #' @return A vector of the gradient
-                       log_gradient = function(y,u,beta=FALSE){
+                       gradient = function(y,u,beta=FALSE){
                          private$verify_data(y)
                          private$update_ptr(y)
                          grad <- Model__log_gradient(private$ptr,u,beta)
                          return(grad)
+                       },
+                       #' @description 
+                       #' The partial derivatives of the covariance matrix Sigma with respect to the covariance
+                       #' parameters. The function returns a list in order: Sigma, first order derivatives, second 
+                       #' order derivatives. The second order derivatives are ordered as the lower-triangular matrix
+                       #' in column major order. Letting 'd(i)' mean the first-order partial derivative with respect 
+                       #' to parameter i, and d2(i,j) mean the second order derivative with respect to parameters i 
+                       #' and j, then if there were three covariance parameters the order of the output would be:
+                       #' (sigma, d(1), d(2), d(3), d2(1,1), d2(1,2), d2(1,3), d2(2,2), d2(2,3), d2(3,3)).
+                       #' @return A list of matrices, see description for contents of the list.
+                       partial_sigma = function(){
+                         if(is.null(private$ptr))private$update_ptr(rep(0,nrow(self$mean$X)))
+                         out <- Model__cov_deriv(private$ptr)
+                         return(out)
                        },
                        #' @description 
                        #' Returns the sample of random effects from the last model fit

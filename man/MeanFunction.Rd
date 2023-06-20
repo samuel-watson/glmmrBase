@@ -28,13 +28,10 @@ For example for a stepped-wedge cluster trial model, a typical mean model is
 are fixed effects for each time period. The formula specification for this would be `~ factor(t) + int` 
 where `int` is the name of the variable indicating the treatment.
 
-One can also include non-linear functions of variables in the mean function. These are handled in the analyses 
-by first-order approximation. 
+One can also include non-linear functions of variables in the mean function, and name the parameters. 
+The resulting X matrix is then a matrix of first-order partial derivatives. For example, one can
+specify `~ int + b_1*exp(b_2*x)`.
 
-If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices 
-are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
-If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of 
-parameters is automatic if using the `update_parameters()` member function.
 
 
 Using `update_parameters()` is the preferred way of updating the parameters of the 

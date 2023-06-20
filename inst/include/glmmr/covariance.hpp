@@ -9,7 +9,6 @@
 #include "formula.hpp"
 #include "sparse.h"
 
-
 using namespace Eigen;
 
 namespace glmmr {
@@ -183,6 +182,7 @@ private:
   std::vector<MatrixXd> re_data_;
   intvec re_fn_par_link_;
   intvec re_count_;
+  intvec re_order_;
   int Q_;
   int n_;
   int B_;

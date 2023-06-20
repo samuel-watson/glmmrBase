@@ -282,6 +282,7 @@ inline dblvec glmmr::Model::get_upper_values(bool beta, bool theta, bool var){
 
 inline void glmmr::Model::calculate_var_par(){
   if(family_=="gaussian" || family_=="Gamma" || family_=="beta"){
+  // revise this for beta and Gamma re residuals
     int niter = u_.cols();
     ArrayXd sigmas(niter);
     MatrixXd zd = linpred();
@@ -289,7 +290,7 @@ inline void glmmr::Model::calculate_var_par(){
     for(int i = 0; i < niter; ++i){
       VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
       ArrayXd resid = (y_ - zdu);
-      sigmas(i) = std::sqrt((resid - resid.mean()).square().sum()/(resid.size()-1));
+      sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1);
     }
     update_var_par(sigmas.mean());
   }
@@ -1105,6 +1106,92 @@ inline ArrayXd glmmr::Model::optimum_weights(double N,
     Rcpp::Rcout << "\n### NOT CONVERGED Reached maximum iterations";
   }
   return weights;
+}
+
+inline std::vector<MatrixXd> glmmr::Model::sigma_derivatives(){
+  std::vector<MatrixXd> derivs;
+  covariance_.derivatives(derivs,2);
+  return derivs;
+}
+
+inline MatrixXd glmmr::Model::information_matrix_theta(){
+  if(family_=="gamma" || family_=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
+  int R = covariance_.npar();
+  int Rmod = family_=="gaussian" ? R+1 : R;
+  MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
+  std::vector<MatrixXd> A_matrix;
+  MatrixXd SigmaInv = Sigma(true);
+  MatrixXd Z = covariance_.Z();
+  std::vector<MatrixXd> derivs;
+  covariance_.derivatives(derivs,1);
+  for(int i = 0; i < R; i++){
+    A_matrix.push_back(SigmaInv*Z*derivs[1+i]*Z.transpose());
+  }
+  if(family_=="gaussian"){
+    A_matrix.push_back(2*var_par_*SigmaInv);
+  }
+  for(int i = 0; i < Rmod; i++){
+    for(int j = i; j < Rmod; j++){
+      M_theta(i,j) = 0.5 * (A_matrix[i]*A_matrix[j]).trace();
+      if(i!=j)M_theta(j,i)=M_theta(i,j);
+    }
+  }
+  return M_theta;
+}
+
+inline matrix_matrix glmmr::Model::kenward_roger(){
+  if(family_=="gamma" || family_=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
+  int R = covariance_.npar();
+  int Rmod = family_=="gaussian" ? R+1 : R;
+  MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
+  std::vector<MatrixXd> A_matrix;
+  MatrixXd SigmaInv = Sigma(true);
+  MatrixXd Z = covariance_.Z();
+  MatrixXd M = information_matrix();
+  M = M.llt().solve(MatrixXd::Identity(P_,P_));
+  MatrixXd X = linpred_.X();
+  MatrixXd SigX = SigmaInv*X;
+  MatrixXd middle = MatrixXd::Identity(n_,n_) - X*M*SigX.transpose();
+  
+  std::vector<MatrixXd> derivs;
+  covariance_.derivatives(derivs,2);
+  for(int i = 0; i < R; i++){
+    A_matrix.push_back(Z*derivs[1+i]*Z.transpose());
+  }
+  if(family_=="gaussian"){
+    A_matrix.push_back(2*var_par_*var_par_*MatrixXd::Identity(n_,n_));
+  }
+  
+  //possible parallelisation?
+  for(int i = 0; i < Rmod; i++){
+    for(int j = i; j < Rmod; j++){
+      M_theta(i,j) = (SigmaInv*A_matrix[i]*SigmaInv*A_matrix[j]).trace();
+      M_theta(i,j) -= (M*SigX.transpose()*A_matrix[i]*SigmaInv*(middle+MatrixXd::Identity(n_,n_))*A_matrix[j]*SigX).trace();
+      M_theta(i,j) *= 0.5;
+      if(i!=j)M_theta(j,i)=M_theta(i,j);
+    }
+  }
+  
+  M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
+  MatrixXd meat = MatrixXd::Zero(P_,P_);
+  for(int i = 0; i < Rmod; i++){
+    for(int j = 0; j < Rmod; j++){
+      int scnd_idx = i <= j ? i + j*(R-1) - j*(j-1)/2 : j + i*(R-1) - i*(i-1)/2;
+      meat += M_theta(i,j)*SigX.transpose()*A_matrix[i]*SigmaInv*middle*A_matrix[j]*SigX;
+      if(i < R && j < R){
+        meat -= M_theta(i,j)*0.25*SigX.transpose()*Z*derivs[R+1+scnd_idx]*Z.transpose()*SigX;
+      }
+      if(i==R && j==R){
+        meat -= M_theta(i,j)*0.5*SigX.transpose()*SigX;
+      }
+    }
+  }
+  
+  M += 2*M*meat*M;
+  matrix_matrix out(P_,P_,Rmod,Rmod);
+  out.mat1 = M;
+  out.mat2 = M_theta;
+  return out;
 }
 
 #endif

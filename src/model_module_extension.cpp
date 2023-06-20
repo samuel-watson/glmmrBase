@@ -105,7 +105,14 @@ SEXP Model__infomat_theta(SEXP xp){
 // [[Rcpp::export]]
 SEXP Model__kenward_roger(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::MatrixXd M = ptr->kenward_roger();
+  matrix_matrix M = ptr->kenward_roger();
+  return wrap(M);
+}
+
+// [[Rcpp::export]]
+SEXP Model__cov_deriv(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  std::vector<Eigen::MatrixXd> M = ptr->sigma_derivatives();
   return wrap(M);
 }
 

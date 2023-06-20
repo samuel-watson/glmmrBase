@@ -7,16 +7,18 @@
 namespace glmmr {
 
 inline intvec interpret_re(const std::string& fn,
-                                  const intvec& A){
+                           const intvec& A){
   intvec B;
   switch(string_to_case.at(fn)){
   case 1:
-    B = {2,2,5};
+    B = {2}; //var par here
     break;
   case 2:
+    B.push_back(2);
     B.insert(B.end(), A.begin(), A.end());
     B.push_back(2);
     B.push_back(8);
+    B.push_back(5);
     break;
   case 3:
      {
@@ -28,7 +30,7 @@ inline intvec interpret_re(const std::string& fn,
      }
   case 4:
     {
-       const intvec C = {6,10,9,2,2,5,5};
+       const intvec C = {6,10,9,2,5};  //var par here
        B.push_back(2);
        B.insert(B.end(), A.begin(), A.end());
        B.insert(B.end(), C.begin(), C.end());
@@ -47,7 +49,7 @@ inline intvec interpret_re(const std::string& fn,
   case 6:
     {
       const intvec C1 = {2,2,5};
-      const intvec C2 = {5,6,10,9,2,2,5,5};
+      const intvec C2 = {5,6,10,9,2,5};//var par here
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), A.begin(), A.end());
       B.insert(B.end(), A.begin(), A.end());
@@ -172,6 +174,11 @@ inline intvec interpret_re(const std::string& fn,
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
+  case 15:
+    B.insert(B.end(), A.begin(), A.end());
+    B.push_back(2);
+    B.push_back(8);
+    break;
   }
   return B;
 }
@@ -200,11 +207,13 @@ inline intvec interpret_re_par(const std::string& fn,
   
   switch(string_to_case.at(fn)){
   case 1:
-    addPar2(0);
+    //addPar2(0);
+    B.push_back(par_idx[0]);
     break;
   case 2: 
-    addA();
     B.push_back(par_idx[0]);
+    addA();
+    B.push_back(par_idx[1]);
     break;
   case 3: case 7:
     B.push_back(par_idx[0]);
@@ -213,7 +222,8 @@ inline intvec interpret_re_par(const std::string& fn,
   case 4:
     B.push_back(par_idx[1]);
     addA();
-    addPar2(0);
+    //addPar2(0);
+    B.push_back(par_idx[0]);
     break;
   case 5:
     addPar2(0);
@@ -224,7 +234,8 @@ inline intvec interpret_re_par(const std::string& fn,
     addPar2(1);
     addA();
     addA();
-    addPar2(0);
+    //addPar2(0);
+    B.push_back(par_idx[0]);
     break;
   case 8:
     addPar2(0);
@@ -284,6 +295,10 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
+  case 15:
+    addA();
+    B.push_back(par_idx[0]);
+    break;
   }
   return B;
 }
@@ -303,25 +318,6 @@ inline void re_linear_predictor(glmmr::calculator& calc,
   calc.instructions.insert(calc.instructions.end(),re_instruct.begin(),re_instruct.end());
   calc.data_count += Q;
 }
-
-// inline void re_vv(glmmr::calculator& calc,
-//                   const int& Q){
-//   intvec v_instruct = {2,17};
-//   intvec v_seq = {2,17,3};
-//   calc.indexes.push_back(0);
-//   calc.parameter_names.push_back("v_0");
-//   for(int i = 1; i < Q; i++){
-//     v_instruct.insert(v_instruct.end(),v_seq.begin(),v_seq.end());
-//     calc.parameter_names.push_back("v_"+std::to_string(i));
-//     calc.indexes.push_back(i);
-//   }
-//   intvec v_seq2 = {22,21,6,5,10};
-//   v_instruct.insert(v_instruct.end(),v_seq2.begin(),v_seq2.end());
-//   calc.instructions = v_instruct;
-//   calc.parameter_count = Q;
-//   calc.data_count = 0;
-//   
-// }
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,
                                      const str& link){
@@ -425,7 +421,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
   switch (family_to_case.at(family)){
     case 1:
       {
-        intvec gaus_instruct = {19,4,6,17,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,3,10};
+        intvec gaus_instruct = {19,4,17,6,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,22,21,6,5,3,10};
         out.push_back(41);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());

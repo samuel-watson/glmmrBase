@@ -3,7 +3,6 @@
 
 inline void glmmr::Covariance::parse(){
   intvec3d re_cols_;
-  intvec re_order_;
   strvec2d re_par_names_;
   dblvec3d re_temp_data_;
 
@@ -645,11 +644,19 @@ inline bool glmmr::Covariance::any_group_re(){
 
 inline strvec glmmr::Covariance::parameter_names(){
     strvec parnames;
-    for(int i = 0; i < B_; i++){
-      parnames.insert(parnames.end(),calc_[i].parameter_names.begin(),calc_[i].parameter_names.end());
+    //for(int i = 0; i < B_; i++){
+    //  parnames.insert(parnames.end(),calc_[i].parameter_names.begin(),calc_[i].parameter_names.end());
+    //}
+    //auto last = std::unique(parnames.begin(),parnames.end());
+    //parnames.erase(last, parnames.end());
+    for(int i = 0; i < form_.re_.size(); i++){
+      for(int j = 0; j < B_; j++){
+        if(re_order_[j]==i){
+          parnames.insert(parnames.end(),calc_[j].parameter_names.begin(),calc_[j].parameter_names.end());
+          break;
+        }
+      }
     }
-    auto last = std::unique(parnames.begin(),parnames.end());
-    parnames.erase(last, parnames.end());
     return parnames;
   };
 

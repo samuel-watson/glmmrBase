@@ -355,7 +355,8 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-LA}{\code{Model$LA()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
-\item \href{#method-Model-log_gradient}{\code{Model$log_gradient()}}
+\item \href{#method-Model-gradient}{\code{Model$gradient()}}
+\item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
@@ -930,7 +931,7 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   verbose = TRUE,
   tol = 0.01,
   max.iter = 30,
-  robust = FALSE,
+  se = "gls",
   sparse = FALSE,
   usestan = TRUE
 )}\if{html}{\out{</div>}}
@@ -953,7 +954,8 @@ between iterations at which to stop the algorithm.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
 
-\item{\code{robust}}{logical indicating whether to return robust sandwich estimator standard errors}
+\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
@@ -1013,7 +1015,7 @@ Maximum Likelihood model fitting with Laplace Approximation
   start,
   method = "nr",
   verbose = FALSE,
-  robust = FALSE,
+  se = "gls",
   max.iter = 40,
   tol = 0.01
 )}\if{html}{\out{</div>}}
@@ -1030,7 +1032,8 @@ Maximum Likelihood model fitting with Laplace Approximation
 
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
 
-\item{\code{robust}}{logical indicating whether to return robust sandwich estimator standard errors}
+\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 
@@ -1113,15 +1116,15 @@ A matrix of samples of the random effects
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-log_gradient"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-log_gradient}{}}}
-\subsection{Method \code{log_gradient()}}{
+\if{html}{\out{<a id="method-Model-gradient"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-gradient}{}}}
+\subsection{Method \code{gradient()}}{
 The gradient of the log-likelihood with respect to either the random effects or
 the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
 Cholesky decomposition of the matrix D. To obtain the random effects from the last
 model fit, see member function \verb{$u}
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$log_gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1137,6 +1140,25 @@ model fit, see member function \verb{$u}
 }
 \subsection{Returns}{
 A vector of the gradient
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-partial_sigma"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-partial_sigma}{}}}
+\subsection{Method \code{partial_sigma()}}{
+The partial derivatives of the covariance matrix Sigma with respect to the covariance
+parameters. The function returns a list in order: Sigma, first order derivatives, second
+order derivatives. The second order derivatives are ordered as the lower-triangular matrix
+in column major order. Letting 'd(i)' mean the first-order partial derivative with respect
+to parameter i, and d2(i,j) mean the second order derivative with respect to parameters i
+and j, then if there were three covariance parameters the order of the output would be:
+(sigma, d(1), d(2), d(3), d2(1,1), d2(1,2), d2(1,3), d2(2,2), d2(2,3), d2(3,3)).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$partial_sigma()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of matrices, see description for contents of the list.
 }
 }
 \if{html}{\out{<hr>}}

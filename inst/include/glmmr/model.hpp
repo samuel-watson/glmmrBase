@@ -188,11 +188,11 @@ public:
   
   void make_covariance_dense();
   
-  // std::vector<MatrixXd> sigma_derivatives();
+  std::vector<MatrixXd> sigma_derivatives();
   
   MatrixXd information_matrix_theta();
   
-  MatrixXd kenward_roger();
+  matrix_matrix kenward_roger();
   
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
                           int max_iter = 501);
@@ -348,86 +348,6 @@ private:
   
 };
 
-}
-
-// inline std::vector<MatrixXd> glmmr::Model::sigma_derivatives(){
-//   std::vector<MatrixXd> derivs;
-//   covariance_.derivatives(derivs);
-//   return derivs;
-// }
-
-inline MatrixXd glmmr::Model::information_matrix_theta(){
-  if(family_=="gamma" || family_=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
-  int R = covariance_.npar();
-  int Rmod = family_=="gaussian" ? R+1 : R;
-  MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
-  std::vector<MatrixXd> A_matrix;
-  MatrixXd SigmaInv = Sigma(true);
-  MatrixXd Z = covariance_.Z();
-  std::vector<MatrixXd> derivs;
-  covariance_.derivatives(derivs,1);
-  for(int i = 0; i < R; i++){
-    A_matrix.push_back(SigmaInv*Z*derivs[1+i]*Z.transpose());
-  }
-  if(family_=="gaussian"){
-    A_matrix.push_back(2*var_par_*SigmaInv);
-  }
-  for(int i = 0; i < Rmod; i++){
-    for(int j = i; j < Rmod; j++){
-      M_theta(i,j) = 0.5 * (A_matrix[i]*A_matrix[j]).trace();
-      if(i!=j)M_theta(j,i)=M_theta(i,j);
-    }
-  }
-  return M_theta;
-}
-
-inline MatrixXd glmmr::Model::kenward_roger(){
-  if(family_=="gamma" || family_=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
-  int R = covariance_.npar();
-  int Rmod = family_=="gaussian" ? R+1 : R;
-  MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
-  std::vector<MatrixXd> A_matrix;
-  MatrixXd SigmaInv = Sigma(true);
-  MatrixXd Z = covariance_.Z();
-  MatrixXd M = information_matrix();
-  MatrixXd X = linpred_.X();
-  MatrixXd SigX = SigmaInv*X;
-  
-  std::vector<MatrixXd> derivs;
-  covariance_.derivatives(derivs,2);
-  for(int i = 0; i < R; i++){
-    A_matrix.push_back(SigmaInv*Z*derivs[1+i]*Z.transpose());
-  }
-  if(family_=="gaussian"){
-    A_matrix.push_back(2*var_par_*SigmaInv);
-  }
-  
-  //possible parallelisation?
-  for(int i = 0; i < Rmod; i++){
-    for(int j = i; j < Rmod; j++){
-      M_theta(i,j) = (A_matrix[i]*A_matrix[j]).trace();
-      M_theta(i,j) -= (M*X.transpose()*A_matrix[i] * (2*MatrixXd::Identity(n_,n_) - SigX*M*X.transpose()) * A_matrix[j]*SigX).trace();
-      M_theta(i,j) *= 0.5;
-      if(i!=j)M_theta(j,i)=M_theta(i,j);
-    }
-  }
-  Rcpp::Rcout << "\nM theta: \n" << M_theta;
-  MatrixXd meat = MatrixXd::Zero(P_,P_);
-  MatrixXd tmp_n(n_,n_);
-  //possible parallelisation?
-  for(int i = 0; i < Rmod; i++){
-    for(int j = 0; j < Rmod; j++){
-      int scnd_idx = i <= j ? i + j*(R-1) - j*(j-1)/2 : j + i*(R-1) - i*(i-1)/2;
-      tmp_n = A_matrix[i] * (MatrixXd::Identity(n_,n_) - SigX*M*X.transpose()) * A_matrix[j];
-      if(i < R && j < R){
-        tmp_n -= 0.25*Z*derivs[R+1+scnd_idx]*Z.transpose();
-      }
-      meat += M_theta(i,j)*X.transpose()*tmp_n*SigX;
-    }
-  }
-  Rcpp::Rcout << "\nmeat: \n" << meat;
-  M += 2*M*meat*M;
-  return M;
 }
 
 #include "likelihood.ipp"

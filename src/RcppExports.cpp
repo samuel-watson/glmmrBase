@@ -841,6 +841,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__cov_deriv
+SEXP Model__cov_deriv(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__cov_deriv(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__cov_deriv(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__hessian
 SEXP Model__hessian(SEXP xp);
 RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
@@ -1025,6 +1036,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 1},
     {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 1},
     {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 1},
+    {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},

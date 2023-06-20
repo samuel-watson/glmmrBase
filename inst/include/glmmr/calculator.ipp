@@ -398,7 +398,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         for(int idx = 0; idx < parameter_count; idx++){
           a_top_dx.push_back(first_dx[idx].top());
           first_dx[idx].pop();
-          double result = 0.5*pow(a,-0.5)*a_top_dx.back();
+          double result = a==0 ? 0 : 0.5*pow(a,-0.5)*a_top_dx.back();
           first_dx[idx].push(result);
         }
         if(order == 2){
@@ -407,7 +407,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             for(int jdx = idx; jdx < parameter_count; jdx++){
               double adx2 = second_dx[index_count].top();
               second_dx[index_count].pop();
-              double result = 0.5*pow(a,-0.5)*adx2 - 0.25*a_top_dx[idx]*a_top_dx[jdx]*pow(a,-3/2);
+              double result = a==0? 0 : 0.5*pow(a,-0.5)*adx2 - 0.25*a_top_dx[idx]*a_top_dx[jdx]*pow(a,-3/2);
               second_dx[index_count].push(result);
               index_count++;
             }

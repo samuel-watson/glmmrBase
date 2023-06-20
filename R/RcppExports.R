@@ -301,6 +301,10 @@ Model__kenward_roger <- function(xp) {
     .Call(`_glmmrBase_Model__kenward_roger`, xp)
 }
 
+Model__cov_deriv <- function(xp) {
+    .Call(`_glmmrBase_Model__cov_deriv`, xp)
+}
+
 Model__hessian <- function(xp) {
     .Call(`_glmmrBase_Model__hessian`, xp)
 }

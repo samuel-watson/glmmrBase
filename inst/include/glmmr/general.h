@@ -42,7 +42,7 @@ namespace glmmr {
 
 const static std::unordered_map<str, double> nvars = {  
   {"gr", 1},
-  {"ar1", 1},
+  {"ar", 2},
   {"fexp0", 1},
   {"fexp", 2},
   {"sqexp0",1},
@@ -54,12 +54,13 @@ const static std::unordered_map<str, double> nvars = {
   {"wend2",2},
   {"prodwm",2},
   {"prodcb",2},
-  {"prodek",2}
+  {"prodek",2},
+  {"ar0", 1}
 };
 
 const static std::unordered_map<str,int> string_to_case{
   {"gr",1},
-  {"ar1",2},
+  {"ar",2},
   {"fexp0", 3},
   {"fexp", 4},
   {"sqexp0",5},
@@ -71,7 +72,8 @@ const static std::unordered_map<str,int> string_to_case{
   {"wend2",11},
   {"prodwm",12},
   {"prodcb",13},
-  {"prodek",14}
+  {"prodek",14},
+  {"ar0",15}
 };
 
 inline bool validate_fn(const str& fn){
@@ -79,7 +81,7 @@ inline bool validate_fn(const str& fn){
   return not_fn;
 }
 
-const static intvec xvar_rpn = {0,1,4,0,1,4,5};
+const static intvec xvar_rpn = {0,1,4,17};
 
 template<typename T>
 inline void print_vec_1d(const T& vec){
