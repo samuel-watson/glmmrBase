@@ -80,6 +80,7 @@ public:
         }
         gen_sigma_blocks();
         setup_calculator();
+        set_num_threads();
       };
   
   void set_offset(const VectorXd& offset);
@@ -194,6 +195,10 @@ public:
   
   matrix_matrix kenward_roger();
   
+  void set_num_threads(int n);
+  
+  void set_num_threads();
+  
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
                           int max_iter = 501);
   
@@ -228,6 +233,7 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
+  int n_threads_;
   
   void setup_calculator();
   
@@ -249,6 +255,8 @@ private:
                         int iter, double rand);
   
   void calculate_var_par();
+  
+  
   
   void sample(int warmup,
                   int nsamp,
@@ -351,6 +359,10 @@ private:
 }
 
 #include "likelihood.ipp"
-#include "model.ipp"
+#include "modelbasefunctions.ipp"
+#include "modelupdatefunctions.ipp"
+#include "modelfittingfunctions.ipp"
+#include "modelmcmcfunctions.ipp"
+#include "modeloptimweights.ipp"
 
 #endif

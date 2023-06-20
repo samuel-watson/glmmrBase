@@ -207,6 +207,9 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
+\dontshow{
+ des$update_config(ncores = 1)
+}
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
@@ -258,6 +261,9 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
+\dontshow{
+ des$update_config(ncores = 1)
+}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -342,6 +348,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
+\item \href{#method-Model-update_config}{\code{Model$update_config()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -660,7 +667,7 @@ ysim <- des$sim_data()
 Checks for any changes in linked objects and updates.
 
 Checks for any changes in any object and updates all linked objects if
-any are detected. Generally called automatically.
+any are detected. Generally called automatically and not required by the user.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$check(verbose = TRUE)}\if{html}{\out{</div>}}
 }
@@ -825,6 +832,9 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
+\dontshow{
+ des$update_config(ncores = 1)
+}
 des$power() #power of 0.90 for the int parameter
 }
 \if{html}{\out{</div>}}
@@ -1021,6 +1031,9 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
+\dontshow{
+ des$update_config(ncores = 1)
+}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -1167,6 +1180,29 @@ previous model fit then the random effects are assumed to be all zero.
 }
 \subsection{Returns}{
 The log-likelihood of the model parameters
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-update_config"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-update_config}{}}}
+\subsection{Method \code{update_config()}}{
+Updates computation configuration. Currently, the only option is to set the number of cores
+used. By default, if OpenMP is available on the system, then the package will used as many
+cores as available for computation. In multi-user or multi-process settings, one may want to
+reduce the number of cores.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_config(ncores)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{ncores}}{Integer. The maximum number of threads to be used.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Nothing, called for effects.
 }
 }
 \if{html}{\out{<hr>}}

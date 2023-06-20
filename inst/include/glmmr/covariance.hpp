@@ -195,6 +195,7 @@ private:
   sparse matZ;
   sparse matL;
   SparseChol spchol;
+  int n_threads_;
   
   void update_parameters_in_calculators();
   
@@ -214,55 +215,10 @@ private:
   
   MatrixXd D_sparse_builder(bool chol = false,
                                    bool upper = false);
+  
+  
 };
 
-}
-
-inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
-                                           int order){
-  // get unique parameters
-  strvec pars = parameter_names();
-  int R = pars.size();
-  int matrix_n = order==2 ? R + R*(R+1)/2 + 1 : R+1;
-  //std::vector<MatrixXd> derivs;
-  // initialise all the matrices to zero
-  for(int i = 0; i < matrix_n; i++)derivs.push_back(MatrixXd::Zero(Q_,Q_));
-  int block_count = 0;
-  
-  // iterate over the blocks and insert if the parameter is in the list.
-  for(int b = 0; b < B_; b++){
-    int block_size = block_dim(b);
-    int R_block = calc_[b].parameter_names.size();
-    intvec par_index;
-    for(int k = 0; k < R_block; k++){
-      auto par_pos = std::find(pars.begin(),pars.end(),calc_[b].parameter_names[k]);
-      int par_pos_int = par_pos - pars.begin();
-      par_index.push_back(par_pos_int);
-    }
-    //check speed of adding parallelisation here with collapse...
-    for(int i = 0; i < block_size; i++){
-      for(int j = i; j < block_size; j++){
-        dblvec out = calc_[b].calculate(i,par_for_calcs_[b],re_data_[b],j,order);
-        derivs[0](block_count+i,block_count+j) = out[0];
-        if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];
-        int index_count = R_block + 1;
-        for(int k = 0; k < R_block; k++){
-          derivs[par_index[k]+1](block_count+i,block_count+j) = out[k+1];
-          if(i!=j)derivs[par_index[k]+1](block_count+j,block_count+i) = out[k+1];
-          //second order derivatives
-          if(order >= 2){
-            for(int l=k; l < R_block; l++){
-              int second_pos = par_index[l]*(R-1) - par_index[l]*(par_index[l]-1)/2 + par_index[k];
-              derivs[R+1+second_pos](block_count+i,block_count+j) = out[index_count];
-              if(i!=j)derivs[R+1+second_pos](block_count+j,block_count+i) = out[index_count];
-              index_count++;
-            }
-          }
-        }
-      }
-    }
-    block_count += block_size;
-  }
 }
 
 #include "covariance.ipp"

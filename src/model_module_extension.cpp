@@ -124,6 +124,13 @@ SEXP Model__hessian(SEXP xp){
 }
 
 // [[Rcpp::export]]
+void Model__set_num_threads(SEXP xp, SEXP max_threads_){
+  XPtr<glmmr::Model> ptr(xp);
+  int max_threads = as<int>(max_threads_);
+  ptr->set_num_threads(max_threads);
+}
+
+// [[Rcpp::export]]
 SEXP Model__predict(SEXP xp, SEXP newdata_,
                     SEXP newoffset_,
                     int m){
