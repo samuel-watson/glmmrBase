@@ -34,7 +34,7 @@ There are several common functions included for a named variable in data \code{x
 A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
 * \code{gr(x)}: Indicator function (1 parameter)
 * \code{fexp(x)}: Exponential function (2 parameters)
-* \code{ar(x)}: AR1 function (2 parameters)
+* \code{ar(x)}: AR function (2 parameters)
 * \code{sqexp(x)}: Squared exponential (1 parameter)
 * \code{matern(x)}: Matern function (2 parameters)
 * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
@@ -64,7 +64,7 @@ If using direct assignment, call `self$check()` afterwards.
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.25,0.7),
                       data= df)
 
@@ -73,7 +73,7 @@ cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.15,0.8),
                       data= df)
 cov$parameters <- c(0.25,0.1)
@@ -84,7 +84,7 @@ cov$check(verbose=FALSE)
 ## ------------------------------------------------
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
-Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 
@@ -93,7 +93,7 @@ Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
 ## ------------------------------------------------
 
 df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)
@@ -172,7 +172,7 @@ A Covariance object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.25,0.7),
                       data= df)
 }
@@ -203,7 +203,7 @@ NULL
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.15,0.8),
                       data= df)
 cov$parameters <- c(0.25,0.1)
@@ -250,7 +250,7 @@ Show details of Covariance object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
-Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 }
@@ -278,7 +278,7 @@ Keep specified indices and removes the rest
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
-cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)
 cov$subset(1:100)

@@ -194,7 +194,7 @@ Model <- R6::R6Class("Model",
                        #'
                        #' #an example of a spatial grid with two time points
                        #' df <- nelder(~ (x(10)*y(10))*t(2))
-                       #' spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
+                       #' spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
                        #'                          mean = list(formula = ~ 1),
                        #'                          data = df,
                        #'                          family = stats::gaussian())
@@ -347,11 +347,6 @@ Model <- R6::R6Class("Model",
                        #' other rows will be removed from the mean function and covariance
                        #' @param index Integer or vector integers listing the rows to keep
                        #' @return The function updates the object and nothing is returned
-                       #' @examples
-                       #' #generate a stepped wedge design and remove the first sequence
-                       #' des <- stepped_wedge(8,10,icc=0.05)
-                       #' ids_to_keep <- which(des$mean$data$J!=1)
-                       #' des$subset_rows(ids_to_keep)
                        subset_rows = function(index){
                          self$mean$subset_rows(index)
                          self$covariance$subset(index)
@@ -363,10 +358,6 @@ Model <- R6::R6Class("Model",
                        #' Removes the specified columns from the linked mean function object's X matrix.
                        #' @param index Integer or vector of integers specifying the indexes of the columns to keep
                        #' @return The function updates the object and nothing is returned
-                       #' @examples
-                       #' #generate a stepped wedge design and remove first and last time periods
-                       #' des <- stepped_wedge(8,10,icc=0.05)
-                       #' des$subset_cols(c(2:8,10))
                        subset_cols = function(index){
                          self$mean$subset_cols(index)
                          self$check(verbose=FALSE)
@@ -387,7 +378,7 @@ Model <- R6::R6Class("Model",
                        #' df[df$cl > 5, 'int'] <- 1
                        #' des <- Model$new(
                        #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar1(t)),
+                       #'     formula = ~ (1|gr(cl)*ar0(t)),
                        #'     parameters = c(0.25,0.8)),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1,
@@ -481,7 +472,7 @@ Model <- R6::R6Class("Model",
                        #' df[df$cl > 5, 'int'] <- 1
                        #' des <- Model$new(
                        #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar1(t)),
+                       #'     formula = ~ (1|gr(cl)*ar0(t)),
                        #'     parameters = c(0.25,0.8)),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1,
@@ -520,7 +511,7 @@ Model <- R6::R6Class("Model",
                        #' df[df$cl > 5, 'int'] <- 1
                        #' des <- Model$new(
                        #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar1(t))),
+                       #'     formula = ~ (1|gr(cl)*ar0(t))),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1),
                        #'   data = df,
@@ -701,7 +692,7 @@ Model <- R6::R6Class("Model",
                        #' df[df$cl > 3, 'int'] <- 1 
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
-                       #'   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+                       #'   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
                        #'   covariance = list(parameters = c(0.25,0.7)),
                        #'   mean = list(parameters = c(rep(0,5),0.2)),
                        #'   data = df,
@@ -969,7 +960,7 @@ Model <- R6::R6Class("Model",
                        #' df[df$cl > 3, 'int'] <- 1 
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
-                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
                        #'   covariance = list( parameters = c(0.25,0.7)),
                        #'   mean = list(parameters = c(rep(0,5),-0.2)),
                        #'   data = df,

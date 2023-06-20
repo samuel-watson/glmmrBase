@@ -125,27 +125,10 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian())
-
-## ------------------------------------------------
-## Method `Model$subset_rows`
-## ------------------------------------------------
-
-#generate a stepped wedge design and remove the first sequence
-des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean$data$J!=1)
-des$subset_rows(ids_to_keep)
-
-## ------------------------------------------------
-## Method `Model$subset_cols`
-## ------------------------------------------------
-
-#generate a stepped wedge design and remove first and last time periods
-des <- stepped_wedge(8,10,icc=0.05)
-des$subset_cols(c(2:8,10))
 
 ## ------------------------------------------------
 ## Method `Model$sim_data`
@@ -156,7 +139,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -175,7 +158,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -198,7 +181,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t))),
+    formula = ~ (1|gr(cl)*ar0(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
   data = df,
@@ -238,7 +221,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
   covariance = list(parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
@@ -269,7 +252,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   covariance = list( parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
@@ -534,7 +517,7 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian())
@@ -600,17 +583,6 @@ other rows will be removed from the mean function and covariance
 \subsection{Returns}{
 The function updates the object and nothing is returned
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{#generate a stepped wedge design and remove the first sequence
-des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean$data$J!=1)
-des$subset_rows(ids_to_keep)
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-subset_cols"></a>}}
@@ -633,16 +605,6 @@ Removes the specified columns from the linked mean function object's X matrix.
 \subsection{Returns}{
 The function updates the object and nothing is returned
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{#generate a stepped wedge design and remove first and last time periods
-des <- stepped_wedge(8,10,icc=0.05)
-des$subset_cols(c(2:8,10))
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-sim_data"></a>}}
@@ -676,7 +638,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -720,7 +682,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -768,7 +730,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t))),
+    formula = ~ (1|gr(cl)*ar0(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
   data = df,
@@ -979,7 +941,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
   covariance = list(parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
@@ -1053,7 +1015,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   covariance = list( parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,

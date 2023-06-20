@@ -50,7 +50,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
                         #' * \code{gr(x)}: Indicator function (1 parameter)
                         #' * \code{fexp(x)}: Exponential function (2 parameters)
-                        #' * \code{ar(x)}: AR1 function (2 parameters)
+                        #' * \code{ar(x)}: AR function (2 parameters)
                         #' * \code{sqexp(x)}: Squared exponential (1 parameter)
                         #' * \code{matern(x)}: Matern function (2 parameters)
                         #' * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
@@ -69,7 +69,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return A Covariance object
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.25,0.7),
                         #'                       data= df)
                         initialize = function(formula,
@@ -102,7 +102,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return NULL
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.15,0.8),
                         #'                       data= df)
                         #' cov$parameters <- c(0.25,0.1)
@@ -141,7 +141,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param ... ignored
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
@@ -155,7 +155,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param index vector of indices to keep
                         #' @examples
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         #' cov$subset(1:100)
