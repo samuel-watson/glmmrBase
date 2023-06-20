@@ -24,23 +24,14 @@ inline void glmmr::Model::setup_calculator(){
 
 inline void glmmr::Model::set_num_threads(int n){
   if(OMP_IS_USED){
-    n_threads_ = n;
-    if(n <= omp_get_max_threads()){
-      omp_set_num_threads(n);
-    } else {
-      omp_set_num_threads(omp_get_max_threads()); 
-    }
-  } else {
-    n_threads_ = 1;
-  }
+    omp_set_num_threads(n);
+  } 
 }
 
 inline void glmmr::Model::set_num_threads(){
   if(OMP_IS_USED){
-    n_threads_ = omp_get_max_threads();
-  } else {
-    n_threads_ = 1;
-  }
+    omp_set_num_threads(omp_get_max_threads());
+  } 
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
@@ -105,7 +96,7 @@ inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
 inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   size_n_array = xb();
-#pragma omp parallel for reduction (+:ll) collapse(2) num_threads(n_threads_)
+#pragma omp parallel for reduction (+:ll) collapse(2) 
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
       ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
@@ -114,7 +105,7 @@ inline double glmmr::Model::log_likelihood() {
   
   // to use the calculator object instead... seems to be generally slower so have opted 
   // for specific formulae above. Will try to optimise this in future versions
-  // #pragma omp parallel for reduction (+:ll) collapse(2) num_threads(n_threads_)
+  // #pragma omp parallel for reduction (+:ll) collapse(2) 
   //  for(int j=0; j<zu_.cols() ; j++){
   //    for(int i = 0; i<n_; i++){
   //      double ozu = offset_(i)+zu_(i,j);
@@ -129,7 +120,7 @@ inline double glmmr::Model::full_log_likelihood(){
   double ll = log_likelihood();
   double logl = 0;
   MatrixXd Lu = covariance_.Lu(u_);
-#pragma omp parallel for reduction (+:logl) num_threads(n_threads_)
+#pragma omp parallel for reduction (+:logl) 
   for(int i = 0; i < Lu.cols(); i++){
     logl += covariance_.log_likelihood(Lu.col(i));
   }

@@ -80,7 +80,6 @@ public:
         }
         gen_sigma_blocks();
         setup_calculator();
-        set_num_threads();
       };
   
   void set_offset(const VectorXd& offset);
@@ -233,7 +232,6 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
-  int n_threads_;
   
   void setup_calculator();
   

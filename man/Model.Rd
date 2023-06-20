@@ -106,7 +106,7 @@ df[df$t > 3, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(ind)),
-    parameters = c(0.25)),
+    parameters = c(0.05)),
   mean = list(
     formula = ~ int,
     parameters = c(1,0.5)),
@@ -116,7 +116,7 @@ des <- Model$new(
 # or as
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
-  covariance = list(parameters = c(0.25)),
+  covariance = list(parameters = c(0.05)),
   mean = list(parameters = c(1,0.5)),
   data = df,
   family = stats::poisson()
@@ -140,7 +140,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.25,0.8)),
+    parameters = c(0.05,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -159,7 +159,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.25,0.8)),
+    parameters = c(0.05,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -199,7 +199,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-    parameters = c(0.25,0.1)),
+    parameters = c(0.05,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -207,9 +207,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{
- des$update_config(ncores = 1)
-}
+\dontshow{des$update_config(ncores = 2)}
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
@@ -225,7 +223,7 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = list(parameters = c(0.25,0.7)),
+  covariance = list(parameters = c(0.05,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
   family = gaussian(),
@@ -256,14 +254,12 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = list( parameters = c(0.25,0.7)),
+  covariance = list( parameters = c(0.05,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
   family = stats::binomial()
 )
-\dontshow{
- des$update_config(ncores = 1)
-}
+\dontshow{des$update_config(ncores = 2)}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -505,7 +501,7 @@ df[df$t > 3, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(ind)),
-    parameters = c(0.25)),
+    parameters = c(0.05)),
   mean = list(
     formula = ~ int,
     parameters = c(1,0.5)),
@@ -515,7 +511,7 @@ des <- Model$new(
 # or as
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
-  covariance = list(parameters = c(0.25)),
+  covariance = list(parameters = c(0.05)),
   mean = list(parameters = c(1,0.5)),
   data = df,
   family = stats::poisson()
@@ -646,7 +642,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.25,0.8)),
+    parameters = c(0.05,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -690,7 +686,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.25,0.8)),
+    parameters = c(0.05,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -824,7 +820,7 @@ df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-    parameters = c(0.25,0.1)),
+    parameters = c(0.05,0.1)),
   mean = list(
     formula = ~ factor(t) + int - 1,
     parameters = c(rep(0,5),0.6)),
@@ -832,9 +828,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{
- des$update_config(ncores = 1)
-}
+\dontshow{des$update_config(ncores = 2)}
 des$power() #power of 0.90 for the int parameter
 }
 \if{html}{\out{</div>}}
@@ -952,7 +946,7 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = list(parameters = c(0.25,0.7)),
+  covariance = list(parameters = c(0.05,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
   family = gaussian(),
@@ -1026,14 +1020,12 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = list( parameters = c(0.25,0.7)),
+  covariance = list( parameters = c(0.05,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
   family = stats::binomial()
 )
-\dontshow{
- des$update_config(ncores = 1)
-}
+\dontshow{des$update_config(ncores = 2)}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
