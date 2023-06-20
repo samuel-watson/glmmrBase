@@ -2,7 +2,8 @@
 #define OPENMPHEADER_H
 
 #ifdef _OPENMP
-#include <omp.h>     
+#include <omp.h> 
+#define OMP_IS_USED true
 #else
 // for machines with compilers void of openmp support
 #define omp_get_num_threads()  1
@@ -12,6 +13,7 @@
 #define omp_get_num_procs()    1
 #define omp_set_nested(a)   // empty statement to remove the call
 #define omp_get_wtime()        0
+#define OMP_IS_USED false
 #endif
 
 #endif

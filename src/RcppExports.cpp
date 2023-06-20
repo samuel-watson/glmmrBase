@@ -863,6 +863,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__set_num_threads
+void Model__set_num_threads(SEXP xp, SEXP max_threads_);
+RcppExport SEXP _glmmrBase_Model__set_num_threads(SEXP xpSEXP, SEXP max_threads_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type max_threads_(max_threads_SEXP);
+    Model__set_num_threads(xp, max_threads_);
+    return R_NilValue;
+END_RCPP
+}
 // Model__predict
 SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
 RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
@@ -1038,6 +1049,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 1},
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
+    {"_glmmrBase_Model__set_num_threads", (DL_FUNC) &_glmmrBase_Model__set_num_threads, 2},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},

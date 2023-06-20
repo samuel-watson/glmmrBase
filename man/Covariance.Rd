@@ -65,7 +65,7 @@ If using direct assignment, call `self$check()` afterwards.
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
-                      parameters = c(0.25,0.7),
+                      parameters = c(0.05,0.7),
                       data= df)
 
 ## ------------------------------------------------
@@ -74,7 +74,7 @@ cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
 
 df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
-                      parameters = c(0.15,0.8),
+                      parameters = c(0.03,0.8),
                       data= df)
 cov$parameters <- c(0.25,0.1)
 cov$check(verbose=FALSE)
@@ -173,7 +173,7 @@ A Covariance object
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
-                      parameters = c(0.25,0.7),
+                      parameters = c(0.05,0.7),
                       data= df)
 }
 \if{html}{\out{</div>}}
@@ -204,7 +204,7 @@ NULL
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
-                      parameters = c(0.15,0.8),
+                      parameters = c(0.03,0.8),
                       data= df)
 cov$parameters <- c(0.25,0.1)
 cov$check(verbose=FALSE)

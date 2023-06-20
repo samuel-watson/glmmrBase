@@ -194,6 +194,10 @@ public:
   
   matrix_matrix kenward_roger();
   
+  void set_num_threads(int n);
+  
+  void set_num_threads();
+  
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
                           int max_iter = 501);
   
@@ -249,6 +253,8 @@ private:
                         int iter, double rand);
   
   void calculate_var_par();
+  
+  
   
   void sample(int warmup,
                   int nsamp,
@@ -351,6 +357,10 @@ private:
 }
 
 #include "likelihood.ipp"
-#include "model.ipp"
+#include "modelbasefunctions.ipp"
+#include "modelupdatefunctions.ipp"
+#include "modelfittingfunctions.ipp"
+#include "modelmcmcfunctions.ipp"
+#include "modeloptimweights.ipp"
 
 #endif

@@ -67,10 +67,10 @@ class calculator {
     
     vector_matrix jacobian_and_hessian(const dblvec& parameters);
     
+
 };
 
 }
-
 
 
 #include "calculator.ipp"

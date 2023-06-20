@@ -166,7 +166,7 @@ Model <- R6::R6Class("Model",
                        #'   data = df,
                        #'   family = stats::gaussian()
                        #' )
-                       #'
+                       #' 
                        #' #here we will specify a cohort study and provide parameter values
                        #' df <- nelder(~ind(20) * t(6))
                        #' df$int <- 0
@@ -175,7 +175,7 @@ Model <- R6::R6Class("Model",
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(ind)),
-                       #'     parameters = c(0.25)),
+                       #'     parameters = c(0.05)),
                        #'   mean = list(
                        #'     formula = ~ int,
                        #'     parameters = c(1,0.5)),
@@ -185,7 +185,7 @@ Model <- R6::R6Class("Model",
                        #' # or as
                        #' des <- Model$new(
                        #'   formula = ~ int + (1|gr(ind)),
-                       #'   covariance = list(parameters = c(0.25)),
+                       #'   covariance = list(parameters = c(0.05)),
                        #'   mean = list(parameters = c(1,0.5)),
                        #'   data = df,
                        #'   family = stats::poisson()
@@ -379,7 +379,7 @@ Model <- R6::R6Class("Model",
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(cl)*ar0(t)),
-                       #'     parameters = c(0.25,0.8)),
+                       #'     parameters = c(0.05,0.8)),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1,
                        #'     parameters = c(rep(0,5),0.6)),
@@ -460,10 +460,10 @@ Model <- R6::R6Class("Model",
 
                        },
                        #'@description
-                       #'Checks for any changes in linked objects and updates.
+                       #' Checks for any changes in linked objects and updates.
                        #'
                        #' Checks for any changes in any object and updates all linked objects if
-                       #' any are detected. Generally called automatically.
+                       #' any are detected. Generally called automatically and not required by the user.
                        #'@param verbose Logical indicating whether to report if any updates are made, defaults to TRUE
                        #'@return Linked objects are updated by nothing is returned
                        #'@examples
@@ -473,7 +473,7 @@ Model <- R6::R6Class("Model",
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(cl)*ar0(t)),
-                       #'     parameters = c(0.25,0.8)),
+                       #'     parameters = c(0.05,0.8)),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1,
                        #'     parameters = c(rep(0,5),0.6)),
@@ -588,7 +588,7 @@ Model <- R6::R6Class("Model",
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-                       #'     parameters = c(0.25,0.1)),
+                       #'     parameters = c(0.05,0.1)),
                        #'   mean = list(
                        #'     formula = ~ factor(t) + int - 1,
                        #'     parameters = c(rep(0,5),0.6)),
@@ -596,6 +596,7 @@ Model <- R6::R6Class("Model",
                        #'   family = stats::gaussian(),
                        #'   var_par = 1
                        #' )
+                       #' \dontshow{des$update_config(ncores = 2)}
                        #' des$power() #power of 0.90 for the int parameter
                        power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
                          self$check(verbose=FALSE)
@@ -693,7 +694,7 @@ Model <- R6::R6Class("Model",
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
                        #'   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-                       #'   covariance = list(parameters = c(0.25,0.7)),
+                       #'   covariance = list(parameters = c(0.05,0.7)),
                        #'   mean = list(parameters = c(rep(0,5),0.2)),
                        #'   data = df,
                        #'   family = gaussian(),
@@ -961,11 +962,12 @@ Model <- R6::R6Class("Model",
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
                        #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-                       #'   covariance = list( parameters = c(0.25,0.7)),
+                       #'   covariance = list( parameters = c(0.05,0.7)),
                        #'   mean = list(parameters = c(rep(0,5),-0.2)),
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
+                       #' \dontshow{des$update_config(ncores = 2)}
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$LA(y = ysim)
                        #'@md
@@ -1246,6 +1248,19 @@ Model <- R6::R6Class("Model",
                          if(!missing(u))Model__update_u(private$ptr,u)
                          return(Model__log_likelihood(private$ptr))
                        },
+                       #' @description 
+                       #' Updates computation configuration. Currently, the only option is to set the number of cores
+                       #' used. By default, if OpenMP is available on the system, then the package will used as many 
+                       #' cores as available for computation. In multi-user or multi-process settings, one may want to 
+                       #' reduce the number of cores.
+                       #' @param ncores Integer. The maximum number of threads to be used.
+                       #' @return Nothing, called for effects.
+                       update_config = function(ncores){
+                         if(!missing(ncores)){
+                           private$ncores <- ncores
+                           if(!is.null(private$ptr))Model__set_num_threads(private$ptr,ncores)
+                         }
+                       },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
@@ -1272,6 +1287,7 @@ Model <- R6::R6Class("Model",
                        W = NULL,
                        Xb = NULL,
                        useSparse = TRUE,
+                       ncores = NULL,
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
@@ -1336,6 +1352,7 @@ Model <- R6::R6Class("Model",
                          }
                          private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),
                                                     self$family[[1]],self$family[[2]])
+                         if(!is.null(private$ncores))Model__set_num_threads(private$ptr,private$ncores)
                          Model__set_offset(private$ptr,self$mean$offset)
                          Model__update_beta(private$ptr,self$mean$parameters)
                          Model__update_theta(private$ptr,self$covariance$parameters)
@@ -1346,7 +1363,8 @@ Model <- R6::R6Class("Model",
                          Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
                          if(!private$useSparse){
                            Model__make_dense(private$ptr)
-                         } 
+                         }
+                         
                        },
                        verify_data = function(y){
                          if(self$family[[1]]=="binomial"){
