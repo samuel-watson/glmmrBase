@@ -222,94 +222,71 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// genX
-Eigen::MatrixXd genX(const std::string& formula, const Eigen::ArrayXXd& data, const std::vector<std::string>& colnames);
-RcppExport SEXP _glmmrBase_genX(SEXP formulaSEXP, SEXP dataSEXP, SEXP colnamesSEXP) {
+// Linpred__new
+SEXP Linpred__new(SEXP formula_, SEXP data_, SEXP colnames_);
+RcppExport SEXP _glmmrBase_Linpred__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    Rcpp::traits::input_parameter< const Eigen::ArrayXXd& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type colnames(colnamesSEXP);
-    rcpp_result_gen = Rcpp::wrap(genX(formula, data, colnames));
+    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__new(formula_, data_, colnames_));
     return rcpp_result_gen;
 END_RCPP
 }
-// x_names
-std::vector<std::string> x_names(const std::string& formula);
-RcppExport SEXP _glmmrBase_x_names(SEXP formulaSEXP) {
+// Linpred__update_pars
+void Linpred__update_pars(SEXP xp, SEXP parameters_);
+RcppExport SEXP _glmmrBase_Linpred__update_pars(SEXP xpSEXP, SEXP parameters_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type parameters_(parameters_SEXP);
+    Linpred__update_pars(xp, parameters_);
+    return R_NilValue;
+END_RCPP
+}
+// Linpred__xb
+SEXP Linpred__xb(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__xb(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    rcpp_result_gen = Rcpp::wrap(x_names(formula));
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__xb(xp));
     return rcpp_result_gen;
 END_RCPP
 }
-// re_names
-std::vector<std::string> re_names(const std::string& formula);
-RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP) {
+// Linpred__x
+SEXP Linpred__x(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__x(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    rcpp_result_gen = Rcpp::wrap(re_names(formula));
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__x(xp));
     return rcpp_result_gen;
 END_RCPP
 }
-// gen_dhdmu
-Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb, std::string family, std::string link);
-RcppExport SEXP _glmmrBase_gen_dhdmu(SEXP xbSEXP, SEXP familySEXP, SEXP linkSEXP) {
+// Linpred__beta_names
+SEXP Linpred__beta_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__beta_names(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
-    Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
-    Rcpp::traits::input_parameter< std::string >::type link(linkSEXP);
-    rcpp_result_gen = Rcpp::wrap(gen_dhdmu(xb, family, link));
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__beta_names(xp));
     return rcpp_result_gen;
 END_RCPP
 }
-// gen_sigma_approx
-Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb, const Eigen::MatrixXd& Z, const Eigen::MatrixXd& D, std::string family, std::string link, double var_par, bool attenuate);
-RcppExport SEXP _glmmrBase_gen_sigma_approx(SEXP xbSEXP, SEXP ZSEXP, SEXP DSEXP, SEXP familySEXP, SEXP linkSEXP, SEXP var_parSEXP, SEXP attenuateSEXP) {
+// Linpred__any_nonlinear
+SEXP Linpred__any_nonlinear(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__any_nonlinear(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Z(ZSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type D(DSEXP);
-    Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
-    Rcpp::traits::input_parameter< std::string >::type link(linkSEXP);
-    Rcpp::traits::input_parameter< double >::type var_par(var_parSEXP);
-    Rcpp::traits::input_parameter< bool >::type attenuate(attenuateSEXP);
-    rcpp_result_gen = Rcpp::wrap(gen_sigma_approx(xb, Z, D, family, link, var_par, attenuate));
-    return rcpp_result_gen;
-END_RCPP
-}
-// attenuate_xb
-Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb, const Eigen::MatrixXd& Z, const Eigen::MatrixXd& D, const std::string& link);
-RcppExport SEXP _glmmrBase_attenuate_xb(SEXP xbSEXP, SEXP ZSEXP, SEXP DSEXP, SEXP linkSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Z(ZSEXP);
-    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type D(DSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type link(linkSEXP);
-    rcpp_result_gen = Rcpp::wrap(attenuate_xb(xb, Z, D, link));
-    return rcpp_result_gen;
-END_RCPP
-}
-// dlinkdeta
-Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb, const std::string& link);
-RcppExport SEXP _glmmrBase_dlinkdeta(SEXP xbSEXP, SEXP linkSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type link(linkSEXP);
-    rcpp_result_gen = Rcpp::wrap(dlinkdeta(xb, link));
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__any_nonlinear(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -371,20 +348,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type u_(u_SEXP);
     Model__update_u(xp, u_);
     return R_NilValue;
-END_RCPP
-}
-// Model__predict
-SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
-RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type newdata_(newdata_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type newoffset_(newoffset_SEXP);
-    Rcpp::traits::input_parameter< int >::type m(mSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
-    return rcpp_result_gen;
 END_RCPP
 }
 // Model__use_attenuation
@@ -535,17 +498,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__laplace_hessian
-SEXP Model__laplace_hessian(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__laplace_hessian(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__laplace_hessian(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Model__Sigma
 SEXP Model__Sigma(SEXP xp, bool inverse);
 RcppExport SEXP _glmmrBase_Model__Sigma(SEXP xpSEXP, SEXP inverseSEXP) {
@@ -569,14 +521,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__hessian
-SEXP Model__hessian(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
+// Model__obs_information_matrix
+SEXP Model__obs_information_matrix(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__obs_information_matrix(SEXP xpSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__hessian(xp));
+    rcpp_result_gen = Rcpp::wrap(Model__obs_information_matrix(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -823,6 +775,175 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__beta_parameter_names
+SEXP Model__beta_parameter_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__beta_parameter_names(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__beta_parameter_names(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__theta_parameter_names
+SEXP Model__theta_parameter_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__theta_parameter_names(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__theta_parameter_names(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__hess_and_grad
+SEXP Model__hess_and_grad(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__hess_and_grad(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__hess_and_grad(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__sandwich
+SEXP Model__sandwich(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__sandwich(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__sandwich(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__infomat_theta
+SEXP Model__infomat_theta(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__infomat_theta(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__infomat_theta(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__kenward_roger
+SEXP Model__kenward_roger(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__kenward_roger(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__kenward_roger(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__cov_deriv
+SEXP Model__cov_deriv(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__cov_deriv(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__cov_deriv(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__hessian
+SEXP Model__hessian(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__hessian(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__predict
+SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
+RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newdata_(newdata_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type newoffset_(newoffset_SEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// re_names
+std::vector<std::string> re_names(const std::string& formula);
+RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
+    rcpp_result_gen = Rcpp::wrap(re_names(formula));
+    return rcpp_result_gen;
+END_RCPP
+}
+// gen_dhdmu
+Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb, std::string family, std::string link);
+RcppExport SEXP _glmmrBase_gen_dhdmu(SEXP xbSEXP, SEXP familySEXP, SEXP linkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
+    Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
+    Rcpp::traits::input_parameter< std::string >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(gen_dhdmu(xb, family, link));
+    return rcpp_result_gen;
+END_RCPP
+}
+// gen_sigma_approx
+Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb, const Eigen::MatrixXd& Z, const Eigen::MatrixXd& D, std::string family, std::string link, double var_par, bool attenuate);
+RcppExport SEXP _glmmrBase_gen_sigma_approx(SEXP xbSEXP, SEXP ZSEXP, SEXP DSEXP, SEXP familySEXP, SEXP linkSEXP, SEXP var_parSEXP, SEXP attenuateSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< std::string >::type family(familySEXP);
+    Rcpp::traits::input_parameter< std::string >::type link(linkSEXP);
+    Rcpp::traits::input_parameter< double >::type var_par(var_parSEXP);
+    Rcpp::traits::input_parameter< bool >::type attenuate(attenuateSEXP);
+    rcpp_result_gen = Rcpp::wrap(gen_sigma_approx(xb, Z, D, family, link, var_par, attenuate));
+    return rcpp_result_gen;
+END_RCPP
+}
+// attenuate_xb
+Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb, const Eigen::MatrixXd& Z, const Eigen::MatrixXd& D, const std::string& link);
+RcppExport SEXP _glmmrBase_attenuate_xb(SEXP xbSEXP, SEXP ZSEXP, SEXP DSEXP, SEXP linkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(attenuate_xb(xb, Z, D, link));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dlinkdeta
+Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb, const std::string& link);
+RcppExport SEXP _glmmrBase_dlinkdeta(SEXP xbSEXP, SEXP linkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::VectorXd& >::type xb(xbSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(dlinkdeta(xb, link));
+    return rcpp_result_gen;
+END_RCPP
+}
 // girling_algorithm
 SEXP girling_algorithm(SEXP xp, SEXP N_, SEXP sigma_sq_, SEXP C_, SEXP tol_);
 RcppExport SEXP _glmmrBase_girling_algorithm(SEXP xpSEXP, SEXP N_SEXP, SEXP sigma_sq_SEXP, SEXP C_SEXP, SEXP tol_SEXP) {
@@ -859,19 +980,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__parameter_fn_index", (DL_FUNC) &_glmmrBase_Covariance__parameter_fn_index, 1},
     {"_glmmrBase_Covariance__re_terms", (DL_FUNC) &_glmmrBase_Covariance__re_terms, 1},
     {"_glmmrBase_Covariance__re_count", (DL_FUNC) &_glmmrBase_Covariance__re_count, 1},
-    {"_glmmrBase_genX", (DL_FUNC) &_glmmrBase_genX, 3},
-    {"_glmmrBase_x_names", (DL_FUNC) &_glmmrBase_x_names, 1},
-    {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
-    {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
-    {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},
-    {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
-    {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
+    {"_glmmrBase_Linpred__new", (DL_FUNC) &_glmmrBase_Linpred__new, 3},
+    {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
+    {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},
+    {"_glmmrBase_Linpred__x", (DL_FUNC) &_glmmrBase_Linpred__x, 1},
+    {"_glmmrBase_Linpred__beta_names", (DL_FUNC) &_glmmrBase_Linpred__beta_names, 1},
+    {"_glmmrBase_Linpred__any_nonlinear", (DL_FUNC) &_glmmrBase_Linpred__any_nonlinear, 1},
     {"_glmmrBase_Model__new", (DL_FUNC) &_glmmrBase_Model__new, 6},
     {"_glmmrBase_Model__set_offset", (DL_FUNC) &_glmmrBase_Model__set_offset, 2},
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 2},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 2},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 2},
-    {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 2},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 1},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 2},
@@ -886,10 +1005,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 1},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 1},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 1},
-    {"_glmmrBase_Model__laplace_hessian", (DL_FUNC) &_glmmrBase_Model__laplace_hessian, 1},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 2},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 1},
-    {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
+    {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
     {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
@@ -912,6 +1030,20 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 2},
     {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 1},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 1},
+    {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 1},
+    {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 1},
+    {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 1},
+    {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 1},
+    {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 1},
+    {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 1},
+    {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 1},
+    {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
+    {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
+    {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
+    {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
+    {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},
+    {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
+    {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
     {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 5},
     {NULL, NULL, 0}
 };

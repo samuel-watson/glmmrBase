@@ -11,7 +11,7 @@ A GLMM Model
 \details{
 A generalised linear mixed model and a range of associated functions
 
-A detailed vingette for this package is available online \url{arXiv:2303.12657}. Briefly, for the generalised linear mixed model
+A detailed vingette for this package is available online\url{doi:10.48550/arXiv.2303.12657}. Briefly, for the generalised linear mixed model
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Zu)}
@@ -125,27 +125,10 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian())
-
-## ------------------------------------------------
-## Method `Model$subset_rows`
-## ------------------------------------------------
-
-#generate a stepped wedge design and remove the first sequence
-des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean$data$J!=1)
-des$subset_rows(ids_to_keep)
-
-## ------------------------------------------------
-## Method `Model$subset_cols`
-## ------------------------------------------------
-
-#generate a stepped wedge design and remove first and last time periods
-des <- stepped_wedge(8,10,icc=0.05)
-des$subset_cols(c(2:8,10))
 
 ## ------------------------------------------------
 ## Method `Model$sim_data`
@@ -156,7 +139,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -175,7 +158,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -198,7 +181,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t))),
+    formula = ~ (1|gr(cl)*ar0(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
   data = df,
@@ -238,7 +221,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
   covariance = list(parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
@@ -269,7 +252,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   covariance = list( parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
@@ -346,6 +329,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-check}{\code{Model$check()}}
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
+\item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
@@ -354,7 +338,8 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-LA}{\code{Model$LA()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
-\item \href{#method-Model-log_gradient}{\code{Model$log_gradient()}}
+\item \href{#method-Model-gradient}{\code{Model$gradient()}}
+\item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
@@ -532,7 +517,7 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar1(t)*fexp(x,y))),
+spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
                          mean = list(formula = ~ 1),
                          data = df,
                          family = stats::gaussian())
@@ -598,17 +583,6 @@ other rows will be removed from the mean function and covariance
 \subsection{Returns}{
 The function updates the object and nothing is returned
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{#generate a stepped wedge design and remove the first sequence
-des <- stepped_wedge(8,10,icc=0.05)
-ids_to_keep <- which(des$mean$data$J!=1)
-des$subset_rows(ids_to_keep)
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-subset_cols"></a>}}
@@ -631,16 +605,6 @@ Removes the specified columns from the linked mean function object's X matrix.
 \subsection{Returns}{
 The function updates the object and nothing is returned
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{#generate a stepped wedge design and remove first and last time periods
-des <- stepped_wedge(8,10,icc=0.05)
-des$subset_cols(c(2:8,10))
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-sim_data"></a>}}
@@ -674,7 +638,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -718,7 +682,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t)),
+    formula = ~ (1|gr(cl)*ar0(t)),
     parameters = c(0.25,0.8)),
   mean = list(
     formula = ~ factor(t) + int - 1,
@@ -766,7 +730,7 @@ df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
   covariance = list(
-    formula = ~ (1|gr(cl)*ar1(t))),
+    formula = ~ (1|gr(cl)*ar0(t))),
   mean = list(
     formula = ~ factor(t) + int - 1),
   data = df,
@@ -785,7 +749,28 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \subsection{Method \code{information_matrix()}}{
 Generates the information matrix of the GLS estimator
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{include.re}}{logical indicating whether to return the information matrix including the random effects components (TRUE),
+or the GLS information matrix for beta only.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A PxP matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-sandwich"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sandwich}{}}}
+\subsection{Method \code{sandwich()}}{
+Returns the robust sandwich matrix
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -908,6 +893,7 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   verbose = TRUE,
   tol = 0.01,
   max.iter = 30,
+  se = "gls",
   sparse = FALSE,
   usestan = TRUE
 )}\if{html}{\out{</div>}}
@@ -929,6 +915,9 @@ not do this step), defaults to FALSE.}
 between iterations at which to stop the algorithm.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
+
+\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
@@ -952,7 +941,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar1(t)),
+  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
   covariance = list(parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),0.2)),
   data = df,
@@ -983,7 +972,15 @@ fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
 \subsection{Method \code{LA()}}{
 Maximum Likelihood model fitting with Laplace Approximation
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$LA(y, start, method = "nr", verbose = FALSE, max.iter = 40, tol = 0.01)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(
+  y,
+  start,
+  method = "nr",
+  verbose = FALSE,
+  se = "gls",
+  max.iter = 40,
+  tol = 0.01
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -996,6 +993,9 @@ Maximum Likelihood model fitting with Laplace Approximation
 \item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
 
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
+
+\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
+"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 
@@ -1015,7 +1015,7 @@ df$int <- 0
 df[df$cl > 3, 'int'] <- 1 
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar1(t)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   covariance = list( parameters = c(0.25,0.7)),
   mean = list(parameters = c(rep(0,5),-0.2)),
   data = df,
@@ -1078,15 +1078,15 @@ A matrix of samples of the random effects
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-log_gradient"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-log_gradient}{}}}
-\subsection{Method \code{log_gradient()}}{
+\if{html}{\out{<a id="method-Model-gradient"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-gradient}{}}}
+\subsection{Method \code{gradient()}}{
 The gradient of the log-likelihood with respect to either the random effects or
 the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
 Cholesky decomposition of the matrix D. To obtain the random effects from the last
 model fit, see member function \verb{$u}
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$log_gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$gradient(y, u, beta = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1102,6 +1102,25 @@ model fit, see member function \verb{$u}
 }
 \subsection{Returns}{
 A vector of the gradient
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-partial_sigma"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-partial_sigma}{}}}
+\subsection{Method \code{partial_sigma()}}{
+The partial derivatives of the covariance matrix Sigma with respect to the covariance
+parameters. The function returns a list in order: Sigma, first order derivatives, second
+order derivatives. The second order derivatives are ordered as the lower-triangular matrix
+in column major order. Letting 'd(i)' mean the first-order partial derivative with respect
+to parameter i, and d2(i,j) mean the second order derivative with respect to parameters i
+and j, then if there were three covariance parameters the order of the output would be:
+(sigma, d(1), d(2), d(3), d2(1,1), d2(1,2), d2(1,3), d2(2,2), d2(2,3), d2(3,3)).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$partial_sigma()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list of matrices, see description for contents of the list.
 }
 }
 \if{html}{\out{<hr>}}

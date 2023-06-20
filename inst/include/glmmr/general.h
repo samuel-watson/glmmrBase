@@ -1,6 +1,7 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
+// includes
 #include <RcppEigen.h>
 #include <vector>
 #include <string>
@@ -9,9 +10,17 @@
 #include <regex>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <stack>
 #include <SparseChol.h>
+#include <set>
 #include "algo.h"
+#include <boost/math/special_functions/bessel.hpp>
+#include <boost/math/special_functions/polygamma.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#include <random>
+#include <boost/math/special_functions/digamma.hpp>
+#include <rbobyqa.h>
 
 using namespace Eigen;
 
@@ -27,12 +36,13 @@ typedef std::vector<intvec2d> intvec3d;
 
 // [[Rcpp::depends(RcppEigen)]]
 
-namespace glmmr {
+// functions and objects
 
+namespace glmmr {
 
 const static std::unordered_map<str, double> nvars = {  
   {"gr", 1},
-  {"ar1", 1},
+  {"ar", 2},
   {"fexp0", 1},
   {"fexp", 2},
   {"sqexp0",1},
@@ -44,12 +54,13 @@ const static std::unordered_map<str, double> nvars = {
   {"wend2",2},
   {"prodwm",2},
   {"prodcb",2},
-  {"prodek",2}
+  {"prodek",2},
+  {"ar0", 1}
 };
 
 const static std::unordered_map<str,int> string_to_case{
   {"gr",1},
-  {"ar1",2},
+  {"ar",2},
   {"fexp0", 3},
   {"fexp", 4},
   {"sqexp0",5},
@@ -61,7 +72,8 @@ const static std::unordered_map<str,int> string_to_case{
   {"wend2",11},
   {"prodwm",12},
   {"prodcb",13},
-  {"prodek",14}
+  {"prodek",14},
+  {"ar0",15}
 };
 
 inline bool validate_fn(const str& fn){
@@ -69,7 +81,7 @@ inline bool validate_fn(const str& fn){
   return not_fn;
 }
 
-const static intvec xvar_rpn = {0,1,4,0,1,4,5};
+const static intvec xvar_rpn = {0,1,4,17};
 
 template<typename T>
 inline void print_vec_1d(const T& vec){
@@ -105,6 +117,25 @@ inline void print_sparse(const sparse& A){
   for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
+inline bool is_number(const std::string& s)
+{
+  std::string::const_iterator it = s.begin();
+  while (it != s.end() && std::isdigit(*it)) ++it;
+  return !s.empty() && it == s.end();
+}
+
+inline bool isalnum_or_uscore(const char& s)
+{
+  return (isalnum(s) || s=='_');
+}
+
+template<typename T>
+inline bool expect_number_of_unique_elements(const std::vector<T> vec,
+                                             int n){
+  int vec_size = std::set<T>(vec.begin(),vec.end()).size();
+  return vec_size==n;
+}
+
 }
 
 struct vector_matrix{
@@ -119,5 +150,20 @@ struct vector_matrix{
     return *this;
   };
 };
+
+struct matrix_matrix{
+public:
+  MatrixXd mat1;
+  MatrixXd mat2;
+  matrix_matrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
+  matrix_matrix(const matrix_matrix& x) : mat1(x.mat1), mat2(x.mat2) {};
+  matrix_matrix& operator=(matrix_matrix x){
+    mat1 = x.mat1;
+    mat2 = x.mat2;
+    return *this;
+  };
+};
+
+
 
 #endif

@@ -20,15 +20,15 @@ public:
   const strvec colnames_;
   dblvec parameters_;
   dblvec other_pars_;
-  //mat(intvec({0,1})), matZ(intvec({0,1}))
+  
   Covariance(const str& formula,
              const ArrayXXd &data,
              const strvec& colnames) :
     form_(formula), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) { 
-    Z_constructor();
-  };
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -36,8 +36,8 @@ public:
     form_(form), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {
-    Z_constructor();
-  };
+      Z_constructor();
+    };
 
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -46,9 +46,9 @@ public:
     form_(formula), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -57,9 +57,9 @@ public:
     form_(form), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -69,9 +69,9 @@ public:
     parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
 
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -113,6 +113,7 @@ public:
     return npars_;
   };
 
+  
   int B(){
     return B_;
   }
@@ -137,7 +138,7 @@ public:
   double log_determinant();
 
   int block_dim(int b){
-    return re_data_[b].size();
+    return re_data_[b].rows();
   };
 
   void make_sparse();
@@ -165,20 +166,23 @@ public:
   sparse ZL_sparse();
   
   sparse Z_sparse();
+  
+  strvec parameter_names();
+  
+  void derivatives(std::vector<MatrixXd>& derivs,
+                   int order = 1);
 
 private:
+  std::vector<glmmr::calculator> calc_;
   intvec z_;
-  dblvec3d re_data_;
-  intvec3d re_cols_;
+  intvec3d re_pars_;
   intvec3d re_cols_data_;
   strvec2d fn_;
-  intvec re_order_;
-  intvec3d re_pars_;
-  intvec2d re_rpn_;
-  intvec2d re_index_;
-  intvec2d re_obs_index_;
+  dblvec2d par_for_calcs_;
+  std::vector<MatrixXd> re_data_;
   intvec re_fn_par_link_;
   intvec re_count_;
+  intvec re_order_;
   int Q_;
   int n_;
   int B_;
@@ -191,6 +195,8 @@ private:
   sparse matZ;
   sparse matL;
   SparseChol spchol;
+  
+  void update_parameters_in_calculators();
   
   MatrixXd get_block(int b);
   
@@ -212,6 +218,52 @@ private:
 
 }
 
+inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
+                                           int order){
+  // get unique parameters
+  strvec pars = parameter_names();
+  int R = pars.size();
+  int matrix_n = order==2 ? R + R*(R+1)/2 + 1 : R+1;
+  //std::vector<MatrixXd> derivs;
+  // initialise all the matrices to zero
+  for(int i = 0; i < matrix_n; i++)derivs.push_back(MatrixXd::Zero(Q_,Q_));
+  int block_count = 0;
+  
+  // iterate over the blocks and insert if the parameter is in the list.
+  for(int b = 0; b < B_; b++){
+    int block_size = block_dim(b);
+    int R_block = calc_[b].parameter_names.size();
+    intvec par_index;
+    for(int k = 0; k < R_block; k++){
+      auto par_pos = std::find(pars.begin(),pars.end(),calc_[b].parameter_names[k]);
+      int par_pos_int = par_pos - pars.begin();
+      par_index.push_back(par_pos_int);
+    }
+    //check speed of adding parallelisation here with collapse...
+    for(int i = 0; i < block_size; i++){
+      for(int j = i; j < block_size; j++){
+        dblvec out = calc_[b].calculate(i,par_for_calcs_[b],re_data_[b],j,order);
+        derivs[0](block_count+i,block_count+j) = out[0];
+        if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];
+        int index_count = R_block + 1;
+        for(int k = 0; k < R_block; k++){
+          derivs[par_index[k]+1](block_count+i,block_count+j) = out[k+1];
+          if(i!=j)derivs[par_index[k]+1](block_count+j,block_count+i) = out[k+1];
+          //second order derivatives
+          if(order >= 2){
+            for(int l=k; l < R_block; l++){
+              int second_pos = par_index[l]*(R-1) - par_index[l]*(par_index[l]-1)/2 + par_index[k];
+              derivs[R+1+second_pos](block_count+i,block_count+j) = out[index_count];
+              if(i!=j)derivs[R+1+second_pos](block_count+j,block_count+i) = out[index_count];
+              index_count++;
+            }
+          }
+        }
+      }
+    }
+    block_count += block_size;
+  }
+}
 
 #include "covariance.ipp"
 

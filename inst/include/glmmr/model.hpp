@@ -3,16 +3,14 @@
 
 #define _USE_MATH_DEFINES
 
-
-#include <boost/math/special_functions/digamma.hpp>
-#include <rbobyqa.h>
 #include "general.h"
 #include "maths.h"
 #include "openmpheader.h"
 #include "covariance.hpp"
 #include "linearpredictor.hpp"
+#include "calculator.hpp"
 #include "sparse.h"
-#include <random>
+
 
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
@@ -81,6 +79,7 @@ public:
           upper_t_.push_back(R_PosInf);
         }
         gen_sigma_blocks();
+        setup_calculator();
       };
   
   void set_offset(const VectorXd& offset);
@@ -100,6 +99,8 @@ public:
   void update_u(const MatrixXd &u);
   
   void update_W();
+  
+  void update_var_par(const double& v);
   
   double log_prob(const VectorXd &v);
   
@@ -135,9 +136,15 @@ public:
   
   void laplace_nr_beta_u();
   
-  MatrixXd laplace_hessian(double tol = 1e-4);
+  //MatrixXd laplace_hessian(double tol = 1e-4);
   
-  MatrixXd hessian(double tol = 1e-4);
+  vector_matrix b_score();
+  
+  vector_matrix re_score();
+  
+  matrix_matrix hess_and_grad();
+  
+  MatrixXd observed_information_matrix();
   
   MatrixXd u(bool scaled = true){
     if(scaled){
@@ -159,6 +166,8 @@ public:
   VectorXd predict_xb(const ArrayXXd& newdata_,
                       const ArrayXd& newoffset_);
   
+  MatrixXd sandwich_matrix();
+  
   void mcmc_sample(int warmup,
                    int samples,
                    int adapt = 100);
@@ -179,6 +188,12 @@ public:
   
   void make_covariance_dense();
   
+  std::vector<MatrixXd> sigma_derivatives();
+  
+  MatrixXd information_matrix_theta();
+  
+  matrix_matrix kenward_roger();
+  
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
                           int max_iter = 501);
   
@@ -187,6 +202,8 @@ private:
   ArrayXd size_q_array;
   ArrayXd size_n_array;
   ArrayXd size_p_array;
+  glmmr::calculator calc_;
+  glmmr::calculator vcalc_;
   sparse ZL_;
   MatrixXd u_;
   MatrixXd zu_;
@@ -212,6 +229,8 @@ private:
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
   
+  void setup_calculator();
+  
   void gen_sigma_blocks();
   
   MatrixXd sigma_block(int b, bool inverse = false);
@@ -228,6 +247,8 @@ private:
   
   VectorXd new_proposal(const VectorXd& u0_, bool adapt, 
                         int iter, double rand);
+  
+  void calculate_var_par();
   
   void sample(int warmup,
                   int nsamp,
@@ -329,12 +350,7 @@ private:
 
 }
 
-
-
-
-
 #include "likelihood.ipp"
-#include "mhmcmc.ipp"
 #include "model.ipp"
 
 #endif

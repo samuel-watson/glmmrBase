@@ -1,23 +1,17 @@
 #ifndef FORMULA_HPP
 #define FORMULA_HPP
 
-#include <RcppEigen.h>
-#include <vector>
-#include <string>
-#include <cstring>
-#include <sstream>
-#include <regex>
-#include <algorithm>
-#include <cmath>
 #include "general.h"
 #include "interpreter.h"
+#include "calculator.hpp"
+#include "formulaparse.h"
 
 namespace glmmr{
 
 class Formula {
 public:
   str formula_;
-  strvec fe_;
+  std::vector<char> linear_predictor_;
   strvec re_;
   strvec z_;
   intvec re_order_;
@@ -41,14 +35,28 @@ public:
   void tokenise();
   
   void formula_validate();
+  
+  void calculate_linear_predictor(glmmr::calculator& calculator,
+                                  const ArrayXXd& data,
+                                  const strvec& colnames,
+                                  MatrixXd& Xdata){
+    //calculator.resize(data.rows());
+    bool outparse = glmmr::parse_formula(linear_predictor_,
+                                          calculator,
+                                          data,
+                                          colnames,
+                                          Xdata);
+    std::reverse(calculator.instructions.begin(),calculator.instructions.end());
+    std::reverse(calculator.indexes.begin(),calculator.indexes.end());
+  }
    
   strvec re(){
     return re_;
   }
 
-  strvec fe(){
-    return fe_;
-  }
+  // strvec fe(){
+  //   return fe_;
+  // }
 
   strvec z(){
     return z_;
@@ -59,7 +67,7 @@ public:
   }
   
 private:
-  strvec tokens_;
+  //strvec tokens_;
   strvec re_terms_;
 };
 

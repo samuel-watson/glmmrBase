@@ -18,7 +18,7 @@
 #' @method print mcml
 #' @export
 print.mcml <- function(x, ...){
-  digits <- 2
+  digits <- 4
   cat(ifelse(x$method%in%c("mcem","mcnr"),
              "Markov chain Monte Carlo Maximum Likelihood Estimation\nAlgorithm: ",
              "Maximum Likelihood Estimation with Laplace Approximation\nAlgorithm: "),
@@ -37,6 +37,8 @@ print.mcml <- function(x, ...){
   z <- pars$est/pars$SE
   pars <- cbind(pars[,1:2],z=z,p=2*(1-stats::pnorm(abs(z))),pars[,3:4])
   colnames(pars) <- c("Estimate","Std. Err.","z value","p value","2.5% CI","97.5% CI")
+  if(x$se == "robust") colnames(pars)[2] <- "Robust Std. Err."
+  if(x$se == "kr") colnames(pars)[2] <- "Bias corr. Std. Err."
   rnames <- x$coefficients$par[1:(length(x$coefficients$par)-dim1)]
   if(any(duplicated(rnames))){
     did <- unique(rnames[duplicated(rnames)])
@@ -47,16 +49,18 @@ print.mcml <- function(x, ...){
   rownames(pars) <- rnames
   pars <- apply(pars,2,round,digits = digits)
   
+  total_vars <- x$P+x$Q
+  if(x$var_par_family)total_vars <- total_vars + 1
+  
+  cat("\nRandom effects: \n")
+  print(pars[(x$P+1):(total_vars),c(1,2)])
+  
   cat("\nFixed effects: \n")
   print(pars[1:x$P,])
   
-  cat("\nRandom effects: \n")
-  total_vars <- x$P+x$Q
-  if(x$var_par_family)total_vars <- total_vars + 1
-  print(pars[(x$P+1):(total_vars),1])
-  
   cat("\ncAIC: ",round(x$aic,digits))
   cat("\nApproximate R-squared: Conditional: ",round(x$Rsq[1],digits)," Marginal: ",round(x$Rsq[2],digits))
+  cat("\nLog-likelihood: ",round(x$logl,digits))
   if(!x$converged)cat("\nMCML ALGORITHM DID NOT CONVERGE!")
 #   #messages
 #   if(x$permutation)message("Permutation test used for one parameter, other SEs are not reported. SEs and Z values

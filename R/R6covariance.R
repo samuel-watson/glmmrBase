@@ -50,29 +50,26 @@ Covariance <- R6::R6Class("Covariance",
                         #' A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
                         #' * \code{gr(x)}: Indicator function (1 parameter)
                         #' * \code{fexp(x)}: Exponential function (2 parameters)
-                        #' * \code{ar1(x)}: AR1 function (1 parameter)
+                        #' * \code{ar(x)}: AR function (2 parameters)
                         #' * \code{sqexp(x)}: Squared exponential (1 parameter)
                         #' * \code{matern(x)}: Matern function (2 parameters)
                         #' * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
+                        #' For many 2 parameter functions, such as `ar` and `fexp`, alternative one parameter 
+                        #' versions are also available as `ar0` and `fexp0`. These function omit the variance 
+                        #' parameter and so can be used in combination with `gr` functions such as `gr(j)*ar0(t)`.
                         #'
                         #' Parameters are provided to the covariance function as a vector.
                         #' The parameters in the vector for each function should be provided
                         #' in the order the covariance functions are written are written.
                         #' For example,
-                        #' * Formula: `~(1|gr(j))+(1|gr(j*t))`; parameters: `c(0.25,0.1)`
-                        #' * Formula: `~(1|gr(j)*fexp(t))`; parameters: `c(0.25,1,0.5)`
-                        #' Note that it is also possible to specify a group membership with two
-                        #' variable alternatively as `(1|gr(j)*gr(t))`, for example, but this
-                        #' will require two parameters to be specified, so it is recommended against.
+                        #' * Formula: `~(1|gr(j))+(1|gr(j*t))`; parameters: `c(0.05,0.01)`
+                        #' * Formula: `~(1|gr(j)*fexp0(t))`; parameters: `c(0.05,0.5)`
                         #'
-                        #' If not all of `formula`, `data`, and `parameters` are not specified then the linked matrices
-                        #' are not calculated. These options can be later specified, or updated via a \link[glmmrBase]{Model} object.
-                        #' If these arguments are updated or changed then call `self$check()` to update linked matrices. Updating of
-                        #' parameters is automatic if using the `update_parameters()` member function.
+                        #' Updating of parameters is automatic if using the `update_parameters()` member function.
                         #' @return A Covariance object
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.25,0.7),
                         #'                       data= df)
                         initialize = function(formula,
@@ -91,7 +88,7 @@ Covariance <- R6::R6Class("Covariance",
                           if(!is.null(parameters)){
                             self$parameters <- parameters
                           }
-
+                          
                           if(allset){
                             private$cov_form()
                           } else {
@@ -105,7 +102,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return NULL
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.15,0.8),
                         #'                       data= df)
                         #' cov$parameters <- c(0.25,0.1)
@@ -117,9 +114,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
                             if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
                             private$genD()
-                          } else {
-                            if(verbose)message("Covariance up to date")
-                          }
+                          } 
                           invisible(self)
                         },
                         #' @description
@@ -133,8 +128,12 @@ Covariance <- R6::R6Class("Covariance",
                         #'
                         #' @param parameters A vector of parameters for the covariance function(s). See Details.
                         update_parameters = function(parameters){
+                          if(is.null(private$ptr)){
+                            if(is.null(self$data))stop("No data")
+                            private$cov_form()
+                          }
                           self$parameters <- parameters
-                          .Covariance__Update_parameters(private$ptr,parameters)
+                          Covariance__Update_parameters(private$ptr,parameters)
                           self$check(FALSE)
                         },
                         #' @description
@@ -142,11 +141,11 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param ... ignored
                         #' @examples
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
-                        #' Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         print = function(){
-                          re <- .re_names(self$formula)
+                          re <- re_names(self$formula)
                           cat("\U2BC8 Covariance")
                           cat("\n   \U2BA1 Terms:",re)
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
@@ -156,7 +155,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param index vector of indices to keep
                         #' @examples
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
-                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar1(t)),
+                        #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),
                         #'                       data= df)
                         #' cov$subset(1:100)
@@ -168,7 +167,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' Returns the Cholesky decomposition of the covariance matrix D
                         #' @return A matrix
                         get_chol_D = function(){
-                          return(Matrix::Matrix(.Covariance__D_chol(private$ptr)))
+                          return(Matrix::Matrix(Covariance__D_chol(private$ptr)))
                         },
                         #' @description
                         #' The function returns the values of the multivariate Gaussian log likelihood
@@ -176,9 +175,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param u Vector of random effects
                         #' @return Value of the log likelihood
                         log_likelihood = function(u){
-                          Q <- .Covariance__Q(private$ptr)
+                          Q <- Covariance__Q(private$ptr)
                           if(length(u)!=Q)stop("Vector not equal to number of random effects")
-                          loglik <- .Covariance__log_likelihood(private$ptr,u)
+                          loglik <- Covariance__log_likelihood(private$ptr,u)
                           return(loglik)
                         },
                         #' @description
@@ -186,7 +185,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' with mean zero and covariance D.
                         #' @return A vector of random effect values
                         simulate_re = function(){
-                          re <- .Covariance__simulate_re(private$ptr)
+                          re <- Covariance__simulate_re(private$ptr)
                           return(re)
                         },
                         #' @description
@@ -196,9 +195,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return None. Called for effects.
                         sparse = function(sparse = TRUE){
                           if(sparse){
-                            .Covariance__make_sparse(private$ptr)
+                            Covariance__make_sparse(private$ptr)
                           } else {
-                            .Covariance__make_dense(private$ptr)
+                            Covariance__make_dense(private$ptr)
                           }
                         },
                         #' @description
@@ -206,9 +205,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' function term.
                         #' @return A data frame
                         parameter_table = function(){
-                          re <- .Covariance__re_terms(private$ptr)
-                          paridx <- .Covariance__parameter_fn_index(private$ptr)+1
-                          recount <- .Covariance__re_count(private$ptr)
+                          re <- Covariance__re_terms(private$ptr)
+                          paridx <- Covariance__parameter_fn_index(private$ptr)+1
+                          recount <- Covariance__re_count(private$ptr)
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
                         }
@@ -223,26 +222,26 @@ Covariance <- R6::R6Class("Covariance",
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
-                          re <- .re_names(self$formula)
+                          re <- re_names(self$formula)
                           self$formula <- re[1]
                           if(length(re)>1){
                             for(i in 2:length(re)){
                               self$formula <- paste0(self$formula,"+",re[i])
                             }
                           }
-                          private$ptr <- .Covariance__new(self$formula,
+                          private$ptr <- Covariance__new(self$formula,
                                                          as.matrix(self$data),
                                                          colnames(self$data))
-                          private$parcount <- .Covariance__n_cov_pars(private$ptr)
-                          if(is.null(self$parameters))self$parameters <- rep(0.5,private$parcount)
-                          .Covariance__Update_parameters(private$ptr,self$parameters)
+                          private$parcount <- Covariance__n_cov_pars(private$ptr)
+                          if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
+                          Covariance__Update_parameters(private$ptr,self$parameters)
                           private$genD()
-                          self$Z <- .Covariance__Z(private$ptr)
+                          self$Z <- Covariance__Z(private$ptr)
                         },
                         genD = function(update=TRUE){
                           if(private$parcount != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          if(.Covariance__any_gr(private$ptr)).Covariance__make_sparse(private$ptr)
-                          D <- .Covariance__D(private$ptr)
+                          if(Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
+                          D <- Covariance__D(private$ptr)
                           if(update){
                             self$D <- Matrix::Matrix(D)
                             private$hash <- private$hash_do()
