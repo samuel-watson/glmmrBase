@@ -4,7 +4,7 @@
 (Version 0.4.2)
 R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using a Laplace approximation or full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
 
-The full details and tutorials have moved to the (project home page)[https://samuel-watson.github.io/glmmr-web/].
+The full details and tutorials have moved to the [project home page](https://samuel-watson.github.io/glmmr-web/).
 
 ## Generalised linear mixed models
 A generalised linear mixed model (GLMM) has a mean function for observation $i$ is
