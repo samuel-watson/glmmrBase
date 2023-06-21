@@ -15,6 +15,7 @@
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
 
+
 namespace glmmr {
 
 using namespace rminqa;

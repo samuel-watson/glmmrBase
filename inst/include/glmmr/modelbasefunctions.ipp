@@ -23,6 +23,13 @@ inline void glmmr::Model::setup_calculator(){
 
 inline void glmmr::Model::set_num_threads(bool parallel){
   parallel_ = parallel;
+  if(!parallel){
+    omp_set_num_threads(1);
+    Eigen::setNbThreads(1);
+  } else {
+    omp_set_num_threads(omp_get_max_threads());
+    Eigen::setNbThreads(omp_get_max_threads());
+  }
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
