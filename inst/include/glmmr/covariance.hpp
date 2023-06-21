@@ -86,91 +86,33 @@ public:
   };
 
   void update_parameters(const dblvec& parameters);
-  
   void update_parameters_extern(const dblvec& parameters);
-
   void update_parameters(const ArrayXd& parameters);
-
   void parse();
-
   double get_val(int b, int i, int j);
-
   MatrixXd Z();
-
-  MatrixXd D(bool chol = false,
-             bool upper = false){
-    MatrixXd D(Q_,Q_);
-    if(isSparse){
-      D = D_sparse_builder(chol,upper);
-    } else {
-      D = D_builder(0,chol,upper);
-    }
-    return D;
-  };
-  
-
-  int npar(){
-    return npars_;
-  };
-
-  
-  int B(){
-    return B_;
-  }
-
+  MatrixXd D(bool chol = false, bool upper = false);
   VectorXd sim_re();
-
-  int Q(){
-    if(Q_==0)Rcpp::stop("Random effects not initialised");
-    return Q_;
-  }
-  
-  int max_block_dim(){
-    int max = 0;
-    for(int i = 0; i<B_; i++){
-      if(block_dim(i) > max)max = block_dim(i);
-    }
-    return max;
-  }
-  
   double log_likelihood(const VectorXd &u);
-
   double log_determinant();
-
-  int block_dim(int b){
-    return re_data_[b].rows();
-  };
-
+  int npar();
+  int B();
+  int Q();
+  int max_block_dim();
+  int block_dim(int b);
   void make_sparse();
-  
   MatrixXd ZL();
-  
   MatrixXd LZWZL(const VectorXd& w);
-  
   MatrixXd ZLu(const MatrixXd& u);
-  
   MatrixXd Lu(const MatrixXd& u);
-  
   void set_sparse(bool sparse);
-  
   bool any_group_re();
-  
-  intvec parameter_fn_index(){
-    return re_fn_par_link_;
-  }
-  
-  intvec re_count(){
-    return re_count_;
-  }
-  
+  intvec parameter_fn_index();
+  intvec re_count();
   sparse ZL_sparse();
-  
   sparse Z_sparse();
-  
   strvec parameter_names();
-  
-  void derivatives(std::vector<MatrixXd>& derivs,
-                   int order = 1);
+  void derivatives(std::vector<MatrixXd>& derivs,int order = 1);
 
 private:
   std::vector<glmmr::calculator> calc_;
@@ -198,23 +140,13 @@ private:
   int n_threads_;
   
   void update_parameters_in_calculators();
-  
   MatrixXd get_block(int b);
-  
   MatrixXd get_chol_block(int b,bool upper = false);
-
-  MatrixXd D_builder(int b,
-                            bool chol = false,
-                            bool upper = false);
-
+  MatrixXd D_builder(int b,bool chol = false,bool upper = false);
   void update_ax();
-  
   void L_constructor();
-  
   void Z_constructor();
-  
-  MatrixXd D_sparse_builder(bool chol = false,
-                                   bool upper = false);
+  MatrixXd D_sparse_builder(bool chol = false,bool upper = false);
   
   
 };

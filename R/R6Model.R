@@ -596,7 +596,7 @@ Model <- R6::R6Class("Model",
                        #'   family = stats::gaussian(),
                        #'   var_par = 1
                        #' )
-                       #' \dontshow{des$update_config(ncores = 2)}
+                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
                        #' des$power() #power of 0.90 for the int parameter
                        power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
                          self$check(verbose=FALSE)
@@ -967,7 +967,7 @@ Model <- R6::R6Class("Model",
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
-                       #' \dontshow{des$update_config(ncores = 2)}
+                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$LA(y = ysim)
                        #'@md
@@ -1249,16 +1249,16 @@ Model <- R6::R6Class("Model",
                          return(Model__log_likelihood(private$ptr))
                        },
                        #' @description 
-                       #' Updates computation configuration. Currently, the only option is to set the number of cores
-                       #' used. By default, if OpenMP is available on the system, then the package will used as many 
+                       #' Updates computation configuration. Currently, the only option is to disable multithreading. 
+                       #' By default, if OpenMP is available on the system, then the package will use as many 
                        #' cores as available for computation. In multi-user or multi-process settings, one may want to 
-                       #' reduce the number of cores.
-                       #' @param ncores Integer. The maximum number of threads to be used.
+                       #' limit multithreading.
+                       #' @param parallel Logical. If set to FALSE then it will disable multithreading.
                        #' @return Nothing, called for effects.
-                       update_config = function(ncores){
-                         if(!missing(ncores)){
-                           private$ncores <- ncores
-                           if(!is.null(private$ptr))Model__set_num_threads(private$ptr,ncores)
+                       update_config = function(parallel){
+                         if(!missing(parallel)){
+                           private$parallel <- parallel
+                           if(!is.null(private$ptr))Model__set_num_threads(private$ptr,parallel)
                          }
                        },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
@@ -1287,7 +1287,7 @@ Model <- R6::R6Class("Model",
                        W = NULL,
                        Xb = NULL,
                        useSparse = TRUE,
-                       ncores = NULL,
+                       parallel = TRUE,
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
@@ -1350,9 +1350,8 @@ Model <- R6::R6Class("Model",
                            cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                            data <- cbind(data,self$mean$data[,cnames])
                          }
-                         private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),
-                                                    self$family[[1]],self$family[[2]])
-                         if(!is.null(private$ncores))Model__set_num_threads(private$ptr,private$ncores)
+                         private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),self$family[[1]],self$family[[2]])
+                         Model__set_num_threads(private$ptr,private$parallel)
                          Model__set_offset(private$ptr,self$mean$offset)
                          Model__update_beta(private$ptr,self$mean$parameters)
                          Model__update_theta(private$ptr,self$covariance$parameters)
@@ -1361,10 +1360,7 @@ Model <- R6::R6Class("Model",
                          Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                          Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
                          Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
-                         if(!private$useSparse){
-                           Model__make_dense(private$ptr)
-                         }
-                         
+                         if(!private$useSparse) Model__make_dense(private$ptr)
                        },
                        verify_data = function(y){
                          if(self$family[[1]]=="binomial"){

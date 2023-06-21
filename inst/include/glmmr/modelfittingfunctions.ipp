@@ -153,7 +153,7 @@ inline double glmmr::Model::aic(){
   int niter = u_.cols();
   int dof = P_ + covariance_.npar();
   double logl = 0;
-#pragma omp parallel for reduction (+:logl) 
+#pragma omp parallel for reduction (+:logl) if (parallel_)
   for(int i = 0; i < Lu.cols(); i++){
     logl += covariance_.log_likelihood(Lu.col(i));
   }
@@ -227,7 +227,7 @@ inline void glmmr::Model::nr_beta(){
       nvar_par *= 1/var_par_;
     }
     
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_)
     for(int i = 0; i < niter; ++i){
       VectorXd w = glmmr::maths::dhdmu(zd.col(i),family_,link_);
       w = (w.array().inverse()).matrix();
@@ -249,7 +249,7 @@ inline void glmmr::Model::nr_beta(){
     update_beta(linpred_.parameter_vector() + bincr);
   }
   
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_)
   for(int i = 0; i < niter; ++i){
     VectorXd zdu1 = glmmr::maths::mod_inv_func(zd.col(i), link_);
     ArrayXd resid = (y_ - zdu1);
@@ -340,7 +340,7 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   }
     case 4:
   {
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_)
     for(int i = 0; i < n_; i++){
       if(y_(i)==1){
         size_n_array(i) = 1;
@@ -357,7 +357,7 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   }
     case 5:
   {
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_) 
     for(int i = 0; i < n_; i++){
       if(y_(i)==1){
         size_n_array(i) = 1/size_n_array(i);
@@ -374,7 +374,7 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   }
     case 6:
   {
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_) 
     for(int i = 0; i < n_; i++){
       if(y_(i)==1){
         size_n_array(i) = (double)R::dnorm(size_n_array(i),0,1,false)/((double)R::pnorm(size_n_array(i),0,1,true,false));
@@ -450,7 +450,7 @@ inline VectorXd glmmr::Model::log_gradient(const VectorXd &v,
   }
     case 12:
   {
-#pragma omp parallel for 
+#pragma omp parallel for if (parallel_) 
     for(int i = 0; i < n_; i++){
       size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
       size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * var_par_ * (log(y_(i)) - log(1- y_(i)) - boost::math::digamma(size_n_array(i)*var_par_) + boost::math::digamma((1-size_n_array(i))*var_par_));

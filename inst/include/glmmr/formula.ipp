@@ -95,4 +95,26 @@ inline void glmmr::Formula::formula_validate(){
   }
 }
 
+inline void glmmr::Formula::calculate_linear_predictor(glmmr::calculator& calculator,const ArrayXXd& data,const strvec& colnames, MatrixXd& Xdata){
+  bool outparse = glmmr::parse_formula(linear_predictor_,
+                                        calculator,
+                                        data,
+                                        colnames,
+                                        Xdata);
+  std::reverse(calculator.instructions.begin(),calculator.instructions.end());
+  std::reverse(calculator.indexes.begin(),calculator.indexes.end());
+}
+ 
+inline strvec glmmr::Formula::re(){
+  return re_;
+}
+
+inline strvec glmmr::Formula::z(){
+  return z_;
+}
+
+inline strvec glmmr::Formula::re_terms(){
+  return re_terms_;
+}
+
 #endif

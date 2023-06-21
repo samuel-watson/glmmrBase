@@ -1,7 +1,6 @@
 #ifndef MODELBASEFUNCTIONS_IPP
 #define MODELBASEFUNCTIONS_IPP
 
-
 inline void glmmr::Model::set_offset(const VectorXd& offset){
   if(offset.size()!=n_)Rcpp::stop("offset wrong length");
     offset_ = offset;
@@ -22,16 +21,8 @@ inline void glmmr::Model::setup_calculator(){
   vcalc_.var_par = var_par_;
 }
 
-inline void glmmr::Model::set_num_threads(int n){
-  if(OMP_IS_USED){
-    omp_set_num_threads(n);
-  } 
-}
-
-inline void glmmr::Model::set_num_threads(){
-  if(OMP_IS_USED){
-    omp_set_num_threads(omp_get_max_threads());
-  } 
+inline void glmmr::Model::set_num_threads(bool parallel){
+  parallel_ = parallel;
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
@@ -96,7 +87,7 @@ inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
 inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   size_n_array = xb();
-#pragma omp parallel for reduction (+:ll) collapse(2) 
+#pragma omp parallel for reduction (+:ll) collapse(2) if (parallel_)
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
       ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
@@ -120,7 +111,7 @@ inline double glmmr::Model::full_log_likelihood(){
   double ll = log_likelihood();
   double logl = 0;
   MatrixXd Lu = covariance_.Lu(u_);
-#pragma omp parallel for reduction (+:logl) 
+#pragma omp parallel for reduction (+:logl) if (parallel_)
   for(int i = 0; i < Lu.cols(); i++){
     logl += covariance_.log_likelihood(Lu.col(i));
   }
@@ -128,6 +119,13 @@ inline double glmmr::Model::full_log_likelihood(){
   return ll+logl;
 }
 
+inline MatrixXd glmmr::Model::u(bool scaled){
+  if(scaled){
+    return covariance_.Lu(u_);
+  } else {
+    return u_;
+  }
+}
 
 inline dblvec glmmr::Model::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
@@ -184,6 +182,14 @@ inline dblvec glmmr::Model::get_upper_values(bool beta, bool theta, bool var){
     upper.push_back(R_PosInf);
   }
   return upper;
+}
+
+inline MatrixXd glmmr::Model::linpred(){
+  return (zu_.colwise()+(linpred_.xb()+offset_));
+}
+
+inline VectorXd glmmr::Model::xb(){
+  return linpred_.xb()+offset_; 
 }
 
 #endif

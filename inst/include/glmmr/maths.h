@@ -287,8 +287,6 @@ inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
   return wdiag.matrix();
 }
 
-
-
 //ramanujans approximation
 inline double log_factorial_approx(double n){
   double ans;
@@ -309,10 +307,8 @@ inline double log_likelihood(double y,
   switch (flink){
   case 1:
   {
-    
     double lf1 = glmmr::maths::log_factorial_approx(y);
     logl = y * mu - exp(mu) - lf1;
-    //Rcpp::Rcout << "\n lf: " << lf1 << " ymu " << y*mu - exp(mu) << " y " << y << " mu " << mu << " logl " << logl;
     break;
   }
   case 2:
@@ -418,11 +414,6 @@ inline std::vector<int> linseq(int start, int end) {
 }
 }
 }
-
-
-
-
-
 
 
 #endif

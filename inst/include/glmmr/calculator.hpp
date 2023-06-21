@@ -26,47 +26,15 @@ class calculator {
                      int order = 0, 
                      double extraData = 0.0);
     
-    calculator& operator= (const glmmr::calculator& calc){
-      instructions = calc.instructions;
-      indexes = calc.indexes;
-      parameter_names = calc.parameter_names;
-      var_par = calc.var_par;
-      data_count = calc.data_count;
-      parameter_count = calc.parameter_count;
-      any_nonlinear = calc.any_nonlinear;
-      return *this;
-    };
-    
-    VectorXd linear_predictor(const dblvec& parameters, 
-                              const MatrixXd& data);
-    
-    VectorXd first_derivative(int i,
-                              const dblvec& parameters,
-                              const MatrixXd& data, 
-                              double extraData = 0);
-    
-    MatrixXd second_derivative(int i,
-                               const dblvec& parameters,
-                               const MatrixXd& data, 
-                               double extraData = 0);
-    
-    MatrixXd jacobian(const dblvec& parameters,
-                      const MatrixXd& data);
-    
-    MatrixXd jacobian(const dblvec& parameters,
-                      const MatrixXd& data,
-                      const VectorXd& extraData);
-    
-    MatrixXd jacobian(const dblvec& parameters,
-                      const MatrixXd& data,
-                      const MatrixXd& extraData);
-    
-    matrix_matrix jacobian_and_hessian(const dblvec& parameters,
-                                       const MatrixXd& data,
-                                       const MatrixXd& extraData);
-    
+    calculator& operator= (const glmmr::calculator& calc);
+    VectorXd linear_predictor(const dblvec& parameters,const MatrixXd& data);
+    VectorXd first_derivative(int i,const dblvec& parameters,const MatrixXd& data,double extraData = 0);
+    MatrixXd second_derivative(int i,const dblvec& parameters,const MatrixXd& data, double extraData = 0);
+    MatrixXd jacobian(const dblvec& parameters, const MatrixXd& data);
+    MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const VectorXd& extraData);
+    MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
+    matrix_matrix jacobian_and_hessian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     vector_matrix jacobian_and_hessian(const dblvec& parameters);
-    
 
 };
 

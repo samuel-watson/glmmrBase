@@ -309,8 +309,8 @@ Model__hessian <- function(xp) {
     .Call(`_glmmrBase_Model__hessian`, xp)
 }
 
-Model__set_num_threads <- function(xp, max_threads_) {
-    invisible(.Call(`_glmmrBase_Model__set_num_threads`, xp, max_threads_))
+Model__set_num_threads <- function(xp, parallel_) {
+    invisible(.Call(`_glmmrBase_Model__set_num_threads`, xp, parallel_))
 }
 
 Model__predict <- function(xp, newdata_, newoffset_, m) {

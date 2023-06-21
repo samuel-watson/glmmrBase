@@ -864,13 +864,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__set_num_threads
-void Model__set_num_threads(SEXP xp, SEXP max_threads_);
-RcppExport SEXP _glmmrBase_Model__set_num_threads(SEXP xpSEXP, SEXP max_threads_SEXP) {
+void Model__set_num_threads(SEXP xp, SEXP parallel_);
+RcppExport SEXP _glmmrBase_Model__set_num_threads(SEXP xpSEXP, SEXP parallel_SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type max_threads_(max_threads_SEXP);
-    Model__set_num_threads(xp, max_threads_);
+    Rcpp::traits::input_parameter< SEXP >::type parallel_(parallel_SEXP);
+    Model__set_num_threads(xp, parallel_);
     return R_NilValue;
 END_RCPP
 }
