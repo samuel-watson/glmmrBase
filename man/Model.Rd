@@ -207,7 +207,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
@@ -229,6 +229,7 @@ des <- Model$new(
   family = gaussian(),
   var_par = 1
 )
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
@@ -259,7 +260,7 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -828,7 +829,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 des$power() #power of 0.90 for the int parameter
 }
 \if{html}{\out{</div>}}
@@ -952,6 +953,7 @@ des <- Model$new(
   family = gaussian(),
   var_par = 1
 )
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
@@ -1025,7 +1027,7 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }

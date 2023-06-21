@@ -596,7 +596,7 @@ Model <- R6::R6Class("Model",
                        #'   family = stats::gaussian(),
                        #'   var_par = 1
                        #' )
-                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
                        #' des$power() #power of 0.90 for the int parameter
                        power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
                          self$check(verbose=FALSE)
@@ -700,6 +700,7 @@ Model <- R6::R6Class("Model",
                        #'   family = gaussian(),
                        #'   var_par = 1
                        #' )
+                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
                        #' #fits the models using Stan
@@ -967,7 +968,7 @@ Model <- R6::R6Class("Model",
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
-                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
+                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$LA(y = ysim)
                        #'@md
