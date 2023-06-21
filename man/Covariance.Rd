@@ -63,6 +63,9 @@ If using direct assignment, call `self$check()` afterwards.
 ## Method `Covariance$new`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.7),
@@ -72,6 +75,9 @@ cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
 ## Method `Covariance$check`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.03,0.8),
@@ -83,6 +89,9 @@ cov$check(verbose=FALSE)
 ## Method `Covariance$print`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(5)*t(5)) > ind(5))
 Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
@@ -92,6 +101,9 @@ Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
 ## Method `Covariance$subset`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
@@ -171,7 +183,10 @@ A Covariance object
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.7),
                       data= df)
@@ -202,7 +217,10 @@ NULL
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(5)*t(5)) > ind(5))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.03,0.8),
                       data= df)
@@ -249,7 +267,10 @@ Show details of Covariance object
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(5)*t(5)) > ind(5))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(5)*t(5)) > ind(5))
 Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)
@@ -277,7 +298,10 @@ Keep specified indices and removes the rest
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(10)*t(5)) > ind(10))
 cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                       parameters = c(0.05,0.8),
                       data= df)

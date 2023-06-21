@@ -313,6 +313,14 @@ Model__predict <- function(xp, newdata_, newoffset_, m) {
     .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m)
 }
 
+#' Disable or enable parallelised computing
+#' 
+#' By default, the package will use multithreading for many calculations if OpenMP is 
+#' available on the system. For multi-user systems this may not be desired, so parallel
+#' execution can be disabled with this function.
+#' 
+#' @param parallel_ Logical indicating whether to use parallel computation (TRUE) or disable it (FALSE)
+#' @return None, called for effects
 setParallel <- function(parallel_) {
     invisible(.Call(`_glmmrBase_setParallel`, parallel_))
 }

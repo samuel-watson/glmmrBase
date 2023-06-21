@@ -8,7 +8,6 @@ test_that("model dense ml", {
                       as.matrix(df),
                       colnames(df),
                       "gaussian","identity")
-  Model__set_num_threads(mptr,FALSE) # for the CRAN check!
   expect_error(Model__update_beta(mptr,c(0,0)))
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(Model__update_theta(mptr,c(0.25,0.25)))
@@ -35,7 +34,6 @@ test_that("model dense la", {
                       as.matrix(df),
                       colnames(df),
                       "gaussian","identity")
-  Model__set_num_threads(mptr,FALSE) # for the CRAN check!
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   Model__update_theta(mptr,c(0.0625))
   Model__set_var_par(mptr,1)
@@ -62,7 +60,6 @@ test_that("model sparse ml", {
                       as.matrix(df),
                       colnames(df),
                       "gaussian","identity")
-  Model__set_num_threads(mptr,FALSE) # for the CRAN check!
   expect_error(Model__update_beta(mptr,c(0,0)))
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(Model__update_theta(mptr,c(0.25,0.25)))
@@ -95,7 +92,6 @@ test_that("overall model class",{
     family=gaussian()
   ))
   expect_s3_class(des,"Model")
-  des$update_config(parallel = FALSE) # for the annoying CRAN check!
   pwr <- des$power()
   expect_equal(round(pwr[3,3],2),0.38)
   rm(des)

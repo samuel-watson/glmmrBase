@@ -86,12 +86,14 @@ class, see \link[glmmrBase]{Model}.
 ## Method `Model$new`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 #create a data frame describing a cross-sectional parallel cluster
 #randomised trial
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
-
 mod <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
@@ -137,6 +139,9 @@ spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
@@ -153,6 +158,9 @@ ysim <- des$sim_data()
 ## Method `Model$check`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
@@ -176,6 +184,9 @@ des$check() #updates
 ## Method `Model$update_parameters`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
@@ -193,6 +204,9 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 ## Method `Model$power`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
@@ -207,7 +221,6 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
@@ -229,7 +242,6 @@ des <- Model$new(
   family = gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
@@ -247,6 +259,9 @@ fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
 ## Method `Model$LA`
 ## ------------------------------------------------
 
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 #create example data with six clusters, five time periods, and five people per cluster-period
 df <- nelder(~(cl(6)*t(5)) > ind(5))
 # parallel trial design intervention indicator
@@ -260,7 +275,6 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -333,6 +347,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
+\item \href{#method-Model-kenward_roger}{\code{Model$kenward_roger()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
@@ -345,7 +360,6 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
-\item \href{#method-Model-update_config}{\code{Model$update_config()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -482,12 +496,14 @@ A new Model class object
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{#create a data frame describing a cross-sectional parallel cluster
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+#create a data frame describing a cross-sectional parallel cluster
 #randomised trial
 df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
-
 mod <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
@@ -640,6 +656,9 @@ Either a vector, a data frame, or a list
 \preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
+\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(cl)*ar0(t)),
@@ -681,7 +700,10 @@ Linked objects are updated by nothing is returned
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
@@ -729,7 +751,10 @@ Updates the parameters of the mean function and/or the covariance function
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
@@ -772,9 +797,22 @@ A PxP matrix
 \if{html}{\out{<a id="method-Model-sandwich"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-sandwich}{}}}
 \subsection{Method \code{sandwich()}}{
-Returns the robust sandwich matrix
+Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$sandwich()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A PxP matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-kenward_roger"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-kenward_roger}{}}}
+\subsection{Method \code{kenward_roger()}}{
+Returns the bias-corrected variance-covariance matrix for the fixed effect parameters.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$kenward_roger()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -815,7 +853,10 @@ errors and estimated power.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{df <- nelder(~(cl(10)*t(5)) > ind(10))
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
@@ -829,7 +870,6 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 des$power() #power of 0.90 for the int parameter
 }
 \if{html}{\out{</div>}}
@@ -953,7 +993,6 @@ des <- Model$new(
   family = gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
 #fits the models using Stan
@@ -1014,7 +1053,10 @@ A \code{mcml} object
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{#create example data with six clusters, five time periods, and five people per cluster-period
+\preformatted{\dontshow{
+setParallel(FALSE) # for the CRAN check
+}
+#create example data with six clusters, five time periods, and five people per cluster-period
 df <- nelder(~(cl(6)*t(5)) > ind(5))
 # parallel trial design intervention indicator
 df$int <- 0
@@ -1027,7 +1069,6 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -1174,29 +1215,6 @@ previous model fit then the random effects are assumed to be all zero.
 }
 \subsection{Returns}{
 The log-likelihood of the model parameters
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-update_config"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-update_config}{}}}
-\subsection{Method \code{update_config()}}{
-Updates computation configuration. Currently, the only option is to disable multithreading.
-By default, if OpenMP is available on the system, then the package will use as many
-cores as available for computation. In multi-user or multi-process settings, one may want to
-limit multithreading.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$update_config(parallel)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{parallel}}{Logical. If set to FALSE then it will disable multithreading.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Nothing, called for effects.
 }
 }
 \if{html}{\out{<hr>}}

@@ -2,6 +2,14 @@
 
 using namespace Rcpp;
 
+//' Disable or enable parallelised computing
+//' 
+//' By default, the package will use multithreading for many calculations if OpenMP is 
+//' available on the system. For multi-user systems this may not be desired, so parallel
+//' execution can be disabled with this function.
+//' 
+//' @param parallel_ Logical indicating whether to use parallel computation (TRUE) or disable it (FALSE)
+//' @return None, called for effects
 // [[Rcpp::export]]
 void setParallel(SEXP parallel_){
   bool parallel = as<bool>(parallel_);
@@ -16,5 +24,4 @@ void setParallel(SEXP parallel_){
       Eigen::setNbThreads(omp_get_max_threads());
     }
   }
-  Rcpp::Rcout << "\nThreads: " << omp_get_num_threads() << " OPEN MP: " << OMP_IS_USED << " max: " << omp_get_max_threads();
 }
