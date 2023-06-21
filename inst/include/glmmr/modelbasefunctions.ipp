@@ -21,17 +21,6 @@ inline void glmmr::Model::setup_calculator(){
   vcalc_.var_par = var_par_;
 }
 
-inline void glmmr::Model::set_num_threads(bool parallel){
-  parallel_ = parallel;
-  if(!parallel){
-    omp_set_num_threads(1);
-    Eigen::setNbThreads(1);
-  } else {
-    omp_set_num_threads(omp_get_max_threads());
-    Eigen::setNbThreads(omp_get_max_threads());
-  }
-}
-
 inline void glmmr::Model::update_beta(const VectorXd &beta){
   if(beta.size()!=P_)Rcpp::stop("beta wrong length");
     linpred_.update_parameters(beta.array());
@@ -94,7 +83,7 @@ inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
 inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   size_n_array = xb();
-#pragma omp parallel for reduction (+:ll) collapse(2) if (parallel_)
+#pragma omp parallel for reduction (+:ll) collapse(2)
   for(int j=0; j<zu_.cols() ; j++){
     for(int i = 0; i<n_; i++){
       ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
@@ -118,7 +107,7 @@ inline double glmmr::Model::full_log_likelihood(){
   double ll = log_likelihood();
   double logl = 0;
   MatrixXd Lu = covariance_.Lu(u_);
-#pragma omp parallel for reduction (+:logl) if (parallel_)
+#pragma omp parallel for reduction (+:logl)
   for(int i = 0; i < Lu.cols(); i++){
     logl += covariance_.log_likelihood(Lu.col(i));
   }

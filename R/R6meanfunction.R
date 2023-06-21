@@ -31,6 +31,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param ... ignored
                           #' @return The number of observations in the model
                           #' @examples
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 2, 'int'] <- 1
@@ -49,6 +52,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param verbose Logical whether to report if any changes detected.
                           #' @return NULL
                           #' @examples
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 5, 'int'] <- 1
@@ -86,6 +92,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param verbose Logical indicating whether to report detailed output
                           #' @return A MeanFunction object
                           #' @examples 
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 2, 'int'] <- 1
@@ -152,6 +161,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param names If NULL then the function prints the column names, if a vector of names, then it attemps to 
                           #' replace the current column names of the data
                           #' @examples 
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 5, 'int'] <- 1
@@ -177,6 +189,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param index Rows of the data to keep
                           #' @return NULL
                           #' @examples 
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 5, 'int'] <- 1
@@ -199,6 +214,9 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @param index Columns of X to keep
                           #' @return NULL
                           #' @examples 
+                          #' \dontshow{
+                          #' setParallel(FALSE) # for the CRAN check
+                          #' }
                           #' df <- nelder(~(cl(4)*t(5)) > ind(5))
                           #' df$int <- 0
                           #' df[df$cl <= 5, 'int'] <- 1

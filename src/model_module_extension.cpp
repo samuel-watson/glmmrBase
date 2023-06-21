@@ -124,13 +124,6 @@ SEXP Model__hessian(SEXP xp){
 }
 
 // [[Rcpp::export]]
-void Model__set_num_threads(SEXP xp, SEXP parallel_){
-  XPtr<glmmr::Model> ptr(xp);
-  bool parallel = as<bool>(parallel_);
-  ptr->set_num_threads(parallel);
-}
-
-// [[Rcpp::export]]
 SEXP Model__predict(SEXP xp, SEXP newdata_,
                     SEXP newoffset_,
                     int m){

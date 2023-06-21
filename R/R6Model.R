@@ -155,12 +155,14 @@ Model <- R6::R6Class("Model",
                        #' @return A new Model class object
                        #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
                        #' @examples
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' #create a data frame describing a cross-sectional parallel cluster
                        #' #randomised trial
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
-                       #' 
                        #' mod <- Model$new(
                        #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
                        #'   data = df,
@@ -376,6 +378,9 @@ Model <- R6::R6Class("Model",
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(cl)*ar0(t)),
@@ -467,6 +472,9 @@ Model <- R6::R6Class("Model",
                        #'@param verbose Logical indicating whether to report if any updates are made, defaults to TRUE
                        #'@return Linked objects are updated by nothing is returned
                        #'@examples
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
@@ -506,6 +514,9 @@ Model <- R6::R6Class("Model",
                        #' @param var.par (Optional) A scalar value for var_par
                        #' @param verbose Logical indicating whether to provide more detailed feedback
                        #' @examples
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
@@ -558,13 +569,22 @@ Model <- R6::R6Class("Model",
                          }
                        },
                        #' @description 
-                       #' Returns the robust sandwich matrix
+                       #' Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
                        #' @return A PxP matrix
                        sandwich = function(){
                          if(is.null(private$ptr)){
                            private$update_ptr(rep(0,nrow(self$mean$data)))
                          }
                          return(Model__sandwich(private$ptr))
+                       },
+                       #' @description 
+                       #' Returns the bias-corrected variance-covariance matrix for the fixed effect parameters.
+                       #' @return A PxP matrix
+                       kenward_roger = function(){
+                         if(is.null(private$ptr)){
+                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                         }
+                         return(Model__kenward_roger(private$ptr))
                        },
                        #' @description
                        #' Estimates the power of the design described by the model using the square root
@@ -582,6 +602,9 @@ Model <- R6::R6Class("Model",
                        #' @return A data frame describing the parameters, their values, expected standard
                        #' errors and estimated power.
                        #' @examples
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
@@ -596,10 +619,6 @@ Model <- R6::R6Class("Model",
                        #'   family = stats::gaussian(),
                        #'   var_par = 1
                        #' )
-                       #' \dontshow{
-                       #' des$update_config(parallel = FALSE) 
-                       #' # to pass the CRAN check you have to limit the cores!
-                       #' }
                        #' des$power() #power of 0.90 for the int parameter
                        power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
                          self$check(verbose=FALSE)
@@ -703,7 +722,6 @@ Model <- R6::R6Class("Model",
                        #'   family = gaussian(),
                        #'   var_par = 1
                        #' )
-                       #' \dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check!}
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
                        #' #fits the models using Stan
@@ -958,6 +976,9 @@ Model <- R6::R6Class("Model",
                        #'@return A `mcml` object
                        #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
+                       #' \dontshow{
+                       #' setParallel(FALSE) # for the CRAN check
+                       #' }
                        #' #create example data with six clusters, five time periods, and five people per cluster-period
                        #' df <- nelder(~(cl(6)*t(5)) > ind(5))
                        #' # parallel trial design intervention indicator
@@ -971,10 +992,6 @@ Model <- R6::R6Class("Model",
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
-                       #' \dontshow{
-                       #' des$update_config(parallel = FALSE) 
-                       #' # to pass the CRAN check you have to limit the cores!
-                       #' }
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$LA(y = ysim)
                        #'@md
@@ -1255,19 +1272,6 @@ Model <- R6::R6Class("Model",
                          if(!missing(u))Model__update_u(private$ptr,u)
                          return(Model__log_likelihood(private$ptr))
                        },
-                       #' @description 
-                       #' Updates computation configuration. Currently, the only option is to disable multithreading. 
-                       #' By default, if OpenMP is available on the system, then the package will use as many 
-                       #' cores as available for computation. In multi-user or multi-process settings, one may want to 
-                       #' limit multithreading.
-                       #' @param parallel Logical. If set to FALSE then it will disable multithreading.
-                       #' @return Nothing, called for effects.
-                       update_config = function(parallel){
-                         if(!missing(parallel)){
-                           private$parallel <- parallel
-                           if(!is.null(private$ptr))Model__set_num_threads(private$ptr,parallel)
-                         }
-                       },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
@@ -1294,7 +1298,6 @@ Model <- R6::R6Class("Model",
                        W = NULL,
                        Xb = NULL,
                        useSparse = TRUE,
-                       parallel = TRUE,
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
@@ -1358,7 +1361,6 @@ Model <- R6::R6Class("Model",
                            data <- cbind(data,self$mean$data[,cnames])
                          }
                          private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),self$family[[1]],self$family[[2]])
-                         Model__set_num_threads(private$ptr,private$parallel)
                          Model__set_offset(private$ptr,self$mean$offset)
                          Model__update_beta(private$ptr,self$mean$parameters)
                          Model__update_theta(private$ptr,self$covariance$parameters)

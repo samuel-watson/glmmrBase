@@ -128,7 +128,6 @@ public:
   std::vector<MatrixXd> sigma_derivatives();
   MatrixXd information_matrix_theta();
   matrix_matrix kenward_roger();
-  void set_num_threads(bool parallel);
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5, int max_iter = 501);
   MatrixXd u(bool scaled = true);
   
@@ -163,7 +162,6 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
-  int parallel_ = 1;
   
   void setup_calculator();
   void gen_sigma_blocks();

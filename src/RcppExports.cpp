@@ -863,17 +863,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__set_num_threads
-void Model__set_num_threads(SEXP xp, SEXP parallel_);
-RcppExport SEXP _glmmrBase_Model__set_num_threads(SEXP xpSEXP, SEXP parallel_SEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type parallel_(parallel_SEXP);
-    Model__set_num_threads(xp, parallel_);
-    return R_NilValue;
-END_RCPP
-}
 // Model__predict
 SEXP Model__predict(SEXP xp, SEXP newdata_, SEXP newoffset_, int m);
 RcppExport SEXP _glmmrBase_Model__predict(SEXP xpSEXP, SEXP newdata_SEXP, SEXP newoffset_SEXP, SEXP mSEXP) {
@@ -886,6 +875,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type m(mSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__predict(xp, newdata_, newoffset_, m));
     return rcpp_result_gen;
+END_RCPP
+}
+// setParallel
+void setParallel(SEXP parallel_);
+RcppExport SEXP _glmmrBase_setParallel(SEXP parallel_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type parallel_(parallel_SEXP);
+    setParallel(parallel_);
+    return R_NilValue;
 END_RCPP
 }
 // re_names
@@ -1049,8 +1048,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 1},
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
-    {"_glmmrBase_Model__set_num_threads", (DL_FUNC) &_glmmrBase_Model__set_num_threads, 2},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
+    {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 1},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_gen_dhdmu", (DL_FUNC) &_glmmrBase_gen_dhdmu, 3},
     {"_glmmrBase_gen_sigma_approx", (DL_FUNC) &_glmmrBase_gen_sigma_approx, 7},

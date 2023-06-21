@@ -45,11 +45,11 @@ inline double glmmr::Model::log_prob(const VectorXd &v){
   VectorXd mu = xb() + zu;
   double lp1 = 0;
   double lp2 = 0;
-#pragma omp parallel for reduction (+:lp1) if (parallel_)
+#pragma omp parallel for reduction (+:lp1)
   for(int i = 0; i < n_; i++){
     lp1 += glmmr::maths::log_likelihood(y_(i),mu(i),var_par_,flink);
   }
-#pragma omp parallel for reduction (+:lp2) if (parallel_)
+#pragma omp parallel for reduction (+:lp2)
   for(int i = 0; i < v.size(); i++){
     lp2 += -0.5*v(i)*v(i); 
   }
@@ -129,7 +129,7 @@ inline void glmmr::Model::calculate_var_par(){
     int niter = u_.cols();
     ArrayXd sigmas(niter);
     MatrixXd zd = linpred();
-#pragma omp parallel for if (parallel_)
+#pragma omp parallel for
     for(int i = 0; i < niter; ++i){
       VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
       ArrayXd resid = (y_ - zdu);
@@ -149,7 +149,7 @@ inline void glmmr::Model::gen_sigma_blocks(){
   for(int b = 0; b < covariance_.B(); b++){
     block_size = covariance_.block_dim(b);
     for(i = 0; i < block_size; i++){
-#pragma omp parallel for shared(it_begin, i) if (parallel_)
+#pragma omp parallel for shared(it_begin, i)
       for(j = 0; j < n_; j++){
         auto it = std::find(it_begin + Z.Ap[j], it_begin + Z.Ap[j+1], (i+block_counter));
         if(it != (it_begin + Z.Ap[j+1])){

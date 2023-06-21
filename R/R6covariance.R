@@ -68,6 +68,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' Updating of parameters is automatic if using the `update_parameters()` member function.
                         #' @return A Covariance object
                         #' @examples
+                        #' \dontshow{
+                        #' setParallel(FALSE) # for the CRAN check
+                        #' }
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
                         #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.7),
@@ -101,6 +104,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param verbose Logical whether to report if any changes detected.
                         #' @return NULL
                         #' @examples
+                        #' \dontshow{
+                        #' setParallel(FALSE) # for the CRAN check
+                        #' }
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
                         #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.03,0.8),
@@ -140,6 +146,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' Show details of Covariance object
                         #' @param ... ignored
                         #' @examples
+                        #' \dontshow{
+                        #' setParallel(FALSE) # for the CRAN check
+                        #' }
                         #' df <- nelder(~(cl(5)*t(5)) > ind(5))
                         #' Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),
@@ -154,6 +163,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' Keep specified indices and removes the rest
                         #' @param index vector of indices to keep
                         #' @examples
+                        #' \dontshow{
+                        #' setParallel(FALSE) # for the CRAN check
+                        #' }
                         #' df <- nelder(~(cl(10)*t(5)) > ind(10))
                         #' cov <- Covariance$new(formula = ~(1|gr(cl)*ar0(t)),
                         #'                       parameters = c(0.05,0.8),

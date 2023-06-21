@@ -309,12 +309,12 @@ Model__hessian <- function(xp) {
     .Call(`_glmmrBase_Model__hessian`, xp)
 }
 
-Model__set_num_threads <- function(xp, parallel_) {
-    invisible(.Call(`_glmmrBase_Model__set_num_threads`, xp, parallel_))
-}
-
 Model__predict <- function(xp, newdata_, newoffset_, m) {
     .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m)
+}
+
+setParallel <- function(parallel_) {
+    invisible(.Call(`_glmmrBase_setParallel`, parallel_))
 }
 
 re_names <- function(formula) {
