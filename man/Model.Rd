@@ -207,7 +207,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(ncores = 2)}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
@@ -259,7 +259,7 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(ncores = 2)}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -828,7 +828,7 @@ des <- Model$new(
   family = stats::gaussian(),
   var_par = 1
 )
-\dontshow{des$update_config(ncores = 2)}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
 des$power() #power of 0.90 for the int parameter
 }
 \if{html}{\out{</div>}}
@@ -1025,7 +1025,7 @@ des <- Model$new(
   data = df,
   family = stats::binomial()
 )
-\dontshow{des$update_config(ncores = 2)}
+\dontshow{des$update_config(parallel = FALSE) # to pass the CRAN check about CPU time v elapsed time!}
 ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$LA(y = ysim)
 }
@@ -1178,18 +1178,18 @@ The log-likelihood of the model parameters
 \if{html}{\out{<a id="method-Model-update_config"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-update_config}{}}}
 \subsection{Method \code{update_config()}}{
-Updates computation configuration. Currently, the only option is to set the number of cores
-used. By default, if OpenMP is available on the system, then the package will used as many
+Updates computation configuration. Currently, the only option is to disable multithreading.
+By default, if OpenMP is available on the system, then the package will use as many
 cores as available for computation. In multi-user or multi-process settings, one may want to
-reduce the number of cores.
+limit multithreading.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$update_config(ncores)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_config(parallel)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ncores}}{Integer. The maximum number of threads to be used.}
+\item{\code{parallel}}{Logical. If set to FALSE then it will disable multithreading.}
 }
 \if{html}{\out{</div>}}
 }
