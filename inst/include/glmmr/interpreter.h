@@ -174,7 +174,7 @@ inline intvec interpret_re(const std::string& fn,
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
-  case 15:
+  case 15: case 16:
     B.insert(B.end(), A.begin(), A.end());
     B.push_back(2);
     B.push_back(8);
@@ -295,7 +295,7 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 15:
+  case 15: case 16:
     addA();
     B.push_back(par_idx[0]);
     break;

@@ -53,7 +53,8 @@ const static std::unordered_map<str, double> nvars = {
   {"prodwm",2},
   {"prodcb",2},
   {"prodek",2},
-  {"ar0", 1}
+  {"ar0", 1},
+  {"ar1", 1}
 };
 
 const static std::unordered_map<str,int> string_to_case{
@@ -71,7 +72,8 @@ const static std::unordered_map<str,int> string_to_case{
   {"prodwm",12},
   {"prodcb",13},
   {"prodek",14},
-  {"ar0",15}
+  {"ar0",15},
+  {"ar1",16}
 };
 
 inline bool validate_fn(const str& fn){
