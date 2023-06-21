@@ -2,9 +2,12 @@
 
 # glmmrBase
 (Version 0.4.2)
-R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using a Laplace approximation or full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
+R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using a Laplace approximation or full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood (MCML) and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
 
 The full details and tutorials have moved to the [project home page](https://samuel-watson.github.io/glmmr-web/).
+
+## Installation
+The package is available on CRAN, or the most up-to-date version can be installed from this repository in R using `devtools::install_github("samuel-watson/glmmrBase")`. A pre-compiled binary is also available with each release on this page.
 
 ## Generalised linear mixed models
 A generalised linear mixed model (GLMM) has a mean function for observation $i$ is
@@ -33,3 +36,5 @@ R>                    data = df,
 R>                    family = gaussian())
 ```
 
+## Model fitting
+A Laplace approximation approach can be used with a model object. If `y` is a vector of outcome values then `model$LA(y)` will fit the model. Alternatively, we also provide MCML, a full likelihood fitting algorithm. The default option requires the package cmdstanr and Stan and can be used as `model$MCML(y)`. To use with the in-built Hamiltonian Monte Carlo sampler `model$MCML(y,cmdstan=FALSE)`.
