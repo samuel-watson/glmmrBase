@@ -36,8 +36,6 @@ typedef std::vector<intvec2d> intvec3d;
 
 // [[Rcpp::depends(RcppEigen)]]
 
-// functions and objects
-
 namespace glmmr {
 
 const static std::unordered_map<str, double> nvars = {  
@@ -135,7 +133,6 @@ inline bool expect_number_of_unique_elements(const std::vector<T> vec,
   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
   return vec_size==n;
 }
-
 }
 
 struct vector_matrix{
@@ -163,7 +160,5 @@ public:
     return *this;
   };
 };
-
-
 
 #endif

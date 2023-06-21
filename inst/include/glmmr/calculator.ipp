@@ -11,6 +11,17 @@ inline VectorXd glmmr::calculator::linear_predictor(const dblvec& parameters,
   }
   return x;
 };
+
+inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator& calc){
+  instructions = calc.instructions;
+  indexes = calc.indexes;
+  parameter_names = calc.parameter_names;
+  var_par = calc.var_par;
+  data_count = calc.data_count;
+  parameter_count = calc.parameter_count;
+  any_nonlinear = calc.any_nonlinear;
+  return *this;
+};
     
 inline VectorXd glmmr::calculator::first_derivative(int i,
                               const dblvec& parameters,

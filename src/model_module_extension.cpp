@@ -124,10 +124,10 @@ SEXP Model__hessian(SEXP xp){
 }
 
 // [[Rcpp::export]]
-void Model__set_num_threads(SEXP xp, SEXP max_threads_){
+void Model__set_num_threads(SEXP xp, SEXP parallel_){
   XPtr<glmmr::Model> ptr(xp);
-  int max_threads = as<int>(max_threads_);
-  ptr->set_num_threads(max_threads);
+  bool parallel = as<bool>(parallel_);
+  ptr->set_num_threads(parallel);
 }
 
 // [[Rcpp::export]]

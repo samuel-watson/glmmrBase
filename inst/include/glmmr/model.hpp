@@ -11,7 +11,6 @@
 #include "calculator.hpp"
 #include "sparse.h"
 
-
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(openmp)]]
@@ -83,123 +82,54 @@ public:
       };
   
   void set_offset(const VectorXd& offset);
-  
   void update_beta(const VectorXd &beta);
-  
   void update_beta(const dblvec &beta);
-  
   void update_beta_extern(const dblvec &beta);
-  
   void update_theta(const VectorXd &theta);
-  
   void update_theta(const dblvec &theta);
-  
   void update_theta_extern(const dblvec &theta);
-
   void update_u(const MatrixXd &u);
-  
   void update_W();
-  
   void update_var_par(const double& v);
-  
   double log_prob(const VectorXd &v);
-  
-  VectorXd log_gradient(const VectorXd &v,
-                              bool beta = false);
- 
-  MatrixXd linpred(){
-    return (zu_.colwise()+(linpred_.xb()+offset_));
-  }
-  
-  
-  VectorXd xb(){
-    return linpred_.xb()+offset_;
-  }
-  
+  VectorXd log_gradient(const VectorXd &v,bool beta = false);
+  MatrixXd linpred();
+  VectorXd xb();
   double log_likelihood();
-  
   double full_log_likelihood();
-  
   void ml_theta();
-  
   void ml_beta();
-  
   void ml_all();
-  
   void laplace_ml_beta_u();
-  
   void laplace_ml_theta();
-  
   void laplace_ml_beta_theta();
-  
   void nr_beta();
-  
   void laplace_nr_beta_u();
-  
-  //MatrixXd laplace_hessian(double tol = 1e-4);
-  
   vector_matrix b_score();
-  
   vector_matrix re_score();
-  
   matrix_matrix hess_and_grad();
-  
   MatrixXd observed_information_matrix();
-  
-  MatrixXd u(bool scaled = true){
-    if(scaled){
-      return covariance_.Lu(u_);
-    } else {
-      return u_;
-    }
-  }
-  
   MatrixXd Zu();
-  
   MatrixXd Sigma(bool inverse = false);
-  
   MatrixXd information_matrix();
-  
-  vector_matrix predict_re(const ArrayXXd& newdata_,
-               const ArrayXd& newoffset_);
-  
-  VectorXd predict_xb(const ArrayXXd& newdata_,
-                      const ArrayXd& newoffset_);
-  
+  vector_matrix predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
+  VectorXd predict_xb(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
   MatrixXd sandwich_matrix();
-  
-  void mcmc_sample(int warmup,
-                   int samples,
-                   int adapt = 100);
-  
+  void mcmc_sample(int warmup,int samples,int adapt = 100);
   void mcmc_set_lambda(double lambda);
-  
   void mcmc_set_max_steps(int max_steps);
-  
   void mcmc_set_refresh(int refresh);
-  
   void mcmc_set_target_accept(double target);
-  
   void set_trace(int trace);
-  
   double aic();
-  
   void make_covariance_sparse();
-  
   void make_covariance_dense();
-  
   std::vector<MatrixXd> sigma_derivatives();
-  
   MatrixXd information_matrix_theta();
-  
   matrix_matrix kenward_roger();
-  
-  void set_num_threads(int n);
-  
-  void set_num_threads();
-  
-  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5,
-                          int max_iter = 501);
+  void set_num_threads(bool parallel);
+  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5, int max_iter = 501);
+  MatrixXd u(bool scaled = true);
   
 private:
   ArrayXd size_m_array;
@@ -232,33 +162,19 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
+  int parallel_ = 1;
   
   void setup_calculator();
-  
   void gen_sigma_blocks();
-  
   MatrixXd sigma_block(int b, bool inverse = false);
-  
   MatrixXd sigma_builder(int b, bool inverse = false);
-  
   MatrixXd information_matrix_by_block(int b);
-  
   dblvec get_start_values(bool beta, bool theta, bool var = true);
-  
   dblvec get_lower_values(bool beta, bool theta, bool var = true);
-  
   dblvec get_upper_values(bool beta, bool theta, bool var = true);
-  
-  VectorXd new_proposal(const VectorXd& u0_, bool adapt, 
-                        int iter, double rand);
-  
+  VectorXd new_proposal(const VectorXd& u0_, bool adapt,  int iter, double rand);
   void calculate_var_par();
-  
-  
-  
-  void sample(int warmup,
-                  int nsamp,
-                  int adapt = 100);
+  void sample(int warmup,int nsamp,int adapt = 100);
   
   class D_likelihood : public Functor<dblvec> {
     Model& M_;
@@ -299,7 +215,6 @@ private:
     denomD_(denomD) {}
     double operator()(const dblvec &par);
   };
-  
   
   class LA_likelihood : public Functor<dblvec> {
     Model& M_;

@@ -271,6 +271,49 @@ inline void glmmr::Covariance::update_parameters_in_calculators(){
   }
 }
 
+inline MatrixXd glmmr::Covariance::D(bool chol, bool upper){
+    MatrixXd D(Q_,Q_);
+    if(isSparse){
+      D = D_sparse_builder(chol,upper);
+    } else {
+      D = D_builder(0,chol,upper);
+    }
+    return D;
+  };
+
+inline int glmmr::Covariance::npar(){
+    return npars_;
+  };
+
+  
+inline int glmmr::Covariance::B(){
+  return B_;
+}
+
+inline int glmmr::Covariance::Q(){
+  if(Q_==0)Rcpp::stop("Random effects not initialised");
+  return Q_;
+}
+  
+inline int glmmr::Covariance::max_block_dim(){
+  int max = 0;
+  for(int i = 0; i<B_; i++){
+    if(block_dim(i) > max)max = block_dim(i);
+  }
+  return max;
+}
+  
+inline int glmmr::Covariance::block_dim(int b){
+  return re_data_[b].rows();
+};
+
+inline intvec glmmr::Covariance::parameter_fn_index(){
+  return re_fn_par_link_;
+}
+
+inline intvec glmmr::Covariance::re_count(){
+  return re_count_;
+}
 
 inline void glmmr::Covariance::update_parameters(const dblvec& parameters){
     if(parameters_.size()==0){

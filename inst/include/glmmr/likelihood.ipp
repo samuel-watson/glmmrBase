@@ -11,8 +11,6 @@ inline double glmmr::Model::D_likelihood::operator()(const dblvec &par) {
   return -1*logl/Lu_.cols();
 }
 
-
-
 inline double glmmr::Model::L_likelihood::operator()(const dblvec &par) {
   //if(M_.family_=="gaussian" || M_.family_=="Gamma" || M_.family_=="beta"){
     //auto first = par.begin();
