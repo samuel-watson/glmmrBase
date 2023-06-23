@@ -49,8 +49,10 @@ Model <- R6::R6Class("Model",
                        mean = NULL,
                        #' @field family One of the family function used in R's glm functions. See \link[stats]{family} for details
                        family = NULL,
-                       #' @field exp_condition A vector indicting the unique experimental conditions for each observation, see Details.
-                       exp_condition = NULL,
+                       #' @field weights A vector indicting the weights for the observations.
+                       weights = NULL,
+                       #' @field trials For binomial family models, the number of trials for each observation. The default is 1 (bernoulli).
+                       trials = NULL,
                        #' @field formula The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.
                        formula = NULL,
                        #' @field var_par Scale parameter required for some distributions (Gaussian, Gamma, Beta).
@@ -151,6 +153,9 @@ Model <- R6::R6Class("Model",
                        #' \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.
                        #' @param var_par Scale parameter required for some distributions, including Gaussian. Default is NULL.
                        #' @param offset A vector of offset values. Optional - could be provided to the argument to mean instead.
+                       #' @param trials For binomial family models, the number of trials for each observation. If it is not set, then it will
+                       #' default to 1 (a bernoulli model).
+                       #' @param weights A vector of weights. Optional..
                        #' @param verbose Logical indicating whether to provide detailed output
                        #' @return A new Model class object
                        #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
@@ -207,15 +212,20 @@ Model <- R6::R6Class("Model",
                                              family = NULL,
                                              var_par = NULL,
                                              offset = NULL,
+                                             weights = NULL,
+                                             trials = NULL,
                                              verbose=TRUE){
 
                          if(is.null(family)){
                            stop("No family specified.")
                          } else {
                            self$family <- family
-                           if(family[[1]] %in% c("gaussian","gamma","beta") & is.null(var_par)){
-                             self$var_par <- 1
-                           }
+                         }
+                         
+                         if(!is.null(var_par)){
+                           self$var_par <- var_par
+                         } else {
+                           self$var_par <- 1
                          }
 
                          if(!missing(formula)){
@@ -275,7 +285,6 @@ Model <- R6::R6Class("Model",
                              }
                              if(!is.null(covariance$parameters))self$covariance$update_parameters(covariance$parameters)
                              if(!is.null(covariance$eff_range))self$covariance$eff_range <- covariance$eff_range
-                             
                            }
                            if(is(mean,"R6")){
                              if(is(mean,"MeanFunction")){
@@ -299,21 +308,27 @@ Model <- R6::R6Class("Model",
                              }
                              if(!is.null(mean$parameters))self$mean$update_parameters(mean$parameters)
                            }
-                           if(is.null(offset)){
-                             self$mean$offset <- rep(0,nrow(self$mean$data))
-                           } else {
-                             self$mean$offset <- offset
-                           }
                            self$mean$check(verbose = verbose)
                            self$covariance$check(verbose=verbose)
                          }
-
-                         if(!is.null(var_par)){
-                           self$var_par <- var_par
+                         if(is.null(offset)){
+                           self$mean$offset <- rep(0,nrow(self$mean$data))
                          } else {
-                           self$var_par <- 1
+                           self$mean$offset <- offset
                          }
-
+                         if(is.null(weights)){
+                           self$weights <- rep(1,nrow(self$mean$data))
+                         } else {
+                           self$weights <- offset
+                         }
+                         if(self$family[[1]]=="binomial"){
+                           if(is.null(trials) || all(trials == 1)){
+                             self$trials <- rep(1,nrow(self$mean$data))
+                             self$family[[1]] <- "bernoulli"
+                           } else {
+                             self$trials <- trials
+                           }
+                         }
                          private$hash <- private$hash_do()
                        },
                        #' @description
@@ -407,30 +422,30 @@ Model <- R6::R6Class("Model",
                            }
                          }
 
-                         if(f[1]=="binomial"){
+                         if(f[1]%in%c("binomial","bernoulli")){
                            if(f[2]=="logit"){
-                             y <- rbinom(self$n(),1,exp(mu)/(1+exp(mu)))
+                             y <- rbinom(self$n(),self$trials,exp(mu)/(1+exp(mu)))
                            }
                            if(f[2]=="log"){
-                             y <- rbinom(self$n(),1,exp(mu))
+                             y <- rbinom(self$n(),self$trials,exp(mu))
                            }
                            if(f[2]=="identity"){
-                             y <- rbinom(self$n(),1,mu)
+                             y <- rbinom(self$n(),self$trials,mu)
                            }
                            if(f[2]=="probit"){
-                             y <- rbinom(self$n(),1,pnorm(mu))
+                             y <- rbinom(self$n(),self$trials,pnorm(mu))
                            }
                          }
 
                          if(f[1]=="gaussian"){
                            if(f[2]=="identity"){
                              if(is.null(self$var_par))stop("For gaussian(link='identity') provide var_par")
-                             y <- rnorm(self$n(),mu,self$var_par)
+                             y <- rnorm(self$n(),mu,self$var_par/self$weights)
                            }
                            if(f[2]=="log"){
                              if(is.null(self$var_par))stop("For gaussian(link='log') provide var_par")
                              #CHECK THIS IS RIGHT
-                             y <- rnorm(self$n(),exp(mu),self$var_par)
+                             y <- rnorm(self$n(),exp(mu),self$var_par/self$weights)
                            }
                          }
 
@@ -644,6 +659,9 @@ Model <- R6::R6Class("Model",
                        #' Returns the diagonal of the matrix W used to calculate the covariance matrix approximation
                        #' @return A vector with values of the glm iterated weights
                        w_matrix = function(){
+                         if(is.null(private$ptr)){
+                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                         }
                          private$genW()
                          return(private$W)
                        },
@@ -687,7 +705,10 @@ Model <- R6::R6Class("Model",
                        #'The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
                        #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
                        #'
-                       #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`
+                       #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`.
+                       #' 
+                       #' To provide weights for the model fitting, store them in self$weights. To set the number of 
+                       #' trials for binomial models, set self$trials.
                        #' 
                        #'@param y A numeric vector of outcome data
                        #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, see Details. Default is `mcem`.
@@ -747,37 +768,28 @@ Model <- R6::R6Class("Model",
                          private$verify_data(y)
                          private$update_ptr(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
-                         ### DO SOME BASIC CHECKS ON Y TO MAKE SURE IT DOESN'T CAUSE ERROR!
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
-                         
                          if(!usestan){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
                          }
-                         
                          trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
-                         
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
-                         
                          all_pars <- c(beta,theta)
                          if(var_par_family)all_pars <- c(all_pars,var_par)
                          all_pars_new <- rep(1,length(all_pars))
                          var_par_new <- var_par
-                         
                          if(verbose)message(paste0("using method: ",method))
                          if(verbose)cat("\nStart: ",all_pars,"\n")
-                         
                          niter <- self$mcmc_options$samps
                          invfunc <- self$family$linkinv
                          L <- Matrix::Matrix(Model__L(private$ptr))
-                         
                          #parse family
                          file_type <- mcnr_family(self$family)
-                         
                          ## set up sampler
                          if(usestan){
                            if(!requireNamespace("cmdstanr")){
@@ -792,36 +804,34 @@ Model <- R6::R6Class("Model",
                              mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
                            }
                          }
-                         
                          data <- list(
                            N = self$n(),
                            Q = Model__Q(private$ptr),
                            Xb = Model__xb(private$ptr),
                            Z = Model__ZL(private$ptr),
                            y = y,
-                           sigma = var_par,
                            type=as.numeric(file_type$type)
                          )
+                         if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
+                         if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
+                         if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
                          iter <- 0
-                         
                          while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
                            if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
                            if(trace==2)t1 <- Sys.time()
-                           
                            if(usestan){
                              data$Xb <-  Model__xb(private$ptr)
                              data$Z <- Model__ZL(private$ptr)
-                             data$sigma <- var_par_new
-                             
-                             capture.output(fit <- mod$sample(data = data,
-                                                              chains = 1,
-                                                              iter_warmup = self$mcmc_options$warmup,
-                                                              iter_sampling = self$mcmc_options$samps,
-                                                              refresh = 0),
-                                            file=tempfile())
-                             
+                             if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
+                             if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
+                              capture.output(fit <- mod$sample(data = data,
+                                                    chains = 1,
+                                                    iter_warmup = self$mcmc_options$warmup,
+                                                    iter_sampling = self$mcmc_options$samps,
+                                                    refresh = 0),
+                                  file=tempfile())
                              dsamps <- fit$draws("gamma",format = "matrix")
                              class(dsamps) <- "matrix"
                              #dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
@@ -842,14 +852,11 @@ Model <- R6::R6Class("Model",
                              Model__nr_beta(private$ptr)
                            }
                            Model__ml_theta(private$ptr)
-                           #L <- Matrix::Matrix(Model__L(private$ptr))
-                           
                            beta_new <- Model__get_beta(private$ptr)
                            theta_new <- Model__get_theta(private$ptr)
                            var_par_new <- Model__get_var_par(private$ptr)
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
-                           
                            if(trace==2)t3 <- Sys.time()
                            if(trace==2)cat("\nModel fitting took: ",t3-t2,"s")
                            if(verbose){
@@ -861,23 +868,18 @@ Model <- R6::R6Class("Model",
                              cat("\n",Reduce(paste0,rep("-",40)))
                            }
                          }
-                         
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         
                          if(sim.lik.step){
                            if(verbose)cat("\n\n")
                            if(verbose)message("Optimising simulated likelihood")
                            Model__ml_all(private$ptr)
-                           
                            beta_new <- Model__get_beta(private$ptr)
                            theta_new <- Model__get_theta(private$ptr)
                            var_par_new <- Model__get_var_par(private$ptr)
                          }
-                         
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
-                         
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr, TRUE)
@@ -893,13 +895,10 @@ Model <- R6::R6Class("Model",
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(Matrix::diag(M))
-                         
                          SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
-                    
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
                          theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
-                         
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
@@ -908,28 +907,20 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
                            SE <- c(SE,SE_theta)
                          }
-                         
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
                                            est = c(all_pars_new,rowMeans(u)),
                                            SE=c(SE,rep(NA,nrow(u))))
-                         
                          res$lower <- res$est - qnorm(1-0.05/2)*res$SE
                          res$upper <- res$est + qnorm(1-0.05/2)*res$SE
-                         
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         
                          aic <- Model__aic(private$ptr)
-                         
                          xb <- Model__xb(private$ptr)
                          zd <- self$covariance$Z %*% rowMeans(u)
-                         
                          wdiag <- Matrix::diag(self$w_matrix())
-                         
                          total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
                          condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
                          margR2 <- var(Matrix::drop(xb))/total_var
-                         
                          out <- list(coefficients = res,
                                      converged = !not_conv,
                                      method = method,
@@ -949,9 +940,7 @@ Model <- R6::R6Class("Model",
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family)
-                         
                          class(out) <- "mcml"
-                         
                          return(out)
                        },
                        #'@description
@@ -963,7 +952,8 @@ Model <- R6::R6Class("Model",
                        #'the covariance matrix is approximated using the first order approximation based on the marginal
                        #'quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
                        #'can be further adjusted following the proposal of Zeger et al (1988), use the member function `use_attenuated()` in this
-                       #'class, see \link[glmmrBase]{Model}.
+                       #'class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To 
+                       #'set the number of trials for binomial models, set self$trials.
                        #'
                        #'@param y A numeric vector of outcome data
                        #'@param start Optional. A numeric vector indicating starting values for the model parameters.
@@ -1008,9 +998,7 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
-                         
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
-                         
                          trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
@@ -1019,26 +1007,21 @@ Model <- R6::R6Class("Model",
                          if(var_par_family)all_pars <- c(all_pars,var_par)
                          all_pars_new <- rep(1,length(all_pars))
                          iter <- 0
-                         
                          while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
-                           
                            iter <- iter + 1
                            if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
-                           
                            if(method=="nr"){
                              Model__laplace_nr_beta_u(private$ptr)
                            } else {
                              Model__laplace_ml_beta_u(private$ptr)
                            }
                            Model__laplace_ml_theta(private$ptr)
-                           
                            beta_new <- Model__get_beta(private$ptr)
                            theta_new <- Model__get_theta(private$ptr)
                            var_par_new <- Model__get_var_par(private$ptr)
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
-                           
                            if(verbose){
                              cat("\nBeta: ", beta_new)
                              cat("\nTheta: ", theta_new)
@@ -1049,22 +1032,17 @@ Model <- R6::R6Class("Model",
                          }
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         
                          #Model__laplace_ml_beta_theta(private$ptr)
                          beta_new <- Model__get_beta(private$ptr)
                          theta_new <- Model__get_theta(private$ptr)
                          var_par_new <- Model__get_var_par(private$ptr)
                          all_pars_new <- c(beta_new,theta_new)
                          if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
-                         
-                         
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
-                         
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr,TRUE)
                          if(verbose)cat("\n\nCalculating standard errors...\n")
-                         
                          if(se == "gls"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
                            SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
@@ -1077,11 +1055,9 @@ Model <- R6::R6Class("Model",
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(Matrix::diag(M))
-                         
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
                          theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
-                         
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
@@ -1090,29 +1066,20 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
                            SE <- c(SE,SE_theta)
                          }
-                         
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
                                            est = c(all_pars_new,drop(u)),
                                            SE=c(SE,rep(NA,nrow(u))))
-                         
                          res$lower <- res$est - qnorm(1-0.05/2)*res$SE
                          res$upper <- res$est + qnorm(1-0.05/2)*res$SE
-                         
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         
                          aic <- Model__aic(private$ptr)
-                         
                          xb <- Model__xb(private$ptr)
                          zd <- self$covariance$Z %*% u
-                         
                          wdiag <- Matrix::diag(self$w_matrix())
-                         
                          total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
                          condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
                          margR2 <- var(Matrix::drop(xb))/total_var
-                         
-                         
                          out <- list(coefficients = res,
                                      converged = !not_conv,
                                      method = method,
@@ -1132,11 +1099,8 @@ Model <- R6::R6Class("Model",
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family)
-                         
                          class(out) <- "mcml"
-                         
                          return(out)
-                         
                        },
                        #' @description 
                        #' Set whether to use sparse matrix methods for model calculations and fitting.
@@ -1188,7 +1152,6 @@ Model <- R6::R6Class("Model",
                              sigma = self$var_par,
                              type=as.numeric(file_type$type)
                            )
-                           
                            if(verbose){
                              fit <- mod$sample(data = data,
                                                chains = 1,
@@ -1203,7 +1166,6 @@ Model <- R6::R6Class("Model",
                                                               refresh = 0),
                                             file=tempfile())
                            }
-                           
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
                            dsamps <- Matrix::Matrix(Model__L(private$ptr) %*% Matrix::t(dsamps)) #check this
@@ -1302,34 +1264,10 @@ Model <- R6::R6Class("Model",
                          exp(x)/(1+exp(x))
                        },
                        generate = function(){
-                         private$genW()
+                         private$hash <- private$hash_do()
                        },
                        genW = function(){
-                         # assume random effects value is at zero
-                         if(!self$family[[1]]%in%c("poisson","binomial","gaussian","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
-                         xb <- self$mean$linear_predictor()
-                         if(private$attenuate_parameters){
-                           xb <- attenuate_xb(xb = xb,
-                                              Z = as.matrix(self$covariance$Z),
-                                              D = as.matrix(self$covariance$D),
-                                              link = self$family[[2]])
-                         }
-                         wdiag <- gen_dhdmu(xb = xb,
-                                            family=self$family[[1]],
-                                            link = self$family[[2]])
-
-                         if(self$family[[1]] == "gaussian"){
-                           wdiag <- self$var_par * self$var_par * wdiag
-                         } else if(self$family[[1]] == "Gamma"){
-                           wdiag <- wdiag/self$var_par
-                         } else if(self$family[[1]] == "beta"){
-                           wdiag <- wdiag*(1+self$var_par)
-                         } else if(self$family[[1]] == "binomial"){
-                           wdiag <- wdiag/self$var_par
-                         }
-
-                         W <- diag(drop(wdiag))
-                         private$W <- Matrix::Matrix(W)
+                         private$W <- Model__get_W(private$ptr)
                        },
                        genS = function(update=TRUE){
                          S = gen_sigma_approx(xb=matrix(self$mean$X%*%self$mean$parameters,ncol=1),
@@ -1349,6 +1287,7 @@ Model <- R6::R6Class("Model",
                        },
                        ptr = NULL,
                        update_ptr = function(y){
+                         if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                          if(length(y)!=nrow(self$mean$X))stop("y not correct size")
                          if(gsub(" ","",self$mean$formula) != gsub(" ","",self$covariance$formula)){
                            form <- paste0(self$mean$formula,"+",self$covariance$formula)
@@ -1360,11 +1299,14 @@ Model <- R6::R6Class("Model",
                            cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                            data <- cbind(data,self$mean$data[,cnames])
                          }
-                         private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),self$family[[1]],self$family[[2]])
+                         if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
+                         private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),tolower(self$family[[1]]),self$family[[2]])
                          Model__set_offset(private$ptr,self$mean$offset)
+                         Model__set_weights(private$ptr,self$weights)
+                         Model__set_var_par(private$ptr,self$var_par)
+                         if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials)
                          Model__update_beta(private$ptr,self$mean$parameters)
                          Model__update_theta(private$ptr,self$covariance$parameters)
-                         Model__set_var_par(private$ptr,self$var_par)
                          Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
                          Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                          Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
@@ -1373,7 +1315,8 @@ Model <- R6::R6Class("Model",
                        },
                        verify_data = function(y){
                          if(self$family[[1]]=="binomial"){
-                           if(!all(y==0 | y==1))stop("y must be 0 or 1")
+                           if(!(all(y>=0 & y%%1 == 0)))stop("y must be integer >= 0")
+                           if(any(y > self$trials))stop("Number of successes > number of trials")
                          } else if(self$family[[1]]=="poisson"){
                            if(any(y <0) || any(y%%1 != 0))stop("y must be integer >= 0")
                          } else if(self$family[[1]]=="beta"){
@@ -1382,6 +1325,10 @@ Model <- R6::R6Class("Model",
                            if(any(y<=0))stop("y must be positive")
                          } else if(self$family[[1]]=="gaussian" & self$family[[2]]=="log"){
                            if(any(y<=0))stop("y must be positive")
+                         } else if(self$family[[1]]=="bernoulli"){
+                           if(any(y > self$trials))stop("Number of successes > number of trials")
+                           if(any(y > 1))self$family[[1]] <- "binomial"
+                           if(!(all(y>=0 & y%%1 == 0)))stop("y must be 0 or 1")
                          }
                        },
                        model_data = function(newdata){

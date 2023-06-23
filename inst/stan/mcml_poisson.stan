@@ -12,7 +12,6 @@ data {
   vector[N] Xb;
   matrix[N,Q] Z;
   array[N] int y;
-  real sigma;
   int type;
 }
 parameters {

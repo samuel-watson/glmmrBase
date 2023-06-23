@@ -6,19 +6,32 @@ inline void glmmr::Model::set_offset(const VectorXd& offset){
     offset_ = offset;
 }
 
+inline void glmmr::Model::set_weights(const ArrayXd& weights){
+  if(weights.size()!=n_)Rcpp::stop("weights wrong length");
+    weights_ = weights;
+    if((weights != 1.0).any()){
+      if(family_!="gaussian")Rcpp::warning("Weighted regression with non-Gaussian models is currently experimental.");
+      weighted_ = true;
+  }
+}
+
 inline void glmmr::Model::setup_calculator(){
   dblvec yvec(y_.data(),y_.data()+y_.size());
   calc_ = linpred_.calc_;
   glmmr::linear_predictor_to_link(calc_,link_);
   glmmr::link_to_likelihood(calc_,family_);
   calc_.y = yvec;
-  calc_.var_par = var_par_;
+  calc_.variance.conservativeResize(yvec.size());
+  calc_.variance = variance_;
+  //calc_.var_par = var_par_;
   vcalc_ = linpred_.calc_;
   glmmr::re_linear_predictor(vcalc_,Q_);
   glmmr::linear_predictor_to_link(vcalc_,link_);
   glmmr::link_to_likelihood(vcalc_,family_);
   vcalc_.y = yvec;
-  vcalc_.var_par = var_par_;
+  //vcalc_.var_par = var_par_;
+  vcalc_.variance.conservativeResize(yvec.size());
+  vcalc_.variance = variance_;
 }
 
 inline void glmmr::Model::update_beta(const VectorXd &beta){
@@ -62,6 +75,11 @@ inline void glmmr::Model::set_trace(int trace){
   trace_ = trace;
 }
 
+inline VectorXd glmmr::Model::W(){
+  update_W();
+  return W_;
+}
+
 inline void glmmr::Model::make_covariance_sparse(){
   covariance_.set_sparse(true);
 }
@@ -83,10 +101,30 @@ inline VectorXd glmmr::Model::predict_xb(const ArrayXXd& newdata_,
 inline double glmmr::Model::log_likelihood() {
   double ll = 0;
   size_n_array = xb();
+  if(weighted_){
+    if(family_=="gaussian"){
 #pragma omp parallel for reduction (+:ll) collapse(2)
-  for(int j=0; j<zu_.cols() ; j++){
-    for(int i = 0; i<n_; i++){
-      ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),var_par_,flink);
+      for(int j=0; j<zu_.cols() ; j++){
+        for(int i = 0; i<n_; i++){
+          ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),variance_(i)/weights_(i),flink);
+        }
+      }
+    } else {
+    // THIS IS EXPERIMENTAL - ADD WARNING TO USER IN R CLASS
+#pragma omp parallel for reduction (+:ll) collapse(2)
+      for(int j=0; j<zu_.cols() ; j++){
+        for(int i = 0; i<n_; i++){
+          ll += weights_(i)*glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),variance_(i),flink);
+        }
+      }
+      ll *= weights_.sum()/n_;
+    }
+  } else {
+#pragma omp parallel for reduction (+:ll) collapse(2)
+    for(int j=0; j<zu_.cols() ; j++){
+      for(int i = 0; i<n_; i++){
+        ll += glmmr::maths::log_likelihood(y_(i),size_n_array(i) + zu_(i,j),variance_(i),flink);
+      }
     }
   }
   

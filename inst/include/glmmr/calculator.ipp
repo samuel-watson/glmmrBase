@@ -16,7 +16,9 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   instructions = calc.instructions;
   indexes = calc.indexes;
   parameter_names = calc.parameter_names;
-  var_par = calc.var_par;
+  //var_par = calc.var_par;
+  variance.conservativeResize(calc.variance.size());
+  variance = calc.variance;
   data_count = calc.data_count;
   parameter_count = calc.parameter_count;
   any_nonlinear = calc.any_nonlinear;
@@ -912,7 +914,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = a*log(a) - a + log(a*(1+4*a*(1+2*a)))/6 + log(3.141593)/2;
           stack.push(result);
         }
-        // NOTE: this function is only ever used in Poisson log likelihood and so the top of the derivative
+        // NOTE: this function is only ever used in Poisson/binom log likelihood and so the top of the derivative
         // stacks should be 0, so we don't need to do anything. However, this should be updated if ever this
         // function is used more broadly.
         //if(order > 0){
@@ -926,7 +928,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     case 41:
       {
         //push var par
-        stack.push(var_par);
+        //stack.push(var_par);
+        stack.push(variance(i));
         if(order > 0){
           addZeroDx();
         }

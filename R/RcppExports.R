@@ -109,6 +109,10 @@ Model__set_offset <- function(xp, offset_) {
     invisible(.Call(`_glmmrBase_Model__set_offset`, xp, offset_))
 }
 
+Model__set_weights <- function(xp, weights_) {
+    invisible(.Call(`_glmmrBase_Model__set_weights`, xp, weights_))
+}
+
 Model__update_beta <- function(xp, beta_) {
     invisible(.Call(`_glmmrBase_Model__update_beta`, xp, beta_))
 }
@@ -127,6 +131,10 @@ Model__use_attenuation <- function(xp, use_) {
 
 Model__update_W <- function(xp) {
     invisible(.Call(`_glmmrBase_Model__update_W`, xp))
+}
+
+Model__get_W <- function(xp) {
+    .Call(`_glmmrBase_Model__get_W`, xp)
 }
 
 Model__log_prob <- function(xp, v_) {
@@ -233,8 +241,16 @@ Model__get_var_par <- function(xp) {
     .Call(`_glmmrBase_Model__get_var_par`, xp)
 }
 
+Model__get_variance <- function(xp) {
+    .Call(`_glmmrBase_Model__get_variance`, xp)
+}
+
 Model__set_var_par <- function(xp, var_par_) {
     invisible(.Call(`_glmmrBase_Model__set_var_par`, xp, var_par_))
+}
+
+Model__set_trials <- function(xp, trials) {
+    invisible(.Call(`_glmmrBase_Model__set_trials`, xp, trials))
 }
 
 Model__L <- function(xp) {
@@ -327,10 +343,6 @@ setParallel <- function(parallel_) {
 
 re_names <- function(formula) {
     .Call(`_glmmrBase_re_names`, formula)
-}
-
-gen_dhdmu <- function(xb, family, link) {
-    .Call(`_glmmrBase_gen_dhdmu`, xb, family, link)
 }
 
 gen_sigma_approx <- function(xb, Z, D, family, link, var_par, attenuate) {

@@ -3,7 +3,6 @@
 
 #include "general.h"
 
-
 namespace glmmr {
 
 class calculator {
@@ -12,7 +11,7 @@ class calculator {
     intvec indexes;
     dblvec y;
     strvec parameter_names;
-    double var_par = 0;
+    ArrayXd variance = ArrayXd::Constant(1,1.0);
     int data_count = 0;
     int parameter_count = 0;
     bool any_nonlinear = false;
@@ -35,7 +34,6 @@ class calculator {
     MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     matrix_matrix jacobian_and_hessian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     vector_matrix jacobian_and_hessian(const dblvec& parameters);
-
 };
 
 }

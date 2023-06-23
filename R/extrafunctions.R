@@ -61,12 +61,16 @@ progress_bar <- function(i,n,len=30){
 #' @param family family object
 #' @return list with filename and type
 mcnr_family <- function(family){
-  f1 <- family[[1]]
+  f1 <- tolower(family[[1]])
   link <- family[[2]]
   gaussian_list <- c("identity")
   binomial_list <- c("logit","log","identity","probit")
+  bernoulli_list <- c("logit","log","identity","probit")
   poisson_list <- c("log")
+  gamma_list <- c("identity","inverse","log")
+  beta_list <- c("logit")
   type <- which(get(paste0(f1,"_list"))==link)
+  if(length(type)==0)stop("link not supported for this family")
   return(list(file = paste0("mcml_",f1,".stan"),type=type))
 }
 

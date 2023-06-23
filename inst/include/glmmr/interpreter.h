@@ -347,7 +347,7 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
     }
   case 3:
     {
-      // probit is a pain in the ass!
+      // probit is a pain in the ass because of the error function!
       // this uses Abramowitz and Stegun approximation.
       intvec iStar = {22,7};
       iStar.insert(iStar.end(),calc.instructions.begin(),calc.instructions.end());
@@ -411,10 +411,11 @@ inline void link_to_likelihood(glmmr::calculator& calc,
   intvec idx;
   const static std::unordered_map<std::string, int> family_to_case{
     {"gaussian",1},
-    {"binomial",2},
+    {"bernoulli",2},
     {"poisson",3},
     {"gamma",4},
-    {"beta",5}
+    {"beta",5},
+    {"binomial",6}
   };
   
   
@@ -485,6 +486,19 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct4.begin(),beta_instruct4.end());
         break;
+      }
+    case 6:
+      {
+        intvec binom_instruct = {19,40,19,41,4,3,41,40,3};
+        intvec binom_instruct2 = {16,19,5,3};
+        intvec binom_instruct3 = {21,4,16,19,41,4,5,3};
+        out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
+        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+        out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
+        out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
+        idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
+        out.insert(out.end(),binom_instruct3.begin(),binom_instruct3.end());
       }
   }
   calc.instructions = out;

@@ -26,10 +26,12 @@ public:
   glmmr::Formula formula_;
   glmmr::Covariance covariance_;
   glmmr::LinearPredictor linpred_;
+  ArrayXd variance_;
   double var_par_;
   std::string family_; 
   std::string link_;
   VectorXd offset_;
+  ArrayXd weights_;
   const VectorXd y_;
   int n_;
   int Q_;
@@ -47,10 +49,12 @@ public:
   ) : formula_(formula),
       covariance_(formula_,data,colnames),
       linpred_(formula_,data,colnames),
+      variance_(ArrayXd::Constant(data.rows(),1.0)),
       var_par_(1.0),
       family_(family),
       link_(link),
       offset_(VectorXd::Zero(data.rows())),
+      weights_(ArrayXd::Constant(data.rows(),1.0)),
       y_(y),
       n_(data.rows()),
       Q_(covariance_.Q()),
@@ -83,6 +87,7 @@ public:
       };
   
   void set_offset(const VectorXd& offset);
+  void set_weights(const ArrayXd& weights);
   void update_beta(const VectorXd &beta);
   void update_beta(const dblvec &beta);
   void update_beta_extern(const dblvec &beta);
@@ -92,6 +97,7 @@ public:
   void update_u(const MatrixXd &u);
   void update_W();
   void update_var_par(const double& v);
+  void update_var_par(const ArrayXd& v);
   double log_prob(const VectorXd &v);
   VectorXd log_gradient(const VectorXd &v,bool beta = false);
   MatrixXd linpred();
@@ -130,6 +136,7 @@ public:
   matrix_matrix kenward_roger();
   ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5, int max_iter = 501);
   MatrixXd u(bool scaled = true);
+  VectorXd W();
   
 private:
   ArrayXd size_m_array;
@@ -162,6 +169,7 @@ private:
   double target_accept_ = 0.9;
   bool verbose_ = true;
   std::vector<glmmr::SigmaBlock> sigma_blocks_;
+  bool weighted_ = false;
   
   void setup_calculator();
   void gen_sigma_blocks();

@@ -14,15 +14,17 @@ inline void glmmr::Model::update_u(const MatrixXd &u){
 }
 
 inline void glmmr::Model::update_W(){
-  double nvar_par = 1.0;
+  ArrayXd nvar_par(n_);
   if(family_=="gaussian"){
-    nvar_par *= var_par_*var_par_;
+    nvar_par = variance_;
   } else if(family_=="Gamma"){
-    nvar_par *= 1/var_par_;
+    nvar_par = variance_.inverse();
   } else if(family_=="beta"){
-    nvar_par *= (1+var_par_);
+    nvar_par = (1+variance_);
   } else if(family_=="binomial"){
-    nvar_par *= 1/var_par_;
+    nvar_par = variance_.inverse();
+  } else {
+    nvar_par.setConstant(1.0);
   }
   
   if(attenuate_){
@@ -31,13 +33,19 @@ inline void glmmr::Model::update_W(){
     size_n_array = xb();
   }
   W_ = glmmr::maths::dhdmu(size_n_array,family_,link_);
-  W_.noalias() = (W_.array().inverse()).matrix();
-  W_ *= 1/nvar_par;
+  W_ = (W_.array()*nvar_par).matrix();
+  W_ = ((W_.array().inverse()) * weights_).matrix();
 }
 
 inline void glmmr::Model::update_var_par(const double& v){
   var_par_ = v;
-  calc_.var_par = v;
+  variance_.setConstant(v);
+  calc_.variance = variance_;
+}
+
+inline void glmmr::Model::update_var_par(const ArrayXd& v){
+  variance_ = v;
+  calc_.variance = variance_;
 }
 
 inline double glmmr::Model::log_prob(const VectorXd &v){
@@ -45,10 +53,28 @@ inline double glmmr::Model::log_prob(const VectorXd &v){
   VectorXd mu = xb() + zu;
   double lp1 = 0;
   double lp2 = 0;
+
+  if(weighted_){
+    if(family_=="gaussian"){
+#pragma omp parallel for reduction (+:lp1) 
+      for(int i = 0; i<n_; i++){
+          lp1 += glmmr::maths::log_likelihood(y_(i),mu(i),variance_(i)/weights_(i),flink);
+        }
+    } else {
+    // THIS IS EXPERIMENTAL - ADD WARNING TO USER IN R CLASS
+#pragma omp parallel for reduction (+:lp1) 
+      for(int i = 0; i<n_; i++){
+          lp1 += weights_(i)*glmmr::maths::log_likelihood(y_(i),mu(i),variance_(i),flink);
+        }
+      lp1 *= weights_.sum()/n_;
+    }
+  } else {
 #pragma omp parallel for reduction (+:lp1)
-  for(int i = 0; i < n_; i++){
-    lp1 += glmmr::maths::log_likelihood(y_(i),mu(i),var_par_,flink);
+    for(int i = 0; i<n_; i++){
+        lp1 += glmmr::maths::log_likelihood(y_(i),mu(i),variance_(i),flink);
+      }
   }
+  
 #pragma omp parallel for reduction (+:lp2)
   for(int i = 0; i < v.size(); i++){
     lp2 += -0.5*v(i)*v(i); 
@@ -124,7 +150,7 @@ inline MatrixXd glmmr::Model::information_matrix_by_block(int b){
 
 
 inline void glmmr::Model::calculate_var_par(){
-  if(family_=="gaussian" || family_=="Gamma" || family_=="beta"){
+  if(family_=="gaussian"){
     // revise this for beta and Gamma re residuals
     int niter = u_.cols();
     ArrayXd sigmas(niter);
@@ -133,6 +159,7 @@ inline void glmmr::Model::calculate_var_par(){
     for(int i = 0; i < niter; ++i){
       VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), link_);
       ArrayXd resid = (y_ - zdu);
+      resid *= weights_.sqrt();
       sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1);
     }
     update_var_par(sigmas.mean());

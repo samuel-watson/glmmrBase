@@ -23,6 +23,13 @@ void Model__set_offset(SEXP xp, SEXP offset_){
 }
 
 // [[Rcpp::export]]
+void Model__set_weights(SEXP xp, SEXP weights_){
+  Eigen::ArrayXd weights = as<Eigen::ArrayXd>(weights_);
+  XPtr<glmmr::Model> ptr(xp);
+  ptr->set_weights(weights);
+}
+
+// [[Rcpp::export]]
 void Model__update_beta(SEXP xp, SEXP beta_){
   std::vector<double> beta = as<std::vector<double> >(beta_);
   XPtr<glmmr::Model> ptr(xp);
@@ -54,6 +61,13 @@ void Model__use_attenuation(SEXP xp, SEXP use_){
 void Model__update_W(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
   ptr->update_W();
+}
+
+// [[Rcpp::export]]
+SEXP Model__get_W(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  VectorXd W = ptr->W();
+  return wrap(W);
 }
 
 // [[Rcpp::export]]
@@ -236,9 +250,25 @@ SEXP Model__get_var_par(SEXP xp){
 }
 
 // [[Rcpp::export]]
+SEXP Model__get_variance(SEXP xp){
+  XPtr<glmmr::Model> ptr(xp);
+  Eigen::ArrayXd theta = ptr->variance_;
+  return wrap(theta);
+}
+
+// [[Rcpp::export]]
 void Model__set_var_par(SEXP xp, SEXP var_par_){
   double var_par = as<double>(var_par_);
   XPtr<glmmr::Model> ptr(xp);
+  ptr->update_var_par(var_par);
+}
+
+// [[Rcpp::export]]
+void Model__set_trials(SEXP xp, SEXP trials){
+  Eigen::ArrayXd var_par = as<Eigen::ArrayXd>(trials);
+  XPtr<glmmr::Model> ptr(xp);
+  if(ptr->family_ != "binomial")Rcpp::stop("trials can only be set for binomial family.");
+  if(var_par.size()!=ptr->n_)Rcpp::stop("trials wrong length");
   ptr->update_var_par(var_par);
 }
 

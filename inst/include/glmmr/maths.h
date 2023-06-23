@@ -17,16 +17,20 @@ namespace maths {
 const static inline std::unordered_map<std::string,int> model_to_int{
   {"poissonlog",1},
   {"poissonidentity",2},
-  {"binomiallogit",3},
-  {"binomiallog",4},
-  {"binomialidentity",5},
-  {"binomialprobit",6},
+  {"bernoullilogit",3},
+  {"bernoullilog",4},
+  {"bernoulliidentity",5},
+  {"bernoulliprobit",6},
   {"gaussianidentity",7},
   {"gaussianlog",8},
   {"gammalog",9},
   {"gammainverse",10},
   {"gammaidentity",11},
-  {"betalogit",12}
+  {"betalogit",12},
+  {"binomiallogit",13},
+  {"binomiallog",14},
+  {"binomialidentity",15},
+  {"binomialprobit",16}
 };
 
 inline double gaussian_cdf(double value)
@@ -110,23 +114,23 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
   case 2:
     wdiag = exp_vec(xb);
     break;
-  case 3:
+  case 3: case 13:
     p = mod_inv_func(xb, "logit");
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1/(p(i)*(1.0 - p(i)));
     }
     break;
-  case 4:
+  case 4: case 14:
     p = mod_inv_func(xb, "log");
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = (1.0 - p(i))/p(i);
     }
     break;
-  case 5:
+  case 5: case 15:
     p = mod_inv_func(xb, "identity");
     wdiag = (p * (1 - p)).matrix();
     break;
-  case 6:
+  case 6: case 16:
     {
       p = mod_inv_func(xb, "probit");
       Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
@@ -167,7 +171,6 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
     }
     break;
   }
-  
   return wdiag;
 }
 
@@ -346,12 +349,12 @@ inline double log_likelihood(double y,
     }
     break;
   case 7:
-    logl = -1*log(var_par) -0.5*log(2*3.141593) -
-      0.5*((y - mu)/var_par)*((y - mu)/var_par);
+    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
+      0.5*(y - mu)*(y - mu)/var_par;
     break;
   case 8:
-    logl = -1*log(var_par) -0.5*log(2*3.141593) -
-      0.5*((log(y) - mu)/var_par)*((log(y) - mu)/var_par);
+    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
+      0.5*(log(y) - mu)*(log(y) - mu)/var_par;
     break;
   case 9:
       {
@@ -370,6 +373,38 @@ inline double log_likelihood(double y,
     break;
   case 12:
     logl = (mu*var_par - 1)*log(y) + ((1-mu)*var_par - 1)*log(1-y) - lgamma(mu*var_par) - lgamma((1-mu)*var_par) + lgamma(var_par);
+  case 13:
+    {
+      double lfk = glmmr::maths::log_factorial_approx(y);
+      double lfn = glmmr::maths::log_factorial_approx(var_par);
+      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+      logl = lfn - lfk - lfnk + y*log(1/(1+exp(-1.0*mu))) + (var_par - y)*log(1 - 1/(1+exp(-1.0*mu)));
+      break;
+    }
+  case 14:
+    {
+      double lfk = glmmr::maths::log_factorial_approx(y);
+      double lfn = glmmr::maths::log_factorial_approx(var_par);
+      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+      logl = lfn - lfk - lfnk + y*mu + (var_par - y)*log(1 - exp(mu));
+      break;
+    }
+  case 15:
+    {
+      double lfk = glmmr::maths::log_factorial_approx(y);
+      double lfn = glmmr::maths::log_factorial_approx(var_par);
+      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+      logl = lfn - lfk - lfnk + y*log(mu) + (var_par - y)*log(1 - mu);
+      break;
+    }
+  case 16:
+    {
+      double lfk = glmmr::maths::log_factorial_approx(y);
+      double lfn = glmmr::maths::log_factorial_approx(var_par);
+      double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
+      logl = lfn - lfk - lfnk + y*((double)R::pnorm(mu,0,1,true,true)) + (var_par - y)*log(1 - (double)R::pnorm(mu,0,1,true,false));
+      break;
+    }
   }
   return logl;
 }

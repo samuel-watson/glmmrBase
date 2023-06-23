@@ -12,13 +12,13 @@ std::vector<std::string> re_names(const std::string& formula){
   return re;
 }
 
-// [[Rcpp::export]]
-Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
-                          std::string family,
-                          std::string link) {
-  Eigen::VectorXd out = glmmr::maths::dhdmu(xb, family, link);
-  return out;
-}
+// // [[Rcpp::export]]
+// Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
+//                           std::string family,
+//                           std::string link) {
+//   Eigen::VectorXd out = glmmr::maths::dhdmu(xb, family, link);
+//   return out;
+// }
 
 
 // [[Rcpp::export]]
