@@ -9,7 +9,7 @@ Description: Specification, analysis, simulation, and fitting of generalised lin
   Includes Markov Chain Monte Carlo Maximum likelihood and Laplace approximation model fitting for a range of GLMMs, 
   non-linear fixed effect specifications, a wide range of flexible covariance functions that can be combined arbitrarily,
   robust and bias-corrected standard error estimation, power calculation, data simulation, and more. 
-  See <https://github.com/samuel-watson/glmmrBase/blob/master/README.md> for a detailed manual.
+  See <https://samuel-watson.github.io/glmmr-web/> for a detailed manual.
 License: GPL (>= 2)
 Imports: 
     methods,
