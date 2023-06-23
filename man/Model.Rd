@@ -71,14 +71,18 @@ parameter estimates.
 The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
 tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
 
-Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}
+Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}.
+
+To provide weights for the model fitting, store them in self$weights. To set the number of
+trials for binomial models, set self$trials.
 
 \strong{Laplace approximation}
 Fits generalised linear mixed models using Laplace approximation to the log likelihood. For non-Gaussian models
 the covariance matrix is approximated using the first order approximation based on the marginal
 quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
 can be further adjusted following the proposal of Zeger et al (1988), use the member function \code{use_attenuated()} in this
-class, see \link[glmmrBase]{Model}.
+class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To
+set the number of trials for binomial models, set self$trials.
 }
 \examples{
 
@@ -306,7 +310,9 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 
 \item{\code{family}}{One of the family function used in R's glm functions. See \link[stats]{family} for details}
 
-\item{\code{exp_condition}}{A vector indicting the unique experimental conditions for each observation, see Details.}
+\item{\code{weights}}{A vector indicting the weights for the observations.}
+
+\item{\code{trials}}{For binomial family models, the number of trials for each observation. The default is 1 (bernoulli).}
 
 \item{\code{formula}}{The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.}
 
@@ -456,6 +462,8 @@ Create a new Model object
   family = NULL,
   var_par = NULL,
   offset = NULL,
+  weights = NULL,
+  trials = NULL,
   verbose = TRUE
 )}\if{html}{\out{</div>}}
 }
@@ -486,6 +494,11 @@ objects, or as members of the list of arguments to \code{mean}. Current accepts 
 \item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
 \item{\code{offset}}{A vector of offset values. Optional - could be provided to the argument to mean instead.}
+
+\item{\code{weights}}{A vector of weights. Optional..}
+
+\item{\code{trials}}{For binomial family models, the number of trials for each observation. If it is not set, then it will
+default to 1 (a bernoulli model).}
 
 \item{\code{verbose}}{Logical indicating whether to provide detailed output}
 }
