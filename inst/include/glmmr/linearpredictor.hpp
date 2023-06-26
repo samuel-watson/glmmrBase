@@ -10,79 +10,78 @@ namespace glmmr {
 
 class LinearPredictor {
 public:
-  dblvec parameters_;
-  glmmr::calculator calc_;
-  MatrixXd Xdata_;
-
-  LinearPredictor(glmmr::Formula& form,
-             const Eigen::ArrayXXd &data,
-             const strvec& colnames) :
-    Xdata_(data.rows(),1),
-    colnames_(colnames),  
-    form_(form),
-    n_(data.rows()),
+  dblvec parameters;
+  glmmr::calculator calc;
+  MatrixXd Xdata;
+  LinearPredictor(glmmr::Formula& form_,
+                  const Eigen::ArrayXXd &data_,
+                  const strvec& colnames_) :
+    Xdata(data_.rows(),1),
+    colnames_vec(colnames_),  
+    form(form_),
+    n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
     {
-      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
-      P_ = calc_.parameter_names.size();
-      parameters_.resize(P_);
-      std::fill(parameters_.begin(),parameters_.end(),0.0);
+      form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+      P_ = calc.parameter_names.size();
+      parameters.resize(P_);
+      std::fill(parameters.begin(),parameters.end(),0.0);
       X_.conservativeResize(n_,P_);
-      if(!calc_.any_nonlinear){
-        X_ = calc_.jacobian(parameters_,Xdata_);
+      if(!calc.any_nonlinear){
+        X_ = calc.jacobian(parameters,Xdata);
       } else {
         X_.setZero();
       }
     };
 
-  LinearPredictor(glmmr::Formula& form,
-             const Eigen::ArrayXXd &data,
-             const strvec& colnames,
-             const dblvec& parameters) :
-    Xdata_(data.rows(),1),
-    colnames_(colnames), 
-    form_(form),
-    n_(data.rows()),
+  LinearPredictor(glmmr::Formula& form_,
+             const Eigen::ArrayXXd &data_,
+             const strvec& colnames_,
+             const dblvec& parameters_) :
+    Xdata(data_.rows(),1),
+    colnames_vec(colnames_), 
+    form(form_),
+    n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
      {
-      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
+      form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
       update_parameters(parameters);
-      P_ = calc_.parameter_names.size();
+      P_ = calc.parameter_names.size();
       X_.conservativeResize(n_,P_);
-      X_ = calc_.jacobian(parameters_,Xdata_);
-      x_set_ = true;
+      X_ = calc.jacobian(parameters,Xdata);
+      x_set = true;
     };
 
-  LinearPredictor(glmmr::Formula& form,
-             const Eigen::ArrayXXd &data,
-             const strvec& colnames,
-             const Eigen::ArrayXd& parameters) :
-    Xdata_(data.rows(),1),
-    colnames_(colnames), 
-    form_(form),
-    n_(data.rows()),
+  LinearPredictor(glmmr::Formula& form_,
+             const Eigen::ArrayXXd &data_,
+             const strvec& colnames_,
+             const Eigen::ArrayXd& parameters_) :
+    Xdata(data_.rows(),1),
+    colnames_vec(colnames_), 
+    form(form_),
+    n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
      {
-      form_.calculate_linear_predictor(calc_,data,colnames,Xdata_);
+      form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
       update_parameters(parameters);
-      P_ = calc_.parameter_names.size();
+      P_ = calc.parameter_names.size();
       X_.conservativeResize(n_,P_);
-      X_ = calc_.jacobian(parameters_,Xdata_);
-      x_set_ = true;
+      X_ = calc.jacobian(parameters,Xdata);
+      x_set = true;
     };
 
-  void update_parameters(const dblvec& parameters){
-    if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
-    parameters_ = parameters;
-    if(!x_set_){
-      X_ = calc_.jacobian(parameters_,Xdata_);
-      x_set_ = true;
+  void update_parameters(const dblvec& parameters_){
+    if(parameters.size()!=P())Rcpp::stop("wrong number of parameters");
+    parameters = parameters_;
+    if(!x_set){
+      X_ = calc.jacobian(parameters,Xdata);
+      x_set = true;
     }
   };
 
-  void update_parameters(const Eigen::ArrayXd& parameters){
-    if(parameters.size()!=P_)Rcpp::stop("wrong number of parameters");
-    dblvec new_parameters(parameters.data(),parameters.data()+parameters.size());
+  void update_parameters(const Eigen::ArrayXd& parameters_){
+    if(parameters.size()!=P())Rcpp::stop("wrong number of parameters");
+    dblvec new_parameters(parameters_.data(),parameters_.data()+parameters_.size());
     update_parameters(new_parameters);
   };
 
@@ -90,16 +89,20 @@ public:
     return P_;
   }
   
+  int n(){
+    return n_;
+  }
+  
   strvec colnames(){
-    return colnames_;
+    return colnames_vec;
   }
 
   VectorXd xb(){
-    VectorXd xb(n_);
-    if(calc_.any_nonlinear){
-      xb = calc_.linear_predictor(parameters_,Xdata_);
+    VectorXd xb(n());
+    if(calc.any_nonlinear){
+      xb = calc.linear_predictor(parameters,Xdata);
     } else {
-      Map<VectorXd> beta(parameters_.data(),parameters_.size());
+      Map<VectorXd> beta(parameters.data(),parameters.size());
       xb = X_ * beta;
     }
     
@@ -107,34 +110,44 @@ public:
   }
 
   MatrixXd X(){
-    if(calc_.any_nonlinear){
-      X_ = calc_.jacobian(parameters_,Xdata_);
+    if(calc.any_nonlinear){
+      X_ = calc.jacobian(parameters,Xdata);
     }
     return X_;
   }
   
   strvec parameter_names(){
-    return calc_.parameter_names;
+    return calc.parameter_names;
   }
   
   VectorXd parameter_vector(){
-    VectorXd pars = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(parameters_.data(),parameters_.size());
+    VectorXd pars = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(parameters.data(),parameters.size());
     return pars;
   }
   
   bool any_nonlinear(){
-    return calc_.any_nonlinear;
+    return calc.any_nonlinear;
+  }
+  
+  VectorXd predict_xb(const ArrayXXd& newdata_,
+             const ArrayXd& newoffset_){
+    glmmr::LinearPredictor newlinpred(form,
+                                       newdata_,
+                                       colnames(),
+                                       parameters);
+    VectorXd xb = newlinpred.xb() + newoffset_.matrix();
+    return xb;
   }
 
 private:
-  strvec colnames_;
-  glmmr::Formula& form_;
+  strvec colnames_vec;
+  glmmr::Formula& form;
   int P_;
-  int n_fe_components_;
+  int n_fe_components;
   int n_;
-  intvec x_cols_;
+  intvec x_cols;
   MatrixXd X_;
-  bool x_set_ = false;
+  bool x_set = false;
 };
 }
 

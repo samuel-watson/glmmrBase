@@ -73,10 +73,10 @@ Model <- R6::R6Class("Model",
                          curr_state <- private$attenuate_parameters
                          if(use){
                            private$attenuate_parameters <- TRUE
-                           if(!is.null(private$ptr))Model__use_attenuation(private$ptr,TRUE)
+                           Model__use_attenuation(private$ptr,TRUE)
                          } else {
                            private$attenuate_parameters <- FALSE
-                           if(!is.null(private$ptr))Model__use_attenuation(private$ptr,FALSE)
+                           Model__use_attenuation(private$ptr,FALSE)
                          }
                          if(private$attenuate_parameters != curr_state){
                            private$genW()
@@ -124,7 +124,6 @@ Model <- R6::R6Class("Model",
                                           offset = rep(0,nrow(newdata)),
                                           m=0
                                           ){
-                         if(is.null(private$ptr))stop("No previous model has been estimated")
                          if(missing(offset)){
                            offs <- rep(0,nrow(newdata))
                          } else {
@@ -330,6 +329,7 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          private$hash <- private$hash_do()
+                         private$update_ptr()
                        },
                        #' @description
                        #' Print method for `Model` class
@@ -565,7 +565,6 @@ Model <- R6::R6Class("Model",
                              Model__set_var_par(private$ptr,var.par)
                            }
                          }
-                         
                          self$check(FALSE)
                        },
                        #' @description
@@ -575,7 +574,7 @@ Model <- R6::R6Class("Model",
                        #' @return A PxP matrix
                        information_matrix = function(include.re = FALSE){
                          if(is.null(private$ptr)){
-                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                           private$update_ptr()
                          }
                          if(include.re){
                            return(Model__obs_information_matrix(private$ptr))
@@ -588,7 +587,7 @@ Model <- R6::R6Class("Model",
                        #' @return A PxP matrix
                        sandwich = function(){
                          if(is.null(private$ptr)){
-                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                           private$update_ptr()
                          }
                          return(Model__sandwich(private$ptr))
                        },
@@ -597,7 +596,7 @@ Model <- R6::R6Class("Model",
                        #' @return A PxP matrix
                        kenward_roger = function(){
                          if(is.null(private$ptr)){
-                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                           private$update_ptr()
                          }
                          return(Model__kenward_roger(private$ptr))
                        },
@@ -660,7 +659,7 @@ Model <- R6::R6Class("Model",
                        #' @return A vector with values of the glm iterated weights
                        w_matrix = function(){
                          if(is.null(private$ptr)){
-                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                           private$update_ptr()
                          }
                          private$genW()
                          return(private$W)
@@ -680,7 +679,7 @@ Model <- R6::R6Class("Model",
                        #' @return A matrix.
                        Sigma = function(inverse = FALSE){
                          if(is.null(private$ptr)){
-                           private$update_ptr(rep(0,nrow(self$mean$data)))
+                           private$update_ptr()
                          }
                          return(Model__Sigma(private$ptr,inverse))
                        },
@@ -766,7 +765,7 @@ Model <- R6::R6Class("Model",
                                        sparse = FALSE,
                                        usestan = TRUE){
                          private$verify_data(y)
-                         private$update_ptr(y)
+                         private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!usestan){
@@ -993,7 +992,7 @@ Model <- R6::R6Class("Model",
                                      max.iter = 40,
                                      tol = 1e-2){
                          private$verify_data(y)
-                         private$update_ptr(y)
+                         private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
@@ -1129,7 +1128,7 @@ Model <- R6::R6Class("Model",
                        #' @return A matrix of samples of the random effects
                        mcmc_sample = function(y,usestan = TRUE,verbose=TRUE){
                          private$verify_data(y)
-                         private$update_ptr(y)
+                         private$set_y(y)
                          if(usestan){
                            file_type <- mcnr_family(self$family)
                            if(!requireNamespace("cmdstanr")){
@@ -1169,9 +1168,7 @@ Model <- R6::R6Class("Model",
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
                            dsamps <- Matrix::Matrix(Model__L(private$ptr) %*% Matrix::t(dsamps)) #check this
-                           
                          } else {
-                           
                            if(verbose)Model__set_trace(private$ptr,2)
                            Model__use_attenuation(private$ptr,private$attenuate_parameters)
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
@@ -1193,7 +1190,7 @@ Model <- R6::R6Class("Model",
                        #' @return A vector of the gradient
                        gradient = function(y,u,beta=FALSE){
                          private$verify_data(y)
-                         private$update_ptr(y)
+                         private$set_y(y)
                          grad <- Model__log_gradient(private$ptr,u,beta)
                          return(grad)
                        },
@@ -1207,7 +1204,7 @@ Model <- R6::R6Class("Model",
                        #' (sigma, d(1), d(2), d(3), d2(1,1), d2(1,2), d2(1,3), d2(2,2), d2(2,3), d2(3,3)).
                        #' @return A list of matrices, see description for contents of the list.
                        partial_sigma = function(){
-                         if(is.null(private$ptr))private$update_ptr(rep(0,nrow(self$mean$X)))
+                         if(is.null(private$ptr))private$update_ptr()
                          out <- Model__cov_deriv(private$ptr)
                          return(out)
                        },
@@ -1217,7 +1214,7 @@ Model <- R6::R6Class("Model",
                        #' N(0,D) scale (`scaled=TRUE`)
                        #' @return A matrix of random effect samples
                        u = function(scaled = TRUE){
-                         if(is.null(private$ptr))stop("No previous model fit")
+                         if(is.null(private$ptr))stop("Model not set")
                          return(Model__u(private$ptr,scaled))
                        },
                        #' @description 
@@ -1230,7 +1227,7 @@ Model <- R6::R6Class("Model",
                        #' @return The log-likelihood of the model parameters
                        log_likelihood = function(y,u){
                          private$verify_data(y)
-                         private$update_ptr(y)
+                         private$set_y(y)
                          if(!missing(u))Model__update_u(private$ptr,u)
                          return(Model__log_likelihood(private$ptr))
                        },
@@ -1269,16 +1266,6 @@ Model <- R6::R6Class("Model",
                        genW = function(){
                          private$W <- Model__get_W(private$ptr)
                        },
-                       genS = function(update=TRUE){
-                         S = gen_sigma_approx(xb=matrix(self$mean$X%*%self$mean$parameters,ncol=1),
-                                              Z = as.matrix(self$covariance$Z),
-                                              D = as.matrix(self$covariance$D),
-                                              family=self$family[[1]],
-                                              link = self$family[[2]],
-                                              var_par = self$var_par,
-                                              attenuate = private$attenuate_parameters)
-                         return(S)
-                       },
                        attenuate_parameters = FALSE,
                        hash = NULL,
                        hash_do = function(){
@@ -1286,32 +1273,37 @@ Model <- R6::R6Class("Model",
                                           self$mean$.__enclos_env__$private$hash))
                        },
                        ptr = NULL,
-                       update_ptr = function(y){
-                         if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
-                         if(length(y)!=nrow(self$mean$X))stop("y not correct size")
-                         if(gsub(" ","",self$mean$formula) != gsub(" ","",self$covariance$formula)){
-                           form <- paste0(self$mean$formula,"+",self$covariance$formula)
-                         } else {
-                           form <- gsub(" ","",self$mean$formula)
+                       set_y = function(y){
+                         if(is.null(private$ptr))private$update_ptr()
+                         Model__set_y(y)
+                       },
+                       update_ptr = function(){
+                         if(is.null(private$ptr)){
+                           if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
+                           if(gsub(" ","",self$mean$formula) != gsub(" ","",self$covariance$formula)){
+                             form <- paste0(self$mean$formula,"+",self$covariance$formula)
+                           } else {
+                             form <- gsub(" ","",self$mean$formula)
+                           }
+                           data <- self$covariance$data
+                           if(any(!colnames(self$mean$data)%in%colnames(data))){
+                             cnames <- which(!colnames(self$mean$data)%in%colnames(data))
+                             data <- cbind(data,self$mean$data[,cnames])
+                           }
+                           if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
+                           private$ptr <- Model__new(form,as.matrix(data),colnames(data),tolower(self$family[[1]]),self$family[[2]])
+                           Model__set_offset(private$ptr,self$mean$offset)
+                           Model__set_weights(private$ptr,self$weights)
+                           Model__set_var_par(private$ptr,self$var_par)
+                           if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials)
+                           Model__update_beta(private$ptr,self$mean$parameters)
+                           Model__update_theta(private$ptr,self$covariance$parameters)
+                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
+                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
+                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
+                           Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
+                           if(!private$useSparse) Model__make_dense(private$ptr)
                          }
-                         data <- self$covariance$data
-                         if(any(!colnames(self$mean$data)%in%colnames(data))){
-                           cnames <- which(!colnames(self$mean$data)%in%colnames(data))
-                           data <- cbind(data,self$mean$data[,cnames])
-                         }
-                         if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                         private$ptr <- Model__new(y,form,as.matrix(data),colnames(data),tolower(self$family[[1]]),self$family[[2]])
-                         Model__set_offset(private$ptr,self$mean$offset)
-                         Model__set_weights(private$ptr,self$weights)
-                         Model__set_var_par(private$ptr,self$var_par)
-                         if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials)
-                         Model__update_beta(private$ptr,self$mean$parameters)
-                         Model__update_theta(private$ptr,self$covariance$parameters)
-                         Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
-                         Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
-                         Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
-                         Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
-                         if(!private$useSparse) Model__make_dense(private$ptr)
                        },
                        verify_data = function(y){
                          if(self$family[[1]]=="binomial"){

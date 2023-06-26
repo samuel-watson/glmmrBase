@@ -8,30 +8,12 @@
 #include <RcppEigen.h>
 #include "algo.h"
 #include "general.h"
+#include "family.hpp"
 
 // [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
 namespace maths {
-
-const static inline std::unordered_map<std::string,int> model_to_int{
-  {"poissonlog",1},
-  {"poissonidentity",2},
-  {"bernoullilogit",3},
-  {"bernoullilog",4},
-  {"bernoulliidentity",5},
-  {"bernoulliprobit",6},
-  {"gaussianidentity",7},
-  {"gaussianlog",8},
-  {"gammalog",9},
-  {"gammainverse",10},
-  {"gammaidentity",11},
-  {"betalogit",12},
-  {"binomiallogit",13},
-  {"binomiallog",14},
-  {"binomialidentity",15},
-  {"binomialprobit",16}
-};
 
 inline double gaussian_cdf(double value)
 {
@@ -101,13 +83,12 @@ inline Eigen::VectorXd mod_inv_func(Eigen::VectorXd mu,
 }
 
 inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
-                             std::string family,
-                             std::string link) {
+                             const glmmr::Family& family) {
   
   Eigen::VectorXd wdiag(xb.size());
   Eigen::ArrayXd p(xb.size());
   
-  switch (glmmr::maths::model_to_int.at(family + link)) {
+  switch (family.flink) {
   case 1:
     wdiag = exp_vec(-1.0 * xb);
     break;

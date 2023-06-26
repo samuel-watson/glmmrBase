@@ -8,6 +8,7 @@
 #include "glmmr/covariance.hpp"
 #include "glmmr/linearpredictor.hpp"
 #include "glmmr/model.hpp"
+#include "glmmr/modelbits.hpp"
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]

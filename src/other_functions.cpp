@@ -12,48 +12,6 @@ std::vector<std::string> re_names(const std::string& formula){
   return re;
 }
 
-// // [[Rcpp::export]]
-// Eigen::VectorXd gen_dhdmu(const Eigen::VectorXd& xb,
-//                           std::string family,
-//                           std::string link) {
-//   Eigen::VectorXd out = glmmr::maths::dhdmu(xb, family, link);
-//   return out;
-// }
-
-
-// [[Rcpp::export]]
-Eigen::MatrixXd gen_sigma_approx(const Eigen::VectorXd& xb,
-                                 const Eigen::MatrixXd& Z,
-                                 const Eigen::MatrixXd& D,
-                                 std::string family,
-                                 std::string link,
-                                 double var_par,
-                                 bool attenuate
-){
-  Eigen::MatrixXd S(xb.size(),xb.size());
-  Eigen::VectorXd linpred(xb);
-  if(attenuate){
-    linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
-  }
-  
-  Eigen::VectorXd W = glmmr::maths::dhdmu(linpred,family,link);
-  double nvar_par = 1.0;
-  if(family=="gaussian"){
-    nvar_par *= var_par*var_par;
-  } else if(family=="Gamma"){
-    nvar_par *= 1/var_par;
-  } else if(family=="beta"){
-    nvar_par *= (1+var_par);
-  } else if(family=="binomial"){
-    nvar_par *= 1/var_par;
-  }
-  W *= nvar_par;
-  //W = W.array().inverse().matrix();
-  S = Z*D*Z.transpose();
-  S += W.asDiagonal();
-  return S;
-}
-
 // [[Rcpp::export]]
 Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
                              const Eigen::MatrixXd& Z,
@@ -82,7 +40,7 @@ SEXP girling_algorithm(SEXP xp, SEXP N_,
   double tol = as<double>(tol_);
   Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::ArrayXd w = ptr->optimum_weights(N,sigma_sq,C,tol);
+  Eigen::ArrayXd w = ptr->optim.optimum_weights(N,sigma_sq,C,tol);
   return wrap(w);
 }
 

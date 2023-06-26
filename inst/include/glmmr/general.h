@@ -1,6 +1,9 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS // yes CRAN has annoying policies
+#define _USE_MATH_DEFINES
+
 // includes
 #include <RcppEigen.h>
 #include <vector>
@@ -22,6 +25,7 @@
 #include <boost/math/special_functions/digamma.hpp>
 #include <rbobyqa.h>
 
+
 using namespace Eigen;
 
 typedef std::string str;
@@ -34,10 +38,13 @@ typedef std::vector<intvec> intvec2d;
 typedef std::vector<dblvec2d> dblvec3d;
 typedef std::vector<intvec2d> intvec3d;
 
+// [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
+// [[Rcpp::plugins(openmp)]]
 
 namespace glmmr {
 
+//useful things used in a few places
 const static std::unordered_map<str, double> nvars = {  
   {"gr", 1},
   {"ar", 2},
@@ -138,7 +145,7 @@ inline bool expect_number_of_unique_elements(const std::vector<T> vec,
 }
 
 struct vector_matrix{
-  public:
+public:
   VectorXd vec;
   MatrixXd mat;
   vector_matrix(int n): vec(n), mat(n,n) {};
@@ -162,6 +169,5 @@ public:
     return *this;
   };
 };
-
 
 #endif
