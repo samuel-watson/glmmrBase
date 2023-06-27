@@ -4,10 +4,14 @@ test_that("model dense ml", {
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
-  mptr <- Model__new(y, "t2 + t3 + (1|gr(j))",
-                      as.matrix(df),
-                      colnames(df),
-                      "gaussian","identity")
+  mbptr <- ModelBits__new(
+    "t2 + t3 + (1|gr(j))",
+    as.matrix(df),
+    colnames(df),
+    "gaussian","identity",c(0,0,0), c(0.05)
+  )
+  mptr <- Model__new_from_bits(mbptr)
+  Model__set_y(mptr,y)
   expect_error(Model__update_beta(mptr,c(0,0)))
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(Model__update_theta(mptr,c(0.25,0.25)))
@@ -30,10 +34,14 @@ test_that("model dense la", {
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
-  mptr <- Model__new(y, "t2 + t3 + (1|gr(j))",
-                      as.matrix(df),
-                      colnames(df),
-                      "gaussian","identity")
+  mbptr <- ModelBits__new(
+    "t2 + t3 + (1|gr(j))",
+    as.matrix(df),
+    colnames(df),
+    "gaussian","identity",c(0,0,0), c(0.05)
+  )
+  mptr <- Model__new_from_bits(mbptr)
+  Model__set_y(mptr,y)
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   Model__update_theta(mptr,c(0.0625))
   Model__set_var_par(mptr,1)
@@ -56,10 +64,14 @@ test_that("model sparse ml", {
   df$t1 <- I(df$t==1)*1
   df$t2 <- I(df$t==2)*1
   df$t3 <- I(df$t==3)*1
-  mptr <- Model__new(y, "t2 + t3 + (1|gr(j))",
-                      as.matrix(df),
-                      colnames(df),
-                      "gaussian","identity")
+  mbptr <- ModelBits__new(
+    "t2 + t3 + (1|gr(j))",
+    as.matrix(df),
+    colnames(df),
+    "gaussian","identity",c(0,0,0), c(0.05)
+  )
+  mptr <- Model__new_from_bits(mbptr)
+  Model__set_y(mptr,y)
   expect_error(Model__update_beta(mptr,c(0,0)))
   Model__update_beta(mptr,c(0.1,0.1,0.1))
   expect_error(Model__update_theta(mptr,c(0.25,0.25)))

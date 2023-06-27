@@ -2,7 +2,7 @@ Package: glmmrBase
 Type: Package
 Title: Generalised Linear Mixed Models in R
 Version: 0.4.3
-Date: 2023-06-25
+Date: 2023-06-27
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 

@@ -34,28 +34,17 @@ void ModelBits__update_theta(SEXP xp, SEXP theta_){
 }
 
 // [[Rcpp::export]]
-SEXP Model__new(SEXP formula_, SEXP data_, SEXP colnames_,
-                SEXP family_, SEXP link_, SEXP beta_,
-                SEXP theta_){
-  std::string formula = as<std::string>(formula_);
-  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
-  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
-  std::string family = as<std::string>(family_);
-  std::string link = as<std::string>(link_);
-  std::vector<double> beta = as<std::vector<double> >(beta_);
-  std::vector<double> theta = as<std::vector<double> >(theta_);
-  glmmr::ModelBits model(formula,data,colnames,family,link);
-  model.linear_predictor.update_parameters(beta);
-  model.covariance.update_parameters(theta);
-  XPtr<glmmr::Model> ptr(new glmmr::Model(model),true);
+SEXP Model__new_from_bits(SEXP bptr_){
+  XPtr<glmmr::ModelBits> bptr(bptr_);
+  XPtr<glmmr::Model> ptr(new glmmr::Model(*bptr),true);
   return ptr;
 }
 
 // [[Rcpp::export]]
 void Model__set_y(SEXP xp, SEXP y_){
-  Eigen::VectorXd offset = as<Eigen::VectorXd>(y_);
+  Eigen::VectorXd y = as<Eigen::VectorXd>(y_);
   XPtr<glmmr::Model> ptr(xp);
-  ptr->set_y(offset);
+  ptr->set_y(y);
 }
 
 // [[Rcpp::export]]

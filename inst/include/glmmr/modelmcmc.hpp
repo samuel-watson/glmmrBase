@@ -61,7 +61,7 @@ private:
 
 inline double glmmr::ModelMCMC::log_prob(const VectorXd &v){
   VectorXd zu = re.ZL * v;
-  VectorXd mu = model.xb().matrix() + re.Zu();
+  VectorXd mu = model.xb().matrix() + zu;
   double lp1 = 0;
   double lp2 = 0;
   if(model.weighted){
@@ -91,9 +91,9 @@ inline double glmmr::ModelMCMC::log_prob(const VectorXd &v){
 }
 
 inline VectorXd glmmr::ModelMCMC::new_proposal(const VectorXd& u0_,
-                                           bool adapt_, 
-                                           int iter_,
-                                           double runif_){
+                                              bool adapt_, 
+                                              int iter_,
+                                              double runif_){
   Rcpp::NumericVector z = Rcpp::rnorm(model.covariance.Q());
   VectorXd r = Rcpp::as<Map<VectorXd> >(z);
   VectorXd grad = matrix.log_gradient(u0_,false);
@@ -153,8 +153,6 @@ inline void glmmr::ModelMCMC::sample(int warmup_,
   accept = 0;
   std::minstd_rand gen(std::random_device{}());
   std::uniform_real_distribution<double> dist(0.0, 1.0);
-  if(nsamp_!=re.u(false).cols())re.u_.conservativeResize(model.covariance.Q(),nsamp_);
-  re.u_.setZero();
   int totalsamps = nsamp_ + warmup_;
   int i;
   double prob;
@@ -172,7 +170,6 @@ inline void glmmr::ModelMCMC::sample(int warmup_,
     }
   }
   re.u_.col(0) = unew;
-  int iter = 1;
   //sampling
   for(i = 0; i < nsamp_-1; i++){
     prob = dist(gen);
@@ -183,14 +180,15 @@ inline void glmmr::ModelMCMC::sample(int warmup_,
   }
   if(trace>0)Rcpp::Rcout << "\nAccept rate: " << (double)accept/(warmup_+nsamp_) << " steps: " << steps << " step size: " << e;
   if(verbose)Rcpp::Rcout << "\n" << std::string(40, '-');
-  // return samples_.matrix();//.array();//remove L
 }
 
 inline void glmmr::ModelMCMC::mcmc_sample(int warmup_,
                                           int samples_,
                                           int adapt_){
+  if(re.u_.cols()!=samples_)re.u_.conservativeResize(NoChange,samples_);
+  if(re.u_.cols()!=re.zu_.cols())re.zu_.conservativeResize(NoChange,samples_);
+  re.u_.setZero();
   sample(warmup_,samples_,adapt_);
-  if(re.u_.cols()!=re.Zu().cols())re.zu_.conservativeResize(model.covariance.Q(),re.u_.cols());
   re.zu_ = re.ZL*re.u_;
 }
 

@@ -183,10 +183,10 @@ inline MatrixXd glmmr::ModelMatrix::observed_information_matrix(){
   //result *= (1.0/iter);
   //return result;
   W.update();
-  MatrixXd XtXW = (model.linear_predictor.X()).transpose() * W.W().asDiagonal() * model.linear_predictor.X();
-  MatrixXd ZL = sparse_to_dense(re.ZL,false);
-  MatrixXd XtWZL = (model.linear_predictor.X()).transpose() * W.W().asDiagonal() * ZL;
-  MatrixXd ZLWLZ = ZL.transpose() * W.W().asDiagonal() * ZL;
+  MatrixXd XtXW = (model.linear_predictor.X()).transpose() * W.W_.asDiagonal() * model.linear_predictor.X();
+  MatrixXd ZL = model.covariance.ZL();
+  MatrixXd XtWZL = (model.linear_predictor.X()).transpose() * W.W_.asDiagonal() * ZL;
+  MatrixXd ZLWLZ = ZL.transpose() * W.W_.asDiagonal() * ZL;
   ZLWLZ += MatrixXd::Identity(model.covariance.Q(),model.covariance.Q());
   MatrixXd infomat(model.linear_predictor.P()+model.covariance.Q(),model.linear_predictor.P()+model.covariance.Q());
   infomat.topLeftCorner(model.linear_predictor.P(),model.linear_predictor.P()) = XtXW;

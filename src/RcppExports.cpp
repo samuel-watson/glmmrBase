@@ -329,31 +329,15 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__new
-SEXP Model__new(SEXP bitsptr_);
-RcppExport SEXP _glmmrBase_Model__new(SEXP bitsptr_SEXP) {
+// Model__new_from_bits
+SEXP Model__new_from_bits(SEXP bptr_);
+RcppExport SEXP _glmmrBase_Model__new_from_bits(SEXP bptr_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type bitsptr_(bitsptr_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__new(bitsptr_));
+    Rcpp::traits::input_parameter< SEXP >::type bptr_(bptr_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__new_from_bits(bptr_));
     return rcpp_result_gen;
-END_RCPP
-}
-// RE__new
-void RE__new(SEXP formula_, SEXP data_, SEXP colnames_, SEXP family_, SEXP link_, SEXP beta_, SEXP theta_);
-RcppExport SEXP _glmmrBase_RE__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP, SEXP family_SEXP, SEXP link_SEXP, SEXP beta_SEXP, SEXP theta_SEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type family_(family_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type link_(link_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type beta_(beta_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type theta_(theta_SEXP);
-    RE__new(formula_, data_, colnames_, family_, link_, beta_, theta_);
-    return R_NilValue;
 END_RCPP
 }
 // Model__set_y
@@ -1074,8 +1058,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_ModelBits__new", (DL_FUNC) &_glmmrBase_ModelBits__new, 7},
     {"_glmmrBase_ModelBits__update_beta", (DL_FUNC) &_glmmrBase_ModelBits__update_beta, 2},
     {"_glmmrBase_ModelBits__update_theta", (DL_FUNC) &_glmmrBase_ModelBits__update_theta, 2},
-    {"_glmmrBase_Model__new", (DL_FUNC) &_glmmrBase_Model__new, 1},
-    {"_glmmrBase_RE__new", (DL_FUNC) &_glmmrBase_RE__new, 7},
+    {"_glmmrBase_Model__new_from_bits", (DL_FUNC) &_glmmrBase_Model__new_from_bits, 1},
     {"_glmmrBase_Model__set_y", (DL_FUNC) &_glmmrBase_Model__set_y, 2},
     {"_glmmrBase_Model__set_offset", (DL_FUNC) &_glmmrBase_Model__set_offset, 2},
     {"_glmmrBase_Model__set_weights", (DL_FUNC) &_glmmrBase_Model__set_weights, 2},

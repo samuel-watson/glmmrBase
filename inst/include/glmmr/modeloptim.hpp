@@ -28,6 +28,8 @@ public:
   
   void update_beta(const dblvec &beta);
   void update_theta(const dblvec &theta);
+  void update_beta(const VectorXd &beta);
+  void update_theta(const VectorXd &theta);
   void update_u(const MatrixXd& u);
   double log_likelihood();
   double full_log_likelihood();
@@ -147,9 +149,20 @@ inline void glmmr::ModelOptim::update_beta(const dblvec &beta){
   model.linear_predictor.update_parameters(beta);
 }
 
+inline void glmmr::ModelOptim::update_beta(const VectorXd &beta){
+  model.linear_predictor.update_parameters(beta.array());
+}
+
 inline void glmmr::ModelOptim::update_theta(const dblvec &theta){
   if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta);
+  re.ZL = model.covariance.ZL_sparse();
+  re.zu_ = re.ZL*re.u_;
+}
+
+inline void glmmr::ModelOptim::update_theta(const VectorXd &theta){
+  if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
+  model.covariance.update_parameters(theta.array());
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
 }
@@ -322,7 +335,7 @@ inline void glmmr::ModelOptim::nr_beta(){
     XtWXm = XtWXm.inverse();
     VectorXd Wum = Wu.rowwise().mean();
     VectorXd bincr = XtWXm * (model.linear_predictor.X().transpose()) * Wum;
-    for(int i = 0; i < model.linear_predictor.P(); i++)model.linear_predictor.parameters[i] += bincr(i);
+    update_beta(model.linear_predictor.parameter_vector() + bincr);
   }
   calculate_var_par();
 }
@@ -344,13 +357,13 @@ inline void glmmr::ModelOptim::laplace_nr_beta_u(){
   w = w.cwiseProduct(resid.matrix());
   VectorXd params(model.linear_predictor.P()+model.covariance.Q());
   params.head(model.linear_predictor.P()) = model.linear_predictor.parameter_vector();
-  params.tail(model.covariance.Q()) = re.u(false).col(0);
+  params.tail(model.covariance.Q()) = re.u_.col(0);
   VectorXd pderiv(model.linear_predictor.P()+model.covariance.Q());
   pderiv.head(model.linear_predictor.P()) = (model.linear_predictor.X()).transpose() * w;
-  pderiv.tail(model.covariance.Q()) = matrix.log_gradient(re.u(false).col(0));
+  pderiv.tail(model.covariance.Q()) = matrix.log_gradient(re.u_.col(0));
   params += infomat*pderiv;
-  for(int i = 0; i < model.linear_predictor.P(); i++)model.linear_predictor.parameters[i] += params(i);
-  for(int i = 0; i < model.covariance.Q(); i++)re.u_(i,0) += params(model.linear_predictor.P()+i);
+  update_beta(params.head(model.linear_predictor.P()));
+  update_u(params.tail(model.covariance.Q()));
   calculate_var_par();
 }
 
