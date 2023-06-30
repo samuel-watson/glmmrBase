@@ -214,9 +214,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
   
   if(order > 2)Rcpp::stop("Only up to second order derivatives allowed.");
   int idx_iter = 0;
-  double a,b,var;
+  double a,b;
   std::stack<double> stack;
-  // for higher order derivatives
   std::vector<std::stack<double> > first_dx;
   std::vector<std::stack<double> > second_dx;
   if(order > 0){

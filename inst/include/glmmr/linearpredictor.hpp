@@ -143,7 +143,6 @@ private:
   strvec colnames_vec;
   glmmr::Formula& form;
   int P_;
-  int n_fe_components;
   int n_;
   intvec x_cols;
   MatrixXd X_;

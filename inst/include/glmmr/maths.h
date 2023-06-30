@@ -304,28 +304,28 @@ inline double log_likelihood(double y,
   case 3:
     if(y==1){
       logl = log(1/(1+exp(-1.0*mu)));
-    } else if(y==0){
+    } else {
       logl = log(1 - 1/(1+exp(-1.0*mu)));
     }
     break;
   case 4:
     if(y==1){
       logl = mu;
-    } else if(y==0){
+    } else {
       logl = log(1 - exp(mu));
     }
     break;
   case 5:
     if(y==1){
       logl = log(mu);
-    } else if(y==0){
+    } else {
       logl = log(1 - mu);
     }
     break;
   case 6:
     if(y==1){
       logl = (double)R::pnorm(mu,0,1,true,true);
-    } else if(y==0){
+    } else {
       logl = log(1 - (double)R::pnorm(mu,0,1,true,false));
     }
     break;

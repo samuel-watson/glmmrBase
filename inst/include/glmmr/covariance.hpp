@@ -137,7 +137,6 @@ private:
   sparse matZ;
   sparse matL;
   SparseChol spchol;
-  int n_threads_;
   
   void update_parameters_in_calculators();
   MatrixXd get_block(int b);
@@ -209,7 +208,7 @@ inline void glmmr::Covariance::parse(){
     dblvec2d groups;
     dblvec vals;
     bool isgr;
-    int j,k,l,idx,zcol;
+    int j,k,idx,zcol;
     if(form_.z_[i].compare("1")==0){
       zcol = -1;
     } else {
@@ -537,15 +536,13 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
 }
 
 inline void glmmr::Covariance::Z_constructor(){
-  
   intvec2d re_obs_index_;
   if(Q_==0)Rcpp::stop("Random effects not initialised");
   MatrixXd Z(data_.rows(),Q_);
   Z.setZero();
   int zcount = 0;
-  int nvar,nval;
-  int i,j,k,l,m;
-  double val;
+  int nvar;
+  int i,j,k,m;
   re_obs_index_.resize(B_);
   for(i = 0; i < B_; i++){
     for(j = 0; j < re_data_[i].rows(); j++){
@@ -776,6 +773,7 @@ inline void glmmr::Covariance::make_sparse(){
 
 inline void glmmr::Covariance::L_constructor(){
   int d = spchol.ldl_numeric();
+  (void)d;
   matL = spchol.LD();
 }
 
@@ -805,6 +803,7 @@ inline void glmmr::Covariance::update_ax(){
   }
   spchol.A_ = mat;
   int d = spchol.ldl_numeric(); // assumes structure of D doesn't change
+  (void)d;
   matL = spchol.LD();
 };
 

@@ -43,7 +43,7 @@ inline void mat_mat_mult(const double* a, const double* b, double* ab,
 inline MatrixXd operator*(const sparse& A, const MatrixXd& B){
   if(A.m != B.rows())Rcpp::stop("Bad dimension");
   int m = B.cols();
-  int n = A.n;
+  // alternative code
   // dblvec ab(A.n*m,0);
   // mat_mat_mult(&A.Ax[0],B.data(),&ab[0],&A.Ai[0],&A.Ap[0],n,m);
   MatrixXd AB(A.n,m);
@@ -65,7 +65,6 @@ inline MatrixXd operator*(const sparse& A, const MatrixXd& B){
 inline VectorXd operator*(const sparse& A, const VectorXd& B){
   if(A.m != B.size())Rcpp::stop("wrong dimension in sparse-vectorxd multiplication");
   VectorXd AB = VectorXd::Zero(A.n);
-  double val;
   for(int i = 0; i < A.n; i++){
     for(int j = A.Ap[i]; j < A.Ap[i+1]; j++){
       AB(i) += A.Ax[j]*B(A.Ai[j]);

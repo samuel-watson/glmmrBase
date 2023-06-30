@@ -14,8 +14,8 @@ using namespace Rcpp;
 // [[Rcpp::export]]
 void setParallel(SEXP parallel_, int cores_ = 2){
   bool parallel = as<bool>(parallel_);
-  int a, b; // needed for defines on machines without openmp
   if(OMP_IS_USED){
+    int a, b; // needed for defines on machines without openmp
     if(!parallel){
       a = 0;
       b = 1;

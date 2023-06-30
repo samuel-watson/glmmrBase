@@ -18,12 +18,8 @@ inline bool parse_formula(std::vector<char>& formula,
   int cursor = 0;
   int nchar = formula.size();
   bool has_found_symbol=false;
-  int n = data.rows();
   std::vector<char> s1;
   std::vector<char> s2;
-  // REMOVE AFTER DEBUG
-  // Rcpp::Rcout << "\nFormula: ";
-  // for(auto ch: formula)Rcpp::Rcout << ch;
   // step 1: split at first +
   while(!has_found_symbol && cursor < nchar){
     if(cursor==0 && (formula[cursor]=='+' || formula[cursor]=='-'))Rcpp::stop("Error in formula, multiply/divide symbol in wrong place");
@@ -172,14 +168,12 @@ inline bool parse_formula(std::vector<char>& formula,
           }
           if(formula[cursor]!=')')Rcpp::stop("Matching bracket missing");
           // process s1 as function (if size > 0)
-          
           if(s1.size()>0){
             if(token_as_str == "factor"){
               // rewrite s2 to have all the unique values of s2 variable
               // 1. check
               str token_as_str2(s2.begin(),s2.end());
               auto colidx = std::find(colnames.begin(),colnames.end(),token_as_str2);
-              
               if(colidx != colnames.end()){
                 int column_index = colidx - colnames.begin();
                 dblvec unique_values(data.col(column_index).data(),data.col(column_index).data()+data.rows());
@@ -240,23 +234,17 @@ inline bool parse_formula(std::vector<char>& formula,
             int column_index = colidx - colnames.begin();
             calc.indexes.push_back(calc.data_count);
             if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);
-            
             Xdata.col(calc.data_count) = data.col(column_index);
-            // for(int i = 0; i < n; i++){
-            //   calc.data[i].push_back(data(i,column_index));
-            // }
             calc.data_count++;
           } else if(glmmr::is_number(token_as_str)) {
             // add an integer to the stack
             int p = s1.size();
             int addint;
-            
             if(p > 1){
               for(int i = 0; i < (p-1); i++){
                 calc.instructions.push_back(3);
               }
             }
-            
             for(int k = 1; k <= p; k++){
               int number = s1[p-k] - '0';
               addint = number + 20;

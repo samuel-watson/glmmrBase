@@ -91,7 +91,6 @@ inline void glmmr::Formula::tokenise(){
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);
   }
-  int m = re_.size();
   re_terms_ = re_;
 }
 
@@ -111,7 +110,6 @@ inline void glmmr::Formula::formula_validate(){
     }
     if(ch=='+' && open > 0)has_a_plus = true;
     if(ch=='|' && open > 0)has_a_vert = true;
-    
     if(has_a_plus && has_a_vert)Rcpp::stop("Addition inside re term not currently supported");
   }
 }
@@ -122,6 +120,7 @@ inline void glmmr::Formula::calculate_linear_predictor(glmmr::calculator& calcul
                                        data,
                                        colnames,
                                        Xdata);
+  (void)outparse;
   std::reverse(calculator.instructions.begin(),calculator.instructions.end());
   std::reverse(calculator.indexes.begin(),calculator.indexes.end());
 }

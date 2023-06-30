@@ -546,7 +546,6 @@ inline double glmmr::ModelOptim::LA_likelihood_btheta::operator()(const dblvec &
 
 inline double glmmr::ModelOptim::aic(){
   MatrixXd Lu = model.covariance.Lu(re.u(false));
-  int niter = re.u(false).cols();
   int dof = model.linear_predictor.P() + model.covariance.npar();
   double logl = 0;
 #pragma omp parallel for reduction (+:logl)
@@ -591,7 +590,6 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
   int block_size;
   MatrixXd M(model.linear_predictor.P(),model.linear_predictor.P());
   int iter = 0;
-  int counter;
   Rcpp::Rcout << "\n### Starting optimisation ###";
   while(diff > tol && iter < max_iter){
     iter++;
@@ -654,7 +652,6 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
     }
     M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
     VectorXd Mc = M*Cvec;
-    counter = 0;
     weightsnew.setZero();
     for(int i = 0 ; i < SB.size(); i++){
       block_size = SB[i].RowIndexes.size();
