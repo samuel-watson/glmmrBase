@@ -36,11 +36,8 @@ private:
 
 inline void glmmr::Formula::tokenise(){
   formula_validate();
-  
-  // remove -1 and set RM_INT is true if its there
   RM_INT = false;
   formula_.erase(std::remove_if(formula_.begin(), formula_.end(), [](unsigned char x) { return std::isspace(x); }), formula_.end());
-  
   auto minone = formula_.find("-1");
   if(minone != str::npos){
     RM_INT = true;
@@ -48,22 +45,18 @@ inline void glmmr::Formula::tokenise(){
   } else {
     str add_intercept = "b_intercept*1+";
     std::vector<char> add_intercept_vec(add_intercept.begin(),add_intercept.end());
-    for(int i = 0; i < add_intercept_vec.size(); i++){
-      linear_predictor_.push_back(add_intercept_vec[i]);
-    }
+    linear_predictor_.insert(linear_predictor_.end(),add_intercept_vec.begin(),add_intercept_vec.end());
   }
-  
-  // split the tokens
   std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
-  // split at plus and then sort
   int nchar = formula_as_chars.size();
   int cursor = 0;
   int bracket_count = 0; // to deal with opening of brackets
   if(formula_as_chars[0]=='+')Rcpp::stop("Cannot start a formula with +");
   std::vector<char> temp_token;
-  
+  int idx = 0;
   while(cursor <= nchar){
-    if((formula_as_chars[cursor]=='+' && bracket_count == 0) || cursor == (nchar)){
+    idx = cursor == nchar ? nchar - 1 : cursor;
+    if(cursor == nchar || (formula_as_chars[idx]=='+' && bracket_count == 0 && cursor < nchar)){
       if(temp_token[0]!='('){
         linear_predictor_.insert(linear_predictor_.end(),temp_token.begin(),temp_token.end());
         linear_predictor_.push_back('+');
@@ -88,23 +81,18 @@ inline void glmmr::Formula::tokenise(){
       }
       temp_token.clear();
     } else {
-      if(formula_as_chars[cursor]=='(')bracket_count++;
-      if(formula_as_chars[cursor]==')')bracket_count--;
-      temp_token.push_back(formula_as_chars[cursor]);
+      if(formula_as_chars[idx]=='(')bracket_count++;
+      if(formula_as_chars[idx]==')')bracket_count--;
+      temp_token.push_back(formula_as_chars[idx]);
     }
     cursor++;
   }
-  
   if(linear_predictor_.back()=='+')linear_predictor_.pop_back();
-  
   for(int i =0; i<re_.size(); i++){
     re_order_.push_back(i);
   }
-  
-  // // random effects: separate right and left hand sides
   int m = re_.size();
   re_terms_ = re_;
-  
 }
 
 inline void glmmr::Formula::formula_validate(){
