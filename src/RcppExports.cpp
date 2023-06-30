@@ -967,12 +967,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // setParallel
-void setParallel(SEXP parallel_);
-RcppExport SEXP _glmmrBase_setParallel(SEXP parallel_SEXP) {
+void setParallel(SEXP parallel_, int cores_);
+RcppExport SEXP _glmmrBase_setParallel(SEXP parallel_SEXP, SEXP cores_SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type parallel_(parallel_SEXP);
-    setParallel(parallel_);
+    Rcpp::traits::input_parameter< int >::type cores_(cores_SEXP);
+    setParallel(parallel_, cores_);
     return R_NilValue;
 END_RCPP
 }
@@ -1116,7 +1117,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 1},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 1},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 4},
-    {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 1},
+    {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 2},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
     {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},

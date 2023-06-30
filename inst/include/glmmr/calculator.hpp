@@ -2,6 +2,7 @@
 #define CALCULATOR_HPP
 
 #include "general.h"
+#include "openmpheader.h"
 
 namespace glmmr {
 

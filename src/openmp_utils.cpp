@@ -9,19 +9,25 @@ using namespace Rcpp;
 //' execution can be disabled with this function.
 //' 
 //' @param parallel_ Logical indicating whether to use parallel computation (TRUE) or disable it (FALSE)
+//' @param cores_ Number of cores for parallel execution
 //' @return None, called for effects
 // [[Rcpp::export]]
-void setParallel(SEXP parallel_){
+void setParallel(SEXP parallel_, int cores_ = 2){
   bool parallel = as<bool>(parallel_);
+  int a, b; // needed for defines on machines without openmp
   if(OMP_IS_USED){
     if(!parallel){
-      omp_set_dynamic(0); 
-      omp_set_num_threads(1);
-      Eigen::setNbThreads(1);
+      a = 0;
+      b = 1;
+      omp_set_dynamic(a); 
+      omp_set_num_threads(b);
+      Eigen::setNbThreads(b);
     } else {
-      omp_set_dynamic(1); 
-      omp_set_num_threads(omp_get_max_threads());
-      Eigen::setNbThreads(omp_get_max_threads());
+      a = 1;
+      b = cores_;
+      omp_set_dynamic(a); 
+      omp_set_num_threads(b);
+      Eigen::setNbThreads(b);
     }
-  }
+  } 
 }

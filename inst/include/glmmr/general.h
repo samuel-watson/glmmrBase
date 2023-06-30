@@ -1,7 +1,7 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
-#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS // yes CRAN has annoying policies
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define _USE_MATH_DEFINES
 
 // includes

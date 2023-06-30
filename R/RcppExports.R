@@ -352,9 +352,10 @@ Model__predict <- function(xp, newdata_, newoffset_, m) {
 #' execution can be disabled with this function.
 #' 
 #' @param parallel_ Logical indicating whether to use parallel computation (TRUE) or disable it (FALSE)
+#' @param cores_ Number of cores for parallel execution
 #' @return None, called for effects
-setParallel <- function(parallel_) {
-    invisible(.Call(`_glmmrBase_setParallel`, parallel_))
+setParallel <- function(parallel_, cores_ = 2L) {
+    invisible(.Call(`_glmmrBase_setParallel`, parallel_, cores_))
 }
 
 re_names <- function(formula) {

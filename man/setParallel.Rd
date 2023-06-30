@@ -4,10 +4,12 @@
 \alias{setParallel}
 \title{Disable or enable parallelised computing}
 \usage{
-setParallel(parallel_)
+setParallel(parallel_, cores_ = 2L)
 }
 \arguments{
 \item{parallel_}{Logical indicating whether to use parallel computation (TRUE) or disable it (FALSE)}
+
+\item{cores_}{Number of cores for parallel execution}
 }
 \value{
 None, called for effects
