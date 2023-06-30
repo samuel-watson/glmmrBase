@@ -1,6 +1,8 @@
 #ifndef OPENMPHEADER_H
 #define OPENMPHEADER_H
 
+#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
+
 #ifdef _OPENMP
 #include <omp.h> 
 #define OMP_IS_USED true
