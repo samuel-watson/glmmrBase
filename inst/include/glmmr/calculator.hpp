@@ -28,8 +28,6 @@ class calculator {
     
     calculator& operator= (const glmmr::calculator& calc);
     VectorXd linear_predictor(const dblvec& parameters,const MatrixXd& data);
-    VectorXd first_derivative(int i,const dblvec& parameters,const MatrixXd& data,double extraData = 0);
-    MatrixXd second_derivative(int i,const dblvec& parameters,const MatrixXd& data, double extraData = 0);
     MatrixXd jacobian(const dblvec& parameters, const MatrixXd& data);
     MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const VectorXd& extraData);
     MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
@@ -38,8 +36,6 @@ class calculator {
 };
 
 }
-
-
 
 inline VectorXd glmmr::calculator::linear_predictor(const dblvec& parameters, 
                                                     const MatrixXd& data){
@@ -56,7 +52,6 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   instructions = calc.instructions;
   indexes = calc.indexes;
   parameter_names = calc.parameter_names;
-  //var_par = calc.var_par;
   variance.conservativeResize(calc.variance.size());
   variance = calc.variance;
   data_count = calc.data_count;
@@ -65,41 +60,17 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   return *this;
 };
 
-inline VectorXd glmmr::calculator::first_derivative(int i,
-                                                    const dblvec& parameters,
-                                                    const MatrixXd& data, 
-                                                    double extraData){
-  dblvec out = calculate(i,parameters,data,0,1,extraData);
-  VectorXd d = Map<VectorXd, Unaligned>(out.data()+1, out.size()-1);
-  return d;
-};
-
-inline MatrixXd glmmr::calculator::second_derivative(int i,
-                                                     const dblvec& parameters,
-                                                     const MatrixXd& data, 
-                                                     double extraData){
-  dblvec out = calculate(i,parameters,data,0,2, extraData);
-  MatrixXd h(parameter_count, parameter_count);
-  int index_count = parameter_count+1;
-  for(int j = 0; j < parameter_count; j++){
-    for(int k = j; k < parameter_count; k++){
-      h(k,j) = out[index_count];
-      if(j != k) h(j,k) = h(k,j);
-      index_count++;
-    }
-  }
-  return h;
-};
-
 inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
                                             const MatrixXd& data){
   int n = data.rows();
   if(n==0)Rcpp::stop("No data initialised in calculator");
   MatrixXd J(n,parameter_count);
-  J.setZero();
 #pragma omp parallel for
   for(int i = 0; i<n ; i++){
-    J.row(i) = (first_derivative(i,parameters,data)).transpose();
+    dblvec out = calculate(i,parameters,data,0,1,0);
+    for(int j = 0; j<parameter_count; j++){
+      J(i,j) = out[j+1];
+    }
   }
   return J;
 };
@@ -110,10 +81,12 @@ inline MatrixXd glmmr::calculator::jacobian(const dblvec& parameters,
   int n = data.rows();
   if(n==0)Rcpp::stop("No data initialised in calculator");
   MatrixXd J(n,parameter_count);
-  J.setZero();
 #pragma omp parallel for
   for(int i = 0; i<n ; i++){
-    J.row(i) = (first_derivative(i,parameters,data,extraData(i))).transpose();
+    dblvec out = calculate(i,parameters,data,0,1,extraData(i));
+    for(int j = 0; j<parameter_count; j++){
+      J(i,j) = out[j+1];
+    }
   }
   return J;
 };
@@ -241,8 +214,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
   };
   
-  
-  for(int k = 0; k < instructions.size(); k++){
+  for(unsigned int k = 0; k < instructions.size(); k++){
     switch(instructions[k]){
     case 0:
   {
@@ -281,7 +253,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
   {
     // push parameter
     //DEBUG
-    if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
+    if((unsigned)idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
     if(indexes[idx_iter] >= parameter_count)Rcpp::stop("Index out of range: case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameter_count));
     
     stack.push(parameters[indexes[idx_iter]]);

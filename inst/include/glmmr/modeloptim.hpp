@@ -154,7 +154,7 @@ inline void glmmr::ModelOptim::update_beta(const VectorXd &beta){
 }
 
 inline void glmmr::ModelOptim::update_theta(const dblvec &theta){
-  if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
+  if(theta.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta);
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
@@ -575,7 +575,7 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
   Rcpp::Rcout << "\n### Preparing data ###";
   Rcpp::Rcout << "\nThere are " << SB.size() << " independent blocks and " << model.n() << " cells.";
   int maxprint = model.n() < 10 ? model.n() : 10;
-  for(int i = 0 ; i < SB.size(); i++){
+  for(unsigned int i = 0 ; i < SB.size(); i++){
     sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),SB[i].RowIndexes);
     MatrixXd ZL = sparse_to_dense(ZLs,false);
     MatrixXd S = ZL * ZL.transpose();
@@ -596,7 +596,7 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
     Rcpp::Rcout << "\nIteration " << iter << "\n------------\nweights: [" << weights.segment(0,maxprint).transpose() << " ...]";
     //add check to remove weights that are below a certain threshold
     if((weights < 1e-8).any()){
-      for(int i = 0 ; i < SB.size(); i++){
+      for(unsigned int i = 0 ; i < SB.size(); i++){
         auto it = SB[i].RowIndexes.begin();
         while(it != SB[i].RowIndexes.end()){
           if(weights(*it) < 1e-8){
@@ -616,7 +616,7 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
     }
     
     M.setZero();
-    for(int i = 0 ; i < SB.size(); i++){
+    for(unsigned int i = 0 ; i < SB.size(); i++){
       Sigmas[i] = ZDZ[i];
       for(int j = 0; j < Sigmas[i].rows(); j++){
         Sigmas[i](j,j) += sigma_sq/(N*weights(SB[i].RowIndexes[j]));
@@ -635,7 +635,7 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
       for(int j = 0; j < M_row_sums.size(); j++){
         if(M_row_sums(j) == 0){
           Rcpp::Rcout << "\n   Removing column " << fake_it;
-          for(int k = 0; k < Xs.size(); k++){
+          for(unsigned int k = 0; k < Xs.size(); k++){
             glmmr::Eigen_ext::removeColumn(Xs[k],fake_it);
           }
           glmmr::Eigen_ext::removeElement(Cvec,fake_it);
@@ -646,14 +646,14 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
       }
       M.conservativeResize(M.rows()-countZero,M.cols()-countZero);
       M.setZero();
-      for(int k = 0; k < SB.size(); k++){
+      for(unsigned int k = 0; k < SB.size(); k++){
         M += Xs[k].transpose() * Sigmas[k] * Xs[k];
       }
     }
     M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
     VectorXd Mc = M*Cvec;
     weightsnew.setZero();
-    for(int i = 0 ; i < SB.size(); i++){
+    for(unsigned int i = 0 ; i < SB.size(); i++){
       block_size = SB[i].RowIndexes.size();
       holder.segment(0,block_size) = Sigmas[i] * Xs[i] * Mc;
       for(int j = 0; j < block_size; j++){

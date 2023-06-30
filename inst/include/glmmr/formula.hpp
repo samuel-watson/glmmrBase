@@ -88,7 +88,7 @@ inline void glmmr::Formula::tokenise(){
     cursor++;
   }
   if(linear_predictor_.back()=='+')linear_predictor_.pop_back();
-  for(int i =0; i<re_.size(); i++){
+  for(unsigned int i =0; i<re_.size(); i++){
     re_order_.push_back(i);
   }
   re_terms_ = re_;

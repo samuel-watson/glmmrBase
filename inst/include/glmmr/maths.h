@@ -286,7 +286,7 @@ inline double log_likelihood(double y,
                              double mu,
                              double var_par,
                              int flink) {
-  double logl;
+  double logl = 0;
   
   switch (flink){
   case 1:

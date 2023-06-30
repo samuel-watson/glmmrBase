@@ -57,7 +57,7 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_by_block(int b){
 inline MatrixXd glmmr::ModelMatrix::information_matrix(){
   W.update();
   MatrixXd M = MatrixXd::Zero(model.linear_predictor.P(),model.linear_predictor.P());
-  for(int i = 0; i< sigma_blocks.size(); i++){
+  for(unsigned int i = 0; i< sigma_blocks.size(); i++){
     M += information_matrix_by_block(i);
   }
   return M;
@@ -126,7 +126,7 @@ inline MatrixXd glmmr::ModelMatrix::Sigma(bool inverse){
 
 inline MatrixXd glmmr::ModelMatrix::sigma_block(int b,
                                                 bool inverse){
-  if(b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
   MatrixXd ZL = sparse_to_dense(ZLs,false);
   MatrixXd S = ZL * ZL.transpose();

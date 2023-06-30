@@ -86,7 +86,7 @@ inline ArrayXd operator*(const sparse& A, const ArrayXd& B){
 // multiplication of sparse and diagonal of a vector
 inline sparse operator%(const sparse& A, const VectorXd& x){
   sparse Ax(A);
-  for(int i = 0; i < A.Ax.size(); i++){
+  for(unsigned int i = 0; i < A.Ax.size(); i++){
     Ax.Ax[i] *= x(Ax.Ai[i]);
   }
   return Ax;
@@ -96,7 +96,7 @@ inline sparse submat_sparse(const sparse& A, intvec rows){
   sparse B;
   B.n = rows.size();
   B.m = A.m;
-  for(int i = 0; i < rows.size(); i++){
+  for(unsigned int i = 0; i < rows.size(); i++){
     B.Ap.push_back(B.Ai.size());
     for(int j = A.Ap[rows[i]]; j < A.Ap[rows[i]+1]; j++){
       B.Ai.push_back(A.Ai[j]);

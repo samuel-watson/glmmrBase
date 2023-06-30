@@ -71,7 +71,7 @@ public:
     };
 
   void update_parameters(const dblvec& parameters_){
-    if(parameters.size()!=P())Rcpp::stop("wrong number of parameters");
+    if(parameters.size()!=(unsigned)P())Rcpp::stop("wrong number of parameters");
     parameters = parameters_;
     if(!x_set){
       X_ = calc.jacobian(parameters,Xdata);

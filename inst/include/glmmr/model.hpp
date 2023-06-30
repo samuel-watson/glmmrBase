@@ -53,19 +53,19 @@ inline void glmmr::Model::set_y(const VectorXd& y_){
 }
 
 inline void glmmr::Model::update_beta(const dblvec &beta_){
-  if(beta_.size()!=model.linear_predictor.P())Rcpp::stop("beta wrong length");
+  if(beta_.size()!=(unsigned)model.linear_predictor.P())Rcpp::stop("beta wrong length");
   model.linear_predictor.update_parameters(beta_);
 }
 
 inline void glmmr::Model::update_theta(const dblvec &theta_){
-  if(theta_.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
+  if(theta_.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta_);
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
 }
 
 inline void glmmr::Model::update_u(const MatrixXd &u_){
-  if(u_.rows()!=model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
+  if(u_.rows()!=(unsigned)model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
     Rcpp::Rcout << "\nDifferent numbers of random effect samples";
     re.u_.conservativeResize(model.covariance.Q(),u_.cols());

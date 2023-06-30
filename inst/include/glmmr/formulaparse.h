@@ -53,7 +53,7 @@ inline bool parse_formula(std::vector<char>& formula,
     if(col_idx != colnames.end()){
       str s1_parname = "b_" + s1_as_str;
       s1.push_back('*');
-      for(int j = 0; j < s1_parname.size(); j++){
+      for(unsigned int j = 0; j < s1_parname.size(); j++){
         s1.push_back(s1_parname[j]);
       }
     }
@@ -63,7 +63,7 @@ inline bool parse_formula(std::vector<char>& formula,
     if(col_idx != colnames.end()){
       str s2_parname = "b_" + s2_as_str;
       s2.push_back('*');
-      for(int j = 0; j < s2_parname.size(); j++){
+      for(unsigned int j = 0; j < s2_parname.size(); j++){
         s2.push_back(s2_parname[j]);
       }
     }
