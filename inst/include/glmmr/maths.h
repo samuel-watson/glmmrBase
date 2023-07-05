@@ -390,13 +390,9 @@ inline double log_likelihood(double y,
   return logl;
 }
 
-template <typename MatrixType>
-inline typename MatrixType::Scalar logdet(const MatrixType& M) {
-  using namespace Eigen;
-  using std::log;
-  typedef typename MatrixType::Scalar Scalar;
-  Scalar ld = 0;
-  LLT<Matrix<Scalar,Dynamic,Dynamic>> chol(M);
+inline double logdet(const Eigen::MatrixXd& M) {
+  double ld = 0;
+  Eigen::LLT<Eigen::MatrixXd> chol(M);
   auto& U = chol.matrixL();
   for (unsigned i = 0; i < M.rows(); ++i)
     ld += log(U(i,i));

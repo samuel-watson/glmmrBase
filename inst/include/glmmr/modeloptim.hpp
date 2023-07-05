@@ -7,6 +7,7 @@
 #include "modelmatrix.hpp"
 #include "openmpheader.h"
 #include "maths.h"
+#include "algo.h"
 #include "sparse.h"
 #include "calculator.hpp"
 

@@ -52,7 +52,6 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
   }
   return y;
 }
-
 }
 
 namespace Eigen_ext {
@@ -130,9 +129,7 @@ inline bool issympd(Eigen::MatrixXd& mat){
   Eigen::LLT<Eigen::MatrixXd> lltOfA(mat);
   return lltOfA.info() == Eigen::NumericalIssue;
 }
-
 }
-
 
 // class for storing and manipulating row indexes
 class SigmaBlock {
@@ -191,11 +188,5 @@ class SigmaBlock {
 };
 
 }
-
-
-
-
-
-
 
 #endif

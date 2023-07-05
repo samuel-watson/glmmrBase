@@ -2,7 +2,6 @@
 #define FAMILY_H
 
 #include "general.h"
-#include "maths.h"
 
 namespace glmmr {
 const static inline std::unordered_map<std::string,int> model_to_int{

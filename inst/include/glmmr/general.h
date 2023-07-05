@@ -17,7 +17,6 @@
 #include <stack>
 #include <SparseChol.h>
 #include <set>
-#include "algo.h"
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/polygamma.hpp>
 #include <boost/math/special_functions/gamma.hpp>

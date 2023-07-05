@@ -5,6 +5,7 @@
 
 #include "openmpheader.h"
 #include "general.h"
+#include "algo.h"
 #include "interpreter.h"
 #include "formula.hpp"
 #include "sparse.h"
