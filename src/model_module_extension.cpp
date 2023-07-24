@@ -13,7 +13,9 @@ template<>
 SEXP wrap(const matrix_matrix& x){
   return Rcpp::wrap(Rcpp::List::create(
       Rcpp::Named("mat1") = Rcpp::wrap(x.mat1),
-      Rcpp::Named("mat2") = Rcpp::wrap(x.mat2)
+      Rcpp::Named("mat2") = Rcpp::wrap(x.mat2),
+      Rcpp::Named("a") = Rcpp::wrap(x.a),
+      Rcpp::Named("b") = Rcpp::wrap(x.b)
   ));
 }
 }

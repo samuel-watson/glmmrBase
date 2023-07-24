@@ -45,7 +45,7 @@ public:
   void laplace_ml_theta();
   void laplace_ml_beta_theta();
   double aic();
-  ArrayXd optimum_weights(double N, double sigma_sq, VectorXd C, double tol = 1e-5, int max_iter = 501);
+  ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
   
 private:
   void calculate_var_par();
@@ -559,7 +559,6 @@ inline double glmmr::ModelOptim::aic(){
 }
 
 inline ArrayXd glmmr::ModelOptim::optimum_weights(double N, 
-                                             double sigma_sq,
                                              VectorXd C,
                                              double tol,
                                              int max_iter){
@@ -569,6 +568,7 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
   VectorXd holder(model.n());
   weights = weights.inverse();
   ArrayXd weightsnew(weights);
+  ArrayXd w = (matrix.W.W()).array().inverse();
   std::vector<MatrixXd> ZDZ;
   std::vector<MatrixXd> Sigmas;
   std::vector<MatrixXd> Xs;
@@ -620,7 +620,8 @@ inline ArrayXd glmmr::ModelOptim::optimum_weights(double N,
     for(unsigned int i = 0 ; i < SB.size(); i++){
       Sigmas[i] = ZDZ[i];
       for(int j = 0; j < Sigmas[i].rows(); j++){
-        Sigmas[i](j,j) += sigma_sq/(N*weights(SB[i].RowIndexes[j]));
+        // sigma_sq
+        Sigmas[i](j,j) += w(SB[i].RowIndexes[j])/(N*weights(SB[i].RowIndexes[j]));
       }
       Sigmas[i] = Sigmas[i].llt().solve(MatrixXd::Identity(Sigmas[i].rows(),Sigmas[i].cols()));
       M += Xs[i].transpose() * Sigmas[i] * Xs[i];

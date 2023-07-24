@@ -370,7 +370,7 @@ dlinkdeta <- function(xb, link) {
     .Call(`_glmmrBase_dlinkdeta`, xb, link)
 }
 
-girling_algorithm <- function(xp, N_, sigma_sq_, C_, tol_) {
-    .Call(`_glmmrBase_girling_algorithm`, xp, N_, sigma_sq_, C_, tol_)
+girling_algorithm <- function(xp, N_, C_, tol_) {
+    .Call(`_glmmrBase_girling_algorithm`, xp, N_, C_, tol_)
 }
 

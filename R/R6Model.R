@@ -318,7 +318,7 @@ Model <- R6::R6Class("Model",
                          if(is.null(weights)){
                            self$weights <- rep(1,nrow(self$mean$data))
                          } else {
-                           self$weights <- offset
+                           self$weights <- weights
                          }
                          if(self$family[[1]]=="binomial"){
                            if(is.null(trials) || all(trials == 1)){
@@ -778,6 +778,7 @@ Model <- R6::R6Class("Model",
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
+                         ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
                          all_pars <- c(beta,theta)
                          if(var_par_family)all_pars <- c(all_pars,var_par)
                          all_pars_new <- rep(1,length(all_pars))
@@ -833,7 +834,6 @@ Model <- R6::R6Class("Model",
                                   file=tempfile())
                              dsamps <- fit$draws("gamma",format = "matrix")
                              class(dsamps) <- "matrix"
-                             #dsamps <- Matrix::Matrix(L %*% Matrix::t(dsamps)) #check this
                              Model__update_u(private$ptr,as.matrix(t(dsamps)))
                            } else {
                              Model__mcmc_sample(private$ptr,
@@ -884,20 +884,19 @@ Model <- R6::R6Class("Model",
                          u <- Model__u(private$ptr, TRUE)
                          if(se == "gls"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
                          } else if(se == "robust"){
                            M <- Model__sandwich(private$ptr)
-                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
                          } else if(se == "kr"){
                            Mout <- Model__kenward_roger(private$ptr)
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
-                         SE <- sqrt(Matrix::diag(M))
-                         SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                         SE <- sqrt(diag(M))
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr)
-                         theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
+                         theta_names <- repar_table$term
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
@@ -908,9 +907,32 @@ Model <- R6::R6Class("Model",
                          }
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
                                            est = c(all_pars_new,rowMeans(u)),
-                                           SE=c(SE,rep(NA,nrow(u))))
-                         res$lower <- res$est - qnorm(1-0.05/2)*res$SE
-                         res$upper <- res$est + qnorm(1-0.05/2)*res$SE
+                                           SE=c(SE,rep(NA,nrow(u))),
+                                           t = NA,
+                                           p = NA,
+                                           lower = NA,
+                                           upper = NA)
+                         if(se == "kr"){
+                           for(i in 1:length(all_pars_new)){
+                             if(!is.na(res$SE[i])){
+                               bvar <- 1/(res$SE[i]^2)
+                               ef <- 1 + bvar^2*Mout$b
+                               vf <- 1 + bvar^2*Mout$a+6*bvar^2*Mout$b
+                               rho <- vf/(2*ef^2)
+                               m <- 4 + 3/(rho - 1)
+                               lambda <- m/(ef*(m-2))
+                               res$t[i] <- (res$est[i]/res$SE[i])*sqrt(lambda)
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),m))
+                               res$lower[i] <- res$est - qt(1-0.05/2,m)*res$SE[i]
+                               res$upper[i] <- res$est + qt(1-0.05/2,m)*res$SE[i]
+                             }
+                           }
+                         } else {
+                           res$t <- res$est/res$SE
+                           res$p <- 2*(1-stats::pnorm(abs(res$t)))
+                           res$lower <- res$est - qnorm(1-0.05/2)*res$SE
+                           res$upper <- res$est + qnorm(1-0.05/2)*res$SE
+                         }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
                          aic <- Model__aic(private$ptr)
@@ -1001,6 +1023,7 @@ Model <- R6::R6Class("Model",
                          trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
+                         ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
                          var_par <- self$var_par
                          all_pars <- c(beta,theta)
                          if(var_par_family)all_pars <- c(all_pars,var_par)
@@ -1044,10 +1067,10 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          if(se == "gls"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
                          } else if(se == "robust"){
                            M <- Model__sandwich(private$ptr)
-                           SE_theta <- sqrt(diag(solve(Model__infomat_theta(private$ptr))))
+                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
                          } else if(se == "kr"){
                            Mout <- Model__kenward_roger(private$ptr)
                            M <- Mout[[1]]
@@ -1066,10 +1089,40 @@ Model <- R6::R6Class("Model",
                            SE <- c(SE,SE_theta)
                          }
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
-                                           est = c(all_pars_new,drop(u)),
-                                           SE=c(SE,rep(NA,nrow(u))))
-                         res$lower <- res$est - qnorm(1-0.05/2)*res$SE
-                         res$upper <- res$est + qnorm(1-0.05/2)*res$SE
+                                           est = c(all_pars_new,rowMeans(u)),
+                                           SE=c(SE,rep(NA,nrow(u))),
+                                           t = NA,
+                                           p = NA,
+                                           lower = NA,
+                                           upper = NA)
+                         
+                         if(se == "kr"){
+                           bvar <- 1#1/(res$SE[i]^4)
+                           ef <- 1/(1 - bvar*Mout$b)
+                           g <- (2*Mout$a - 5*Mout$b)/(3*Mout$b)
+                           c1 <- g/(3+2*(1-g))
+                           c2 <- (1-g)/(3+2*(1-g))
+                           c3 <- (3-g)/(3+2*(1-g))
+                           b <- 0.5*(Mout$a + 6*Mout$b)
+                           vf <- 2*((1+c1*b)/((1-c2*b)^2*(1-c3*b)))
+                           rho <- vf/(2*ef^2)
+                           m <- 4 + 3/(rho - 1)
+                           lambda <- m/(ef*(m-2))
+                           print(m)
+                           for(i in 1:length(beta)){
+                             if(!is.na(res$SE[i])){
+                               res$t[i] <- (res$est[i]/res$SE[i])*sqrt(lambda)
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),m))
+                               res$lower[i] <- res$est[i] - stats::qt(0.975,m)*res$SE[i]
+                               res$upper[i] <- res$est[i] + stats::qt(0.975,m)*res$SE[i]
+                             }
+                           }
+                         } else {
+                           res$t <- res$est/res$SE
+                           res$p <- 2*(1-stats::pnorm(abs(res$t)))
+                           res$lower <- res$est - qnorm(1-0.05/2)*res$SE
+                           res$upper <- res$est + qnorm(1-0.05/2)*res$SE
+                         }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
                          aic <- Model__aic(private$ptr)

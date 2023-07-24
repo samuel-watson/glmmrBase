@@ -28,19 +28,18 @@ Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb,
   return deta;
 }
 
-// This is a function in development - it works as expected,
-// but is subject to current research and so it is currently
-// not exposed to the user through the model class yet
+// Access to this function is provided to the user in the 
+// glmmrOptim package
 // [[Rcpp::export]]
-SEXP girling_algorithm(SEXP xp, SEXP N_,
-                       SEXP sigma_sq_, SEXP C_,
+SEXP girling_algorithm(SEXP xp, 
+                       SEXP N_,
+                       SEXP C_,
                        SEXP tol_){
   double N = as<double>(N_);
-  double sigma_sq = as<double>(sigma_sq_);
   double tol = as<double>(tol_);
   Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
   XPtr<glmmr::Model> ptr(xp);
-  Eigen::ArrayXd w = ptr->optim.optimum_weights(N,sigma_sq,C,tol);
+  Eigen::ArrayXd w = ptr->optim.optimum_weights(N,C,tol);
   return wrap(w);
 }
 

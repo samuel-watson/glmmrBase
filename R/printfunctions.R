@@ -33,12 +33,10 @@ print.mcml <- function(x, ...){
   if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n\n")
  
   dim1 <- dim(x$re.samps)[1]
-  pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),c('est','SE','lower','upper')]
-  z <- pars$est/pars$SE
-  pars <- cbind(pars[,1:2],z=z,p=2*(1-stats::pnorm(abs(z))),pars[,3:4])
+  pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),1:6]
   colnames(pars) <- c("Estimate","Std. Err.","z value","p value","2.5% CI","97.5% CI")
   if(x$se == "robust") colnames(pars)[2] <- "Robust Std. Err."
-  if(x$se == "kr") colnames(pars)[2] <- "Bias corr. Std. Err."
+  if(x$se == "kr") colnames(pars)[2:3] <- c("Bias corr. Std. Err.", "t value")
   rnames <- x$coefficients$par[1:(length(x$coefficients$par)-dim1)]
   if(any(duplicated(rnames))){
     did <- unique(rnames[duplicated(rnames)])

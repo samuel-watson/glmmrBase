@@ -1015,17 +1015,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // girling_algorithm
-SEXP girling_algorithm(SEXP xp, SEXP N_, SEXP sigma_sq_, SEXP C_, SEXP tol_);
-RcppExport SEXP _glmmrBase_girling_algorithm(SEXP xpSEXP, SEXP N_SEXP, SEXP sigma_sq_SEXP, SEXP C_SEXP, SEXP tol_SEXP) {
+SEXP girling_algorithm(SEXP xp, SEXP N_, SEXP C_, SEXP tol_);
+RcppExport SEXP _glmmrBase_girling_algorithm(SEXP xpSEXP, SEXP N_SEXP, SEXP C_SEXP, SEXP tol_SEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< SEXP >::type N_(N_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type sigma_sq_(sigma_sq_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type C_(C_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type tol_(tol_SEXP);
-    rcpp_result_gen = Rcpp::wrap(girling_algorithm(xp, N_, sigma_sq_, C_, tol_));
+    rcpp_result_gen = Rcpp::wrap(girling_algorithm(xp, N_, C_, tol_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1121,7 +1120,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
     {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
-    {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 5},
+    {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 4},
     {NULL, NULL, 0}
 };
 
