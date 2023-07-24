@@ -33,7 +33,7 @@ print.mcml <- function(x, ...){
   if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n\n")
  
   dim1 <- dim(x$re.samps)[1]
-  pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),1:6]
+  pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),2:7]
   colnames(pars) <- c("Estimate","Std. Err.","z value","p value","2.5% CI","97.5% CI")
   if(x$se == "robust") colnames(pars)[2] <- "Robust Std. Err."
   if(x$se == "kr") colnames(pars)[2:3] <- c("Bias corr. Std. Err.", "t value")

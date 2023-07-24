@@ -1097,20 +1097,22 @@ Model <- R6::R6Class("Model",
                                            upper = NA)
                          
                          if(se == "kr"){
-                           bvar <- 1#1/(res$SE[i]^4)
-                           ef <- 1/(1 - bvar*Mout$b)
-                           g <- (2*Mout$a - 5*Mout$b)/(3*Mout$b)
-                           c1 <- g/(3+2*(1-g))
-                           c2 <- (1-g)/(3+2*(1-g))
-                           c3 <- (3-g)/(3+2*(1-g))
-                           b <- 0.5*(Mout$a + 6*Mout$b)
-                           vf <- 2*((1+c1*b)/((1-c2*b)^2*(1-c3*b)))
-                           rho <- vf/(2*ef^2)
-                           m <- 4 + 3/(rho - 1)
-                           lambda <- m/(ef*(m-2))
-                           print(m)
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
+                               bvar <- 1/(res$SE[i]^4)
+                               a1 <-  bvar*Mout$a
+                               a2 <- bvar*Mout$b
+                               ef <- 1/(1 - a2)
+                               g <- (2*a1 - 5*a2)/(3*a2)
+                               c1 <- g/(3+2*(1-g))
+                               c2 <- (1-g)/(3+2*(1-g))
+                               c3 <- (3-g)/(3+2*(1-g))
+                               b <- 0.5*(a1 + 6*a2)
+                               vf <- 2*((1+c1*b)/((1-c2*b)^2*(1-c3*b)))
+                               rho <- vf/(2*ef^2)
+                               m <- 4 + 3/(rho - 1)
+                               lambda <- m/(ef*(m-2))
+                               print(m)
                                res$t[i] <- (res$est[i]/res$SE[i])*sqrt(lambda)
                                res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),m))
                                res$lower[i] <- res$est[i] - stats::qt(0.975,m)*res$SE[i]
