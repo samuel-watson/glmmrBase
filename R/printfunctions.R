@@ -29,14 +29,23 @@ print.mcml <- function(x, ...){
   
   cat("\nFixed effects formula :",x$mean_form)
   cat("\nCovariance function formula: ",x$cov_form)
-  cat("\nFamily: ",x$family,", Link function:",x$link,"\n")
+  cat("\nFamily: ",x$family,", Link function:",x$link)
+  setype <- switch(
+    x$se,
+    "gls" = "GLS",
+    "robust" = "Robust",
+    "kr" = "Kenward Roger",
+    "bw" = "GLS with between-within correction",
+    "bwrobust" = "Robust with between-within correction"
+  )
+  cat("\nStandard error: ",setype,"\n")
   if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n\n")
+  
  
   dim1 <- dim(x$re.samps)[1]
   pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),2:7]
   colnames(pars) <- c("Estimate","Std. Err.","z value","p value","2.5% CI","97.5% CI")
-  if(x$se == "robust") colnames(pars)[2] <- "Robust Std. Err."
-  if(x$se == "kr") colnames(pars)[2:3] <- c("Bias corr. Std. Err.", "t value")
+  if(x$se == "bw" || x$se == "bwrobust" || x$se == "kr")colnames(pars)[3] <- "t value"
   rnames <- x$coefficients$par[1:(length(x$coefficients$par)-dim1)]
   if(any(duplicated(rnames))){
     did <- unique(rnames[duplicated(rnames)])
@@ -45,10 +54,10 @@ print.mcml <- function(x, ...){
     }
   }
   rownames(pars) <- rnames
-  pars <- apply(pars,2,round,digits = digits)
-  
   total_vars <- x$P+x$Q
   if(x$var_par_family)total_vars <- total_vars + 1
+  if(x$se %in% c("kr","bw","bwrobust"))pars$DoF <- c(x$dof, rep(NA,total_vars - x$P))
+  pars <- apply(pars,2,round,digits = digits)
   
   cat("\nRandom effects: \n")
   print(pars[(x$P+1):(total_vars),c(1,2)])
@@ -56,15 +65,12 @@ print.mcml <- function(x, ...){
   cat("\nFixed effects: \n")
   print(pars[1:x$P,])
   
+  
   cat("\ncAIC: ",round(x$aic,digits))
   cat("\nApproximate R-squared: Conditional: ",round(x$Rsq[1],digits)," Marginal: ",round(x$Rsq[2],digits))
   cat("\nLog-likelihood: ",round(x$logl,digits))
   if(!x$converged)cat("\nMCML ALGORITHM DID NOT CONVERGE!")
-#   #messages
-#   if(x$permutation)message("Permutation test used for one parameter, other SEs are not reported. SEs and Z values
-# are approximate based on the p-value, and assume normality.")
-  #if(!x$hessian&!x$permutation)warning("Hessian was not positive definite, standard errors are approximate")
-  #if(!x$converged)warning("Algorithm did not converge")
+
   return(invisible(pars))
 }
 

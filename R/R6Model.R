@@ -718,12 +718,16 @@ Model <- R6::R6Class("Model",
                        #'between iterations at which to stop the algorithm.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
                        #'@param se String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-                       #' "robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.
+                       #' "robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
+                       #' GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
+                       #' standard errors with between-within correction to the degrees of freedom.
                        #'@param sparse Logical indicating whether to use sparse matrix methods
                        #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
                        #'it generally produces a larger number of effective samplers per unit time, especially for more complex
                        #'covariance functions.
+                       #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
+                       #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -763,7 +767,8 @@ Model <- R6::R6Class("Model",
                                        max.iter = 30,
                                        se = "gls",
                                        sparse = FALSE,
-                                       usestan = TRUE){
+                                       usestan = TRUE,
+                                       se.theta = TRUE){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
@@ -859,7 +864,6 @@ Model <- R6::R6Class("Model",
                            if(trace==2)t3 <- Sys.time()
                            if(trace==2)cat("\nModel fitting took: ",t3-t2,"s")
                            if(verbose){
-                             #cat("\ntheta:",theta[all_pars])
                              cat("\nBeta: ", beta_new)
                              cat("\nTheta: ", theta_new)
                              if(var_par_family)cat("\nSigma: ",var_par_new)
@@ -882,12 +886,20 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr, TRUE)
-                         if(se == "gls"){
+                         if(se == "gls" || se == "bw"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
-                         } else if(se == "robust"){
+                           if(se.theta){
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           } else {
+                             SE_theta <- rep(NA, ncovpar)
+                           }
+                         } else if(se == "robust" || se == "bwrobust"){
                            M <- Model__sandwich(private$ptr)
-                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           if(se.theta){
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           } else {
+                             SE_theta <- rep(NA, ncovpar)
+                           }
                          } else if(se == "kr"){
                            Mout <- Model__kenward_roger(private$ptr)
                            M <- Mout[[1]]
@@ -912,21 +924,24 @@ Model <- R6::R6Class("Model",
                                            p = NA,
                                            lower = NA,
                                            upper = NA)
+                         dof <- rep(self$n(),length(beta))
                          if(se == "kr"){
-                           for(i in 1:length(all_pars_new)){
+                           for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
-                               bvar <- 1/(res$SE[i]^2)
-                               ef <- 1 + bvar^2*Mout$b
-                               vf <- 1 + bvar^2*Mout$a+6*bvar^2*Mout$b
-                               rho <- vf/(2*ef^2)
-                               m <- 4 + 3/(rho - 1)
-                               lambda <- m/(ef*(m-2))
-                               res$t[i] <- (res$est[i]/res$SE[i])*sqrt(lambda)
-                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),m))
-                               res$lower[i] <- res$est - qt(1-0.05/2,m)*res$SE[i]
-                               res$upper[i] <- res$est + qt(1-0.05/2,m)*res$SE[i]
+                               res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=FALSE))
+                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
+                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
                              }
+                             dof[i] <- Mout$dof[i]
                            }
+                         } else if(se=="bw" || se == "bwrobust"){
+                           res$t <- res$est/res$SE
+                           bwdof <- sum(repar_table$count) - length(beta)
+                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=FALSE))
+                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           dof <- rep(bwdof,length(beta))
                          } else {
                            res$t <- res$est/res$SE
                            res$p <- 2*(1-stats::pnorm(abs(res$t)))
@@ -958,6 +973,7 @@ Model <- R6::R6Class("Model",
                                      link = self$family[[2]],
                                      re.samps = u,
                                      iter = iter,
+                                     dof = dof,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family)
@@ -981,9 +997,13 @@ Model <- R6::R6Class("Model",
                        #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
                        #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
                        #'@param se String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-                       #' "robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.
+                       #' "robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
+                       #' GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
+                       #' standard errors with between-within correction to the degrees of freedom.
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
+                       #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
+                       #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@return A `mcml` object
                        #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -1012,7 +1032,8 @@ Model <- R6::R6Class("Model",
                                      verbose = FALSE,
                                      se = "gls",
                                      max.iter = 40,
-                                     tol = 1e-2){
+                                     tol = 1e-4,
+                                     se.theta = TRUE){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters)
@@ -1065,12 +1086,20 @@ Model <- R6::R6Class("Model",
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr,TRUE)
                          if(verbose)cat("\n\nCalculating standard errors...\n")
-                         if(se == "gls"){
+                         if(se == "gls" || se =="bw"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
-                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
-                         } else if(se == "robust"){
+                           if(se.theta){
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           } else {
+                             SE_theta <- rep(NA, ncovpar)
+                           }
+                         } else if(se == "robust" || se == "bwrobust"){
                            M <- Model__sandwich(private$ptr)
-                           SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           if(se.theta){
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                           } else {
+                             SE_theta <- rep(NA, ncovpar)
+                           }
                          } else if(se == "kr"){
                            Mout <- Model__kenward_roger(private$ptr)
                            M <- Mout[[1]]
@@ -1096,29 +1125,24 @@ Model <- R6::R6Class("Model",
                                            lower = NA,
                                            upper = NA)
                          
+                         dof <- rep(self$n(),length(beta))
                          if(se == "kr"){
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
-                               bvar <- 1/(res$SE[i]^4)
-                               a1 <-  bvar*Mout$a
-                               a2 <- bvar*Mout$b
-                               ef <- 1/(1 - a2)
-                               g <- (2*a1 - 5*a2)/(3*a2)
-                               c1 <- g/(3+2*(1-g))
-                               c2 <- (1-g)/(3+2*(1-g))
-                               c3 <- (3-g)/(3+2*(1-g))
-                               b <- 0.5*(a1 + 6*a2)
-                               vf <- 2*((1+c1*b)/((1-c2*b)^2*(1-c3*b)))
-                               rho <- vf/(2*ef^2)
-                               m <- 4 + 3/(rho - 1)
-                               lambda <- m/(ef*(m-2))
-                               print(m)
-                               res$t[i] <- (res$est[i]/res$SE[i])*sqrt(lambda)
-                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),m))
-                               res$lower[i] <- res$est[i] - stats::qt(0.975,m)*res$SE[i]
-                               res$upper[i] <- res$est[i] + stats::qt(0.975,m)*res$SE[i]
+                               res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=FALSE))
+                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
+                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
                              }
+                             dof[i] <- Mout$dof[i]
                            }
+                         } else if(se=="bw" || se == "bwrobust"){
+                           res$t <- res$est/res$SE
+                           bwdof <- sum(repar_table$count) - length(beta)
+                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=FALSE))
+                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           dof <- rep(bwdof,length(beta))
                          } else {
                            res$t <- res$est/res$SE
                            res$p <- 2*(1-stats::pnorm(abs(res$t)))
@@ -1150,6 +1174,7 @@ Model <- R6::R6Class("Model",
                                      link = self$family[[2]],
                                      re.samps = u,
                                      iter = iter,
+                                     dof = dof,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family)

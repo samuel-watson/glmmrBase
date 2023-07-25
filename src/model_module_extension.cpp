@@ -18,6 +18,15 @@ SEXP wrap(const matrix_matrix& x){
       Rcpp::Named("b") = Rcpp::wrap(x.b)
   ));
 }
+
+template<>
+SEXP wrap(const kenward_data& x){
+  return Rcpp::wrap(Rcpp::List::create(
+      Rcpp::Named("vcov_beta") = Rcpp::wrap(x.vcov_beta),
+      Rcpp::Named("vcov_theta") = Rcpp::wrap(x.vcov_theta),
+      Rcpp::Named("dof") = Rcpp::wrap(x.dof)
+  ));
+}
 }
 
 using namespace Rcpp;
@@ -107,7 +116,7 @@ SEXP Model__infomat_theta(SEXP xp){
 // [[Rcpp::export]]
 SEXP Model__kenward_roger(SEXP xp){
   XPtr<glmmr::Model> ptr(xp);
-  matrix_matrix M = ptr->matrix.kenward_roger();
+  kenward_data M = ptr->matrix.kenward_roger();
   return wrap(M);
 }
 

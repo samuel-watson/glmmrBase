@@ -173,4 +173,21 @@ public:
   };
 };
 
+struct kenward_data{
+public:
+  MatrixXd vcov_beta;
+  MatrixXd vcov_theta;
+  VectorXd dof;
+  VectorXd lambda;
+  kenward_data(int n1, int m1, int n2, int m2): vcov_beta(n1,m1), vcov_theta(n2,m2), dof(n1), lambda(n1) {};
+  kenward_data(const kenward_data& x) : vcov_beta(x.vcov_beta), vcov_theta(x.vcov_theta), dof(x.dof), lambda(x.lambda) {};
+  kenward_data& operator=(kenward_data x){
+    vcov_beta = x.vcov_beta;
+    vcov_theta = x.vcov_theta;
+    dof = x.dof;
+    lambda = x.lambda;
+    return *this;
+  };
+};
+
 #endif

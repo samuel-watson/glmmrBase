@@ -953,7 +953,8 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   max.iter = 30,
   se = "gls",
   sparse = FALSE,
-  usestan = TRUE
+  usestan = TRUE,
+  se.theta = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -975,7 +976,9 @@ between iterations at which to stop the algorithm.}
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
 
 \item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
+"robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
+GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
+standard errors with between-within correction to the degrees of freedom.}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
@@ -983,6 +986,9 @@ between iterations at which to stop the algorithm.}
 the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
 it generally produces a larger number of effective samplers per unit time, especially for more complex
 covariance functions.}
+
+\item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
+of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1037,7 +1043,8 @@ Maximum Likelihood model fitting with Laplace Approximation
   verbose = FALSE,
   se = "gls",
   max.iter = 40,
-  tol = 0.01
+  tol = 1e-04,
+  se.theta = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -1053,11 +1060,16 @@ Maximum Likelihood model fitting with Laplace Approximation
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
 
 \item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-"robust" for Huber robust sandwich estimator, and "kr" for Kenward-Roger bias corrected standard errors.}
+"robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
+GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
+standard errors with between-within correction to the degrees of freedom.}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 
 \item{\code{tol}}{Maximum difference between successive iterations at which to terminate the algorithm}
+
+\item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
+of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
 }
 \if{html}{\out{</div>}}
 }

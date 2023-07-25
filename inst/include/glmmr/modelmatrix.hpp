@@ -25,7 +25,7 @@ class ModelMatrix{
     MatrixXd sandwich_matrix();
     std::vector<MatrixXd> sigma_derivatives();
     MatrixXd information_matrix_theta();
-    matrix_matrix kenward_roger();
+    kenward_data kenward_roger();
     MatrixXd linpred();
     vector_matrix b_score();
     vector_matrix re_score();
@@ -221,18 +221,18 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
   model.covariance.derivatives(derivs,1);
   int R = model.covariance.npar();
   int Rmod = model.family.family=="gaussian" ? R+1 : R;
-  
   MatrixXd M = information_matrix();
   M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
   MatrixXd SigmaInv = Sigma(true);
   MatrixXd Z = model.covariance.Z();
-  // MatrixXd X = model.linear_predictor.X();
-  // MatrixXd SigX = SigmaInv*X;
-  //MatrixXd PG = SigmaInv - SigX*M*SigX.transpose();
+  MatrixXd X = model.linear_predictor.X();
+  MatrixXd SigX = SigmaInv*X;
   MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
   MatrixXd partial1(model.n(),model.n());
   MatrixXd partial2(model.n(),model.n());
   glmmr::MatrixField<MatrixXd> S;
+  glmmr::MatrixField<MatrixXd> P;
+  glmmr::MatrixField<MatrixXd> Q;
   int counter = 0;
   for(int i = 0; i < Rmod; i++){
     if(i < R){
@@ -241,6 +241,7 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
       partial1 = MatrixXd::Identity(n,n);
       if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
     }
+    P.add(-1*SigX.transpose()*partial1*SigX);
     for(int j = i; j < Rmod; j++){
       if(j < R){
         partial2 = Z*derivs[1+j]*Z.transpose();
@@ -248,14 +249,14 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
         partial2 = MatrixXd::Identity(n,n);
         if((model.data.weights != 1).any())partial2 = model.data.weights.inverse().matrix().asDiagonal();
       }
+      Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
       S.add(SigmaInv*partial1*SigmaInv*partial2);
     }
   }
   counter = 0;
   for(int i = 0; i < Rmod; i++){
     for(int j = i; j < Rmod; j++){
-      // using the expected REML information matrix here, but can use alternative commented out
-      M_theta(i,j) = 0.5*(S(counter).trace()); //- (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
+      M_theta(i,j) = 0.5*(S(counter).trace())- (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
       if(i!=j)M_theta(j,i)=M_theta(i,j);
       counter++;
     }
@@ -264,7 +265,7 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
   return M_theta;
 }
 
-inline matrix_matrix glmmr::ModelMatrix::kenward_roger(){
+inline kenward_data glmmr::ModelMatrix::kenward_roger(){
   if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
   int n = model.n();
   std::vector<MatrixXd> derivs;
@@ -279,7 +280,6 @@ inline matrix_matrix glmmr::ModelMatrix::kenward_roger(){
   MatrixXd Z = model.covariance.Z();
   MatrixXd X = model.linear_predictor.X();
   MatrixXd SigX = SigmaInv*X;
-  //MatrixXd PG = SigmaInv - SigX*M*SigX.transpose();
   MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
   MatrixXd partial1(model.n(),model.n());
   MatrixXd partial2(model.n(),model.n());
@@ -315,7 +315,6 @@ inline matrix_matrix glmmr::ModelMatrix::kenward_roger(){
   counter = 0;
   for(int i = 0; i < Rmod; i++){
     for(int j = i; j < Rmod; j++){
-      // using the expected REML information matrix here, but can use alternative commented out
       M_theta(i,j) = 0.5*(S(counter).trace()) - (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
       if(i!=j)M_theta(j,i)=M_theta(i,j);
       counter++;
@@ -337,7 +336,6 @@ inline matrix_matrix glmmr::ModelMatrix::kenward_roger(){
       }
       int scnd_idx = i + j*(Rmod-1) - j*(j-1)/2;
       meat += M_theta(i,j)*(Q(scnd_idx) + Q(scnd_idx).transpose() - P(i)*M*P(j) -P(j)*M*P(i));//(SigX.transpose()*partial1*PG*partial2*SigX);//
-      //meat += M_theta(i,j)*(SigX.transpose()*partial2*PG*partial1*SigX);
       if(i < R && j < R){
         scnd_idx = i + j*(R-1) - j*(j-1)/2;
         meat -= 0.5*M_theta(i,j)*(RR(scnd_idx));
@@ -361,19 +359,44 @@ inline matrix_matrix glmmr::ModelMatrix::kenward_roger(){
   M_new = M + 2*M*meat*M;
   
   // degrees of freedom correction
-  double a1, a2 = 0;
-  for(int i = 0; i < Rmod; i++){
-    for(int j = 0; j < Rmod; j++){
-      a1 += M_theta(i,j)*(M*P(i)*M).trace()*(M*P(j)*M).trace();
-      a2 += M_theta(i,j)*(M*P(i)*M*M*P(j)*M).trace();
+  
+  kenward_data out(model.linear_predictor.P(),model.linear_predictor.P(),Rmod,Rmod);
+  out.vcov_beta = M_new;
+  out.vcov_theta = M_theta;
+  
+  double a1, a2, B, g, c1, c2, c3, v0, v1, v2, rhotop, rho;
+  int mult = 1;
+  VectorXd L = VectorXd::Zero(model.linear_predictor.P());
+  MatrixXd Theta(model.linear_predictor.P(),model.linear_predictor.P());
+  for(int p = 0; p < L.size(); p++){
+    L.setZero();
+    L(p) = 1;
+    double vlb = L.transpose() * M * L;
+    Theta = (1/vlb)*(L*L.transpose());
+    Theta = Theta*M;
+    a1 = 0; 
+    a2 = 0;
+    for(int i = 0; i < Rmod; i++){
+      for(int j = i; j < Rmod; j++){
+        mult = i==j ? 1 : 2;
+        a1 += mult*M_theta(i,j)*(Theta*P(i)*M).trace()*(Theta*P(j)*M).trace();
+        a2 += mult*M_theta(i,j)*(Theta*P(i)*M*Theta*P(j)*M).trace();
+      }
     }
+    B = (a1 + 6*a2)*0.5;
+    g = (2*a1 - 5*a2)/(3*a2);
+    c1 = g/(3+2*(1-g));
+    c2 = (1-g)/(3+2*(1-g));
+    c3 = (3-g)/(3+2*(1-g));
+    v0 = abs(1 + c1*B) < 1e-10 ? 0 : 1 + c1*B;
+    v1 = 1 - c2*B;
+    v2 = 1/(1 - c3*B);
+    rhotop = abs(1-a2) < 1e-10 && abs(v1) < 1e-10 ? 1.0 : (1-a2)/v1;
+    rho = rhotop*rhotop*v0*v2;
+    out.dof(p) = 4 + 3/(rho-1);
+    out.lambda(p) = (1-a2)*out.dof(p)/(out.dof(p) - 2);
   }
   
-  matrix_matrix out(model.linear_predictor.P(),model.linear_predictor.P(),Rmod,Rmod);
-  out.mat1 = M_new;
-  out.mat2 = M_theta;
-  out.a = a1;
-  out.b = a2;
   return out;
 }
 
