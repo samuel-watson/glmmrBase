@@ -1,4 +1,5 @@
 test_that("dense covariance tests", {
+  setParallel(FALSE)
   df <- nelder(~(cl(4)*t(5)) > ind(5))
   df$int <- 0
   df[df$cl <= 2, 'int'] <- 1
@@ -22,6 +23,7 @@ test_that("dense covariance tests", {
 })
 
 test_that("sparse covariance tests", {
+  setParallel(FALSE)
   df <- nelder(~(cl(4)*t(5)) > ind(5))
   df$int <- 0
   df[df$cl <= 2, 'int'] <- 1
@@ -44,6 +46,7 @@ test_that("sparse covariance tests", {
 })
 
 test_that("covariance functions", {
+  setParallel(FALSE)
   df <- nelder(~(cl(4)*t(5)) > ind(5))
   cptr <- expect_no_error(Covariance__new("(1|fexp0(t))",as.matrix(df),colnames(df)))
   Covariance__Update_parameters(cptr,c(0.25))
