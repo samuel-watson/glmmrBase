@@ -39,7 +39,7 @@ public:
   void mcmc_set_refresh(int refresh);
   void mcmc_set_target_accept(double target);
   
-private:
+protected:
   VectorXd u0;
   VectorXd up;
   VectorXd r;

@@ -83,7 +83,7 @@ public:
   virtual VectorXd predict_xb(const ArrayXXd& newdata_,
              const ArrayXd& newoffset_);
 
-private:
+protected:
   strvec colnames_vec;
   glmmr::Formula& form;
   int P_;

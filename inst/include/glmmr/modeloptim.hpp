@@ -48,7 +48,7 @@ public:
   virtual double aic();
   virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
   
-private:
+protected:
   void calculate_var_par();
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   dblvec get_lower_values(bool beta, bool theta, bool var = true);

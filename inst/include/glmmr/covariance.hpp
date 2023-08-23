@@ -115,7 +115,7 @@ public:
   strvec parameter_names();
   virtual void derivatives(std::vector<MatrixXd>& derivs,int order = 1);
   
-private:
+protected:
   std::vector<glmmr::calculator> calc_;
   intvec z_;
   intvec3d re_pars_;
