@@ -10,23 +10,26 @@ namespace glmmr {
 
 using namespace Eigen;
 
+template<typename cov, typename linpred>
 class MatrixW{
 public:
   bool attenuated = false;
   VectorXd W_ = VectorXd::Constant(1,1.0);
-  glmmr::ModelBits& model;
-  MatrixW(glmmr::ModelBits& model_): model(model_) { update(); };
+  glmmr::ModelBits<cov, linpred>& model;
+  MatrixW(glmmr::ModelBits<cov, linpred>& model_): model(model_) { update(); };
   VectorXd W();
   void update();
 };
 
 }
 
-inline VectorXd glmmr::MatrixW::W(){
+template<typename cov, typename linpred>
+inline VectorXd glmmr::MatrixW<cov, linpred>::W(){
   return W_;
 }
 
-inline void glmmr::MatrixW::update(){
+template<typename cov, typename linpred>
+inline void glmmr::MatrixW<cov, linpred>::update(){
   if(W_.size() != model.n())W_.conservativeResize(model.n());
   ArrayXd nvar_par(model.n());
   ArrayXd xb(model.n());

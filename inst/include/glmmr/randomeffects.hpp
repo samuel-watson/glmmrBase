@@ -12,13 +12,14 @@ namespace glmmr {
 
 using namespace Eigen;
 
+template<typename cov, typename linpred>
 class RandomEffects{
 public:
   sparse ZL;
   MatrixXd u_;
   MatrixXd zu_;
-  glmmr::ModelBits& model;
-  RandomEffects(glmmr::ModelBits& model_) : 
+  glmmr::ModelBits<cov, linpred>& model;
+  RandomEffects(glmmr::ModelBits<cov, linpred>& model_) : 
     ZL(model_.n(),model_.covariance.Q()),
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     zu_(model_.n(),1), model(model_) { if(model.covariance.parameters_.size()>0)ZL = model.covariance.ZL_sparse();};
@@ -29,7 +30,8 @@ public:
 
 }
 
-inline MatrixXd glmmr::RandomEffects::u(bool scaled){
+template<typename cov, typename linpred>
+inline MatrixXd glmmr::RandomEffects<cov, linpred>::u(bool scaled){
   if(scaled){
     return model.covariance.Lu(u_);
   } else {
@@ -37,7 +39,8 @@ inline MatrixXd glmmr::RandomEffects::u(bool scaled){
   }
 }
 
-inline vector_matrix glmmr::RandomEffects::predict_re(const ArrayXXd& newdata_,
+template<typename cov, typename linpred>
+inline vector_matrix glmmr::RandomEffects<cov, linpred>::predict_re(const ArrayXXd& newdata_,
                                                       const ArrayXd& newoffset_){
   if(model.covariance.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
   // generate the merged data

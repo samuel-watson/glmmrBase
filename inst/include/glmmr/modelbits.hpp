@@ -13,11 +13,12 @@ namespace glmmr {
 
 using namespace Eigen;
 
+template<typename cov, typename linpred>
 class ModelBits{
 public:
   glmmr::Formula formula;
-  glmmr::Covariance covariance;
-  glmmr::LinearPredictor linear_predictor;
+  cov covariance;
+  linpred linear_predictor;
   glmmr::ModelExtraData data;
   glmmr::Family family;
   glmmr::calculator calc;
@@ -35,8 +36,8 @@ public:
     family(family_,link_) { setup_calculator(); };
   int n(){return linear_predictor.n();};
   ArrayXd xb(){return linear_predictor.xb() + data.offset;};
-  void make_covariance_sparse();
-  void make_covariance_dense();
+  virtual void make_covariance_sparse();
+  virtual void make_covariance_dense();
   
 private:
   void setup_calculator();
@@ -44,7 +45,8 @@ private:
 
 }
 
-inline void glmmr::ModelBits::setup_calculator(){
+template<typename cov, typename linpred>
+inline void glmmr::ModelBits<cov, linpred>::setup_calculator(){
   dblvec yvec(n(),0.0);
   calc = linear_predictor.calc;
   glmmr::linear_predictor_to_link(calc,family.link);
@@ -61,11 +63,13 @@ inline void glmmr::ModelBits::setup_calculator(){
   vcalc.variance = data.variance;
 }
 
-inline void glmmr::ModelBits::make_covariance_sparse(){
+template<typename cov, typename linpred>
+void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(){
   covariance.set_sparse(true);
 }
 
-inline void glmmr::ModelBits::make_covariance_dense(){
+template<typename cov, typename linpred>
+void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
   covariance.set_sparse(false);
 }
 

@@ -13,12 +13,13 @@ namespace glmmr {
 
 using namespace Eigen;
 
+template<typename cov, typename linp>
 class ModelMatrix{
   public:
-    glmmr::ModelBits& model;
-    glmmr::MatrixW W;
-    glmmr::RandomEffects& re;
-    ModelMatrix(glmmr::ModelBits& model_, glmmr::RandomEffects& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
+    glmmr::ModelBits<cov, linp>& model;
+    glmmr::MatrixW<cov, linp> W;
+    glmmr::RandomEffects<cov, linp>& re;
+    ModelMatrix(glmmr::ModelBits<cov, linp>& model_, glmmr::RandomEffects<cov, linp>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
     MatrixXd information_matrix();
     MatrixXd Sigma(bool inverse = false);
     MatrixXd observed_information_matrix();
@@ -43,11 +44,13 @@ class ModelMatrix{
 
 }
 
-inline std::vector<glmmr::SigmaBlock> glmmr::ModelMatrix::get_sigma_blocks(){
+template<typename cov, typename linp>
+inline std::vector<glmmr::SigmaBlock> glmmr::ModelMatrix<cov, linp>::get_sigma_blocks(){
   return sigma_blocks;
 }
 
-inline MatrixXd glmmr::ModelMatrix::information_matrix_by_block(int b){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::information_matrix_by_block(int b){
   ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
   MatrixXd X = glmmr::Eigen_ext::submat(model.linear_predictor.X(),rows,ArrayXi::LinSpaced(model.linear_predictor.P(),0,model.linear_predictor.P()-1));
   MatrixXd S = sigma_block(b,true);
@@ -55,7 +58,8 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_by_block(int b){
   return M;
 }
 
-inline MatrixXd glmmr::ModelMatrix::information_matrix(){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::information_matrix(){
   W.update();
   MatrixXd M = MatrixXd::Zero(model.linear_predictor.P(),model.linear_predictor.P());
   for(unsigned int i = 0; i< sigma_blocks.size(); i++){
@@ -64,7 +68,8 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix(){
   return M;
 }
 
-inline void glmmr::ModelMatrix::gen_sigma_blocks(){
+template<typename cov, typename linp>
+inline void glmmr::ModelMatrix<cov, linp>::gen_sigma_blocks(){
   int block_counter = 0;
   intvec2d block_ids(model.n());
   int block_size;
@@ -119,15 +124,17 @@ inline void glmmr::ModelMatrix::gen_sigma_blocks(){
   }
 }
 
-inline MatrixXd glmmr::ModelMatrix::Sigma(bool inverse){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::Sigma(bool inverse){
   W.update();
   MatrixXd S = sigma_builder(0,inverse);
   return S;
 }
 
-inline MatrixXd glmmr::ModelMatrix::sigma_block(int b,
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::sigma_block(int b,
                                                 bool inverse){
-  if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  //if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
   MatrixXd ZL = sparse_to_dense(ZLs,false);
   MatrixXd S = ZL * ZL.transpose();
@@ -140,7 +147,8 @@ inline MatrixXd glmmr::ModelMatrix::sigma_block(int b,
   return S;
 }
 
-inline MatrixXd glmmr::ModelMatrix::sigma_builder(int b,
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::sigma_builder(int b,
                                                   bool inverse){
   int B_ = sigma_blocks.size();
   if (b == B_ - 1) {
@@ -164,16 +172,17 @@ inline MatrixXd glmmr::ModelMatrix::sigma_builder(int b,
   }
 }
 
-inline MatrixXd glmmr::ModelMatrix::observed_information_matrix(){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::observed_information_matrix(){
   // this works but its too slow doing all the cross partial derivatives
   //MatrixXd XZ(n_,P_+Q_);
   //int iter = zu_.cols();
-  //XZ.leftCols(P_) = linpred_.X();
+  //XZ.leftCols(P_) = linp_.X();
   //XZ.rightCols(Q_) = sparse_to_dense(ZL_,false);
   //MatrixXd result = MatrixXd::Zero(P_+Q_,P_+Q_);
   //MatrixXd I = MatrixXd::Identity(P_+Q_,P_+Q_);
   //dblvec params(P_+Q_);
-  //std::copy_n(linpred_.parameters_.begin(),P_,params.begin());
+  //std::copy_n(linp_.parameters_.begin(),P_,params.begin());
   //for(int i = 0; i < iter; i++){
   //  for(int j = 0; j < Q_; j++){
   //    params[P_+j] = u_(j,i);
@@ -197,7 +206,8 @@ inline MatrixXd glmmr::ModelMatrix::observed_information_matrix(){
   return infomat;
 }
 
-inline MatrixXd glmmr::ModelMatrix::sandwich_matrix(){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::sandwich_matrix(){
   MatrixXd infomat = observed_information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P()+model.covariance.Q(),model.linear_predictor.P()+model.covariance.Q()));
   infomat.conservativeResize(model.linear_predictor.P(),model.linear_predictor.P());
@@ -208,14 +218,16 @@ inline MatrixXd glmmr::ModelMatrix::sandwich_matrix(){
   return sandwich;
 }
 
-inline std::vector<MatrixXd> glmmr::ModelMatrix::sigma_derivatives(){
+template<typename cov, typename linp>
+inline std::vector<MatrixXd> glmmr::ModelMatrix<cov, linp>::sigma_derivatives(){
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
   return derivs;
 }
 
-inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
-  if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::information_matrix_theta(){
+  //if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,1);
@@ -265,8 +277,9 @@ inline MatrixXd glmmr::ModelMatrix::information_matrix_theta(){
   return M_theta;
 }
 
-inline kenward_data glmmr::ModelMatrix::kenward_roger(){
-  if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
+template<typename cov, typename linp>
+inline kenward_data glmmr::ModelMatrix<cov, linp>::kenward_roger(){
+  //if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
@@ -400,11 +413,13 @@ inline kenward_data glmmr::ModelMatrix::kenward_roger(){
   return out;
 }
 
-inline MatrixXd glmmr::ModelMatrix::linpred(){
+template<typename cov, typename linp>
+inline MatrixXd glmmr::ModelMatrix<cov, linp>::linpred(){
   return (re.zu_.colwise()+(model.linear_predictor.xb()+model.data.offset));
 }
 
-inline vector_matrix glmmr::ModelMatrix::b_score(){
+template<typename cov, typename linp>
+inline vector_matrix glmmr::ModelMatrix<cov, linp>::b_score(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
   matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
@@ -415,14 +430,16 @@ inline vector_matrix glmmr::ModelMatrix::b_score(){
   return out;
 }
 
-inline matrix_matrix glmmr::ModelMatrix::hess_and_grad(){
+template<typename cov, typename linp>
+inline matrix_matrix glmmr::ModelMatrix<cov, linp>::hess_and_grad(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
   matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
   return hess;
 }
 
-inline vector_matrix glmmr::ModelMatrix::re_score(){
+template<typename cov, typename linp>
+inline vector_matrix glmmr::ModelMatrix<cov, linp>::re_score(){
   VectorXd xbOffset = model.linear_predictor.xb() + model.data.offset;
   matrix_matrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),sparse_to_dense(re.ZL,false),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
   vector_matrix out(model.covariance.Q());
@@ -433,7 +450,8 @@ inline vector_matrix glmmr::ModelMatrix::re_score(){
   return out;
 }
 
-inline VectorXd glmmr::ModelMatrix::log_gradient(const VectorXd &v,
+template<typename cov, typename linp>
+inline VectorXd glmmr::ModelMatrix<cov, linp>::log_gradient(const VectorXd &v,
                                                 bool beta){
   ArrayXd size_n_array = model.xb();
   ArrayXd size_q_array = ArrayXd::Zero(model.covariance.Q());
@@ -618,7 +636,7 @@ inline VectorXd glmmr::ModelMatrix::log_gradient(const VectorXd &v,
   }
   // we can use autodiff here, but the above method is faster
   // else {
-  //   VectorXd xbOffset_ = linpred_.xb() + offset_;
+  //   VectorXd xbOffset_ = linp_.xb() + offset_;
   //   MatrixXd J = vcalc_.jacobian(dblvec(v.data(),v.data()+v.size()),
   //                                               sparse_to_dense(ZL_,false),
   //                                               xbOffset_);
