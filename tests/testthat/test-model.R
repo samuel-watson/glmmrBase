@@ -1,4 +1,5 @@
 test_that("model dense ml", {
+  setParallel(FALSE)
   df <- nelder(~(j(10) * t(3)) > i(5))
   y <- ytest1
   df$t1 <- I(df$t==1)*1
@@ -29,6 +30,7 @@ test_that("model dense ml", {
 })
 
 test_that("model dense la", {
+  setParallel(FALSE)
   df <- nelder(~(j(10) * t(3)) > i(5))
   y <- ytest1
   df$t1 <- I(df$t==1)*1
@@ -59,6 +61,7 @@ test_that("model dense la", {
 })
 
 test_that("model sparse ml", {
+  setParallel(FALSE)
   df <- nelder(~(j(10) * t(3)) > i(5))
   y <- ytest1
   df$t1 <- I(df$t==1)*1
@@ -90,6 +93,7 @@ test_that("model sparse ml", {
 })
 
 test_that("overall model class",{
+  setParallel(FALSE)
   df <- nelder(~(j(5) * t(3)) > i(10))
   des <- expect_no_error(Model$new(
     covariance = list(
