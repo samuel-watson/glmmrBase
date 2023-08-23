@@ -32,7 +32,7 @@ public:
   virtual void update_theta(const dblvec &theta);
   virtual void update_beta(const VectorXd &beta);
   virtual void update_theta(const VectorXd &theta);
-  virtual void update_u(const MatrixXd& u);
+  virtual void update_u(const MatrixXd& u_);
   virtual double log_likelihood();
   virtual double full_log_likelihood();
   virtual void nr_beta();
@@ -177,7 +177,6 @@ template<typename cov, typename linpred>
 inline void glmmr::ModelOptim<cov, linpred>::update_u(const MatrixXd &u_){
   //if(u_.rows()!=model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
-    //Rcpp::Rcout << "\nDifferent numbers of random effect samples";
     re.u_.conservativeResize(model.covariance.Q(),u_.cols());
     re.zu_.resize(model.covariance.Q(),u_.cols());
   }

@@ -96,12 +96,12 @@ public:
   virtual VectorXd sim_re();
   virtual double log_likelihood(const VectorXd &u);
   virtual double log_determinant();
-  int npar();
-  int B();
-  int Q();
-  int max_block_dim();
-  int block_dim(int b);
-  void make_sparse();
+  virtual int npar();
+  virtual int B();
+  virtual int Q();
+  virtual int max_block_dim();
+  virtual int block_dim(int b);
+  virtual void make_sparse();
   virtual MatrixXd ZL();
   virtual MatrixXd LZWZL(const VectorXd& w);
   virtual MatrixXd ZLu(const MatrixXd& u);
