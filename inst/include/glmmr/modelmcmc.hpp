@@ -1,5 +1,4 @@
-#ifndef MODELMCMC_HPP
-#define MODELMCMC_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -216,5 +215,3 @@ template<typename modeltype>
 inline void glmmr::ModelMCMC<modeltype>::mcmc_set_target_accept(double target_){
   target_accept = target_;
 }
-
-#endif

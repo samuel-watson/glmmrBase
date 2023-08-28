@@ -1,5 +1,4 @@
-#ifndef FORMULAPARSE_H
-#define FORMULAPARSE_H
+#pragma once
 
 #include "general.h"
 
@@ -275,6 +274,3 @@ inline bool parse_formula(std::vector<char>& formula,
 
 }
 
-
-
-#endif

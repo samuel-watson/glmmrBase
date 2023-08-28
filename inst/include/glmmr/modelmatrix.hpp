@@ -1,5 +1,4 @@
-#ifndef MODELMATRIX_HPP
-#define MODELMATRIX_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -644,5 +643,3 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   // }
   return beta ? size_p_array.matrix() : size_q_array.matrix();
 }
-
-#endif

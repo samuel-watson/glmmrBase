@@ -1,5 +1,4 @@
-#ifndef INTERPRETER_H
-#define INTERPRETER_H
+#pragma once
 
 #include "general.h"
 #include "calculator.hpp"
@@ -506,5 +505,3 @@ inline void link_to_likelihood(glmmr::calculator& calc,
 }
 
 }
-
-#endif

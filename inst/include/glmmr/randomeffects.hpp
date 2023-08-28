@@ -1,5 +1,4 @@
-#ifndef RANDOMEFFECTS_HPP
-#define RANDOMEFFECTS_HPP
+#pragma once
 
 #include "general.h"
 #include "covariance.hpp"
@@ -80,5 +79,3 @@ inline vector_matrix glmmr::RandomEffects<modeltype>::predict_re(const ArrayXXd&
   result.mat -= D12 * D22 * D12.transpose();
   return result;
 }
-
-#endif

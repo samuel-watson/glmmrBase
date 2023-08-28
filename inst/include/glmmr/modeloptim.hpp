@@ -1,5 +1,4 @@
-#ifndef MODELOPTIM_HPP
-#define MODELOPTIM_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -701,5 +700,3 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
   }
   return weights;
 }
-
-#endif 

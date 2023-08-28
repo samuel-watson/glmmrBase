@@ -1,5 +1,4 @@
-#ifndef MATHS_H
-#define MATHS_H
+#pragma once
 
 #define _USE_MATH_DEFINES
 
@@ -426,6 +425,3 @@ inline std::vector<int> linseq(int start, int end) {
 }
 }
 }
-
-
-#endif

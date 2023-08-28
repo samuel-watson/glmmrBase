@@ -1,5 +1,4 @@
-#ifndef GLMMR_H
-#define GLMMR_H
+#pragma once
 
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 
@@ -15,4 +14,5 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
-#endif
+typedef glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> bits;
+typedef glmmr::Model<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > glmm;

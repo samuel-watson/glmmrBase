@@ -1,5 +1,4 @@
-#ifndef LINEARPREDICTOR_HPP
-#define LINEARPREDICTOR_HPP
+#pragma once
 
 #include "general.h"
 #include "interpreter.h"
@@ -162,5 +161,3 @@ inline VectorXd glmmr::LinearPredictor::predict_xb(const ArrayXXd& newdata_,
   VectorXd xb = newlinpred.xb() + newoffset_.matrix();
   return xb;
 }
-
-#endif

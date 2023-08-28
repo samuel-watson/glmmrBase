@@ -1,5 +1,4 @@
-#ifndef ALGO_H
-#define ALGO_H
+#pragma once
 
 #include <cmath>
 #include <RcppEigen.h>
@@ -188,5 +187,3 @@ class SigmaBlock {
 };
 
 }
-
-#endif

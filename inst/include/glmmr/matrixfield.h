@@ -1,5 +1,4 @@
-#ifndef MATRIXFIELD_H
-#define MATRIXFIELD_H
+#pragma once
 
 #include <cmath> 
 #include <RcppEigen.h>
@@ -67,5 +66,3 @@ public:
 };
 
 }
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef MODEL_HPP
-#define MODEL_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -92,5 +91,3 @@ inline void glmmr::Model<modeltype>::set_trace(int trace_){
     mcmc.verbose = false;
   }
 }
-
-#endif

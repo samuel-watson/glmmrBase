@@ -1,5 +1,4 @@
-#ifndef GENERAL_H
-#define GENERAL_H
+#pragma once
 
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define _USE_MATH_DEFINES
@@ -189,5 +188,3 @@ public:
     return *this;
   };
 };
-
-#endif

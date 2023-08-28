@@ -1,5 +1,4 @@
-#ifndef MODELBITS_HPP
-#define MODELBITS_HPP
+#pragma once
 
 #include "general.h"
 #include "covariance.hpp"
@@ -72,5 +71,3 @@ template<typename cov, typename linpred>
 void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
   covariance.set_sparse(false);
 }
-
-#endif 

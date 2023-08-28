@@ -1,5 +1,4 @@
-#ifndef MATRIXW_HPP
-#define MATRIXW_HPP
+#pragma once
 
 #include "general.h"
 #include "modelbits.hpp"
@@ -54,5 +53,3 @@ inline void glmmr::MatrixW<modeltype>::update(){
   W_ = (W_.array()*nvar_par).matrix();
   W_ = ((W_.array().inverse()) * model.data.weights).matrix();
 }
-
-#endif

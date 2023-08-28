@@ -1,5 +1,4 @@
-#ifndef CALCULATOR_HPP
-#define CALCULATOR_HPP
+#pragma once
 
 #include "general.h"
 #include "openmpheader.h"
@@ -976,5 +975,3 @@ inline dblvec glmmr::calculator::calculate(const int i,
   
   return result;
 }
-
-#endif
