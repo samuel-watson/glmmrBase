@@ -38,7 +38,7 @@ SEXP girling_algorithm(SEXP xp,
   double N = as<double>(N_);
   double tol = as<double>(tol_);
   Eigen::VectorXd C = as<Eigen::VectorXd>(C_);
-  XPtr<glmmr::Model<glmmr::Covariance, glmmr::LinearPredictor> > ptr(xp);
+  XPtr<glmmr::Model<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > > ptr(xp);
   Eigen::ArrayXd w = ptr->optim.optimum_weights(N,C,tol);
   return wrap(w);
 }

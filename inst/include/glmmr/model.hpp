@@ -12,16 +12,16 @@ namespace glmmr {
 
 using namespace Eigen;
 
-template<typename cov, typename linpred>
+template<typename modeltype>
 class Model {
 public:
-  glmmr::ModelBits<cov, linpred>& model;
-  glmmr::RandomEffects<cov, linpred> re;
-  glmmr::ModelMatrix<cov, linpred> matrix;
-  glmmr::ModelOptim<cov, linpred> optim;
-  glmmr::ModelMCMC<cov, linpred> mcmc;
+  modeltype& model;
+  glmmr::RandomEffects<modeltype> re;
+  glmmr::ModelMatrix<modeltype> matrix;
+  glmmr::ModelOptim<modeltype> optim;
+  glmmr::ModelMCMC<modeltype> mcmc;
   
-  Model(glmmr::ModelBits<cov, linpred>& model_) : model(model_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
+  Model(modeltype& model_) : model(model_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
   
   virtual void set_offset(const VectorXd& offset_);
   virtual void set_weights(const ArrayXd& weights_);
@@ -34,14 +34,14 @@ public:
 
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::set_offset(const VectorXd& offset_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
   //if(offset_.size()!=model.n())Rcpp::stop("offset wrong length");
   model.data.set_offset(offset_);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::set_weights(const ArrayXd& weights_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_weights(const ArrayXd& weights_){
   //if(weights_.size()!=model.n())Rcpp::stop("weights wrong length");
   model.data.set_weights(weights_);
   if((weights_ != 1.0).any()){
@@ -50,28 +50,28 @@ inline void glmmr::Model<cov, linpred>::set_weights(const ArrayXd& weights_){
   }
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::set_y(const VectorXd& y_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_y(const VectorXd& y_){
   //if(y_.size()!=model.n())Rcpp::stop("y wrong length");
   model.data.update_y(y_);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::update_beta(const dblvec &beta_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
   //if(beta_.size()!=(unsigned)model.linear_predictor.P())Rcpp::stop("beta wrong length");
   model.linear_predictor.update_parameters(beta_);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::update_theta(const dblvec &theta_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   //if(theta_.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta_);
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::update_u(const MatrixXd &u_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_){
   //if(u_.rows()!=(unsigned)model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
     //Rcpp::Rcout << "\nDifferent numbers of random effect samples";
@@ -82,8 +82,8 @@ inline void glmmr::Model<cov, linpred>::update_u(const MatrixXd &u_){
   re.zu_ = re.ZL*re.u_;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::Model<cov, linpred>::set_trace(int trace_){
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::set_trace(int trace_){
   optim.trace = trace_;
   mcmc.trace = trace_;
   if(trace_ > 0){

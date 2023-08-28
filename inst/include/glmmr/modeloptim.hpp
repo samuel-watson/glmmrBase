@@ -16,17 +16,17 @@ namespace glmmr {
 using namespace rminqa;
 using namespace Eigen;
 
-template<typename cov, typename linpred>
+template<typename modeltype>
 class ModelOptim{
 public:
-  glmmr::ModelBits<cov, linpred>& model;
-  glmmr::ModelMatrix<cov, linpred>& matrix;
-  glmmr::RandomEffects<cov, linpred>& re;
+  modeltype& model;
+  glmmr::ModelMatrix<modeltype>& matrix;
+  glmmr::RandomEffects<modeltype>& re;
   int trace = 0;
   
-  ModelOptim(glmmr::ModelBits<cov, linpred>& model_, 
-             glmmr::ModelMatrix<cov, linpred>& matrix_,
-             glmmr::RandomEffects<cov, linpred>& re_) : model(model_), matrix(matrix_), re(re_) {};
+  ModelOptim(modeltype& model_, 
+             glmmr::ModelMatrix<modeltype>& matrix_,
+             glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
   
   virtual void update_beta(const dblvec &beta);
   virtual void update_theta(const dblvec &theta);
@@ -55,20 +55,20 @@ protected:
   dblvec get_upper_values(bool beta, bool theta, bool var = true);
   
   class L_likelihood : public Functor<dblvec> {
-    ModelOptim<cov, linpred>& M;
+    ModelOptim<modeltype>& M;
     double ll;
   public:
-    L_likelihood(ModelOptim<cov, linpred>& M_) :  
+    L_likelihood(ModelOptim<modeltype>& M_) :  
       M(M_), ll(0.0) {};
     double operator()(const dblvec &par);
   };
   
   class D_likelihood : public Functor<dblvec> {
-    ModelOptim<cov, linpred>& M;
+    ModelOptim<modeltype>& M;
     const MatrixXd& Lu;
     double logl;
   public:
-    D_likelihood(ModelOptim<cov, linpred>& M_,
+    D_likelihood(ModelOptim<modeltype>& M_,
                  const MatrixXd& Lu_) :
       M(M_),
       Lu(Lu_),
@@ -77,13 +77,13 @@ protected:
   };
   
   class F_likelihood : public Functor<dblvec> {
-      ModelOptim<cov, linpred>& M;
+      ModelOptim<modeltype>& M;
       int G;
       bool importance;
       double ll;
       double denomD;
   public:
-    F_likelihood(ModelOptim<cov, linpred>& M_,
+    F_likelihood(ModelOptim<modeltype>& M_,
                  double denomD_ = 0,
                  bool importance_ = false) : 
       M(M_),
@@ -95,14 +95,14 @@ protected:
   };
   
   class LA_likelihood : public Functor<dblvec> {
-    ModelOptim<cov, linpred>& M;
+    ModelOptim<modeltype>& M;
     MatrixXd v;
     MatrixXd LZWZL;
     double LZWdet;
     double logl;
     double ll;
   public:
-    LA_likelihood(ModelOptim<cov, linpred>& M_) :
+    LA_likelihood(ModelOptim<modeltype>& M_) :
       M(M_),
       v(M.model.covariance.Q(),1),
       LZWZL(MatrixXd::Zero(M.model.covariance.Q(),M.model.covariance.Q())),
@@ -116,13 +116,13 @@ protected:
   };
   
   class LA_likelihood_cov : public Functor<dblvec> {
-    ModelOptim<cov, linpred>& M;
+    ModelOptim<modeltype>& M;
     MatrixXd LZWZL;
     double LZWdet;
     double logl;
     double ll;
   public:
-    LA_likelihood_cov(ModelOptim<cov, linpred>& M_) :
+    LA_likelihood_cov(ModelOptim<modeltype>& M_) :
       M(M_),
       LZWZL(MatrixXd::Zero(M.model.covariance.Q(),M.model.covariance.Q())),
       LZWdet(0.0), logl(0.0), ll(0.0) {};
@@ -130,13 +130,13 @@ protected:
   };
   
   class LA_likelihood_btheta : public Functor<dblvec> {
-    ModelOptim<cov, linpred>& M;
+    ModelOptim<modeltype>& M;
     MatrixXd LZWZL;
     double LZWdet;
     double logl;
     double ll;
   public:
-    LA_likelihood_btheta(ModelOptim<cov, linpred>& M_) :
+    LA_likelihood_btheta(ModelOptim<modeltype>& M_) :
       M(M_),
       LZWZL(MatrixXd::Zero(M.model.covariance.Q(),M.model.covariance.Q())),
       LZWdet(0.0), logl(0.0), ll(0.0) {};
@@ -147,34 +147,34 @@ protected:
 
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_beta(const dblvec &beta){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_beta(const dblvec &beta){
   model.linear_predictor.update_parameters(beta);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_beta(const VectorXd &beta){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_beta(const VectorXd &beta){
   model.linear_predictor.update_parameters(beta.array());
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_theta(const dblvec &theta){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_theta(const dblvec &theta){
   //if(theta.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta);
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_theta(const VectorXd &theta){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_theta(const VectorXd &theta){
   //if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta.array());
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_u(const MatrixXd &u_){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
   //if(u_.rows()!=model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
     re.u_.conservativeResize(model.covariance.Q(),u_.cols());
@@ -184,8 +184,8 @@ inline void glmmr::ModelOptim<cov, linpred>::update_u(const MatrixXd &u_){
   re.zu_ = re.ZL*re.u_;
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::log_likelihood() {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
   double ll = 0;
   ArrayXd xb(model.xb());
   if(model.weighted){
@@ -227,8 +227,8 @@ inline double glmmr::ModelOptim<cov, linpred>::log_likelihood() {
   return ll/re.Zu().cols();
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::full_log_likelihood(){
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::full_log_likelihood(){
   double ll = log_likelihood();
   double logl = 0;
   MatrixXd Lu = model.covariance.Lu(re.u(false));
@@ -240,8 +240,8 @@ inline double glmmr::ModelOptim<cov, linpred>::full_log_likelihood(){
   return ll+logl;
 }
 
-template<typename cov, typename linpred>
-inline dblvec glmmr::ModelOptim<cov, linpred>::get_start_values(bool beta, bool theta, bool var){
+template<typename modeltype>
+inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
   if(beta){
     for(int i =0 ; i < model.linear_predictor.P(); i++)start.push_back(model.linear_predictor.parameters[i]);
@@ -259,8 +259,8 @@ inline dblvec glmmr::ModelOptim<cov, linpred>::get_start_values(bool beta, bool 
   return start;
 }
 
-template<typename cov, typename linpred>
-inline dblvec glmmr::ModelOptim<cov, linpred>::get_lower_values(bool beta, bool theta, bool var){
+template<typename modeltype>
+inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
   dblvec lower;
   if(beta){
     for(int i = 0; i< model.linear_predictor.P(); i++){
@@ -278,8 +278,8 @@ inline dblvec glmmr::ModelOptim<cov, linpred>::get_lower_values(bool beta, bool 
   return lower;
 }
 
-template<typename cov, typename linpred>
-inline dblvec glmmr::ModelOptim<cov, linpred>::get_upper_values(bool beta, bool theta, bool var){
+template<typename modeltype>
+inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool theta, bool var){
   dblvec upper;
   if(beta){
     for(int i = 0; i< model.linear_predictor.P(); i++){
@@ -297,8 +297,8 @@ inline dblvec glmmr::ModelOptim<cov, linpred>::get_upper_values(bool beta, bool 
   return upper;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::nr_beta(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
@@ -349,8 +349,8 @@ inline void glmmr::ModelOptim<cov, linpred>::nr_beta(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::laplace_nr_beta_u(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   matrix.W.update();
   VectorXd zd = (matrix.linpred()).col(0);
   VectorXd dmu =  glmmr::maths::detadmu(zd,model.family.link);
@@ -377,21 +377,21 @@ inline void glmmr::ModelOptim<cov, linpred>::laplace_nr_beta_u(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_var_par(const double& v){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_var_par(const double& v){
   model.data.var_par = v;
   model.data.variance.setConstant(v);
   model.calc.variance = model.data.variance;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::update_var_par(const ArrayXd& v){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
   model.data.variance = v;
   model.calc.variance = model.data.variance;
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::calculate_var_par(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
   if(model.family.family=="gaussian"){
     // revise this for beta and Gamma re residuals
     int niter = re.u(false).cols();
@@ -408,8 +408,8 @@ inline void glmmr::ModelOptim<cov, linpred>::calculate_var_par(){
   }
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::ml_beta(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   L_likelihood ldl(*this);
   Rbobyqa<L_likelihood,dblvec> opt;
   opt.control.iprint = trace;
@@ -421,8 +421,8 @@ inline void glmmr::ModelOptim<cov, linpred>::ml_beta(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::ml_theta(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   MatrixXd Lu = model.covariance.Lu(re.u(false));
   D_likelihood ddl(*this,Lu);
   Rbobyqa<D_likelihood,dblvec> opt;
@@ -433,8 +433,8 @@ inline void glmmr::ModelOptim<cov, linpred>::ml_theta(){
   opt.minimize(ddl, start_t);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::ml_all(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::ml_all(){
   MatrixXd Lu = model.covariance.Lu(re.u(false));
   double denomD = 0;
   for(int i = 0; i < Lu.cols(); i++){
@@ -451,8 +451,8 @@ inline void glmmr::ModelOptim<cov, linpred>::ml_all(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_beta_u(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   LA_likelihood ldl(*this);
   Rbobyqa<LA_likelihood,dblvec> opt;
   opt.control.iprint = trace;
@@ -463,8 +463,8 @@ inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_beta_u(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_theta(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta(){
   LA_likelihood_cov ldl(*this);
   Rbobyqa<LA_likelihood_cov,dblvec> opt;
   dblvec lower = get_lower_values(false,true,false);
@@ -474,8 +474,8 @@ inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_theta(){
   opt.minimize(ldl, start);
 }
 
-template<typename cov, typename linpred>
-inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_beta_theta(){
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
   LA_likelihood_btheta ldl(*this);
   Rbobyqa<LA_likelihood_btheta,dblvec> opt;
   dblvec lower = get_lower_values(true,true,false);
@@ -486,15 +486,15 @@ inline void glmmr::ModelOptim<cov, linpred>::laplace_ml_beta_theta(){
   calculate_var_par();
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::L_likelihood::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::L_likelihood::operator()(const dblvec &par) {
   M.update_beta(par);
   ll = M.log_likelihood();
   return -1*ll;
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::D_likelihood::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::D_likelihood::operator()(const dblvec &par) {
   M.update_theta(par);
   logl = 0;
 #pragma omp parallel for reduction (+:logl)
@@ -504,8 +504,8 @@ inline double glmmr::ModelOptim<cov, linpred>::D_likelihood::operator()(const db
   return -1*logl/Lu.cols();
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::F_likelihood::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::F_likelihood::operator()(const dblvec &par) {
   auto first = par.begin();
   auto last1 = par.begin() + M.model.linear_predictor.P();
   auto last2 = par.begin() + M.model.linear_predictor.P() + G;
@@ -522,8 +522,8 @@ inline double glmmr::ModelOptim<cov, linpred>::F_likelihood::operator()(const db
   }
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::LA_likelihood::operator()(const dblvec &par) {
   logl = 0;
   auto start = par.begin();
   auto end = par.begin()+M.model.linear_predictor.P();
@@ -541,8 +541,8 @@ inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood::operator()(const d
   return -1.0*(ll - 0.5*logl - 0.5*LZWdet);
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood_cov::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::LA_likelihood_cov::operator()(const dblvec &par) {
   M.update_theta(par);
   M.matrix.W.update();
   logl = M.re.u_.col(0).transpose() * M.re.u_.col(0);
@@ -552,8 +552,8 @@ inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood_cov::operator()(con
   return -1*(ll - 0.5*logl - 0.5*LZWdet);
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood_btheta::operator()(const dblvec &par) {
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::LA_likelihood_btheta::operator()(const dblvec &par) {
   auto start = par.begin();
   auto end1 = par.begin() +M.model.linear_predictor.P();
   auto end2 = par.begin() + M.model.linear_predictor.P() + M.model.covariance.npar();
@@ -569,8 +569,8 @@ inline double glmmr::ModelOptim<cov, linpred>::LA_likelihood_btheta::operator()(
   return -1*(ll - 0.5*logl - 0.5*LZWdet);
 }
 
-template<typename cov, typename linpred>
-inline double glmmr::ModelOptim<cov, linpred>::aic(){
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::aic(){
   MatrixXd Lu = model.covariance.Lu(re.u(false));
   int dof = model.linear_predictor.P() + model.covariance.npar();
   double logl = 0;
@@ -583,8 +583,8 @@ inline double glmmr::ModelOptim<cov, linpred>::aic(){
   return (-2*( ll + logl ) + 2*dof); 
 }
 
-template<typename cov, typename linpred>
-inline ArrayXd glmmr::ModelOptim<cov, linpred>::optimum_weights(double N, 
+template<typename modeltype>
+inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N, 
                                              VectorXd C,
                                              double tol,
                                              int max_iter){
