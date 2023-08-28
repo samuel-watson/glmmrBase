@@ -12,6 +12,7 @@ public:
   dblvec parameters;
   glmmr::calculator calc;
   MatrixXd Xdata;
+  glmmr::Formula& form;
   LinearPredictor(glmmr::Formula& form_,
                   const Eigen::ArrayXXd &data_,
                   const strvec& colnames_) :
@@ -84,7 +85,6 @@ public:
 
 protected:
   strvec colnames_vec;
-  glmmr::Formula& form;
   int P_;
   int n_;
   intvec x_cols;
