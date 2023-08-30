@@ -27,8 +27,8 @@ public:
     form_(formula), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) { 
-    Z_constructor();
-  };
+      Z_constructor();
+    };
   
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -36,8 +36,8 @@ public:
     form_(form), data_(data), colnames_(colnames), Q_(0),
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()) {
-    Z_constructor();
-  };
+      Z_constructor();
+    };
   
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -46,9 +46,9 @@ public:
     form_(formula), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
   
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -57,9 +57,9 @@ public:
     form_(form), data_(data), colnames_(colnames), parameters_(parameters),
     Q_(0),size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
   
   Covariance(const str& formula,
              const ArrayXXd &data,
@@ -69,9 +69,9 @@ public:
     parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
   
   Covariance(const glmmr::Formula& form,
              const ArrayXXd &data,
@@ -81,9 +81,18 @@ public:
     parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(0), 
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
-    L_constructor();
-    Z_constructor();
-  };
+      L_constructor();
+      Z_constructor();
+    };
+  
+  Covariance(const glmmr::Covariance& cov) : form_(cov.form_), data_(cov.data_),
+    colnames_(cov.colnames_),
+    parameters_(cov.parameters_), Q_(cov.Q_), 
+    size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
+    zquad(max_block_dim()), spchol((make_sparse(),mat)) {
+      L_constructor();
+      Z_constructor();
+    };
   
   virtual void update_parameters(const dblvec& parameters);
   virtual void update_parameters_extern(const dblvec& parameters);

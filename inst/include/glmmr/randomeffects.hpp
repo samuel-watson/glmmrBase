@@ -22,6 +22,7 @@ public:
     ZL(model_.n(),model_.covariance.Q()),
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     zu_(model_.n(),1), model(model_) { if(model.covariance.parameters_.size()>0)ZL = model.covariance.ZL_sparse();};
+  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : ZL(re.ZL), u_(re.u_), zu_(re.zu_), model(re.model) {};
   MatrixXd Zu(){return zu_;};
   MatrixXd u(bool scaled = true);
   vector_matrix predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);

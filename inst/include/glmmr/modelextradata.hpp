@@ -22,6 +22,8 @@ public:
     variance.conservativeResize(n);
     variance.setConstant(1.0);
   }
+  ModelExtraData(const glmmr::ModelExtraData& data) : offset(data.offset), weights(data.weights), variance(data.variance), var_par(data.var_par), y(data.y) {};
+  
   void set_offset(const VectorXd& offset_){
     if(offset_.size()!=offset.size())offset.conservativeResize(offset_.size());
     offset = offset_;

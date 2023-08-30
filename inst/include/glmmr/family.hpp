@@ -29,5 +29,6 @@ public:
   int flink;
   Family(std::string family_, std::string link_): family(family_), link(link_) {flink = glmmr::model_to_int.at(family_+link_);};
   Family(){};
+  Family(const glmmr::Family& fam) : family(fam.family), link(fam.link), flink(fam.flink) {};
 };
 }

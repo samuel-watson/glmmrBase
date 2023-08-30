@@ -69,6 +69,21 @@ public:
       X_ = calc.jacobian(parameters,Xdata);
       x_set = true;
     };
+  
+  LinearPredictor(const glmmr::LinearPredictor& linpred) :
+    Xdata(linpred.Xdata.rows(),1),
+    colnames_vec(linpred.colnames_vec), 
+    form(linpred.form),
+    n_(linpred.Xdata.rows()),
+    X_(MatrixXd::Zero(n_,1))
+  {
+    form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,Xdata);
+    update_parameters(linpred.parameters);
+    P_ = calc.parameter_names.size();
+    X_.conservativeResize(n_,P_);
+    X_ = calc.jacobian(parameters,Xdata);
+    x_set = true;
+  };
 
   virtual void update_parameters(const dblvec& parameters_);
   virtual void update_parameters(const Eigen::ArrayXd& parameters_);
