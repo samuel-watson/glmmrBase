@@ -63,6 +63,20 @@ SEXP Model__new(SEXP formula_, SEXP data_, SEXP colnames_,
 }
 
 // [[Rcpp::export]]
+SEXP Covariance__get_ptr_model(SEXP xp){
+  XPtr<glmm> ptr(xp);
+  XPtr<glmmr::Covariance> cptr(&(ptr->model.covariance));
+  return cptr;
+}
+
+// [[Rcpp::export]]
+SEXP LinearPredictor__get_ptr_model(SEXP xp){
+  XPtr<glmm> ptr(xp);
+  XPtr<glmmr::LinearPredictor> cptr(&(ptr->model.linear_predictor));
+  return cptr;
+}
+
+// [[Rcpp::export]]
 void Model__set_y(SEXP xp, SEXP y_){
   Eigen::VectorXd y = as<Eigen::VectorXd>(y_);
   XPtr<glmm> ptr(xp);

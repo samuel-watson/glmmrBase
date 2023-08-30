@@ -178,6 +178,9 @@ inline intvec interpret_re(const std::string& fn,
     B.push_back(2);
     B.push_back(8);
     break;
+  case 17:
+    B.insert(B.end(), A.begin(), A.end());
+    break;
   }
   return B;
 }
@@ -193,8 +196,8 @@ inline intvec interpret_re_par(const std::string& fn,
     for(int i = 0; i<col_idx.size();i++){
       B.push_back(col_idx[i]);
       B.push_back(col_idx[i]);
-      B.push_back(col_idx[i]);
-      B.push_back(col_idx[i]);
+      //B.push_back(col_idx[i]);
+      //B.push_back(col_idx[i]);
     }
   };
   
@@ -206,7 +209,6 @@ inline intvec interpret_re_par(const std::string& fn,
   
   switch(string_to_case.at(fn)){
   case 1:
-    //addPar2(0);
     B.push_back(par_idx[0]);
     break;
   case 2: 
@@ -297,6 +299,9 @@ inline intvec interpret_re_par(const std::string& fn,
   case 15: case 16:
     addA();
     B.push_back(par_idx[0]);
+    break;
+  case 17:
+    addA();
     break;
   }
   return B;

@@ -33,6 +33,7 @@ public:
     linear_predictor(formula,data_,colnames_),
     data(data_.rows()),
     family(family_,link_) { setup_calculator(); };
+  
   int n(){return linear_predictor.n();};
   ArrayXd xb(){return linear_predictor.xb() + data.offset;};
   virtual void make_covariance_sparse();

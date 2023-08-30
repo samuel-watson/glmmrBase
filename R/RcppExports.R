@@ -121,6 +121,14 @@ Model__new <- function(formula_, data_, colnames_, family_, link_) {
     .Call(`_glmmrBase_Model__new`, formula_, data_, colnames_, family_, link_)
 }
 
+Covariance__get_ptr_model <- function(xp) {
+    .Call(`_glmmrBase_Covariance__get_ptr_model`, xp)
+}
+
+LinearPredictor__get_ptr_model <- function(xp) {
+    .Call(`_glmmrBase_LinearPredictor__get_ptr_model`, xp)
+}
+
 Model__set_y <- function(xp, y_) {
     invisible(.Call(`_glmmrBase_Model__set_y`, xp, y_))
 }

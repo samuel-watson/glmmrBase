@@ -361,6 +361,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Covariance__get_ptr_model
+SEXP Covariance__get_ptr_model(SEXP xp);
+RcppExport SEXP _glmmrBase_Covariance__get_ptr_model(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance__get_ptr_model(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// LinearPredictor__get_ptr_model
+SEXP LinearPredictor__get_ptr_model(SEXP xp);
+RcppExport SEXP _glmmrBase_LinearPredictor__get_ptr_model(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(LinearPredictor__get_ptr_model(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__set_y
 void Model__set_y(SEXP xp, SEXP y_);
 RcppExport SEXP _glmmrBase_Model__set_y(SEXP xpSEXP, SEXP y_SEXP) {
@@ -1081,6 +1103,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_ModelBits__update_theta", (DL_FUNC) &_glmmrBase_ModelBits__update_theta, 2},
     {"_glmmrBase_Model__new_w_pars", (DL_FUNC) &_glmmrBase_Model__new_w_pars, 7},
     {"_glmmrBase_Model__new", (DL_FUNC) &_glmmrBase_Model__new, 5},
+    {"_glmmrBase_Covariance__get_ptr_model", (DL_FUNC) &_glmmrBase_Covariance__get_ptr_model, 1},
+    {"_glmmrBase_LinearPredictor__get_ptr_model", (DL_FUNC) &_glmmrBase_LinearPredictor__get_ptr_model, 1},
     {"_glmmrBase_Model__set_y", (DL_FUNC) &_glmmrBase_Model__set_y, 2},
     {"_glmmrBase_Model__set_offset", (DL_FUNC) &_glmmrBase_Model__set_offset, 2},
     {"_glmmrBase_Model__set_weights", (DL_FUNC) &_glmmrBase_Model__set_weights, 2},
