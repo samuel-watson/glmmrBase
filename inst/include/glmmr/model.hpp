@@ -14,13 +14,17 @@ using namespace Eigen;
 template<typename modeltype>
 class Model {
 public:
-  modeltype& model;
+  modeltype model;
   glmmr::RandomEffects<modeltype> re;
   glmmr::ModelMatrix<modeltype> matrix;
   glmmr::ModelOptim<modeltype> optim;
   glmmr::ModelMCMC<modeltype> mcmc;
   
-  Model(modeltype& model_) : model(model_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
+  Model(const std::string& formula_,
+            const ArrayXXd& data_,
+            const strvec& colnames_,
+            std::string family_, 
+            std::string link_) : model(formula_,data_,colnames_,family_,link_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
   
   virtual void set_offset(const VectorXd& offset_);
   virtual void set_weights(const ArrayXd& weights_);
@@ -29,41 +33,36 @@ public:
   virtual void update_theta(const dblvec &theta_);
   virtual void update_u(const MatrixXd &u_);
   virtual void set_trace(int trace_);
+  // add in functions to run the whole fitting algorithm here
 };
 
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
-  //if(offset_.size()!=model.n())Rcpp::stop("offset wrong length");
   model.data.set_offset(offset_);
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_weights(const ArrayXd& weights_){
-  //if(weights_.size()!=model.n())Rcpp::stop("weights wrong length");
   model.data.set_weights(weights_);
   if((weights_ != 1.0).any()){
-    //if(model.family.family!="gaussian")Rcpp::warning("Weighted regression with non-Gaussian models is currently experimental.");
     model.weighted = true;
   }
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_y(const VectorXd& y_){
-  //if(y_.size()!=model.n())Rcpp::stop("y wrong length");
   model.data.update_y(y_);
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
-  //if(beta_.size()!=(unsigned)model.linear_predictor.P())Rcpp::stop("beta wrong length");
   model.linear_predictor.update_parameters(beta_);
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
-  //if(theta_.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta_);
   re.ZL = model.covariance.ZL_sparse();
   re.zu_ = re.ZL*re.u_;
@@ -71,9 +70,7 @@ inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_){
-  //if(u_.rows()!=(unsigned)model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
-    //Rcpp::Rcout << "\nDifferent numbers of random effect samples";
     re.u_.conservativeResize(model.covariance.Q(),u_.cols());
     re.zu_.conservativeResize(model.covariance.Q(),u_.cols());
   }

@@ -1353,7 +1353,7 @@ Model <- R6::R6Class("Model",
                                           self$mean$.__enclos_env__$private$hash))
                        },
                        ptr = NULL,
-                       bitsptr = NULL,
+                       #bitsptr = NULL,
                        set_y = function(y){
                          if(is.null(private$ptr))private$update_ptr()
                          Model__set_y(private$ptr,y)
@@ -1372,10 +1372,12 @@ Model <- R6::R6Class("Model",
                              data <- cbind(data,self$mean$data[,cnames])
                            }
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           private$bitsptr <- ModelBits__new(form,as.matrix(data),colnames(data),
-                                                             tolower(self$family[[1]]),self$family[[2]],
-                                                             self$mean$parameters,self$covariance$parameters)
-                           private$ptr <- Model__new_from_bits(private$bitsptr)
+                           # private$bitsptr <- ModelBits__new(form,as.matrix(data),colnames(data),
+                           #                                   tolower(self$family[[1]]),self$family[[2]],
+                           #                                   self$mean$parameters,self$covariance$parameters)
+                           private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
+                                                               tolower(self$family[[1]]),self$family[[2]],
+                                                               self$mean$parameters,self$covariance$parameters)
                            Model__set_offset(private$ptr,self$mean$offset)
                            Model__set_weights(private$ptr,self$weights)
                            Model__set_var_par(private$ptr,self$var_par)

@@ -34,9 +34,31 @@ void ModelBits__update_theta(SEXP xp, SEXP theta_){
 }
 
 // [[Rcpp::export]]
-SEXP Model__new_from_bits(SEXP bptr_){
-  XPtr<bits> bptr(bptr_);
-  XPtr<glmm> ptr(new glmm(*bptr),true);
+SEXP Model__new_w_pars(SEXP formula_, SEXP data_, SEXP colnames_,
+                    SEXP family_, SEXP link_, SEXP beta_,
+                    SEXP theta_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  std::string family = as<std::string>(family_);
+  std::string link = as<std::string>(link_);
+  std::vector<double> beta = as<std::vector<double> >(beta_);
+  std::vector<double> theta = as<std::vector<double> >(theta_);
+  XPtr<glmm> ptr(new glmm(formula,data,colnames,family,link),true);
+  ptr->model.linear_predictor.update_parameters(beta);
+  ptr->model.covariance.update_parameters(theta);
+  return ptr;
+}
+
+// [[Rcpp::export]]
+SEXP Model__new(SEXP formula_, SEXP data_, SEXP colnames_,
+                       SEXP family_, SEXP link_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  std::string family = as<std::string>(family_);
+  std::string link = as<std::string>(link_);
+  XPtr<glmm> ptr(new glmm(formula,data,colnames,family,link),true);
   return ptr;
 }
 
