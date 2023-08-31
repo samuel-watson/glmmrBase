@@ -98,24 +98,57 @@ void Model__set_weights(SEXP xp, SEXP weights_){
 }
 
 // [[Rcpp::export]]
+SEXP Model__P(SEXP xp){
+  XPtr<glmm> ptr(xp);
+  int u = ptr->model.linear_predictor.P();
+  return wrap(u);
+}
+
+// [[Rcpp::export]]
+SEXP Model__Q(SEXP xp){
+  XPtr<glmm> ptr(xp);
+  int Q = ptr->model.covariance.Q();
+  return wrap(Q);
+}
+
+// [[Rcpp::export]]
+SEXP Model__theta_size(SEXP xp){
+  XPtr<glmm> ptr(xp);
+  int Q = ptr->model.covariance.npar();
+  return wrap(Q);
+}
+
+// [[Rcpp::export]]
 void Model__update_beta(SEXP xp, SEXP beta_){
   std::vector<double> beta = as<std::vector<double> >(beta_);
   XPtr<glmm> ptr(xp);
-  ptr->update_beta(beta);
+  if(beta.size() != ptr->model.linear_predictor.P()){
+    Rcpp::stop("Wrong number of beta parameters");
+  } else {
+    ptr->update_beta(beta);
+  }
 }
 
 // [[Rcpp::export]]
 void Model__update_theta(SEXP xp, SEXP theta_){
   std::vector<double> theta = as<std::vector<double> >(theta_);
   XPtr<glmm> ptr(xp);
-  ptr->update_theta(theta);
+  if(theta.size() != ptr->model.covariance.npar()){
+    Rcpp::stop("Wrong number of covariance parameters");
+  } else {
+    ptr->update_theta(theta);
+  }
 }
 
 // [[Rcpp::export]]
 void Model__update_u(SEXP xp, SEXP u_){
   Eigen::MatrixXd u = as<Eigen::MatrixXd>(u_);
   XPtr<glmm> ptr(xp);
-  ptr->update_u(u);
+  if(u.rows() != ptr->model.covariance.Q()){
+    Rcpp::stop("Wrong number of random effects");
+  } else {
+    ptr->update_u(u);
+  }
 }
 
 // [[Rcpp::export]]
@@ -250,20 +283,6 @@ SEXP Model__Zu(SEXP xp){
   XPtr<glmm> ptr(xp);
   Eigen::MatrixXd Zu = ptr->re.Zu();
   return wrap(Zu);
-}
-
-// [[Rcpp::export]]
-SEXP Model__P(SEXP xp){
-  XPtr<glmm> ptr(xp);
-  int u = ptr->model.linear_predictor.P();
-  return wrap(u);
-}
-
-// [[Rcpp::export]]
-SEXP Model__Q(SEXP xp){
-  XPtr<glmm> ptr(xp);
-  int Q = ptr->model.covariance.Q();
-  return wrap(Q);
 }
 
 // [[Rcpp::export]]

@@ -416,6 +416,39 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__P
+SEXP Model__P(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__P(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__P(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__Q
+SEXP Model__Q(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__Q(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__Q(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__theta_size
+SEXP Model__theta_size(SEXP xp);
+RcppExport SEXP _glmmrBase_Model__theta_size(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__theta_size(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__update_beta
 void Model__update_beta(SEXP xp, SEXP beta_);
 RcppExport SEXP _glmmrBase_Model__update_beta(SEXP xpSEXP, SEXP beta_SEXP) {
@@ -662,28 +695,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__Zu(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Model__P
-SEXP Model__P(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__P(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__P(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Model__Q
-SEXP Model__Q(SEXP xp);
-RcppExport SEXP _glmmrBase_Model__Q(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__Q(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1108,6 +1119,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__set_y", (DL_FUNC) &_glmmrBase_Model__set_y, 2},
     {"_glmmrBase_Model__set_offset", (DL_FUNC) &_glmmrBase_Model__set_offset, 2},
     {"_glmmrBase_Model__set_weights", (DL_FUNC) &_glmmrBase_Model__set_weights, 2},
+    {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
+    {"_glmmrBase_Model__Q", (DL_FUNC) &_glmmrBase_Model__Q, 1},
+    {"_glmmrBase_Model__theta_size", (DL_FUNC) &_glmmrBase_Model__theta_size, 1},
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 2},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 2},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 2},
@@ -1131,8 +1145,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 1},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 2},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 1},
-    {"_glmmrBase_Model__P", (DL_FUNC) &_glmmrBase_Model__P, 1},
-    {"_glmmrBase_Model__Q", (DL_FUNC) &_glmmrBase_Model__Q, 1},
     {"_glmmrBase_Model__X", (DL_FUNC) &_glmmrBase_Model__X, 1},
     {"_glmmrBase_Model__mcmc_sample", (DL_FUNC) &_glmmrBase_Model__mcmc_sample, 4},
     {"_glmmrBase_Model__set_trace", (DL_FUNC) &_glmmrBase_Model__set_trace, 2},

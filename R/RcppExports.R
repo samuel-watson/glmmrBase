@@ -141,6 +141,18 @@ Model__set_weights <- function(xp, weights_) {
     invisible(.Call(`_glmmrBase_Model__set_weights`, xp, weights_))
 }
 
+Model__P <- function(xp) {
+    .Call(`_glmmrBase_Model__P`, xp)
+}
+
+Model__Q <- function(xp) {
+    .Call(`_glmmrBase_Model__Q`, xp)
+}
+
+Model__theta_size <- function(xp) {
+    .Call(`_glmmrBase_Model__theta_size`, xp)
+}
+
 Model__update_beta <- function(xp, beta_) {
     invisible(.Call(`_glmmrBase_Model__update_beta`, xp, beta_))
 }
@@ -231,14 +243,6 @@ Model__u <- function(xp, scaled_) {
 
 Model__Zu <- function(xp) {
     .Call(`_glmmrBase_Model__Zu`, xp)
-}
-
-Model__P <- function(xp) {
-    .Call(`_glmmrBase_Model__P`, xp)
-}
-
-Model__Q <- function(xp) {
-    .Call(`_glmmrBase_Model__Q`, xp)
 }
 
 Model__X <- function(xp) {

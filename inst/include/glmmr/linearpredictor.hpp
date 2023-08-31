@@ -17,8 +17,8 @@ public:
                   const Eigen::ArrayXXd &data_,
                   const strvec& colnames_) :
     Xdata(data_.rows(),1),
-    colnames_vec(colnames_),  
     form(form_),
+    colnames_vec(colnames_),  
     n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
     {
@@ -39,8 +39,8 @@ public:
              const strvec& colnames_,
              const dblvec& parameters_) :
     Xdata(data_.rows(),1),
-    colnames_vec(colnames_), 
     form(form_),
+    colnames_vec(colnames_), 
     n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
      {
@@ -57,8 +57,8 @@ public:
              const strvec& colnames_,
              const Eigen::ArrayXd& parameters_) :
     Xdata(data_.rows(),1),
-    colnames_vec(colnames_), 
     form(form_),
+    colnames_vec(colnames_), 
     n_(data_.rows()),
     X_(MatrixXd::Zero(n_,1))
      {
@@ -72,8 +72,8 @@ public:
   
   LinearPredictor(const glmmr::LinearPredictor& linpred) :
     Xdata(linpred.Xdata.rows(),1),
-    colnames_vec(linpred.colnames_vec), 
     form(linpred.form),
+    colnames_vec(linpred.colnames_vec), 
     n_(linpred.Xdata.rows()),
     X_(MatrixXd::Zero(n_,1))
   {
