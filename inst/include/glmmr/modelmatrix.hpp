@@ -89,16 +89,15 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
     }
     block_counter += block_size;
   }
-  block_counter = 0;
   intvec idx_matches;
   int n_matches;
   for(i = 0; i < model.n(); i++){
-    if(block_counter == 0){
+    if(sigma_blocks.size() == 0){
       glmmr::SigmaBlock newblock(block_ids[i]);
-      newblock.add_row(0);
+      newblock.add_row(i);
       sigma_blocks.push_back(newblock);
     } else {
-      for(j = 0; j < block_counter; j++){
+      for(j = 0; j < sigma_blocks.size(); j++){
         if(sigma_blocks[j] == block_ids[i]){
           idx_matches.push_back(j);
         }
@@ -115,12 +114,12 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
         std::reverse(idx_matches.begin(),idx_matches.end());
         for(k = 0; k < (n_matches-1); k++){
           sigma_blocks[idx_matches[n_matches-1]].merge(sigma_blocks[idx_matches[k]]);
+          sigma_blocks[idx_matches[n_matches-1]].add_row(i);
           sigma_blocks.erase(sigma_blocks.begin()+idx_matches[k]);
         }
       }
     }
     idx_matches.clear();
-    block_counter = sigma_blocks.size();
   }
 }
 
