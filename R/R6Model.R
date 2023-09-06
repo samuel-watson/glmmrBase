@@ -1353,7 +1353,6 @@ Model <- R6::R6Class("Model",
                                           self$mean$.__enclos_env__$private$hash))
                        },
                        ptr = NULL,
-                       #bitsptr = NULL,
                        set_y = function(y){
                          if(is.null(private$ptr))private$update_ptr()
                          Model__set_y(private$ptr,y)
@@ -1372,9 +1371,6 @@ Model <- R6::R6Class("Model",
                              data <- cbind(data,self$mean$data[,cnames])
                            }
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           # private$bitsptr <- ModelBits__new(form,as.matrix(data),colnames(data),
-                           #                                   tolower(self$family[[1]]),self$family[[2]],
-                           #                                   self$mean$parameters,self$covariance$parameters)
                            private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
                                                                tolower(self$family[[1]]),self$family[[2]],
                                                                self$mean$parameters,self$covariance$parameters)
@@ -1384,6 +1380,7 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials)
                            Model__update_beta(private$ptr,self$mean$parameters)
                            Model__update_theta(private$ptr,self$covariance$parameters)
+                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr)),ncol=1)) # initialise random effects to random
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
@@ -1392,6 +1389,7 @@ Model <- R6::R6Class("Model",
                          }
                        },
                        verify_data = function(y){
+                         if(any(is.na(y)))stop("NAs in y")
                          if(self$family[[1]]=="binomial"){
                            if(!(all(y>=0 & y%%1 == 0)))stop("y must be integer >= 0")
                            if(any(y > self$trials))stop("Number of successes > number of trials")
