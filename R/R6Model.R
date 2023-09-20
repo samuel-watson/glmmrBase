@@ -1386,8 +1386,6 @@ Model <- R6::R6Class("Model",
                              data <- cbind(data,self$mean$data[,cnames])
                            }
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           print(nngp)
-                           print(type)
                            if(!nngp[1]){
                              private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
                                                               tolower(self$family[[1]]),

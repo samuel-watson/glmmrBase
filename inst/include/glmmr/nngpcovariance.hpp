@@ -68,7 +68,6 @@ inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data){
     grid_data.col(i) = data.col(this->re_cols_data_[0][0][i]);
   }
   grid.setup(grid_data,10);
-
 }
 
 inline void glmmr::nngpCovariance::gen_NN(int nn){
@@ -91,30 +90,29 @@ inline MatrixXd glmmr::nngpCovariance::D(bool chol, bool upper){
 }
 
 inline MatrixXd glmmr::nngpCovariance::ZL(){
-  MatrixXd L = D(true,false);
+  MatrixXd L = sparse_to_dense(this->matL);
   return L;
 }
 
 inline MatrixXd glmmr::nngpCovariance::LZWZL(const VectorXd& w){
-  MatrixXd ZL = glmmr::nngpCovariance::ZL();
+  MatrixXd ZL = sparse_to_dense(this->matL);
   MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
   LZWZL += MatrixXd::Identity(LZWZL.rows(), LZWZL.cols());
   return LZWZL;
 }
 
 inline MatrixXd glmmr::nngpCovariance::ZLu(const MatrixXd& u){
-  MatrixXd ZLu = glmmr::nngpCovariance::ZL() * u;
+  MatrixXd ZLu = this->matL * u;
   return ZLu;
 }
 
 inline MatrixXd glmmr::nngpCovariance::Lu(const MatrixXd& u){
-  MatrixXd L = D();
+  MatrixXd L = sparse_to_dense(this->matL);
   return L*u;
 }
 
 inline sparse glmmr::nngpCovariance::ZL_sparse(){
-  sparse dummy;
-  return dummy;
+  return this->matL;
 }
 
 inline int glmmr::nngpCovariance::Q(){
@@ -170,29 +168,10 @@ inline void glmmr::nngpCovariance::gen_AD(){
       Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
     }
     VectorXd SSv = S.llt().solve(Sv);
-    // if(idxlim > A.rows()){
-    //   Rcpp::Rcout << "\ni: " << i << " idxlim " << idxlim << " A rows " << A.rows();
-    //   Rcpp::stop("Fail 1");
-    // }
-    // if(i > A.cols()){
-    //   Rcpp::Rcout << "\ni: " << i << " idxlim " << idxlim << " A rows " << A.rows();
-    //   Rcpp::stop("Fail 2");
-    // }
-    // if(i > Dvec.size()){
-    //   Rcpp::Rcout << "\ni: " << i << " idxlim " << idxlim << " D size " << Dvec.size();
-    //   Rcpp::stop("Fail 3");
-    // }
-    // if(SSv.size() != idxlim){
-    //   Rcpp::Rcout << "\nssv: " << SSv.size() << " idxlim " << idxlim << " i " << i;
-    //   Rcpp::stop("Fail 4");
-    // }
-    // if(SSv.size() != Sv.size()){
-    //   Rcpp::Rcout << "\nssv: " << SSv.size() << " sv " << Sv.size() << " i " << i;
-    //   Rcpp::stop("Fail 4");
-    // }
     A.block(0,i,idxlim,1) = SSv;
     Dvec(i) = val - (SSv.transpose() * Sv)(0);
   }
+  this->matL = dense_to_sparse(D(true,false));
 }
 
 inline vector_matrix glmmr::nngpCovariance::submatrix(int i){
