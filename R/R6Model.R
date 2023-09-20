@@ -73,10 +73,10 @@ Model <- R6::R6Class("Model",
                          curr_state <- private$attenuate_parameters
                          if(use){
                            private$attenuate_parameters <- TRUE
-                           Model__use_attenuation(private$ptr,TRUE)
+                           Model__use_attenuation(private$ptr,TRUE,private$model_type())
                          } else {
                            private$attenuate_parameters <- FALSE
-                           Model__use_attenuation(private$ptr,FALSE)
+                           Model__use_attenuation(private$ptr,FALSE,private$model_type())
                          }
                          if(private$attenuate_parameters != curr_state){
                            private$genW()
@@ -130,7 +130,7 @@ Model <- R6::R6Class("Model",
                            offs <- offset
                          }
                          preddata <- private$model_data(newdata)
-                         out <- Model__predict(private$ptr,as.matrix(preddata),offset,m)
+                         out <- Model__predict(private$ptr,as.matrix(preddata),offset,m,private$model_type())
                          return(out)
                        },
                        #' @description
@@ -550,19 +550,19 @@ Model <- R6::R6Class("Model",
                          if(!is.null(mean.pars)){
                            self$mean$update_parameters(mean.pars)
                            if(!is.null(private$ptr)){
-                             Model__update_beta(private$ptr,mean.pars)
+                             Model__update_beta(private$ptr,mean.pars,private$model_type())
                            }
                          }
                          if(!is.null(cov.pars)){
                            self$covariance$update_parameters(cov.pars)
                            if(!is.null(private$ptr)){
-                             Model__update_theta(private$ptr,cov.pars)
+                             Model__update_theta(private$ptr,cov.pars,private$model_type())
                            }
                          }
                          if(!is.null(var.par)){
                            self$var_par <- var.par
                            if(!is.null(private$ptr)){
-                             Model__set_var_par(private$ptr,var.par)
+                             Model__set_var_par(private$ptr,var.par,private$model_type())
                            }
                          }
                          self$check(FALSE)
@@ -577,9 +577,9 @@ Model <- R6::R6Class("Model",
                            private$update_ptr()
                          }
                          if(include.re){
-                           return(Model__obs_information_matrix(private$ptr))
+                           return(Model__obs_information_matrix(private$ptr,private$model_type()))
                          } else {
-                           return(Model__information_matrix(private$ptr))
+                           return(Model__information_matrix(private$ptr,private$model_type()))
                          }
                        },
                        #' @description 
@@ -589,7 +589,7 @@ Model <- R6::R6Class("Model",
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         return(Model__sandwich(private$ptr))
+                         return(Model__sandwich(private$ptr,private$model_type()))
                        },
                        #' @description 
                        #' Returns the bias-corrected variance-covariance matrix for the fixed effect parameters.
@@ -598,7 +598,7 @@ Model <- R6::R6Class("Model",
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         return(Model__kenward_roger(private$ptr))
+                         return(Model__kenward_roger(private$ptr,private$model_type()))
                        },
                        #' @description
                        #' Estimates the power of the design described by the model using the square root
@@ -681,7 +681,7 @@ Model <- R6::R6Class("Model",
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         return(Model__Sigma(private$ptr,inverse))
+                         return(Model__Sigma(private$ptr,inverse,private$model_type()))
                        },
                        #'@description
                        #'Markov Chain Monte Carlo Maximum Likelihood  model fitting
@@ -771,12 +771,12 @@ Model <- R6::R6Class("Model",
                                        se.theta = TRUE){
                          private$verify_data(y)
                          private$set_y(y)
-                         Model__use_attenuation(private$ptr,private$attenuate_parameters)
+                         Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!usestan){
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
+                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
+                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
+                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,private$model_type())
                          }
                          trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
@@ -792,7 +792,7 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\nStart: ",all_pars,"\n")
                          niter <- self$mcmc_options$samps
                          invfunc <- self$family$linkinv
-                         L <- Matrix::Matrix(Model__L(private$ptr))
+                         L <- Matrix::Matrix(Model__L(private$ptr,private$model_type()))
                          #parse family
                          file_type <- mcnr_family(self$family)
                          ## set up sampler
@@ -811,9 +811,9 @@ Model <- R6::R6Class("Model",
                          }
                          data <- list(
                            N = self$n(),
-                           Q = Model__Q(private$ptr),
-                           Xb = Model__xb(private$ptr),
-                           Z = Model__ZL(private$ptr),
+                           Q = Model__Q(private$ptr,private$model_type()),
+                           Xb = Model__xb(private$ptr,private$model_type()),
+                           Z = Model__ZL(private$ptr,private$model_type()),
                            y = y,
                            type=as.numeric(file_type$type)
                          )
@@ -827,8 +827,8 @@ Model <- R6::R6Class("Model",
                            if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
                            if(trace==2)t1 <- Sys.time()
                            if(usestan){
-                             data$Xb <-  Model__xb(private$ptr)
-                             data$Z <- Model__ZL(private$ptr)
+                             data$Xb <-  Model__xb(private$ptr,private$model_type())
+                             data$Z <- Model__ZL(private$ptr,private$model_type())
                              if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
                              if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
                               capture.output(fit <- mod$sample(data = data,
@@ -839,26 +839,26 @@ Model <- R6::R6Class("Model",
                                   file=tempfile())
                              dsamps <- fit$draws("gamma",format = "matrix")
                              class(dsamps) <- "matrix"
-                             Model__update_u(private$ptr,as.matrix(t(dsamps)))
+                             Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            } else {
                              Model__mcmc_sample(private$ptr,
                                                  self$mcmc_options$warmup,
                                                  self$mcmc_options$samps,
-                                                 self$mcmc_options$adapt)
+                                                 self$mcmc_options$adapt,private$model_type())
                            }
                            if(trace==2)t2 <- Sys.time()
                            if(trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
                            if(method=="mcem"){
-                             Model__ml_beta(private$ptr)
+                             Model__ml_beta(private$ptr,private$model_type())
                            } else {
-                             Model__nr_beta(private$ptr)
+                             Model__nr_beta(private$ptr,private$model_type())
                            }
-                           Model__ml_theta(private$ptr)
-                           beta_new <- Model__get_beta(private$ptr)
-                           theta_new <- Model__get_theta(private$ptr)
-                           var_par_new <- Model__get_var_par(private$ptr)
+                           Model__ml_theta(private$ptr,private$model_type())
+                           beta_new <- Model__get_beta(private$ptr,private$model_type())
+                           theta_new <- Model__get_theta(private$ptr,private$model_type())
+                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            if(trace==2)t3 <- Sys.time()
@@ -876,38 +876,38 @@ Model <- R6::R6Class("Model",
                          if(sim.lik.step){
                            if(verbose)cat("\n\n")
                            if(verbose)message("Optimising simulated likelihood")
-                           Model__ml_all(private$ptr)
-                           beta_new <- Model__get_beta(private$ptr)
-                           theta_new <- Model__get_theta(private$ptr)
-                           var_par_new <- Model__get_var_par(private$ptr)
+                           Model__ml_all(private$ptr,private$model_type())
+                           beta_new <- Model__get_beta(private$ptr,private$model_type())
+                           theta_new <- Model__get_theta(private$ptr,private$model_type())
+                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                          }
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
-                         u <- Model__u(private$ptr, TRUE)
+                         u <- Model__u(private$ptr, TRUE,private$model_type())
                          if(se == "gls" || se == "bw"){
-                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
+                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "robust" || se == "bwrobust"){
-                           M <- Model__sandwich(private$ptr)
+                           M <- Model__sandwich(private$ptr,private$model_type())
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "kr"){
-                           Mout <- Model__kenward_roger(private$ptr)
+                           Mout <- Model__kenward_roger(private$ptr,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(diag(M))
                          repar_table <- self$covariance$parameter_table()
-                         beta_names <- Model__beta_parameter_names(private$ptr)
+                         beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
                          theta_names <- repar_table$term
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
@@ -950,8 +950,8 @@ Model <- R6::R6Class("Model",
                          }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         aic <- Model__aic(private$ptr)
-                         xb <- Model__xb(private$ptr)
+                         aic <- Model__aic(private$ptr,private$model_type())
+                         xb <- Model__xb(private$ptr,private$model_type())
                          zd <- self$covariance$Z %*% rowMeans(u)
                          wdiag <- Matrix::diag(self$w_matrix())
                          total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
@@ -966,7 +966,7 @@ Model <- R6::R6Class("Model",
                                      aic = aic,
                                      se=se,
                                      Rsq = c(cond = condR2,marg=margR2),
-                                     logl = Model__log_likelihood(private$ptr),
+                                     logl = Model__log_likelihood(private$ptr,private$model_type()),
                                      mean_form = self$mean$formula,
                                      cov_form = self$covariance$formula,
                                      family = self$family[[1]],
@@ -976,7 +976,8 @@ Model <- R6::R6Class("Model",
                                      dof = dof,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
-                                     var_par_family = var_par_family)
+                                     var_par_family = var_par_family,
+                                     y=y)
                          class(out) <- "mcml"
                          return(out)
                        },
@@ -1036,7 +1037,7 @@ Model <- R6::R6Class("Model",
                                      se.theta = TRUE){
                          private$verify_data(y)
                          private$set_y(y)
-                         Model__use_attenuation(private$ptr,private$attenuate_parameters)
+                         Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          trace <- ifelse(verbose,1,0)
@@ -1055,14 +1056,14 @@ Model <- R6::R6Class("Model",
                            iter <- iter + 1
                            if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
                            if(method=="nr"){
-                             Model__laplace_nr_beta_u(private$ptr)
+                             Model__laplace_nr_beta_u(private$ptr,private$model_type())
                            } else {
-                             Model__laplace_ml_beta_u(private$ptr)
+                             Model__laplace_ml_beta_u(private$ptr,private$model_type())
                            }
-                           Model__laplace_ml_theta(private$ptr)
-                           beta_new <- Model__get_beta(private$ptr)
-                           theta_new <- Model__get_theta(private$ptr)
-                           var_par_new <- Model__get_var_par(private$ptr)
+                           Model__laplace_ml_theta(private$ptr,private$model_type())
+                           beta_new <- Model__get_beta(private$ptr,private$model_type())
+                           theta_new <- Model__get_theta(private$ptr,private$model_type())
+                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
                            if(verbose){
@@ -1076,38 +1077,38 @@ Model <- R6::R6Class("Model",
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          #Model__laplace_ml_beta_theta(private$ptr)
-                         beta_new <- Model__get_beta(private$ptr)
-                         theta_new <- Model__get_theta(private$ptr)
-                         var_par_new <- Model__get_var_par(private$ptr)
+                         beta_new <- Model__get_beta(private$ptr,private$model_type())
+                         theta_new <- Model__get_theta(private$ptr,private$model_type())
+                         var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                          all_pars_new <- c(beta_new,theta_new)
                          if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
                          self$var_par <- var_par_new
-                         u <- Model__u(private$ptr,TRUE)
+                         u <- Model__u(private$ptr,TRUE,private$model_type())
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          if(se == "gls" || se =="bw"){
-                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr))[1:length(beta),1:length(beta)]
+                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "robust" || se == "bwrobust"){
-                           M <- Model__sandwich(private$ptr)
+                           M <- Model__sandwich(private$ptr,private$model_type())
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr)))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "kr"){
-                           Mout <- Model__kenward_roger(private$ptr)
+                           Mout <- Model__kenward_roger(private$ptr,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
                          SE <- sqrt(Matrix::diag(M))
                          repar_table <- self$covariance$parameter_table()
-                         beta_names <- Model__beta_parameter_names(private$ptr)
+                         beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
                          theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
@@ -1151,8 +1152,8 @@ Model <- R6::R6Class("Model",
                          }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         aic <- Model__aic(private$ptr)
-                         xb <- Model__xb(private$ptr)
+                         aic <- Model__aic(private$ptr,private$model_type())
+                         xb <- Model__xb(private$ptr,private$model_type())
                          zd <- self$covariance$Z %*% u
                          wdiag <- Matrix::diag(self$w_matrix())
                          total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
@@ -1169,7 +1170,7 @@ Model <- R6::R6Class("Model",
                                      Rsq = c(cond = condR2,marg=margR2),
                                      mean_form = self$mean$formula,
                                      cov_form = self$covariance$formula,
-                                     logl = Model__log_likelihood(private$ptr),
+                                     logl = Model__log_likelihood(private$ptr,private$model_type()),
                                      family = self$family[[1]],
                                      link = self$family[[2]],
                                      re.samps = u,
@@ -1177,7 +1178,8 @@ Model <- R6::R6Class("Model",
                                      dof = dof,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
-                                     var_par_family = var_par_family)
+                                     var_par_family = var_par_family,
+                                     y = y)
                          class(out) <- "mcml"
                          return(out)
                        },
@@ -1188,14 +1190,18 @@ Model <- R6::R6Class("Model",
                        #' @return None, called for effects
                        sparse = function(sparse = TRUE){
                          if(!is.null(private$ptr)){
-                           if(sparse){
-                             Model__make_sparse(private$ptr)
+                           if(private$model_type() == 1){
+                             message("Sparse has no effect with NNGP models")
                            } else {
-                             Model__make_dense(private$ptr)
+                             if(sparse){
+                               Model__make_sparse(private$ptr,private$model_type())
+                             } else {
+                               Model__make_dense(private$ptr,private$model_type())
+                             }
+                             self$covariance$sparse(sparse)
                            }
+                           private$useSparse = sparse
                          } 
-                         private$useSparse = sparse
-                         self$covariance$sparse(sparse)
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
@@ -1224,9 +1230,9 @@ Model <- R6::R6Class("Model",
                            }
                            data <- list(
                              N = self$n(),
-                             Q = Model__Q(private$ptr),
-                             Xb = Model__xb(private$ptr),
-                             Z = Model__ZL(private$ptr),
+                             Q = Model__Q(private$ptr, private$model_type()),
+                             Xb = Model__xb(private$ptr, private$model_type()),
+                             Z = Model__ZL(private$ptr, private$model_type()),
                              y = y,
                              sigma = self$var_par,
                              type=as.numeric(file_type$type)
@@ -1247,15 +1253,15 @@ Model <- R6::R6Class("Model",
                            }
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
-                           dsamps <- Matrix::Matrix(Model__L(private$ptr) %*% Matrix::t(dsamps)) #check this
+                           dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {
-                           if(verbose)Model__set_trace(private$ptr,2)
-                           Model__use_attenuation(private$ptr,private$attenuate_parameters)
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
-                           Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt)
-                           dsamps <- Model__u(private$ptr,TRUE)
+                           if(verbose)Model__set_trace(private$ptr,2, private$model_type())
+                           Model__use_attenuation(private$ptr,private$attenuate_parameters, private$model_type())
+                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda, private$model_type())
+                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps, private$model_type())
+                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh, private$model_type())
+                           Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt, private$model_type())
+                           dsamps <- Model__u(private$ptr,TRUE, private$model_type())
                          }
                          return(dsamps)
                        },
@@ -1271,7 +1277,7 @@ Model <- R6::R6Class("Model",
                        gradient = function(y,u,beta=FALSE){
                          private$verify_data(y)
                          private$set_y(y)
-                         grad <- Model__log_gradient(private$ptr,u,beta)
+                         grad <- Model__log_gradient(private$ptr,u,beta, private$model_type())
                          return(grad)
                        },
                        #' @description 
@@ -1285,7 +1291,7 @@ Model <- R6::R6Class("Model",
                        #' @return A list of matrices, see description for contents of the list.
                        partial_sigma = function(){
                          if(is.null(private$ptr))private$update_ptr()
-                         out <- Model__cov_deriv(private$ptr)
+                         out <- Model__cov_deriv(private$ptr, private$model_type())
                          return(out)
                        },
                        #' @description 
@@ -1295,7 +1301,7 @@ Model <- R6::R6Class("Model",
                        #' @return A matrix of random effect samples
                        u = function(scaled = TRUE){
                          if(is.null(private$ptr))stop("Model not set")
-                         return(Model__u(private$ptr,scaled))
+                         return(Model__u(private$ptr,scaled, private$model_type()))
                        },
                        #' @description 
                        #' The log likelihood for the GLMM. The random effects can be left 
@@ -1308,8 +1314,8 @@ Model <- R6::R6Class("Model",
                        log_likelihood = function(y,u){
                          private$verify_data(y)
                          private$set_y(y)
-                         if(!missing(u))Model__update_u(private$ptr,u)
-                         return(Model__log_likelihood(private$ptr))
+                         if(!missing(u))Model__update_u(private$ptr,u, private$model_type())
+                         return(Model__log_likelihood(private$ptr, private$model_type()))
                        },
                        #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
@@ -1344,7 +1350,7 @@ Model <- R6::R6Class("Model",
                          private$hash <- private$hash_do()
                        },
                        genW = function(){
-                         private$W <- Model__get_W(private$ptr)
+                         private$W <- Model__get_W(private$ptr, private$model_type())
                        },
                        attenuate_parameters = FALSE,
                        hash = NULL,
@@ -1355,7 +1361,11 @@ Model <- R6::R6Class("Model",
                        ptr = NULL,
                        set_y = function(y){
                          if(is.null(private$ptr))private$update_ptr()
-                         Model__set_y(private$ptr,y)
+                         Model__set_y(private$ptr,y, private$model_type())
+                       },
+                       model_type = function(){
+                         nngp <- self$covariance$nngp()
+                         return(nngp[1]*1)
                        },
                        update_ptr = function(){
                          if(is.null(private$ptr)){
@@ -1365,27 +1375,47 @@ Model <- R6::R6Class("Model",
                            } else {
                              form <- gsub(" ","",self$mean$formula)
                            }
+                           if(grepl("nngp",form)){
+                             form <- gsub("nngp_","",form)
+                           }
+                           nngp <- self$covariance$nngp()
+                           type <- nngp[1]*1
                            data <- self$covariance$data
                            if(any(!colnames(self$mean$data)%in%colnames(data))){
                              cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                              data <- cbind(data,self$mean$data[,cnames])
                            }
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
-                                                               tolower(self$family[[1]]),self$family[[2]],
-                                                               self$mean$parameters,self$covariance$parameters)
-                           Model__set_offset(private$ptr,self$mean$offset)
-                           Model__set_weights(private$ptr,self$weights)
-                           Model__set_var_par(private$ptr,self$var_par)
-                           if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials)
-                           Model__update_beta(private$ptr,self$mean$parameters)
-                           Model__update_theta(private$ptr,self$covariance$parameters)
-                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr)),ncol=1)) # initialise random effects to random
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda)
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps)
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh)
-                           Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept)
-                           if(!private$useSparse) Model__make_dense(private$ptr)
+                           print(nngp)
+                           print(type)
+                           if(!nngp[1]){
+                             private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
+                                                              tolower(self$family[[1]]),
+                                                              self$family[[2]],
+                                                              self$mean$parameters,
+                                                              self$covariance$parameters)
+                           } else {
+                             private$ptr <- Model_nngp__new_w_pars(form,as.matrix(data),
+                                                                   colnames(data),
+                                                                    tolower(self$family[[1]]),
+                                                                    self$family[[2]],
+                                                                    self$mean$parameters,
+                                                                    self$covariance$parameters,
+                                                                    nngp[2])
+                           }
+                           
+                           Model__set_offset(private$ptr,self$mean$offset,type)
+                           Model__set_weights(private$ptr,self$weights,type)
+                           Model__set_var_par(private$ptr,self$var_par,type)
+                           if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials,type)
+                           Model__update_beta(private$ptr,self$mean$parameters,type)
+                           Model__update_theta(private$ptr,self$covariance$parameters,type)
+                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr)),ncol=1),type) # initialise random effects to random
+                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,type)
+                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,type)
+                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,type)
+                           Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept,type)
+                           if(!private$useSparse & !nngp[1]) Model__make_dense(private$ptr,type)
                          }
                        },
                        verify_data = function(y){

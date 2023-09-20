@@ -35,7 +35,6 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param data (Optional) Data frame with data required for constructing the covariance.
                         #' @param parameters (Optional) Vector with parameter values for the functions in the model
                         #' formula. See Details.
-                        #' @param verbose Logical whether to provide detailed output.
                         #' @details
                         #' **Intitialisation**
                         #' A covariance function is specified as an additive formula made up of
@@ -77,8 +76,7 @@ Covariance <- R6::R6Class("Covariance",
                         #'                       data= df)
                         initialize = function(formula,
                                               data = NULL,
-                                              parameters= NULL,
-                                              verbose=TRUE){
+                                              parameters= NULL){
                           if(missing(formula))stop("formula required.")
                           self$formula = Reduce(paste0,as.character(formula))
                           allset <- TRUE
@@ -139,7 +137,7 @@ Covariance <- R6::R6Class("Covariance",
                             private$cov_form()
                           }
                           self$parameters <- parameters
-                          Covariance__Update_parameters(private$ptr,parameters)
+                          Covariance__Update_parameters(private$ptr,parameters,private$nngp_flag)
                           self$check(FALSE)
                         },
                         #' @description
@@ -179,7 +177,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' Returns the Cholesky decomposition of the covariance matrix D
                         #' @return A matrix
                         get_chol_D = function(){
-                          return(Matrix::Matrix(Covariance__D_chol(private$ptr)))
+                          return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$nngp_flag)))
                         },
                         #' @description
                         #' The function returns the values of the multivariate Gaussian log likelihood
@@ -187,9 +185,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param u Vector of random effects
                         #' @return Value of the log likelihood
                         log_likelihood = function(u){
-                          Q <- Covariance__Q(private$ptr)
+                          Q <- Covariance__Q(private$ptr,private$nngp_flag)
                           if(length(u)!=Q)stop("Vector not equal to number of random effects")
-                          loglik <- Covariance__log_likelihood(private$ptr,u)
+                          loglik <- Covariance__log_likelihood(private$ptr,u,private$nngp_flag)
                           return(loglik)
                         },
                         #' @description
@@ -197,7 +195,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' with mean zero and covariance D.
                         #' @return A vector of random effect values
                         simulate_re = function(){
-                          re <- Covariance__simulate_re(private$ptr)
+                          re <- Covariance__simulate_re(private$ptr,private$nngp_flag)
                           return(re)
                         },
                         #' @description
@@ -207,9 +205,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return None. Called for effects.
                         sparse = function(sparse = TRUE){
                           if(sparse){
-                            Covariance__make_sparse(private$ptr)
+                            Covariance__make_sparse(private$ptr,private$nngp_flag)
                           } else {
-                            Covariance__make_dense(private$ptr)
+                            Covariance__make_dense(private$ptr,private$nngp_flag)
                           }
                         },
                         #' @description
@@ -217,11 +215,30 @@ Covariance <- R6::R6Class("Covariance",
                         #' function term.
                         #' @return A data frame
                         parameter_table = function(){
-                          re <- Covariance__re_terms(private$ptr)
-                          paridx <- Covariance__parameter_fn_index(private$ptr)+1
-                          recount <- Covariance__re_count(private$ptr)
+                          re <- Covariance__re_terms(private$ptr,private$nngp_flag)
+                          paridx <- Covariance__parameter_fn_index(private$ptr,private$nngp_flag)+1
+                          recount <- Covariance__re_count(private$ptr,private$nngp_flag)
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
+                        },
+                        #' @description 
+                        #' Reports or sets the parameters for the nearest neighbour Gaussian process
+                        #' @param nn Integer. Number of nearest neighbours. Optional - leave as NULL to return
+                        #' details of the NNGP instead.
+                        #' @return If `nn` is NULL then the function will either return FALSE if not using a 
+                        #' Nearest neighbour approximation, or TRUE and the number of nearest neighbours, otherwise
+                        #' it will return nothing.
+                        nngp = function(nn = NULL){
+                          if(!is.null(nn)){
+                            if(!is(nn,"numeric") || nn%%1 != 0 || nn <= 0)stop("nn must be a positive integer")
+                            private$nn <- nn
+                          } else {
+                            if(private$nngp_flag){
+                              return(c(TRUE,private$nn))
+                            } else {
+                              return(c(FALSE))
+                            }
+                          }
                         }
                       ),
                       private = list(
@@ -231,29 +248,43 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         parcount = NULL,
                         ptr = NULL,
+                        nngp_flag = 0,
+                        nn = 10,
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
                           re <- re_names(self$formula)
+                          if(any(sapply(re,function(i)grepl("nngp",i)))){
+                            if(length(re)>1)stop("NNGP only available as a single covariance function currently.")
+                            private$nngp_flag <- 1
+                            re[1] <- gsub("nngp_","",re[1])
+                          }
                           self$formula <- re[1]
                           if(length(re)>1){
                             for(i in 2:length(re)){
                               self$formula <- paste0(self$formula,"+",re[i])
                             }
                           }
-                          private$ptr <- Covariance__new(self$formula,
-                                                         as.matrix(self$data),
-                                                         colnames(self$data))
-                          private$parcount <- Covariance__n_cov_pars(private$ptr)
                           if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
-                          Covariance__Update_parameters(private$ptr,self$parameters)
+                          if(private$nngp_flag == 0){
+                            private$ptr <- Covariance__new(self$formula,
+                                                           as.matrix(self$data),
+                                                           colnames(self$data))
+                          } else {
+                            private$ptr <- Covariance_nngp__new(self$formula,
+                                                           as.matrix(self$data),
+                                                           colnames(self$data))
+                            Covariance__set_nn(private$ptr,private$nn)
+                          }
+                          Covariance__Update_parameters(private$ptr,self$parameters,private$nngp_flag)
+                          private$parcount <- Covariance__n_cov_pars(private$ptr,private$nngp_flag)
                           private$genD()
-                          self$Z <- Covariance__Z(private$ptr)
+                          self$Z <- Covariance__Z(private$ptr,private$nngp_flag)
                         },
                         genD = function(update=TRUE){
                           if(private$parcount != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          if(Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
-                          D <- Covariance__D(private$ptr)
+                          if(private$nngp_flag == 0 & Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
+                          D <- Covariance__D(private$ptr,private$nngp_flag)
                           if(update){
                             self$D <- Matrix::Matrix(D)
                             private$hash <- private$hash_do()

@@ -130,7 +130,6 @@ inline bool issympd(Eigen::MatrixXd& mat){
 }
 }
 
-// class for storing and manipulating row indexes
 class SigmaBlock {
   public:
     intvec Dblocks;

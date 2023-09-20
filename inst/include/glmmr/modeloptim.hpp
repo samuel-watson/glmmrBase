@@ -160,16 +160,14 @@ template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_theta(const dblvec &theta){
   //if(theta.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta);
-  re.ZL = model.covariance.ZL_sparse();
-  re.zu_ = re.ZL*re.u_;
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_theta(const VectorXd &theta){
   //if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta.array());
-  re.ZL = model.covariance.ZL_sparse();
-  re.zu_ = re.ZL*re.u_;
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
@@ -180,7 +178,7 @@ inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
     re.zu_.resize(model.covariance.Q(),u_.cols());
   }
   re.u_ = u_;
-  re.zu_ = re.ZL*re.u_;
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>

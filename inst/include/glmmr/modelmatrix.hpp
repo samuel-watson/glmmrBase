@@ -20,6 +20,10 @@ class ModelMatrix{
     glmmr::RandomEffects<modeltype>& re;
     ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
     ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
+    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_): model(model_), W(model_), re(re_) { 
+      useBlock = useBlock_;
+      useSparse = useSparse_;
+      if(useBlock)gen_sigma_blocks();};
     MatrixXd information_matrix();
     MatrixXd Sigma(bool inverse = false);
     MatrixXd observed_information_matrix();
@@ -40,6 +44,8 @@ class ModelMatrix{
     MatrixXd sigma_block(int b, bool inverse = false);
     MatrixXd sigma_builder(int b, bool inverse = false);
     MatrixXd information_matrix_by_block(int b);
+    bool useBlock = true;
+    bool useSparse = true;
 };
 
 }
@@ -126,7 +132,17 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::Sigma(bool inverse){
   W.update();
-  MatrixXd S = sigma_builder(0,inverse);
+  MatrixXd S(model.n(), model.n());
+  if(useBlock){
+    S = sigma_builder(0,inverse);
+  } else {
+    MatrixXd ZL = model.covariance.ZL();
+    S = ZL * ZL.transpose();
+    S += W.W().array().inverse().matrix().asDiagonal();
+    if(inverse){
+      S = S.llt().solve(MatrixXd::Identity(S.rows(),S.cols()));
+    }
+  }
   return S;
 }
 
@@ -134,6 +150,7 @@ template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
                                                 bool inverse){
   //if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  // UPDATE THIS TO NOT USE SPARSE IF DESIRED
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
   MatrixXd ZL = sparse_to_dense(ZLs,false);
   MatrixXd S = ZL * ZL.transpose();
@@ -440,7 +457,7 @@ inline matrix_matrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
 template<typename modeltype>
 inline vector_matrix glmmr::ModelMatrix<modeltype>::re_score(){
   VectorXd xbOffset = model.linear_predictor.xb() + model.data.offset;
-  matrix_matrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),sparse_to_dense(re.ZL,false),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
+  matrix_matrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),model.covariance.ZL(),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
   vector_matrix out(model.covariance.Q());
   hess.mat1 *= -1.0;
   out.mat = hess.mat1 + MatrixXd::Identity(model.covariance.Q(),model.covariance.Q());
@@ -455,12 +472,13 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   ArrayXd size_n_array = model.xb();
   ArrayXd size_q_array = ArrayXd::Zero(model.covariance.Q());
   ArrayXd size_p_array = ArrayXd::Zero(model.linear_predictor.P());
-  sparse ZLt = re.ZL;
+  sparse ZLt = model.covariance.ZL_sparse();
+  sparse ZL = ZLt;
   ZLt.transpose();
-  size_n_array += (re.ZL*v).array();
+  size_n_array += (ZL*v).array();
   
   if(beta){
-    VectorXd zuOffset = re.ZL*v;
+    VectorXd zuOffset = ZL*v;
     zuOffset += model.data.offset;
     MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
     size_p_array = J.transpose().rowwise().sum().array();

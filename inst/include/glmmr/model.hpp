@@ -11,6 +11,12 @@ namespace glmmr {
 
 using namespace Eigen;
 
+template<class>
+struct check_type : std::false_type {};
+
+template<>
+struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > : std::true_type {};
+
 template<typename modeltype>
 class Model {
 public:
@@ -24,7 +30,9 @@ public:
             const ArrayXXd& data_,
             const strvec& colnames_,
             std::string family_, 
-            std::string link_) : model(formula_,data_,colnames_,family_,link_), re(model), matrix(model,re), optim(model,matrix,re), mcmc(model,matrix,re) {};
+            std::string link_) : model(formula_,data_,colnames_,family_,link_), re(model), 
+            matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+            optim(model,matrix,re), mcmc(model,matrix,re) {};
   
   virtual void set_offset(const VectorXd& offset_);
   virtual void set_weights(const ArrayXd& weights_);
@@ -33,7 +41,6 @@ public:
   virtual void update_theta(const dblvec &theta_);
   virtual void update_u(const MatrixXd &u_);
   virtual void set_trace(int trace_);
-  // add in functions to run the whole fitting algorithm here
 };
 
 }
@@ -64,8 +71,7 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  re.ZL = model.covariance.ZL_sparse();
-  re.zu_ = re.ZL*re.u_;
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
@@ -75,7 +81,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_){
     re.zu_.conservativeResize(model.covariance.Q(),u_.cols());
   }
   re.u_ = u_;
-  re.zu_ = re.ZL*re.u_;
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>

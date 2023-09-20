@@ -10,9 +10,14 @@
 #include "glmmr/model.hpp"
 #include "glmmr/modelbits.hpp"
 #include "glmmr/openmpheader.h"
+#include "glmmr/nngpcovariance.hpp"
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 
-typedef glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> bits;
-typedef glmmr::Model<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > glmm;
+typedef glmmr::Covariance covariance;
+typedef glmmr::nngpCovariance nngp;
+typedef glmmr::LinearPredictor xb;
+typedef glmmr::ModelBits<covariance, xb> bits;
+typedef glmmr::Model<bits > glmm;
+typedef glmmr::Model<glmmr::ModelBits<nngp, xb> > glmm_nngp;
