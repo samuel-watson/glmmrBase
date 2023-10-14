@@ -401,10 +401,6 @@ inline void glmmr::Covariance::parse(){
   block_size.resize(calc_.size());
   block_nvar.resize(calc_.size());
   for(unsigned int i = 0; i < calc_.size(); i++){
-    if(i >= re_temp_data_.size()){
-      Rcpp::Rcout << "\n calc size: " << calc_.size() << " re size " << re_temp_data_.size();
-      Rcpp::stop("re temp data error");
-    }
     Q_ += re_temp_data_[i].size();
     block_size[i] = re_temp_data_[i].size();
     block_nvar[i] = re_temp_data_[i][0].size();
@@ -412,10 +408,6 @@ inline void glmmr::Covariance::parse(){
   re_count_.resize(form_.re_terms().size());
   std::fill(re_count_.begin(), re_count_.end(), 0);
   for(unsigned int i = 0; i < calc_.size(); i++){
-    if(i >= re_order_.size()){
-      Rcpp::Rcout << "\n calc size: " << calc_.size() << " re order " << re_order_.size();
-      Rcpp::stop("re temp data error");
-    }
     re_count_[re_order_[i]] += re_temp_data_[i].size();
   }
   B_ = calc_.size();
@@ -426,8 +418,7 @@ inline void glmmr::Covariance::parse(){
 inline void glmmr::Covariance::Z_constructor(){
   matZ.n = data_.rows();
   matZ.m = Q_;
-  matZ.Ap = intvec(Q_+1,0);
-  //matZ = sparse(data_.rows(),Q_);
+  matZ.Ap = intvec(data_.rows()+1,0);
   int zcount = 0;
   double insertval;
   for(int i = 0; i < B_; i++){
@@ -443,7 +434,7 @@ inline void glmmr::Covariance::Z_constructor(){
         }
         if(valscomp==vals){
           insertval = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
-          matZ.insert(k,zcount,insertval);
+          matZ.insert(k,zcount,insertval,true);
         }
       }
       zcount++;
@@ -583,13 +574,8 @@ inline MatrixXd glmmr::Covariance::get_block(int b){
 }
 
 inline MatrixXd glmmr::Covariance::Z(){
-  // glmmr::print_vec_1d<intvec>(matZ.Ap);
-  // glmmr::print_vec_1d<intvec>(matZ.Ai);
-  // glmmr::print_vec_1d<dblvec>(matZ.Ax);
-  MatrixXd Z = sparse_to_dense(matZ,false,false);
+  MatrixXd Z = sparse_to_dense(matZ,false,true);
   return Z;
-  // MatrixXd Z = MatrixXd::Identity(Q_,Q_);
-  // return Z;
 }
 
 inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
