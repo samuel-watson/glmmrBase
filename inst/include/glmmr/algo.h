@@ -51,6 +51,25 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
   }
   return y;
 }
+
+template<typename T>
+std::vector<T> rep_vec(const std::vector<T>& vec, int times = 1, int each = 1){
+  std::vector<T> out(vec.size()*times*each);
+  int counter = 0;
+  for(int i = 0; i < vec.size(); i++){
+    for(int j = 0; j < each; j++){
+      out[counter] = vec[i];
+      counter++;
+    }
+  }
+  if(times > 1){
+    for(int i = 1; i < times; i++){
+      std::copy_n(out.begin(),vec.size()*each,out.begin()+vec.size()*each*i);
+    } 
+  }
+  return out;
+}
+
 }
 
 namespace Eigen_ext {

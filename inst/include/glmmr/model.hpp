@@ -30,7 +30,8 @@ public:
             const ArrayXXd& data_,
             const strvec& colnames_,
             std::string family_, 
-            std::string link_) : model(formula_,data_,colnames_,family_,link_), re(model), 
+            std::string link_) : model(formula_,data_,colnames_,family_,link_), 
+            re(model), 
             matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
             optim(model,matrix,re), mcmc(model,matrix,re) {};
   

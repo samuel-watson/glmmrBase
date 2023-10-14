@@ -187,18 +187,12 @@ inline intvec interpret_re(const std::string& fn,
 
 //add in the indexes for each function
 inline intvec interpret_re_par(const std::string& fn,
-                               const intvec& col_idx,
+                               const int col_idx,
                                const intvec& par_idx){
   intvec B;
-  
-  
+
   auto addA = [&] (){
-    for(int i = 0; i<col_idx.size();i++){
-      B.push_back(col_idx[i]);
-      B.push_back(col_idx[i]);
-      //B.push_back(col_idx[i]);
-      //B.push_back(col_idx[i]);
-    }
+    B.push_back(col_idx);
   };
   
   auto addPar2 = [&] (int i){
@@ -223,7 +217,6 @@ inline intvec interpret_re_par(const std::string& fn,
   case 4:
     B.push_back(par_idx[1]);
     addA();
-    //addPar2(0);
     B.push_back(par_idx[0]);
     break;
   case 5:
@@ -235,7 +228,6 @@ inline intvec interpret_re_par(const std::string& fn,
     addPar2(1);
     addA();
     addA();
-    //addPar2(0);
     B.push_back(par_idx[0]);
     break;
   case 8:

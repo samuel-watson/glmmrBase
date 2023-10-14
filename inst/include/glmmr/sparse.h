@@ -7,14 +7,25 @@
 namespace glmmr {
 
 inline MatrixXd sparse_to_dense(const sparse& m,
-                                bool symmetric = true){
+                                bool symmetric = true,
+                                bool rowmajor = true){
   MatrixXd D = MatrixXd::Zero(m.n,m.m);
-  for(int i = 0; i < m.n; i++){
-    for(int j = m.Ap[i]; j < m.Ap[i+1]; j++){
-      D(i,m.Ai[j]) = m.Ax[j];
-      if(symmetric) D(m.Ai[j],i) = m.Ax[j];
+  if(rowmajor){
+    for(int i = 0; i < m.n; i++){
+      for(int j = m.Ap[i]; j < m.Ap[i+1]; j++){
+        D(i,m.Ai[j]) = m.Ax[j];
+        if(symmetric) D(m.Ai[j],i) = m.Ax[j];
+      }
+    }
+  } else {
+    for(int i = 0; i < m.m; i++){
+      for(int j = m.Ap[i]; j < m.Ap[i+1]; j++){
+        D(m.Ai[j],i) = m.Ax[j];
+        if(symmetric) D(m.Ai[j],i) = m.Ax[j];
+      }
     }
   }
+  
   return D;
 }
 

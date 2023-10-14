@@ -23,7 +23,8 @@ class calculator {
                      const MatrixXd& data,
                      const int j = 0,
                      int order = 0, 
-                     double extraData = 0.0);
+                     double extraData = 0.0,
+                     int n = 0);
     
     calculator& operator= (const glmmr::calculator& calc);
     VectorXd linear_predictor(const dblvec& parameters,const MatrixXd& data);
@@ -182,9 +183,9 @@ inline dblvec glmmr::calculator::calculate(const int i,
                                            const MatrixXd& data,
                                            const int j,
                                            int order,
-                                           double extraData){
+                                           double extraData,
+                                           int n){
   
-  //if(order > 2)Rcpp::stop("Only up to second order derivatives allowed.");
   int idx_iter = 0;
   double a,b;
   std::stack<double> stack;
@@ -237,8 +238,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
     //DEBUG
     //if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 1 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
     //if(indexes[idx_iter] >= data.cols())Rcpp::stop("Index out of range: case 1 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
-    
-    stack.push(data(j,indexes[idx_iter]));
+    if(i==j){
+      stack.push(0.0);
+    } else {
+      int i1 = i < j ? (n-1)*i - ((i-1)*i/2) + (j-i-1) : (n-1)*j - ((j-1)*j/2) + (i-j-1);
+      stack.push(data(i1,indexes[idx_iter]));
+    }
     if(order > 0){
       addZeroDx();
     }

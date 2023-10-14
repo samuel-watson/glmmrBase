@@ -18,7 +18,7 @@ public:
   griddata(const ArrayXXd& X_, int M) : X(X_), N(X_.rows()) {genNN(M);};
   griddata(const glmmr::griddata& g) : X(g.X), N(g.N) {};
   
-  ArrayXi top_i_pq(ArrayXd v, int n);
+  ArrayXi top_i_pq(const ArrayXd& v, int n);
   void genNN(int M);
   void setup(const ArrayXXd& X_);
   void setup(const ArrayXXd& X_, int M);
@@ -27,17 +27,24 @@ public:
 };
 }
 
-inline ArrayXi glmmr::griddata::top_i_pq(ArrayXd v, int n) {
+inline ArrayXi glmmr::griddata::top_i_pq(const ArrayXd& v, int n) {
   typedef std::pair<double, int> Elt;
-  std::priority_queue< Elt, std::vector<Elt>, std::greater<Elt> > pq;
+  
+  struct ComparePair {
+    bool operator()(const Elt& elt1, const Elt& elt2) const {
+      return elt1.first < elt2.first;
+    }
+  };
+  
+  std::priority_queue< Elt, std::vector<Elt>, ComparePair > pq;
   std::vector<int> result;
   
-  for (int i = 0; i != v.size(); ++i) {
+  for (int i = 0; i < v.size(); i++) {
     if (pq.size() < n)
       pq.push(Elt(v(i), i));
     else {
       Elt elt = Elt(v(i), i);
-      if (pq.top() < elt) {
+      if (pq.top().first > elt.first) {
         pq.pop();
         pq.push(elt);
       }

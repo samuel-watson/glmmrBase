@@ -142,6 +142,16 @@ protected:
     double operator()(const dblvec &par);
   };
   
+  class D_likelihood_hsgp : public Functor<dblvec> {
+    ModelOptim<modeltype>& M;
+    double logl;
+  public:
+    D_likelihood_hsgp(ModelOptim<modeltype>& M_) :
+    M(M_),
+    logl(0.0) {};
+    double operator()(const dblvec &par);
+  };
+  
 };
 
 }
@@ -430,6 +440,17 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   opt.minimize(ddl, start_t);
 }
 
+// template<>
+// inline void glmmr::ModelOptim<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >::ml_theta(){
+//   D_likelihood_hsgp ddl(*this);
+//   Rbobyqa<D_likelihood_hsgp,dblvec> opt;
+//   dblvec lower = get_lower_values(false,true,false);
+//   opt.set_lower(lower);
+//   opt.control.iprint = trace;
+//   dblvec start_t = get_start_values(false,true,false);
+//   opt.minimize(ddl, start_t);
+// }
+
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
   MatrixXd Lu = model.covariance.Lu(re.u(false));
@@ -564,6 +585,13 @@ inline double glmmr::ModelOptim<modeltype>::LA_likelihood_btheta::operator()(con
   LZWZL = M.model.covariance.LZWZL(M.matrix.W.W());
   LZWdet = glmmr::maths::logdet(LZWZL);
   return -1*(ll - 0.5*logl - 0.5*LZWdet);
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::D_likelihood_hsgp::operator()(const dblvec &par) {
+  M.update_theta(par);
+  logl = M.log_likelihood();
+  return -1*logl;
 }
 
 template<typename modeltype>

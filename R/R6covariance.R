@@ -265,7 +265,7 @@ Covariance <- R6::R6Class("Covariance",
                               self$formula <- paste0(self$formula,"+",re[i])
                             }
                           }
-                          if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
+                          
                           if(private$nngp_flag == 0){
                             private$ptr <- Covariance__new(self$formula,
                                                            as.matrix(self$data),
@@ -276,8 +276,10 @@ Covariance <- R6::R6Class("Covariance",
                                                            colnames(self$data))
                             Covariance__set_nn(private$ptr,private$nn)
                           }
-                          Covariance__Update_parameters(private$ptr,self$parameters,private$nngp_flag)
+                          
                           private$parcount <- Covariance__n_cov_pars(private$ptr,private$nngp_flag)
+                          if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
+                          Covariance__Update_parameters(private$ptr,self$parameters,private$nngp_flag)
                           private$genD()
                           self$Z <- Covariance__Z(private$ptr,private$nngp_flag)
                         },

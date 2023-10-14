@@ -62,10 +62,10 @@ public:
 }
 
 inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data){
-  int dim = this->re_cols_data_[0][0].size();
+  int dim = this->block_nvar[0];
   ArrayXXd grid_data(data.rows(),dim);
   for(int i = 0; i < dim; i++){
-    grid_data.col(i) = data.col(this->re_cols_data_[0][0][i]);
+    grid_data.col(i) = data.col(this->block_nvar[0]);
   }
   grid.setup(grid_data,10);
 }
@@ -123,14 +123,14 @@ inline double glmmr::nngpCovariance::log_likelihood(const VectorXd &u){
   double ll1 = 0.0;
   double logdet = log_determinant();
   int idxlim;
-  double au;
-  
   double qf = u(0)*u(0)/Dvec(0);
+
+#pragma omp parallel for reduction (+:qf)
   for(int i = 1; i < grid.N; i++){
     idxlim = i <= m ? i : m;
     VectorXd usec(idxlim);
     for(int j = 0; j < idxlim; j++) usec(j) = u(grid.NN(j,i));
-    au = u(i) - (A.col(i).segment(0,idxlim).transpose() * usec)(0);
+    double au = u(i) - (A.col(i).segment(0,idxlim).transpose() * usec)(0);
     qf += au*au/Dvec(i);
   }
   ll1 -= 0.5*qf + 0.5*grid.N*log(2*M_PI);
@@ -149,13 +149,15 @@ inline void glmmr::nngpCovariance::gen_AD(){
   int idxlim;
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
+  
+#pragma omp parallel for
   for(int i = 1; i < grid.N; i++){
-     idxlim = i <= m ? i : m;
-     MatrixXd S(idxlim,idxlim);
-     VectorXd Sv(idxlim);
-     for(int j = 0; j<idxlim; j++){
-       S(j,j) = val;
-     }
+    idxlim = i <= m ? i : m;
+    MatrixXd S(idxlim,idxlim);
+    VectorXd Sv(idxlim);
+    for(int j = 0; j<idxlim; j++){
+      S(j,j) = val;
+    }
     if(idxlim > 1){
       for(int j = 0; j<(idxlim-1); j++){
         for(int k = j+1; k<idxlim; k++){
@@ -167,11 +169,10 @@ inline void glmmr::nngpCovariance::gen_AD(){
     for(int j = 0; j<idxlim; j++){
       Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
     }
-    VectorXd SSv = S.llt().solve(Sv);
-    A.block(0,i,idxlim,1) = SSv;
-    Dvec(i) = val - (SSv.transpose() * Sv)(0);
+    A.block(0,i,idxlim,1) = S.ldlt().solve(Sv);
+    Dvec(i) = val - (A.col(i).segment(0,idxlim).transpose() * Sv)(0);
   }
-  this->matL = dense_to_sparse(D(true,false));
+  this->matL = glmmr::dense_to_sparse(D(true,false),false);
 }
 
 inline vector_matrix glmmr::nngpCovariance::submatrix(int i){
@@ -228,11 +229,12 @@ inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters){
 };
 
 inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A, 
-                                                   const VectorXd &D,
-                                                   const ArrayXXi &NN){
+                                                 const VectorXd &D,
+                                                 const ArrayXXi &NN){
   int n = A.cols();
   int m = A.rows();
   MatrixXd y = MatrixXd::Zero(n,n);
+  ArrayXd dsqrt = Dvec.array().sqrt();
 #pragma omp parallel for  
   for(int k=0; k<n; k++){
     int idxlim;
@@ -240,11 +242,11 @@ inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A,
       idxlim = i<=m ? i : m;
       double lsum = 0;
       for (int j = 0; j < idxlim; j++) {
-        lsum += -1.0 * A(j,i) * y(NN(j,i),k);
+        lsum += A(j,i) * y(NN(j,i),k);
       }
-      y(i,k) = i==k ? (1-lsum)  : (-1.0*lsum);
+      y(i,k) = i==k ? (1+lsum)*dsqrt(k)  : lsum*dsqrt(k) ;
     }
   }
   
-  return y*D.cwiseSqrt().asDiagonal();
+  return y;
 }
