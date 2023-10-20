@@ -1364,8 +1364,8 @@ Model <- R6::R6Class("Model",
                          Model__set_y(private$ptr,y, private$model_type())
                        },
                        model_type = function(){
-                         nngp <- self$covariance$nngp()
-                         return(nngp[1]*1)
+                         type <- self$covariance$.__enclos_env__$private$type
+                         return(type)
                        },
                        update_ptr = function(){
                          if(is.null(private$ptr)){
@@ -1377,22 +1377,24 @@ Model <- R6::R6Class("Model",
                            }
                            if(grepl("nngp",form)){
                              form <- gsub("nngp_","",form)
+                           } else if(grepl("hsgp",form)){
+                             form <- gsub("hsgp_","",form)
                            }
-                           nngp <- self$covariance$nngp()
-                           type <- nngp[1]*1
+                           type <- private$model_type()
                            data <- self$covariance$data
                            if(any(!colnames(self$mean$data)%in%colnames(data))){
                              cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                              data <- cbind(data,self$mean$data[,cnames])
                            }
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           if(!nngp[1]){
+                           if(type == 0){
                              private$ptr <- Model__new_w_pars(form,as.matrix(data),colnames(data),
                                                               tolower(self$family[[1]]),
                                                               self$family[[2]],
                                                               self$mean$parameters,
                                                               self$covariance$parameters)
-                           } else {
+                           } else if(type==1){
+                             nngp <- self$covariance$nngp()
                              private$ptr <- Model_nngp__new_w_pars(form,as.matrix(data),
                                                                    colnames(data),
                                                                     tolower(self$family[[1]]),
@@ -1400,6 +1402,13 @@ Model <- R6::R6Class("Model",
                                                                     self$mean$parameters,
                                                                     self$covariance$parameters,
                                                                     nngp[2])
+                           } else if(type==2){
+                             private$ptr <- Model_hsgp__new_w_pars(form,as.matrix(data),
+                                                                   colnames(data),
+                                                                   tolower(self$family[[1]]),
+                                                                   self$family[[2]],
+                                                                   self$mean$parameters,
+                                                                   self$covariance$parameters)
                            }
                            
                            Model__set_offset(private$ptr,self$mean$offset,type)
@@ -1413,7 +1422,9 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,type)
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,type)
                            Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept,type)
-                           if(!private$useSparse & !nngp[1]) Model__make_dense(private$ptr,type)
+                           if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)
+                           # set covariance pointer
+                           self$covariance$.__enclos_env__$private$ptr <- Covariance__get_ptr_model(private$ptr,type)
                          }
                        },
                        verify_data = function(y){

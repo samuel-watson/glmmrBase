@@ -661,3 +661,5 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   // }
   return beta ? size_p_array.matrix() : size_q_array.matrix();
 }
+
+

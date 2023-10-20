@@ -46,8 +46,13 @@ public:
   virtual void laplace_ml_beta_theta();
   virtual double aic();
   virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
+  virtual void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
+  virtual MatrixXd hessian_numerical(double tol = 1e-4);
   
 protected:
+  int npt = 0;
+  double rhobeg = 0;
+  double rhoend = 0;
   void calculate_var_par();
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   dblvec get_lower_values(bool beta, bool theta, bool var = true);
@@ -72,6 +77,15 @@ protected:
       M(M_),
       Lu(Lu_),
       logl(0.0) {};
+    double operator()(const dblvec &par);
+  };
+  
+  class Lu_likelihood : public Functor<dblvec> {
+    ModelOptim<modeltype>& M;
+    double ll;
+  public:
+    Lu_likelihood(ModelOptim<modeltype>& M_) :  
+    M(M_), ll(0.0) {};
     double operator()(const dblvec &par);
   };
   
@@ -157,6 +171,13 @@ protected:
 }
 
 template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
+  npt = npt_;
+  rhobeg = rhobeg_;
+  rhoend = rhoend_;
+}
+
+template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_beta(const dblvec &beta){
   model.linear_predictor.update_parameters(beta);
 }
@@ -168,21 +189,18 @@ inline void glmmr::ModelOptim<modeltype>::update_beta(const VectorXd &beta){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_theta(const dblvec &theta){
-  //if(theta.size()!=(unsigned)model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta);
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_theta(const VectorXd &theta){
-  //if(theta.size()!=model.covariance.npar())Rcpp::stop("theta wrong length");
   model.covariance.update_parameters(theta.array());
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
-  //if(u_.rows()!=model.covariance.Q())Rcpp::stop("u has wrong number of random effects");
   if(u_.cols()!=re.u(false).cols()){
     re.u_.conservativeResize(model.covariance.Q(),u_.cols());
     re.zu_.resize(model.covariance.Q(),u_.cols());
@@ -420,6 +438,9 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   L_likelihood ldl(*this);
   Rbobyqa<L_likelihood,dblvec> opt;
   opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,false,false);
   dblvec lower = get_lower_values(true,false,false);
   opt.set_lower(lower);
@@ -436,20 +457,23 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   dblvec lower = get_lower_values(false,true,false);
   opt.set_lower(lower);
   opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   dblvec start_t = get_start_values(false,true,false);
   opt.minimize(ddl, start_t);
 }
 
-// template<>
-// inline void glmmr::ModelOptim<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >::ml_theta(){
-//   D_likelihood_hsgp ddl(*this);
-//   Rbobyqa<D_likelihood_hsgp,dblvec> opt;
-//   dblvec lower = get_lower_values(false,true,false);
-//   opt.set_lower(lower);
-//   opt.control.iprint = trace;
-//   dblvec start_t = get_start_values(false,true,false);
-//   opt.minimize(ddl, start_t);
-// }
+template<>
+inline void glmmr::ModelOptim<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >::ml_theta(){
+  D_likelihood_hsgp ddl(*this);
+  Rbobyqa<D_likelihood_hsgp,dblvec> opt;
+  dblvec lower = get_lower_values(false,true,false);
+  opt.set_lower(lower);
+  opt.control.iprint = trace;
+  dblvec start_t = get_start_values(false,true,false);
+  opt.minimize(ddl, start_t);
+}
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
@@ -461,6 +485,9 @@ inline void glmmr::ModelOptim<modeltype>::ml_all(){
   denomD *= 1/Lu.cols();
   F_likelihood dl(*this,denomD,true);
   Rbobyqa<F_likelihood,dblvec> opt;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,true,false);
   dblvec lower = get_lower_values(true,true,false);
   opt.set_lower(lower);
@@ -474,6 +501,9 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   LA_likelihood ldl(*this);
   Rbobyqa<LA_likelihood,dblvec> opt;
   opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,false,false);
   for(int i = 0; i< model.covariance.Q(); i++)start.push_back(re.u_(i,0));
   opt.control.iprint = trace;
@@ -488,6 +518,9 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta(){
   dblvec lower = get_lower_values(false,true,false);
   dblvec start = get_start_values(false,true,false);
   opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   opt.set_lower(lower);
   opt.minimize(ldl, start);
 }
@@ -500,6 +533,9 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
   dblvec start = get_start_values(true,true,false);
   opt.set_lower(lower);
   opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
   opt.minimize(ldl, start);
   calculate_var_par();
 }
@@ -516,10 +552,27 @@ inline double glmmr::ModelOptim<modeltype>::D_likelihood::operator()(const dblve
   M.update_theta(par);
   logl = 0;
 #pragma omp parallel for reduction (+:logl)
-  for(int i = 0; i < M.re.u(false).cols(); i++){
+  for(int i = 0; i < Lu.cols(); i++){
     logl += M.model.covariance.log_likelihood(Lu.col(i));
   }
   return -1*logl/Lu.cols();
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::Lu_likelihood::operator()(const dblvec &par) {
+  auto first = par.begin();
+  auto last1 = par.begin() + M.model.linear_predictor.P();
+  auto last2 = par.begin() + M.model.linear_predictor.P() + M.model.covariance.Q();
+  dblvec beta(first,last1);
+  dblvec u(last1,last2);
+  MatrixXd umat = Map<MatrixXd>(u.data(),u.size(),1);
+  M.update_beta(beta);
+  M.update_u(umat);
+  ll = M.log_likelihood();
+  for(int i = 0; i < M.model.covariance.Q(); i++){
+    ll -= 0.5*u[i]*u[i];
+  }
+  return -1*ll;
 }
 
 template<typename modeltype>
@@ -606,6 +659,30 @@ inline double glmmr::ModelOptim<modeltype>::aic(){
   double ll = log_likelihood();
   
   return (-2*( ll + logl ) + 2*dof); 
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelOptim<modeltype>::hessian_numerical(double tol){
+  
+  F_likelihood dl(*this);
+  dblvec start = get_start_values(true,true,false);
+  dblvec lower = get_lower_values(true,true,false);
+  
+  F_likelihood ldl(*this);
+  dblvec currbeta = model.linear_predictor.parameters;
+  dblvec currtheta = model.covariance.parameters_;
+  
+  dblvec hess(start.size()*start.size());
+  std::fill(hess.begin(),hess.end(),0.0);
+  dblvec ndeps(start.size());
+  std::fill(ndeps.begin(),ndeps.end(),tol);
+  ldl.os.ndeps_ = ndeps;
+  ldl.os.lower_ = lower;
+  ldl.Hessian(start,hess);
+  MatrixXd H = Map<MatrixXd>(hess.data(),model.linear_predictor.P(),model.linear_predictor.P());
+  update_beta(currbeta);
+  update_theta(currtheta);
+  return H;
 }
 
 template<typename modeltype>

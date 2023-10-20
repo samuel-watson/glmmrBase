@@ -172,7 +172,7 @@ inline void glmmr::nngpCovariance::gen_AD(){
     A.block(0,i,idxlim,1) = S.ldlt().solve(Sv);
     Dvec(i) = val - (A.col(i).segment(0,idxlim).transpose() * Sv)(0);
   }
-  this->matL = glmmr::dense_to_sparse(D(true,false),false);
+  this->matL = dense_to_sparse(D(true,false),false);
 }
 
 inline vector_matrix glmmr::nngpCovariance::submatrix(int i){

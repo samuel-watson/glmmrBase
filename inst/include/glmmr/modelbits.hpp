@@ -2,6 +2,7 @@
 
 #include "general.h"
 #include "covariance.hpp"
+#include "hsgpcovariance.hpp"
 #include "linearpredictor.hpp"
 #include "family.hpp"
 #include "modelextradata.hpp"
@@ -61,6 +62,12 @@ inline void glmmr::ModelBits<cov, linpred>::setup_calculator(){
   vcalc.y = yvec;
   vcalc.variance.conservativeResize(yvec.size());
   vcalc.variance = data.variance;
+}
+
+template<>
+inline void glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>::setup_calculator(){
+  int i = 0;
+  (void)i;
 }
 
 template<typename cov, typename linpred>

@@ -137,7 +137,7 @@ Covariance <- R6::R6Class("Covariance",
                             private$cov_form()
                           }
                           self$parameters <- parameters
-                          Covariance__Update_parameters(private$ptr,parameters,private$nngp_flag)
+                          Covariance__Update_parameters(private$ptr,parameters,private$type)
                           self$check(FALSE)
                         },
                         #' @description
@@ -177,7 +177,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' Returns the Cholesky decomposition of the covariance matrix D
                         #' @return A matrix
                         get_chol_D = function(){
-                          return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$nngp_flag)))
+                          return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$type)))
                         },
                         #' @description
                         #' The function returns the values of the multivariate Gaussian log likelihood
@@ -185,9 +185,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param u Vector of random effects
                         #' @return Value of the log likelihood
                         log_likelihood = function(u){
-                          Q <- Covariance__Q(private$ptr,private$nngp_flag)
+                          Q <- Covariance__Q(private$ptr,private$type)
                           if(length(u)!=Q)stop("Vector not equal to number of random effects")
-                          loglik <- Covariance__log_likelihood(private$ptr,u,private$nngp_flag)
+                          loglik <- Covariance__log_likelihood(private$ptr,u,private$type)
                           return(loglik)
                         },
                         #' @description
@@ -195,7 +195,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' with mean zero and covariance D.
                         #' @return A vector of random effect values
                         simulate_re = function(){
-                          re <- Covariance__simulate_re(private$ptr,private$nngp_flag)
+                          re <- Covariance__simulate_re(private$ptr,private$type)
                           return(re)
                         },
                         #' @description
@@ -205,9 +205,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return None. Called for effects.
                         sparse = function(sparse = TRUE){
                           if(sparse){
-                            Covariance__make_sparse(private$ptr,private$nngp_flag)
+                            Covariance__make_sparse(private$ptr,private$type)
                           } else {
-                            Covariance__make_dense(private$ptr,private$nngp_flag)
+                            Covariance__make_dense(private$ptr,private$type)
                           }
                         },
                         #' @description
@@ -215,9 +215,9 @@ Covariance <- R6::R6Class("Covariance",
                         #' function term.
                         #' @return A data frame
                         parameter_table = function(){
-                          re <- Covariance__re_terms(private$ptr,private$nngp_flag)
-                          paridx <- Covariance__parameter_fn_index(private$ptr,private$nngp_flag)+1
-                          recount <- Covariance__re_count(private$ptr,private$nngp_flag)
+                          re <- Covariance__re_terms(private$ptr,private$type)
+                          paridx <- Covariance__parameter_fn_index(private$ptr,private$type)+1
+                          recount <- Covariance__re_count(private$ptr,private$type)
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
                         },
@@ -233,11 +233,58 @@ Covariance <- R6::R6Class("Covariance",
                             if(!is(nn,"numeric") || nn%%1 != 0 || nn <= 0)stop("nn must be a positive integer")
                             private$nn <- nn
                           } else {
-                            if(private$nngp_flag){
+                            if(private$type == 1){
                               return(c(TRUE,private$nn))
                             } else {
                               return(c(FALSE))
                             }
+                          }
+                        },
+                        #' @description 
+                        #' Reports or sets the parameters for the Hilbert Space Gaussian process
+                        #' @param m Integer or vector of integers. Number of basis functions per dimension. If only
+                        #' a single number is provided and there is more than one dimension the same number will be applied
+                        #' to all dimensions.
+                        #' @param L Decimal. The boundary extension.
+                        #' @return If `m` and `L` are NULL then the function will either return FALSE if not using a 
+                        #' Hilbert space approximation, or TRUE and the number of bases functions and boundary value, otherwise
+                        #' it will return nothing.
+                        hsgp = function(m = NULL, L = NULL){
+                          if(private$type == 2){
+                            dim <- Model_hsgp__dim(private$ptr)
+                            if(!is.null(m)){
+                              if(length(m)==1 & dim > 1){
+                                private$m <- rep(m,dim)
+                              } else if(length(m) > 1 & dim > 1){
+                                if(length(m)==dim){
+                                  private$m <- m
+                                } else (
+                                  stop("m wrong dimension")
+                                )
+                              } else if(length(m) == 1 & dim == 1){
+                                private$m <- m
+                              }
+                            }
+                            if(!is.null(L)){
+                              if(length(L)==1 & dim > 1){
+                                private$L <- rep(L,dim)
+                              } else if(length(L) > 1 & dim > 1){
+                                if(length(L)==dim){
+                                  private$L <- L
+                                } else (
+                                  stop("m wrong dimension")
+                                )
+                              } else if(length(m) == 1 & dim == 1){
+                                private$L <- L
+                              }
+                            }
+                            if(is.null(m) & is.null(L)){
+                              return(c(TRUE,private$m,private$L))
+                            } else {
+                              Model_hsgp__set_approx_pars(private$ptr,private$m,private$L)
+                            }
+                          } else {
+                            return(FALSE)
                           }
                         }
                       ),
@@ -248,16 +295,22 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         parcount = NULL,
                         ptr = NULL,
-                        nngp_flag = 0,
+                        type = 0,
                         nn = 10,
+                        m = 10,
+                        L = 1.5,
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
                           re <- re_names(self$formula)
                           if(any(sapply(re,function(i)grepl("nngp",i)))){
                             if(length(re)>1)stop("NNGP only available as a single covariance function currently.")
-                            private$nngp_flag <- 1
+                            private$type <- 1
                             re[1] <- gsub("nngp_","",re[1])
+                          } else if(any(sapply(re,function(i)grepl("hsgp",i)))){
+                            if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
+                            private$type <- 2
+                            re[1] <- gsub("hsgp_","",re[1])
                           }
                           self$formula <- re[1]
                           if(length(re)>1){
@@ -266,27 +319,36 @@ Covariance <- R6::R6Class("Covariance",
                             }
                           }
                           
-                          if(private$nngp_flag == 0){
+                          if(private$type == 0){
                             private$ptr <- Covariance__new(self$formula,
                                                            as.matrix(self$data),
                                                            colnames(self$data))
-                          } else {
+                          } else if(private$type == 1){
                             private$ptr <- Covariance_nngp__new(self$formula,
                                                            as.matrix(self$data),
                                                            colnames(self$data))
                             Covariance__set_nn(private$ptr,private$nn)
+                          } else if(private$type==2){
+                            private$ptr <- Covariance_hsgp__new(self$formula,
+                                                                as.matrix(self$data),
+                                                                colnames(self$data))
                           }
                           
-                          private$parcount <- Covariance__n_cov_pars(private$ptr,private$nngp_flag)
+                          private$parcount <- Covariance__n_cov_pars(private$ptr,private$type)
                           if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
-                          Covariance__Update_parameters(private$ptr,self$parameters,private$nngp_flag)
+                          Covariance__Update_parameters(private$ptr,self$parameters,private$type)
                           private$genD()
-                          self$Z <- Covariance__Z(private$ptr,private$nngp_flag)
+                          self$Z <- Covariance__Z(private$ptr,private$type)
+                          if(private$type==2){
+                            dim <- Model_hsgp__dim(private$ptr)
+                            private$m <- rep(10,dim)
+                            private$L <- rep(1.5,dim)
+                          }
                         },
                         genD = function(update=TRUE){
                           if(private$parcount != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          if(private$nngp_flag == 0 & Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
-                          D <- Covariance__D(private$ptr,private$nngp_flag)
+                          if(private$type == 0 & Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
+                          D <- Covariance__D(private$ptr,private$type)
                           if(update){
                             self$D <- Matrix::Matrix(D)
                             private$hash <- private$hash_do()

@@ -9,6 +9,10 @@ Covariance_nngp__new <- function(form_, data_, colnames_) {
     .Call(`_glmmrBase_Covariance_nngp__new`, form_, data_, colnames_)
 }
 
+Covariance_hsgp__new <- function(form_, data_, colnames_) {
+    .Call(`_glmmrBase_Covariance_hsgp__new`, form_, data_, colnames_)
+}
+
 Covariance__Z <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Covariance__Z`, xp, type)
 }
@@ -141,12 +145,20 @@ Model_nngp__new_w_pars <- function(formula_, data_, colnames_, family_, link_, b
     .Call(`_glmmrBase_Model_nngp__new_w_pars`, formula_, data_, colnames_, family_, link_, beta_, theta_, nn)
 }
 
-Covariance__get_ptr_model <- function(xp) {
-    .Call(`_glmmrBase_Covariance__get_ptr_model`, xp)
+Model_hsgp__new <- function(formula_, data_, colnames_, family_, link_) {
+    .Call(`_glmmrBase_Model_hsgp__new`, formula_, data_, colnames_, family_, link_)
 }
 
-LinearPredictor__get_ptr_model <- function(xp) {
-    .Call(`_glmmrBase_LinearPredictor__get_ptr_model`, xp)
+Model_hsgp__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_, theta_) {
+    .Call(`_glmmrBase_Model_hsgp__new_w_pars`, formula_, data_, colnames_, family_, link_, beta_, theta_)
+}
+
+Covariance__get_ptr_model <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Covariance__get_ptr_model`, xp, type)
+}
+
+LinearPredictor__get_ptr_model <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_LinearPredictor__get_ptr_model`, xp, type)
 }
 
 Model__set_y <- function(xp, y_, type = 0L) {
@@ -199,6 +211,10 @@ Model__get_W <- function(xp, type = 0L) {
 
 Model__log_prob <- function(xp, v_, type = 0L) {
     .Call(`_glmmrBase_Model__log_prob`, xp, v_, type)
+}
+
+Model__set_bobyqa_control <- function(xp, npt_, rhobeg_, rhoend_, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_bobyqa_control`, xp, npt_, rhobeg_, rhoend_, type))
 }
 
 Model__log_gradient <- function(xp, v_, beta_, type = 0L) {
@@ -317,12 +333,24 @@ Model__ZL <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__ZL`, xp, type)
 }
 
+Model__hessian_numerical <- function(xp, tol = 1e-4, type = 0L) {
+    .Call(`_glmmrBase_Model__hessian_numerical`, xp, tol, type)
+}
+
 Model__xb <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__xb`, xp, type)
 }
 
 Covariance__submatrix <- function(xp, i) {
     .Call(`_glmmrBase_Covariance__submatrix`, xp, i)
+}
+
+Model_hsgp__set_approx_pars <- function(xp, m_, L_) {
+    invisible(.Call(`_glmmrBase_Model_hsgp__set_approx_pars`, xp, m_, L_))
+}
+
+Model_hsgp__dim <- function(xp) {
+    .Call(`_glmmrBase_Model_hsgp__dim`, xp)
 }
 
 Model__aic <- function(xp, type = 0L) {

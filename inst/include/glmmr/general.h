@@ -14,7 +14,8 @@
 #include <cmath>
 #include <cctype>
 #include <stack>
-#include <SparseChol.h>
+#include <variant>
+#include <sparse.h>
 #include <set>
 #include <queue>
 #include <boost/math/special_functions/bessel.hpp>

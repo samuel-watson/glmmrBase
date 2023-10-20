@@ -434,7 +434,7 @@ inline void glmmr::Covariance::Z_constructor(){
         }
         if(valscomp==vals){
           insertval = z_[i]==-1 ? 1.0 : data_(k,z_[i]);
-          matZ.insert(k,zcount,insertval,true);
+          matZ.insert(k,zcount,insertval);
         }
       }
       zcount++;
@@ -656,7 +656,7 @@ inline sparse glmmr::Covariance::Z_sparse(){
 
 inline MatrixXd glmmr::Covariance::ZL(){
   sparse ZD = ZL_sparse();
-  MatrixXd ZL = glmmr::sparse_to_dense(ZD,false);
+  MatrixXd ZL = sparse_to_dense(ZD,false);
   return ZL;
 }
 
@@ -672,7 +672,7 @@ inline MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w){
       if(i == ZLt.Ai[j])ZLt.Ax[j]++;
     }
   }
-  return glmmr::sparse_to_dense(ZLt);
+  return sparse_to_dense(ZLt);
 }
 
 inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
@@ -814,9 +814,9 @@ inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
                                                     bool upper){
   MatrixXd D = MatrixXd::Zero(Q_,Q_);
   if(!chol){
-    D = glmmr::sparse_to_dense(mat,true);
+    D = sparse_to_dense(mat,true);
   } else {
-    D = glmmr::sparse_to_dense(matL,false);
+    D = sparse_to_dense(matL,false);
   }
   return D;
 }

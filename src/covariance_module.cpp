@@ -21,6 +21,15 @@ SEXP Covariance_nngp__new(SEXP form_,SEXP data_, SEXP colnames_){
 }
 
 // [[Rcpp::export]]
+SEXP Covariance_hsgp__new(SEXP form_,SEXP data_, SEXP colnames_){
+  std::string form = as<std::string>(form_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  XPtr<hsgp> ptr(new hsgp(form,data,colnames),true);
+  return ptr;
+}
+
+// [[Rcpp::export]]
 SEXP Covariance__Z(SEXP xp, int type = 0){
   switch(type){
   case 0:
@@ -33,6 +42,13 @@ SEXP Covariance__Z(SEXP xp, int type = 0){
   case 1:
 {
   XPtr<nngp> ptr(xp);
+  Eigen::MatrixXd Z = ptr->Z();
+  return wrap(Z);
+  break;
+}
+  case 2:
+{
+  XPtr<hsgp> ptr(xp);
   Eigen::MatrixXd Z = ptr->Z();
   return wrap(Z);
   break;
@@ -53,6 +69,13 @@ SEXP Covariance__ZL(SEXP xp, int type = 0){
   case 1:
 {
   XPtr<nngp> ptr(xp);
+  Eigen::MatrixXd Z = ptr->ZL();
+  return wrap(Z);
+  break;
+}
+  case 2:
+{
+  XPtr<hsgp> ptr(xp);
   Eigen::MatrixXd Z = ptr->ZL();
   return wrap(Z);
   break;
@@ -78,6 +101,13 @@ SEXP Covariance__LZWZL(SEXP xp, SEXP w_, int type = 0){
     return wrap(Z);
     break;
   }
+  case 2:
+  {
+    XPtr<hsgp> ptr(xp);
+    Eigen::MatrixXd Z = ptr->LZWZL(w);
+    return wrap(Z);
+    break;
+  }
   }
 }
 
@@ -97,6 +127,12 @@ void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type = 0){
       ptr->update_parameters_extern(parameters);
       break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      ptr->update_parameters_extern(parameters);
+      break;
+    }
   }
 }
 
@@ -113,6 +149,13 @@ SEXP Covariance__D(SEXP xp, int type = 0){
   case 1:
 {
   XPtr<nngp> ptr(xp);
+  Eigen::MatrixXd D = ptr->D(false,false);
+  return wrap(D);
+  break;
+}
+  case 2:
+{
+  XPtr<hsgp> ptr(xp);
   Eigen::MatrixXd D = ptr->D(false,false);
   return wrap(D);
   break;
@@ -137,6 +180,13 @@ SEXP Covariance__D_chol(SEXP xp, int type = 0){
   return wrap(D);
   break;
 }
+  case 2:
+{
+  XPtr<hsgp> ptr(xp);
+  Eigen::MatrixXd D = ptr->D(true,false);
+  return wrap(D);
+  break;
+}
   }
 }
 
@@ -153,6 +203,12 @@ SEXP Covariance__B(SEXP xp, int type = 0){
   case 1:
   {
     XPtr<nngp> ptr(xp);
+    B = ptr->B();
+    break;
+  }
+  case 2:
+  {
+    XPtr<hsgp> ptr(xp);
     B = ptr->B();
     break;
   }
@@ -173,6 +229,12 @@ SEXP Covariance__Q(SEXP xp, int type = 0){
   case 1:
     {
       XPtr<nngp> ptr(xp);
+      Q = ptr->Q();
+      break;
+    }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
       Q = ptr->Q();
       break;
     }
@@ -198,6 +260,12 @@ SEXP Covariance__log_likelihood(SEXP xp, SEXP u_, int type = 0){
     ll = ptr->log_likelihood(u);
     break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      ll = ptr->log_likelihood(u);
+      break;
+    }
   }
   return wrap(ll);
 }
@@ -218,6 +286,12 @@ SEXP Covariance__log_determinant(SEXP xp, int type = 0){
     ll = ptr->log_determinant();
     break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      ll = ptr->log_determinant();
+      break;
+    }
   }
   return wrap(ll);
 }
@@ -234,7 +308,13 @@ SEXP Covariance__n_cov_pars(SEXP xp, int type = 0){
   }
   case 1:
   {
-    XPtr<covariance> ptr(xp);
+    XPtr<nngp> ptr(xp);
+    G = ptr->npar();
+    break;
+  }
+  case 2:
+  {
+    XPtr<hsgp> ptr(xp);
     G = ptr->npar();
     break;
   }
@@ -259,6 +339,13 @@ SEXP Covariance__simulate_re(SEXP xp, int type = 0){
   return wrap(rr);
   break;
 }
+  case 2:
+{
+  XPtr<hsgp> ptr(xp);
+  Eigen::VectorXd rr = ptr->sim_re();
+  return wrap(rr);
+  break;
+}
   }
 }
 
@@ -277,6 +364,12 @@ void Covariance__make_sparse(SEXP xp, int type = 0){
       ptr->set_sparse(true);
       break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      ptr->set_sparse(true);
+      break;
+    }
   }
 }
 
@@ -292,6 +385,12 @@ void Covariance__make_dense(SEXP xp, int type = 0){
   case 1:
     {
       XPtr<nngp> ptr(xp);
+      ptr->set_sparse(false);
+      break;
+    }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
       ptr->set_sparse(false);
       break;
     }
@@ -317,8 +416,12 @@ SEXP Covariance__any_gr(SEXP xp, int type = 0){
     }
   case 1:
     {
-      XPtr<nngp> ptr(xp);
-      gr = ptr->any_group_re();
+      gr = false;
+      break;
+    }
+  case 2:
+    {
+      gr = false;
       break;
     }
   }
@@ -338,6 +441,12 @@ SEXP Covariance__get_val(SEXP xp, int i, int j, int type = 0){
   case 1:
   {
     XPtr<nngp> ptr(xp);
+    gr = ptr->get_val(0,i,j);
+    break;
+  }
+  case 2:
+  {
+    XPtr<hsgp> ptr(xp);
     gr = ptr->get_val(0,i,j);
     break;
   }
@@ -361,6 +470,12 @@ SEXP Covariance__parameter_fn_index(SEXP xp, int type = 0){
       gr = ptr->parameter_fn_index();
       break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      gr = ptr->parameter_fn_index();
+      break;
+    }
   }
   return wrap(gr);
 }
@@ -381,6 +496,12 @@ SEXP Covariance__re_terms(SEXP xp, int type = 0){
       gr = ptr->form_.re_terms();
       break;
     }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
+      gr = ptr->form_.re_terms();
+      break;
+    }
   }
   return wrap(gr);
 }
@@ -398,6 +519,12 @@ SEXP Covariance__re_count(SEXP xp, int type = 0){
   case 1:
     {
       XPtr<nngp> ptr(xp);
+      gr = ptr->re_count();
+      break;
+    }
+  case 2:
+    {
+      XPtr<hsgp> ptr(xp);
       gr = ptr->re_count();
       break;
     }
