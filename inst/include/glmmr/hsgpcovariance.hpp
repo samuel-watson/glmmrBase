@@ -8,8 +8,8 @@ using namespace Eigen;
 
 class hsgpCovariance : public Covariance {
 public:
-  intvec m;
   int dim;
+  intvec m;
   ArrayXd L_boundary;
   ArrayXXd hsgp_data;
   
@@ -17,7 +17,7 @@ public:
                  const ArrayXXd& data,
                  const strvec& colnames) : Covariance(formula, data, colnames),
                   dim(this->re_cols_data_[0][0].size()),
-                  m(dim,10),
+                  m(dim),
                   L_boundary(dim),
                   hsgp_data(data.rows(),dim),
                   L(data.rows(),1), 
@@ -25,17 +25,18 @@ public:
                   indices(1,dim), 
                   Phi(data.rows(),1), 
                   PhiT(2,2) {
-    L_boundary.setConstant(1.5);
-    parse_hsgp_data();
-    update_approx_parameters(m, L_boundary);
     isSparse = false;
+    for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+    std::fill(m.begin(),m.end(),10);
+    parse_hsgp_data();
+    update_approx_parameters();
   };
   
   hsgpCovariance(const glmmr::Formula& formula,
                  const ArrayXXd& data,
                  const strvec& colnames) : Covariance(formula, data, colnames),
                  dim(this->re_cols_data_[0][0].size()),
-                 m(dim,10),
+                 m(dim),
                  L_boundary(dim),
                  hsgp_data(data.rows(),dim),
                  L(data.rows(),1), 
@@ -43,10 +44,11 @@ public:
                  indices(1,dim), 
                  Phi(data.rows(),1), 
                  PhiT(2,2) {
-    L_boundary.setConstant(1.5);
-    parse_hsgp_data();
-    update_approx_parameters(m, L_boundary);
     isSparse = false;
+    for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+    std::fill(m.begin(),m.end(),10);
+    parse_hsgp_data();
+    update_approx_parameters();
   };
   
   hsgpCovariance(const std::string& formula,
@@ -54,7 +56,7 @@ public:
                  const strvec& colnames,
                  const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                   dim(this->re_cols_data_[0][0].size()),
-                  m(dim,10),
+                  m(dim),
                   L_boundary(dim),
                   hsgp_data(data.rows(),dim),
                   L(data.rows(),1), 
@@ -62,10 +64,11 @@ public:
                   indices(1,dim), 
                   Phi(data.rows(),1), 
                   PhiT(2,2) {
-    L_boundary.setConstant(1.5);
-    parse_hsgp_data();
-    update_approx_parameters(m, L_boundary);
     isSparse = false;
+    for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+    std::fill(m.begin(),m.end(),10);
+    parse_hsgp_data();
+    update_approx_parameters();
   };
   
   hsgpCovariance(const glmmr::Formula& formula,
@@ -73,7 +76,7 @@ public:
                  const strvec& colnames,
                  const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                  dim(this->re_cols_data_[0][0].size()),
-                 m(dim,10),
+                 m(dim),
                  L_boundary(dim),
                  hsgp_data(data.rows(),dim),
                  L(data.rows(),1), 
@@ -81,10 +84,11 @@ public:
                  indices(1,dim), 
                  Phi(data.rows(),1), 
                  PhiT(2,2) {
-    L_boundary.setConstant(1.5);
-    parse_hsgp_data();
-    update_approx_parameters(m, L_boundary);
     isSparse = false;
+    for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+    std::fill(m.begin(),m.end(),10);
+    parse_hsgp_data();
+    update_approx_parameters();
   };
   
   hsgpCovariance(const glmmr::hsgpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_), 
@@ -112,6 +116,7 @@ public:
   MatrixXd PhiSPD(bool lambda = true, bool inverse = false);
   ArrayXd LambdaSPD();
   void update_approx_parameters(intvec m_, ArrayXd L_);
+  void update_approx_parameters();
   
   
 protected:
@@ -138,7 +143,7 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
   if(!(sqexpidx == this->fn_[0].end())){
     sq_exp = true;
   } else {
-    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),"exp");
+    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),"fexp");
     if(!(expidx == this->fn_[0].end())){
       sq_exp = false;
     } else {
@@ -150,12 +155,22 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
 inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, ArrayXd L_){
   m = m_;
   L = L_;
-  total_m = std::accumulate(m.begin(),m.end(),1, std::multiplies<int>());
+  total_m = glmmr::algo::prod_vec(m);
   indices.conservativeResize(total_m,NoChange);
   Phi.conservativeResize(NoChange,total_m);
   PhiT.conservativeResize(total_m,total_m);
   gen_indices();
-  gen_phi_prod();
+  // gen_phi_prod();
+}
+
+inline void glmmr::hsgpCovariance::update_approx_parameters(){
+  total_m = glmmr::algo::prod_vec(m);
+  indices.conservativeResize(total_m,NoChange);
+  Phi.conservativeResize(NoChange,total_m);
+  PhiT.conservativeResize(total_m,total_m);
+  Rcpp::Rcout << "\nTotal m: " << total_m << "\nDim: " << dim;
+  gen_indices();
+  // gen_phi_prod();
 }
 
 inline double glmmr::hsgpCovariance::spd_nD(int i){
@@ -278,15 +293,28 @@ inline void glmmr::hsgpCovariance::set_function(bool squared_exp){
 }
 
 inline void glmmr::hsgpCovariance::gen_indices(){
-  int each, times;
+  intvec2d indices_vec;
+  intvec ind_buffer(dim);
+  intvec2d linspace_vec;
   for(int i = 0; i < dim; i++){
-    each = i < (dim - 1) ? std::accumulate(m.begin()+i+1,m.end(),1, std::multiplies<int>()) : 1;
-    times = i > 0 ? std::accumulate(m.begin(),m.begin()+i-1,1, std::multiplies<int>()) : 1;
     intvec linspaced(m[i]);
-    for(int k = 1; k <= m[i]; k++)linspaced[k] = k;
-    intvec colint = glmmr::algo::rep_vec(linspaced,times,each);
-    indices.col(i) = Map<ArrayXi>(colint.data(),colint.size());
+    for(int k = 1; k <= m[i]; k++)linspaced[k-1] = k;
+    linspace_vec.push_back(linspaced);
   }
+  glmmr::print_vec_2d<intvec2d>(linspace_vec);
+  for(unsigned int i = 0; i < linspace_vec[0].size(); i++){
+    glmmr::algo::combinations(linspace_vec,0,i,ind_buffer,indices_vec);
+  }
+  // copy into array
+  glmmr::print_vec_2d<intvec2d>(indices_vec);
+  if(indices_vec.size() != indices.rows())Rcpp::stop("rows not equal");
+  if(indices_vec[0].size() != indices.cols())Rcpp::stop("cols not equal");
+  for(int i = 0; i < indices_vec.size(); i++){
+    for(int j = 0; j < indices_vec[0].size(); j++){
+      indices(i,j) = indices_vec[i][j];
+    }
+  }
+  // Rcpp::Rcout << "\nIndices: \n" << indices;
 }
 
 inline void glmmr::hsgpCovariance::gen_phi_prod(){

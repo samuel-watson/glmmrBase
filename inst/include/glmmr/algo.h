@@ -53,21 +53,28 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
 }
 
 template<typename T>
-std::vector<T> rep_vec(const std::vector<T>& vec, int times = 1, int each = 1){
-  std::vector<T> out(vec.size()*times*each);
-  int counter = 0;
-  for(int i = 0; i < vec.size(); i++){
-    for(int j = 0; j < each; j++){
-      out[counter] = vec[i];
-      counter++;
+inline void combinations(const std::vector<std::vector<T> >& vecs, 
+                         unsigned int n,
+                         unsigned int m,
+                         std::vector<T>& buffer,
+                         std::vector<std::vector<T> >& result){
+  if(n >= vecs.size())Rcpp::stop("n > vec size");
+  if(m >= vecs[n].size())Rcpp::stop("m > vec[n] size");
+  buffer[n] = vecs[n][m];
+  if(n == vecs.size()-1){
+    result.push_back(buffer);
+  } else {
+    for(unsigned int i = 0; i < vecs[n+1].size(); i++){
+      combinations(vecs,n+1,i,buffer,result);
     }
   }
-  if(times > 1){
-    for(int i = 1; i < times; i++){
-      std::copy_n(out.begin(),vec.size()*each,out.begin()+vec.size()*each*i);
-    } 
-  }
-  return out;
+}
+
+template<typename T>
+inline T prod_vec(std::vector<T> vec){
+  T result = 1;
+  for(const auto& val: vec)result *= val;
+  return result;
 }
 
 }
