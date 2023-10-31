@@ -314,7 +314,7 @@ inline void glmmr::hsgpCovariance::gen_indices(){
       indices(i,j) = indices_vec[i][j];
     }
   }
-  // Rcpp::Rcout << "\nIndices: \n" << indices;
+  Rcpp::Rcout << "\nIndices: \n" << indices;
 }
 
 inline void glmmr::hsgpCovariance::gen_phi_prod(){

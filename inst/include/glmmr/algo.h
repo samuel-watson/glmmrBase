@@ -58,8 +58,6 @@ inline void combinations(const std::vector<std::vector<T> >& vecs,
                          unsigned int m,
                          std::vector<T>& buffer,
                          std::vector<std::vector<T> >& result){
-  if(n >= vecs.size())Rcpp::stop("n > vec size");
-  if(m >= vecs[n].size())Rcpp::stop("m > vec[n] size");
   buffer[n] = vecs[n][m];
   if(n == vecs.size()-1){
     result.push_back(buffer);
