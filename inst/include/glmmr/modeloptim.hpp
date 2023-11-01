@@ -649,7 +649,7 @@ inline double glmmr::ModelOptim<modeltype>::D_likelihood_hsgp::operator()(const 
 
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::aic(){
-  MatrixXd Lu = model.covariance.Lu(re.u(false));
+  MatrixXd Lu = re.u();
   int dof = model.linear_predictor.P() + model.covariance.npar();
   double logl = 0;
 #pragma omp parallel for reduction (+:logl)

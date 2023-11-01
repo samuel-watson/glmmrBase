@@ -960,7 +960,7 @@ Model <- R6::R6Class("Model",
                          }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         aic <- Model__aic(private$ptr,private$model_type())
+                         aic <- ifelse(private$model_type()==0 , Model__aic(private$ptr,private$model_type()),NA)
                          xb <- Model__xb(private$ptr,private$model_type())
                          zd <- self$covariance$Z %*% rowMeans(u)
                          wdiag <- Matrix::diag(self$w_matrix())
@@ -1162,7 +1162,7 @@ Model <- R6::R6Class("Model",
                          }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
                          rownames(u) <- rep(repar_table$term,repar_table$count)
-                         aic <- Model__aic(private$ptr,private$model_type())
+                         aic <- ifelse(private$model_type()==0 , Model__aic(private$ptr,private$model_type()),NA)
                          xb <- Model__xb(private$ptr,private$model_type())
                          zd <- self$covariance$Z %*% u
                          wdiag <- Matrix::diag(self$w_matrix())
