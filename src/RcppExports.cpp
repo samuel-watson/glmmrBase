@@ -851,6 +851,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__information_matrix_crude
+SEXP Model__information_matrix_crude(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__information_matrix_crude(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__information_matrix_crude(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__obs_information_matrix
 SEXP Model__obs_information_matrix(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__obs_information_matrix(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1419,6 +1431,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 2},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
+    {"_glmmrBase_Model__information_matrix_crude", (DL_FUNC) &_glmmrBase_Model__information_matrix_crude, 2},
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 2},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 3},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 2},

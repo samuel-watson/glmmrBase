@@ -273,6 +273,10 @@ Model__information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__information_matrix`, xp, type)
 }
 
+Model__information_matrix_crude <- function(xp, type = 2L) {
+    .Call(`_glmmrBase_Model__information_matrix_crude`, xp, type)
+}
+
 Model__obs_information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__obs_information_matrix`, xp, type)
 }

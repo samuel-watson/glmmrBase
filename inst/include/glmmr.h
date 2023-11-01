@@ -31,13 +31,13 @@ struct glmmrType
 {
   std::variant<int, Rcpp::XPtr<glmm>, Rcpp::XPtr<glmm_nngp>, Rcpp::XPtr<glmm_hsgp> > ptr; 
   glmmrType(SEXP xp, int type) : ptr(0) {
-    if(type == 1){
+    if(type == 0){
       Rcpp::XPtr<glmm> newptr(xp);
       ptr = newptr;
-    } else if(type== 2){
+    } else if(type== 1){
       Rcpp::XPtr<glmm_nngp> newptr(xp);
       ptr = newptr;
-    } else if(type == 3){
+    } else if(type == 2){
       Rcpp::XPtr<glmm_hsgp> newptr(xp);
       ptr = newptr;
     } 

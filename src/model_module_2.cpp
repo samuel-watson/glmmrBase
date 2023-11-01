@@ -182,6 +182,26 @@ SEXP Model__information_matrix(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__information_matrix_crude(SEXP xp, int type = 2){
+  glmmrType model(xp,type);
+  auto functorS = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->matrix.Sigma(false));}
+  };
+  auto functorX = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.linear_predictor.X());}
+  };
+  auto S = std::visit(functorS,model.ptr);
+  auto X = std::visit(functorX,model.ptr);
+  Eigen::MatrixXd Sigma = std::get<Eigen::MatrixXd>(S);
+  Eigen::MatrixXd Xmat = std::get<Eigen::MatrixXd>(X);
+  Eigen::MatrixXd SigmaInv = Sigma.llt().solve(Eigen::MatrixXd::Identity(Sigma.rows(),Sigma.cols()));
+  Eigen::MatrixXd M = Xmat.transpose() * SigmaInv * Xmat;
+  return wrap(M);
+}
+
+// [[Rcpp::export]]
 SEXP Model__obs_information_matrix(SEXP xp, int type = 0){
   glmmrType model(xp,type);
   auto functor = overloaded {
@@ -367,5 +387,5 @@ SEXP Model__xb(SEXP xp, int type = 0){
     [](auto ptr){return returnType(ptr->model.xb());}
   };
   auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<Eigen::VectorXd>(S));
+  return wrap(std::get<Eigen::ArrayXd>(S));
 }

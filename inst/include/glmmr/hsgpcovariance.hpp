@@ -121,7 +121,7 @@ public:
   
 protected:
   int total_m;
-  MatrixXd L; // cholesky decomposition of Lambda + PhiTPhi m^2 * m^2
+  MatrixXd L; // Half-eigen decomposition of Lambda + PhiTPhi m^2 * m^2
   ArrayXd Lambda;
   ArrayXXi indices;
   MatrixXd Phi;
@@ -154,23 +154,28 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
 
 inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, ArrayXd L_){
   m = m_;
-  L = L_;
+  L_boundary = L_;
   total_m = glmmr::algo::prod_vec(m);
+  this->Q_ = total_m;
   indices.conservativeResize(total_m,NoChange);
   Phi.conservativeResize(NoChange,total_m);
   PhiT.conservativeResize(total_m,total_m);
+  Lambda.conservativeResize(total_m);
+  L.conservativeResize(NoChange,total_m);
   gen_indices();
-  // gen_phi_prod();
+  gen_phi_prod();
 }
 
 inline void glmmr::hsgpCovariance::update_approx_parameters(){
   total_m = glmmr::algo::prod_vec(m);
+  this->Q_ = total_m;
   indices.conservativeResize(total_m,NoChange);
   Phi.conservativeResize(NoChange,total_m);
   PhiT.conservativeResize(total_m,total_m);
-  Rcpp::Rcout << "\nTotal m: " << total_m << "\nDim: " << dim;
+  Lambda.conservativeResize(total_m);
+  L.conservativeResize(NoChange,total_m);
   gen_indices();
-  // gen_phi_prod();
+  gen_phi_prod();
 }
 
 inline double glmmr::hsgpCovariance::spd_nD(int i){
@@ -268,7 +273,7 @@ inline sparse glmmr::hsgpCovariance::ZL_sparse(){
 }
 
 inline int glmmr::hsgpCovariance::Q(){
-  return total_m;
+  return this->Q_;
 }
 
 inline double glmmr::hsgpCovariance::log_likelihood(const VectorXd &u){
@@ -301,20 +306,15 @@ inline void glmmr::hsgpCovariance::gen_indices(){
     for(int k = 1; k <= m[i]; k++)linspaced[k-1] = k;
     linspace_vec.push_back(linspaced);
   }
-  glmmr::print_vec_2d<intvec2d>(linspace_vec);
   for(unsigned int i = 0; i < linspace_vec[0].size(); i++){
     glmmr::algo::combinations(linspace_vec,0,i,ind_buffer,indices_vec);
   }
   // copy into array
-  glmmr::print_vec_2d<intvec2d>(indices_vec);
-  if(indices_vec.size() != indices.rows())Rcpp::stop("rows not equal");
-  if(indices_vec[0].size() != indices.cols())Rcpp::stop("cols not equal");
   for(int i = 0; i < indices_vec.size(); i++){
     for(int j = 0; j < indices_vec[0].size(); j++){
       indices(i,j) = indices_vec[i][j];
     }
   }
-  Rcpp::Rcout << "\nIndices: \n" << indices;
 }
 
 inline void glmmr::hsgpCovariance::gen_phi_prod(){

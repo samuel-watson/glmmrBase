@@ -773,6 +773,7 @@ Model <- R6::R6Class("Model",
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
+                         if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(!usestan){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
@@ -886,24 +887,33 @@ Model <- R6::R6Class("Model",
                          if(verbose)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr, TRUE,private$model_type())
-                         if(se == "gls" || se == "bw"){
-                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
-                           if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
-                           } else {
-                             SE_theta <- rep(NA, ncovpar)
+                         if(private$model_type()==0){
+                           if(se == "gls" || se == "bw"){
+                             M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
+                             if(se.theta){
+                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                             } else {
+                               SE_theta <- rep(NA, ncovpar)
+                             }
+                           } else if(se == "robust" || se == "bwrobust"){
+                             M <- Model__sandwich(private$ptr,private$model_type())
+                             if(se.theta){
+                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                             } else {
+                               SE_theta <- rep(NA, ncovpar)
+                             }
+                           } else if(se == "kr"){
+                             Mout <- Model__kenward_roger(private$ptr,private$model_type())
+                             M <- Mout[[1]]
+                             SE_theta <- sqrt(diag(Mout[[2]]))
                            }
-                         } else if(se == "robust" || se == "bwrobust"){
-                           M <- Model__sandwich(private$ptr,private$model_type())
-                           if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
-                           } else {
-                             SE_theta <- rep(NA, ncovpar)
-                           }
-                         } else if(se == "kr"){
-                           Mout <- Model__kenward_roger(private$ptr,private$model_type())
-                           M <- Mout[[1]]
-                           SE_theta <- sqrt(diag(Mout[[2]]))
+                         } else {
+                           # crudely calculate the information matrix for GP approximations - this will be integrated into the main
+                           # library in future versions, but can cause error/crash with the above methods
+                           M <- Model__information_matrix_crude(private$ptr,private$model_type())
+                           nB <- nrow(M)
+                           M <- tryCatch(solve(M), error = matrix(NA,nrow = nB,ncol=nB))
+                           SE_theta <- rep(NA, ncovpar)
                          }
                          SE <- sqrt(diag(M))
                          repar_table <- self$covariance$parameter_table()
@@ -1417,14 +1427,14 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials,type)
                            Model__update_beta(private$ptr,self$mean$parameters,type)
                            Model__update_theta(private$ptr,self$covariance$parameters,type)
-                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr)),ncol=1),type) # initialise random effects to random
+                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type) # initialise random effects to random
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,type)
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,type)
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,type)
                            Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept,type)
                            if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)
                            # set covariance pointer
-                           self$covariance$.__enclos_env__$private$ptr <- Covariance__get_ptr_model(private$ptr,type)
+                           #self$covariance$.__enclos_env__$private$ptr <- Covariance__get_ptr_model(private$ptr,type)
                          }
                        },
                        verify_data = function(y){
