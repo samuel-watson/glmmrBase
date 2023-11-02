@@ -91,7 +91,7 @@ public:
     size_B_array((parse(),B_)), dmat_matrix(max_block_dim(),max_block_dim()),
     zquad(max_block_dim()), spchol((make_sparse(),mat)) {
       L_constructor();
-    Z_constructor();
+      Z_constructor();
     };
   
   virtual void update_parameters(const dblvec& parameters);

@@ -483,7 +483,8 @@ Model <- R6::R6Class("Model",
                        #' Checks for any changes in linked objects and updates.
                        #'
                        #' Checks for any changes in any object and updates all linked objects if
-                       #' any are detected. Generally called automatically and not required by the user.
+                       #' any are detected. Generally not required by the user.
+                       #' This function will be deprecated in future versions as checking is automatic.
                        #'@param verbose Logical indicating whether to report if any updates are made, defaults to TRUE
                        #'@return Linked objects are updated by nothing is returned
                        #'@examples
@@ -554,7 +555,7 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          if(!is.null(cov.pars)){
-                           self$covariance$update_parameters(cov.pars)
+                           #self$covariance$update_parameters(cov.pars)
                            if(!is.null(private$ptr)){
                              Model__update_theta(private$ptr,cov.pars,private$model_type())
                            }
@@ -1434,7 +1435,8 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept,type)
                            if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)
                            # set covariance pointer
-                           #self$covariance$.__enclos_env__$private$ptr <- Covariance__get_ptr_model(private$ptr,type)
+                           self$covariance$.__enclos_env__$private$model_ptr <- private$ptr
+                           self$covariance$.__enclos_env__$private$ptr <- NULL
                          }
                        },
                        verify_data = function(y){
@@ -1457,10 +1459,10 @@ Model <- R6::R6Class("Model",
                          }
                        },
                        model_data = function(newdata){
-                         cnames1 <- colnames(self$covariance$data)
-                         cnames2 <- colnames(self$mean$data)
-                         cnames2 <- cnames2[!cnames2%in%cnames1]
-                         cnames <- c(cnames1,cnames2)
+                         cnames <- colnames(self$covariance$data)
+                         if(any(!colnames(self$mean$data)%in%cnames)){
+                           cnames <- c(cnames1, which(!colnames(self$mean$data)%in%cnames))
+                         }
                          if(!isTRUE(all.equal(cnames,colnames(newdata)))){
                            newdat <- newdata[,cnames[cnames%in%colnames(newdata)]]
                            newcnames <- cnames[!cnames%in%colnames(newdata)]
@@ -1479,8 +1481,9 @@ Model <- R6::R6Class("Model",
                              }
                            }
                          } else {
-                           newdat = newdata
+                           newdat <- newdata
                          }
+                         newdat <- newdat[,cnames]
                          return(newdat)
                        }
                      ))

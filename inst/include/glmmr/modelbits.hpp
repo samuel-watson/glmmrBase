@@ -3,6 +3,7 @@
 #include "general.h"
 #include "covariance.hpp"
 #include "hsgpcovariance.hpp"
+#include "nngpcovariance.hpp"
 #include "linearpredictor.hpp"
 #include "family.hpp"
 #include "modelextradata.hpp"
@@ -79,3 +80,11 @@ template<typename cov, typename linpred>
 void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
   covariance.set_sparse(false);
 }
+
+typedef glmmr::Covariance covariance;
+typedef glmmr::nngpCovariance nngp;
+typedef glmmr::hsgpCovariance hsgp;
+typedef glmmr::LinearPredictor xb;
+typedef glmmr::ModelBits<covariance, xb> bits;
+typedef glmmr::ModelBits<nngp, xb> bits_nngp;
+typedef glmmr::ModelBits<hsgp, xb> bits_hsgp;

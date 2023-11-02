@@ -273,6 +273,34 @@ Model__information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__information_matrix`, xp, type)
 }
 
+Model__D <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__D`, xp, type)
+}
+
+Model__D_chol <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__D_chol`, xp, type)
+}
+
+Model__u_log_likelihood <- function(xp, u_, type = 0L) {
+    .Call(`_glmmrBase_Model__u_log_likelihood`, xp, u_, type)
+}
+
+Model__simulate_re <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__simulate_re`, xp, type)
+}
+
+Model__re_terms <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__re_terms`, xp, type)
+}
+
+Model__re_count <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__re_count`, xp, type)
+}
+
+Model__parameter_fn_index <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__parameter_fn_index`, xp, type)
+}
+
 Model__information_matrix_crude <- function(xp, type = 2L) {
     .Call(`_glmmrBase_Model__information_matrix_crude`, xp, type)
 }
@@ -353,6 +381,10 @@ Model_hsgp__set_approx_pars <- function(xp, m_, L_) {
     invisible(.Call(`_glmmrBase_Model_hsgp__set_approx_pars`, xp, m_, L_))
 }
 
+Covariance_hsgp__set_approx_pars <- function(xp, m_, L_) {
+    invisible(.Call(`_glmmrBase_Covariance_hsgp__set_approx_pars`, xp, m_, L_))
+}
+
 Model_hsgp__dim <- function(xp) {
     .Call(`_glmmrBase_Model_hsgp__dim`, xp)
 }
@@ -419,6 +451,10 @@ Model__hessian <- function(xp, type = 0L) {
 
 Model__predict <- function(xp, newdata_, newoffset_, m, type = 0L) {
     .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m, type)
+}
+
+Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {
+    .Call(`_glmmrBase_Model__predict_re`, xp, newdata_, newoffset_, m, type)
 }
 
 #' Disable or enable parallelised computing

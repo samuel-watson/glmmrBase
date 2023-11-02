@@ -47,6 +47,14 @@ void Model_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
 }
 
 // [[Rcpp::export]]
+void Covariance_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
+  std::vector<int> m = as<std::vector<int> >(m_);
+  Eigen::ArrayXd L = as<Eigen::ArrayXd>(L_);
+  XPtr<hsgp> ptr(xp);
+  ptr->update_approx_parameters(m,L);
+}
+
+// [[Rcpp::export]]
 SEXP Model_hsgp__dim(SEXP xp){
   XPtr<glmm_hsgp> ptr(xp);
   int dim = ptr->model.covariance.dim;
@@ -249,5 +257,33 @@ SEXP Model__predict(SEXP xp, SEXP newdata_,
     Rcpp::Named("linear_predictor") = wrap(xb),
     Rcpp::Named("re_parameters") = wrap(res),
     Rcpp::Named("samples") = wrap(samps)
+  );
+}
+
+// [[Rcpp::export]]
+SEXP Model__predict_re(SEXP xp, SEXP newdata_,
+                    SEXP newoffset_,
+                    int m, int type = 0){
+  Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
+  Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
+  
+  glmmrType model(xp,type);
+  auto functor_re = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->re.predict_re(newdata,newoffset));}
+  };
+  auto S_re = std::visit(functor_re,model.ptr);
+  
+  vector_matrix res = std::get<vector_matrix>(S_re);
+  
+  // Eigen::MatrixXd samps(newdata.rows(),m>0 ? m : 1);
+  // if(m>0){
+  //   samps = glmmr::maths::sample_MVN(res,m);
+  // } else {
+  //   samps.setZero();
+  // }
+  
+  return Rcpp::List::create(
+    Rcpp::Named("re_parameters") = wrap(res)
   );
 }

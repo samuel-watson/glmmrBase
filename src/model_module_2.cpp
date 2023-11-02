@@ -182,6 +182,84 @@ SEXP Model__information_matrix(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__D(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.D(false,false));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__D_chol(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.D(true,false));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__u_log_likelihood(SEXP xp, SEXP u_, int type = 0){
+  glmmrType model(xp,type);
+  Eigen::VectorXd u = as<Eigen::VectorXd>(u_);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&u](auto ptr){return returnType(ptr->model.covariance.log_likelihood(u));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<double>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__simulate_re(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.sim_re());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::VectorXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__re_terms(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.form_.re_terms());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<strvec>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__re_count(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.re_count());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<intvec>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__parameter_fn_index(SEXP xp, int type = 0){
+  glmmrType model(xp,type);
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.parameter_fn_index());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<intvec>(S));
+}
+
+// [[Rcpp::export]]
 SEXP Model__information_matrix_crude(SEXP xp, int type = 2){
   glmmrType model(xp,type);
   auto functorS = overloaded {

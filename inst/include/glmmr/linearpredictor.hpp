@@ -45,8 +45,8 @@ public:
     X_(MatrixXd::Zero(n_,1))
      {
       form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
-      update_parameters(parameters);
       P_ = calc.parameter_names.size();
+      update_parameters(parameters);
       X_.conservativeResize(n_,P_);
       X_ = calc.jacobian(parameters,Xdata);
       x_set = true;
@@ -63,8 +63,8 @@ public:
     X_(MatrixXd::Zero(n_,1))
      {
       form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
-      update_parameters(parameters);
       P_ = calc.parameter_names.size();
+      update_parameters(parameters);
       X_.conservativeResize(n_,P_);
       X_ = calc.jacobian(parameters,Xdata);
       x_set = true;
@@ -78,8 +78,8 @@ public:
     X_(MatrixXd::Zero(n_,1))
   {
     form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,Xdata);
-    update_parameters(linpred.parameters);
     P_ = calc.parameter_names.size();
+    update_parameters(linpred.parameters);
     X_.conservativeResize(n_,P_);
     X_ = calc.jacobian(parameters,Xdata);
     x_set = true;

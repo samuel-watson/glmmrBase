@@ -224,9 +224,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
-  MatrixXd infomat = observed_information_matrix();
-  infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P()+model.covariance.Q(),model.linear_predictor.P()+model.covariance.Q()));
-  infomat.conservativeResize(model.linear_predictor.P(),model.linear_predictor.P());
+  MatrixXd infomat = information_matrix();
+  infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P(),model.linear_predictor.P()));
+  //infomat.conservativeResize(model.linear_predictor.P(),model.linear_predictor.P());
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
   MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);

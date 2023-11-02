@@ -112,14 +112,16 @@ Covariance <- R6::R6Class("Covariance",
                         #' cov$parameters <- c(0.25,0.1)
                         #' cov$check(verbose=FALSE)
                         check = function(verbose=TRUE){
-                          new_hash <- private$hash_do()
-                          if(private$hash != new_hash){
-                            private$cov_form()
-                            if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
-                            if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
-                            private$genD()
-                          } 
-                          invisible(self)
+                          if(is.null(private$model_ptr)){
+                            new_hash <- private$hash_do()
+                            if(private$hash != new_hash){
+                              private$cov_form()
+                              if(verbose)message(paste0("Generating the ",nrow(self$Z)," x ",ncol(self$Z)," matrix Z"))
+                              if(verbose)message(paste0("Generating the ",nrow(self$D)," x ",ncol(self$D)," matrix D"))
+                              private$genD()
+                            } 
+                            invisible(self)
+                          }
                         },
                         #' @description
                         #' Updates the covariance parameters
@@ -137,8 +139,13 @@ Covariance <- R6::R6Class("Covariance",
                             private$cov_form()
                           }
                           self$parameters <- parameters
-                          Covariance__Update_parameters(private$ptr,parameters,private$type)
-                          self$check(FALSE)
+                          if(is.null(private$model_ptr)){
+                            Covariance__Update_parameters(private$ptr,parameters,private$type)
+                            self$D <- Matrix::Matrix(Covariance__D(private$ptr,private$type))
+                          } else {
+                            Model__update_theta(private$model_ptr,parameters,private$type) 
+                            self$D <- Matrix::Matrix(Model__D(private$model_ptr,private$type))
+                          }
                         },
                         #' @description
                         #' Show details of Covariance object
@@ -177,7 +184,11 @@ Covariance <- R6::R6Class("Covariance",
                         #' Returns the Cholesky decomposition of the covariance matrix D
                         #' @return A matrix
                         get_chol_D = function(){
-                          return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$type)))
+                          if(is.null(private$model_ptr)){
+                            return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$type)))
+                          } else {
+                            return(Matrix::Matrix(Model__D_chol(private$model_ptr,private$type)))
+                          }
                         },
                         #' @description
                         #' The function returns the values of the multivariate Gaussian log likelihood
@@ -185,9 +196,15 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param u Vector of random effects
                         #' @return Value of the log likelihood
                         log_likelihood = function(u){
-                          Q <- Covariance__Q(private$ptr,private$type)
-                          if(length(u)!=Q)stop("Vector not equal to number of random effects")
-                          loglik <- Covariance__log_likelihood(private$ptr,u,private$type)
+                          if(is.null(private$model_ptr)){
+                            Q <- Covariance__Q(private$ptr,private$type)
+                            if(length(u)!=Q)stop("Vector not equal to number of random effects")
+                            loglik <- Covariance__log_likelihood(private$ptr,u,private$type)
+                          } else {
+                            Q <- Model__Q(private$model_ptr,private$type)
+                            if(length(u)!=Q)stop("Vector not equal to number of random effects")
+                            loglik <- Model__u_log_likelihood(private$model_ptr,u,private$type)
+                          }
                           return(loglik)
                         },
                         #' @description
@@ -195,7 +212,11 @@ Covariance <- R6::R6Class("Covariance",
                         #' with mean zero and covariance D.
                         #' @return A vector of random effect values
                         simulate_re = function(){
-                          re <- Covariance__simulate_re(private$ptr,private$type)
+                          if(is.null(private$model_ptr)){
+                            re <- Covariance__simulate_re(private$ptr,private$type)
+                          } else {
+                            re <- Model__simulate_re(private$model_ptr,private$type)
+                          }
                           return(re)
                         },
                         #' @description
@@ -205,9 +226,17 @@ Covariance <- R6::R6Class("Covariance",
                         #' @return None. Called for effects.
                         sparse = function(sparse = TRUE){
                           if(sparse){
-                            Covariance__make_sparse(private$ptr,private$type)
+                            if(is.null(private$model_ptr)){
+                              Covariance__make_sparse(private$ptr,private$type)
+                            } else {
+                              Model__make_sparse(private$model_ptr,private$type)
+                            }
                           } else {
-                            Covariance__make_dense(private$ptr,private$type)
+                            if(is.null(private$model_ptr)){
+                              Covariance__make_dense(private$ptr,private$type)
+                            } else {
+                              Model__make_dense(private$model_ptr,private$type)
+                            }
                           }
                         },
                         #' @description
@@ -215,9 +244,15 @@ Covariance <- R6::R6Class("Covariance",
                         #' function term.
                         #' @return A data frame
                         parameter_table = function(){
-                          re <- Covariance__re_terms(private$ptr,private$type)
-                          paridx <- Covariance__parameter_fn_index(private$ptr,private$type)+1
-                          recount <- Covariance__re_count(private$ptr,private$type)
+                          if(is.null(private$model_ptr)){
+                            re <- Covariance__re_terms(private$ptr,private$type)
+                            paridx <- Covariance__parameter_fn_index(private$ptr,private$type)+1
+                            recount <- Covariance__re_count(private$ptr,private$type)
+                          } else {
+                            re <- Model__re_terms(private$model_ptr,private$type)
+                            paridx <- Model__parameter_fn_index(private$model_ptr,private$type)+1
+                            recount <- Model__re_count(private$model_ptr,private$type)
+                          }
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
                         },
@@ -251,7 +286,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' it will return nothing.
                         hsgp = function(m = NULL, L = NULL){
                           if(private$type == 2){
-                            dim <- Model_hsgp__dim(private$ptr)
+                            dim <- Model_hsgp__dim(private$model_ptr)
                             if(!is.null(m)){
                               if(length(m)==1 & dim > 1){
                                 private$m <- rep(m,dim)
@@ -281,7 +316,11 @@ Covariance <- R6::R6Class("Covariance",
                             if(is.null(m) & is.null(L)){
                               return(c(TRUE,private$m,private$L))
                             } else {
-                              Model_hsgp__set_approx_pars(private$ptr,private$m,private$L)
+                              if(is.null(private$model_ptr)){
+                                Covariance_hsgp__set_approx_pars(private$ptr,private$m,private$L)
+                              } else {
+                                Model_hsgp__set_approx_pars(private$model_ptr,private$m,private$L)
+                              }
                             }
                           } else {
                             return(FALSE)
@@ -295,6 +334,7 @@ Covariance <- R6::R6Class("Covariance",
                         },
                         parcount = NULL,
                         ptr = NULL,
+                        model_ptr = NULL,
                         type = 0,
                         nn = 10,
                         m = 10,

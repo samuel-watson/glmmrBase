@@ -69,6 +69,7 @@ public:
     std::fill(m.begin(),m.end(),10);
     parse_hsgp_data();
     update_approx_parameters();
+    update_lambda();
   };
   
   hsgpCovariance(const glmmr::Formula& formula,
@@ -89,6 +90,7 @@ public:
     std::fill(m.begin(),m.end(),10);
     parse_hsgp_data();
     update_approx_parameters();
+    update_lambda();
   };
   
   hsgpCovariance(const glmmr::hsgpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_), 
@@ -189,8 +191,8 @@ inline double glmmr::hsgpCovariance::spd_nD(int i){
   if(sq_exp){
     S = parameters_[0] * pow(2 * M_PI, dim/2.0) * pow(parameters_[1],dim) * exp(-0.5 * phisq * wprod);
   } else {
-    double S1 = parameters_[0] * pow(4 * M_PI, dim/2.0) * pow(parameters_[1],dim);
-    double S2 = 1 + phisq * wprod;
+    double S1 = parameters_[0] * pow(4 * M_PI, dim/2.0) * (tgamma(0.5*(dim+1))/(tgamma(0.5)*parameters_[1]));
+    double S2 = 1/phisq + wprod;
     S = S1 * pow(S2,-1*(dim+1)/2.0);
   }
   return S;

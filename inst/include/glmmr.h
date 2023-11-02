@@ -15,14 +15,9 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 
-typedef glmmr::Covariance covariance;
-typedef glmmr::nngpCovariance nngp;
-typedef glmmr::hsgpCovariance hsgp;
-typedef glmmr::LinearPredictor xb;
-typedef glmmr::ModelBits<covariance, xb> bits;
 typedef glmmr::Model<bits > glmm;
-typedef glmmr::Model<glmmr::ModelBits<nngp, xb> > glmm_nngp;
-typedef glmmr::Model<glmmr::ModelBits<hsgp, xb> > glmm_hsgp;
+typedef glmmr::Model<bits_nngp> glmm_nngp;
+typedef glmmr::Model<bits_hsgp > glmm_hsgp;
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
@@ -44,4 +39,4 @@ struct glmmrType
   }
 };
 
-using returnType = std::variant<int, double, Eigen::VectorXd, Eigen::ArrayXd, Eigen::MatrixXd, std::vector<double>, std::vector<std::string>, vector_matrix, matrix_matrix, kenward_data, std::vector<Eigen::MatrixXd> >;
+using returnType = std::variant<int, double, Eigen::VectorXd, Eigen::ArrayXd, Eigen::MatrixXd, dblvec, strvec, intvec, vector_matrix, matrix_matrix, kenward_data, std::vector<Eigen::MatrixXd> >;
