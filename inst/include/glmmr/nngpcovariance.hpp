@@ -65,14 +65,14 @@ inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data){
   int dim = this->block_nvar[0];
   ArrayXXd grid_data(data.rows(),dim);
   for(int i = 0; i < dim; i++){
-    grid_data.col(i) = data.col(this->block_nvar[0]);
+    grid_data.col(i) = data.col(this->re_cols_data_[0][0][i]);
   }
   grid.setup(grid_data,10);
 }
 
 inline void glmmr::nngpCovariance::gen_NN(int nn){
   m = nn;
-  A.conservativeResize(nn,grid.N);
+  A.conservativeResize(nn,NoChange);
   grid.genNN(m);
 }
 
@@ -90,29 +90,31 @@ inline MatrixXd glmmr::nngpCovariance::D(bool chol, bool upper){
 }
 
 inline MatrixXd glmmr::nngpCovariance::ZL(){
-  MatrixXd L = sparse_to_dense(this->matL);
+  MatrixXd L = D(true,false);//sparse_to_dense(this->matL);
   return L;
 }
 
 inline MatrixXd glmmr::nngpCovariance::LZWZL(const VectorXd& w){
-  MatrixXd ZL = sparse_to_dense(this->matL);
+  MatrixXd ZL = D(true,false);//sparse_to_dense(this->matL);
   MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
   LZWZL += MatrixXd::Identity(LZWZL.rows(), LZWZL.cols());
   return LZWZL;
 }
 
 inline MatrixXd glmmr::nngpCovariance::ZLu(const MatrixXd& u){
-  MatrixXd ZLu = this->matL * u;
+  MatrixXd L = D(true,false);
+  MatrixXd ZLu = L * u;
   return ZLu;
 }
 
 inline MatrixXd glmmr::nngpCovariance::Lu(const MatrixXd& u){
-  MatrixXd L = sparse_to_dense(this->matL);
+  MatrixXd L = D(true,false);//sparse_to_dense(this->matL);
   return L*u;
 }
 
 inline sparse glmmr::nngpCovariance::ZL_sparse(){
-  return this->matL;
+  MatrixXd L = D(true,false);
+  return dense_to_sparse(L);
 }
 
 inline int glmmr::nngpCovariance::Q(){
@@ -166,13 +168,10 @@ inline void glmmr::nngpCovariance::gen_AD(){
         }
       }
     }
-    for(int j = 0; j<idxlim; j++){
-      Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
-    }
-    A.block(0,i,idxlim,1) = S.ldlt().solve(Sv);
-    Dvec(i) = val - (A.col(i).segment(0,idxlim).transpose() * Sv)(0);
+    for(int j = 0; j<idxlim; j++)Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
+    A.col(i).head(idxlim) = S.ldlt().solve(Sv);
+    Dvec(i) = val - (A.col(i).head(idxlim).transpose() * Sv)(0);
   }
-  this->matL = dense_to_sparse(D(true,false),false);
 }
 
 inline vector_matrix glmmr::nngpCovariance::submatrix(int i){
@@ -244,9 +243,8 @@ inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A,
       for (int j = 0; j < idxlim; j++) {
         lsum += A(j,i) * y(NN(j,i),k);
       }
-      y(i,k) = i==k ? (1+lsum)*dsqrt(k)  : lsum*dsqrt(k) ;
+      y(i,k) = i==k ? (1+lsum) : lsum ;
     }
   }
-  
-  return y;
+  return y * dsqrt.matrix().asDiagonal();
 }

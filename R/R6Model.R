@@ -124,11 +124,6 @@ Model <- R6::R6Class("Model",
                                           offset = rep(0,nrow(newdata)),
                                           m=0
                                           ){
-                         if(missing(offset)){
-                           offs <- rep(0,nrow(newdata))
-                         } else {
-                           offs <- offset
-                         }
                          preddata <- private$model_data(newdata)
                          out <- Model__predict(private$ptr,as.matrix(preddata),offset,m,private$model_type())
                          return(out)

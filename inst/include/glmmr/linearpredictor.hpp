@@ -169,10 +169,8 @@ inline bool glmmr::LinearPredictor::any_nonlinear(){
 
 inline VectorXd glmmr::LinearPredictor::predict_xb(const ArrayXXd& newdata_,
                     const ArrayXd& newoffset_){
-  glmmr::LinearPredictor newlinpred(form,
-                                    newdata_,
-                                    colnames(),
-                                    parameters);
+  LinearPredictor newlinpred(form,newdata_,colnames());
+  newlinpred.update_parameters(parameters);
   VectorXd xb = newlinpred.xb() + newoffset_.matrix();
   return xb;
 }

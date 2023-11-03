@@ -128,7 +128,6 @@ template<>
 inline vector_matrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd& newdata_,
                                                                  const ArrayXd& newoffset_){
   if(model.covariance.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
-  // generate the merged data
  
   hsgpCovariance covariancenewnew(model.covariance.form_,
                                   newdata_,
@@ -147,9 +146,8 @@ inline vector_matrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd&
   VectorXd newLuCol(newLu.rows());
   for(int i = 0; i < iter; i++){
     newLuCol = newLu.col(i) - result.vec;
-    result.mat += newLuCol * newLuCol.transpose();
+    result.mat += (newLuCol * newLuCol.transpose());
   }
-  result.mat *= (1/iter);
-  
+  result.mat.array() *= (1/(double)iter);
   return result;
 }

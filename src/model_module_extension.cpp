@@ -242,10 +242,8 @@ SEXP Model__predict(SEXP xp, SEXP newdata_,
   };
   auto S_re = std::visit(functor_re,model.ptr);
   auto S_xb = std::visit(functor_xb,model.ptr);
-  
   vector_matrix res = std::get<vector_matrix>(S_re);
   Eigen::VectorXd xb = std::get<Eigen::VectorXd>(S_xb);
-  
   Eigen::MatrixXd samps(newdata.rows(),m>0 ? m : 1);
   if(m>0){
     samps = glmmr::maths::sample_MVN(res,m);
@@ -266,22 +264,13 @@ SEXP Model__predict_re(SEXP xp, SEXP newdata_,
                     int m, int type = 0){
   Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
   Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
-  
   glmmrType model(xp,type);
   auto functor_re = overloaded {
     [](int) {  return returnType(0);}, 
     [&](auto ptr){return returnType(ptr->re.predict_re(newdata,newoffset));}
   };
   auto S_re = std::visit(functor_re,model.ptr);
-  
   vector_matrix res = std::get<vector_matrix>(S_re);
-  
-  // Eigen::MatrixXd samps(newdata.rows(),m>0 ? m : 1);
-  // if(m>0){
-  //   samps = glmmr::maths::sample_MVN(res,m);
-  // } else {
-  //   samps.setZero();
-  // }
   
   return Rcpp::List::create(
     Rcpp::Named("re_parameters") = wrap(res)
