@@ -90,12 +90,12 @@ inline MatrixXd glmmr::nngpCovariance::D(bool chol, bool upper){
 }
 
 inline MatrixXd glmmr::nngpCovariance::ZL(){
-  MatrixXd L = D(true,false);//sparse_to_dense(this->matL);
+  MatrixXd L = D(true,false);
   return L;
 }
 
 inline MatrixXd glmmr::nngpCovariance::LZWZL(const VectorXd& w){
-  MatrixXd ZL = D(true,false);//sparse_to_dense(this->matL);
+  MatrixXd ZL = D(true,false);
   MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
   LZWZL += MatrixXd::Identity(LZWZL.rows(), LZWZL.cols());
   return LZWZL;
@@ -108,7 +108,7 @@ inline MatrixXd glmmr::nngpCovariance::ZLu(const MatrixXd& u){
 }
 
 inline MatrixXd glmmr::nngpCovariance::Lu(const MatrixXd& u){
-  MatrixXd L = D(true,false);//sparse_to_dense(this->matL);
+  MatrixXd L = D(true,false);
   return L*u;
 }
 
@@ -147,7 +147,6 @@ inline double glmmr::nngpCovariance::log_determinant(){
 inline void glmmr::nngpCovariance::gen_AD(){
   A.setZero();
   Dvec.setZero();
-  
   int idxlim;
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
