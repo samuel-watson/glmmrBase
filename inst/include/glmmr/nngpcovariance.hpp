@@ -147,13 +147,12 @@ inline double glmmr::nngpCovariance::log_determinant(){
 inline void glmmr::nngpCovariance::gen_AD(){
   A.setZero();
   Dvec.setZero();
-  int idxlim;
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
   
 #pragma omp parallel for
   for(int i = 1; i < grid.N; i++){
-    idxlim = i <= m ? i : m;
+    int idxlim = i <= m ? i : m;
     MatrixXd S(idxlim,idxlim);
     VectorXd Sv(idxlim);
     for(int j = 0; j<idxlim; j++){
