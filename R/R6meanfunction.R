@@ -151,7 +151,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           update_parameters = function(parameters){
                             self$parameters <- parameters
                             Linpred__update_pars(private$ptr,self$parameters)
-                            if(Linpred__any_nonlinear(private$ptr))self$X <- Linpred__x(prviate$ptr)
+                            if(Linpred__any_nonlinear(private$ptr))self$X <- Linpred__x(private$ptr)
                             names(self$parameters) <- Linpred__beta_names(private$ptr)
                             self$check(FALSE)
                           },
