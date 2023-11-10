@@ -107,6 +107,7 @@ public:
   MatrixXd LZWZL(const VectorXd& w) override;
   MatrixXd ZLu(const MatrixXd& u) override;
   MatrixXd Lu(const MatrixXd& u) override;
+  VectorXd sim_re() override;
   sparse ZL_sparse() override;
   int Q() override;
   double log_likelihood(const VectorXd &u) override;
@@ -149,7 +150,9 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
     if(!(expidx == this->fn_[0].end())){
       sq_exp = false;
     } else {
+      #ifdef R_BUILD
       Rcpp::stop("HSGP only allows exp and sqexp currently.");
+      #endif
     }
   }
 }
@@ -222,6 +225,20 @@ inline MatrixXd glmmr::hsgpCovariance::D(bool chol, bool upper){
   } else {
     return As * As.transpose();
   }
+}
+
+inline VectorXd glmmr::hsgpCovariance::sim_re(){
+  #ifdef R_BUILD
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
+  #endif
+  VectorXd samps(this->Q_);
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+    generator(boost::mt19937(time(0)),
+              boost::normal_distribution<>());
+  VectorXd zz(this->Q_);      
+  randomGaussian(generator, zz);
+  samps = glmmr::hsgpCovariance::ZL()*zz;
+  return samps;
 }
 
 inline void glmmr::hsgpCovariance::update_parameters_extern(const dblvec& parameters){

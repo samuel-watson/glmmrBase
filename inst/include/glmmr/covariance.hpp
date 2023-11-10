@@ -599,22 +599,27 @@ inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
 }
 
 inline VectorXd glmmr::Covariance::sim_re(){
+  #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no parameters");
+  #endif
   VectorXd samps(Q_);
   int idx = 0;
   int ndim;
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+    generator(boost::mt19937(time(0)),
+              boost::normal_distribution<>());
   if(!isSparse){
     for(int i=0; i< B(); i++){
       MatrixXd L = get_chol_block(i);
       ndim = block_dim(i);//re_data_[i].rows();
-      Rcpp::NumericVector z = Rcpp::rnorm(ndim);
-      Map<VectorXd> zz(Rcpp::as<Map<VectorXd> >(z));
+      VectorXd zz(ndim);      
+      randomGaussian(generator, zz);
       samps.segment(idx,ndim) = L*zz;
       idx += ndim;
     }
   } else {
-    Rcpp::NumericVector z = Rcpp::rnorm(Q_);
-    VectorXd zz = Rcpp::as<VectorXd>(z);
+    VectorXd zz(Q_);
+    randomGaussian(generator, zz);
     samps = matL * zz;
   }
   

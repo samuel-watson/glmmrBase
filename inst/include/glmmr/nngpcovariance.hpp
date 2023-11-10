@@ -44,6 +44,7 @@ public:
   MatrixXd LZWZL(const VectorXd& w) override;
   MatrixXd ZLu(const MatrixXd& u) override;
   MatrixXd Lu(const MatrixXd& u) override;
+  VectorXd sim_re() override;
   sparse ZL_sparse() override;
   int Q() override;
   double log_likelihood(const VectorXd &u) override;
@@ -110,6 +111,21 @@ inline MatrixXd glmmr::nngpCovariance::ZLu(const MatrixXd& u){
 inline MatrixXd glmmr::nngpCovariance::Lu(const MatrixXd& u){
   MatrixXd L = D(true,false);
   return L*u;
+}
+
+inline VectorXd glmmr::nngpCovariance::sim_re(){
+#ifdef R_BUILD
+  if(parameters_.size()==0)Rcpp::stop("no parameters");
+#endif
+  VectorXd samps(this->Q_);
+  MatrixXd L = D(true,false);
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+    generator(boost::mt19937(time(0)),
+              boost::normal_distribution<>());
+  VectorXd zz(this->Q_);      
+  randomGaussian(generator, zz);
+  samps = L*zz;
+  return samps;
 }
 
 inline sparse glmmr::nngpCovariance::ZL_sparse(){

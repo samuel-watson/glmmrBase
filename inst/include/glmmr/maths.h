@@ -12,6 +12,17 @@
 // [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
+
+template<class T>
+T randomGaussian(T generator,
+                 VectorXd& res)
+{
+  for (size_t i = 0; i < res.size(); ++i)
+    res(i) = generator();
+  // Note the generator is returned back
+  return  generator;
+}
+
 namespace maths {
 
 inline double gaussian_cdf(double value)

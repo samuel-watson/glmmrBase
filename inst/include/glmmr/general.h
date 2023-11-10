@@ -3,8 +3,13 @@
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define _USE_MATH_DEFINES
 
+//#define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG
+#define R_BUILD //Uncomment to build for R with RCPP
+
 // includes
+#ifdef R_BUILD
 #include <RcppEigen.h>
+#endif
 #include <vector>
 #include <string>
 #include <cstring>
@@ -21,8 +26,10 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/polygamma.hpp>
 #include <boost/math/special_functions/gamma.hpp>
+#include <boost/math/distributions/normal.hpp>
 #include <random>
 #include <boost/math/special_functions/digamma.hpp>
+#include <boost/random.hpp>
 #include <rbobyqa.h>
 
 
@@ -126,11 +133,27 @@ inline void print_sparse(const sparse& A){
   for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
+// inline bool is_number(const std::string& s)
+// {
+//   std::string::const_iterator it = s.begin();
+//   while (it != s.end() && std::isdigit(*it)) ++it;
+//   return !s.empty() && it == s.end();
+// }
+
 inline bool is_number(const std::string& s)
 {
-  std::string::const_iterator it = s.begin();
-  while (it != s.end() && std::isdigit(*it)) ++it;
-  return !s.empty() && it == s.end();
+  bool isnum = true;
+  try {
+    float a = std::stod(s);
+  }
+  catch (std::invalid_argument const& ex)
+  {
+    #ifdef ENABLE_DEBUG
+    Rcpp::Rcout << " Not double: " << ex.what() << '\n';
+    #endif
+    isnum = false;
+  }
+  return isnum;
 }
 
 inline bool isalnum_or_uscore(const char& s)

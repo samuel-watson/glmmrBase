@@ -109,7 +109,10 @@ protected:
 }
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
+  #ifdef R_BUILD
   if(parameters.size()!=(unsigned)P())Rcpp::stop("wrong number of parameters");
+  #endif
+  
   parameters = parameters_;
   if(!x_set){
     X_ = calc.jacobian(parameters,Xdata);
@@ -118,7 +121,10 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const Eigen::ArrayXd& parameters_){
+  #ifdef R_BUILD
   if(parameters.size()!=P())Rcpp::stop("wrong number of parameters");
+  #endif 
+  
   dblvec new_parameters(parameters_.data(),parameters_.data()+parameters_.size());
   update_parameters(new_parameters);
 };

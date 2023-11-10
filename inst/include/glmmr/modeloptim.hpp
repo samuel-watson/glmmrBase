@@ -48,11 +48,14 @@ public:
   virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
   virtual void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
   virtual MatrixXd hessian_numerical(double tol = 1e-4);
+  void set_bound(const dblvec& bound, bool lower = true);
   
 protected:
   int npt = 0;
   double rhobeg = 0;
   double rhoend = 0;
+  dblvec lower_bound;
+  dblvec upper_bound; // bounds for beta
   void calculate_var_par();
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   dblvec get_lower_values(bool beta, bool theta, bool var = true);
@@ -285,11 +288,28 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 }
 
 template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower){
+  #ifdef R_BUILD
+  if(bound.size()!=model.linear_predictor.P())Rcpp::stop("Bound not equal to number of parameters");
+  #endif
+  if(lower){
+    lower_bound = bound; 
+  } else {
+    upper_bound = bound;
+  }
+}
+
+
+template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
   dblvec lower;
   if(beta){
     for(int i = 0; i< model.linear_predictor.P(); i++){
-      lower.push_back(R_NegInf);
+      if(lower_bound.size()==0){
+        lower.push_back(R_NegInf);
+      } else {
+        lower = lower_bound;
+      }
     }
   } 
   if(theta){
@@ -308,7 +328,11 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
   dblvec upper;
   if(beta){
     for(int i = 0; i< model.linear_predictor.P(); i++){
-      upper.push_back(R_PosInf);
+      if(upper_bound.size()==0){
+        upper.push_back(R_PosInf);
+      } else {
+        upper = upper_bound;
+      }
     }
   } 
   if(theta){
@@ -690,7 +714,10 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
                                              VectorXd C,
                                              double tol,
                                              int max_iter){
-  //if(C.size()!=model.linear_predictor.P())Rcpp::stop("C is wrong size");
+  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if(C.size()!=model.linear_predictor.P())Rcpp::stop("C is wrong size");
+  #endif 
+  
   VectorXd Cvec(C);
   ArrayXd weights = ArrayXd::Constant(model.n(),1.0*model.n());
   VectorXd holder(model.n());

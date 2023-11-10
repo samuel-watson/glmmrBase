@@ -149,7 +149,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::Sigma(bool inverse){
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
                                                 bool inverse){
-  //if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  #endif
   // UPDATE THIS TO NOT USE SPARSE IF DESIRED
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
   MatrixXd ZL = sparse_to_dense(ZLs,false);

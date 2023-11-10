@@ -724,6 +724,8 @@ Model <- R6::R6Class("Model",
                        #'covariance functions.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
+                       #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
+                       #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -764,7 +766,9 @@ Model <- R6::R6Class("Model",
                                        se = "gls",
                                        sparse = FALSE,
                                        usestan = TRUE,
-                                       se.theta = TRUE){
+                                       se.theta = TRUE,
+                                       lower.bound = NULL,
+                                       upper.bound = NULL){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -774,6 +778,12 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,private$model_type())
+                         }
+                         if(!is.null(lower.bound)){
+                           Model__set_lower_bound(private$ptr,lower.bound,private$model_type())
+                         }
+                         if(!is.null(upper.bound)){
+                           Model__set_upper_bound(private$ptr,upper.bound,private$model_type())
                          }
                          trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
@@ -1011,6 +1021,8 @@ Model <- R6::R6Class("Model",
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
+                       #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.
+                       #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@return A `mcml` object
                        #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -1040,12 +1052,20 @@ Model <- R6::R6Class("Model",
                                      se = "gls",
                                      max.iter = 40,
                                      tol = 1e-4,
-                                     se.theta = TRUE){
+                                     se.theta = TRUE,
+                                     lower.bound = NULL,
+                                     upper.bound = NULL){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
+                         if(!is.null(lower.bound)){
+                           Model__set_lower_bound(private$ptr,lower.bound,private$model_type())
+                         }
+                         if(!is.null(upper.bound)){
+                           Model__set_upper_bound(private$ptr,upper.bound,private$model_type())
+                         }
                          trace <- ifelse(verbose,1,0)
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
                          trace <- ifelse(verbose,2,0)

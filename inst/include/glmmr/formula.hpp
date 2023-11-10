@@ -37,22 +37,56 @@ inline void glmmr::Formula::tokenise(){
   formula_validate();
   RM_INT = false;
   formula_.erase(std::remove_if(formula_.begin(), formula_.end(), [](unsigned char x) { return std::isspace(x); }), formula_.end());
-  auto minone = formula_.find("-1");
-  if(minone != str::npos){
+  
+  #ifdef ENABLE_DEBUG
+  Rcpp::Rcout << "\nINITIALISE FORMULA: " << formula_;
+  #endif
+  
+  // if there is a -1 then remove it and set no intercept
+  std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
+  int bracket_count = 0;
+  int cursor = 0;
+  int nchar = formula_as_chars.size();
+  bool has_found_symbol=false;
+  while(!has_found_symbol && cursor < (nchar-1)){
+    if(formula_as_chars[cursor]=='(')bracket_count++;
+    if(formula_as_chars[cursor]==')')bracket_count--;
+    if((formula_as_chars[cursor]=='-' && formula_as_chars[cursor+1]=='1') && bracket_count == 0){
+      has_found_symbol = true;
+      break;
+    } 
+    cursor++;
+  }
+  
+  
+  
+  //auto minone = formula_.find("-1");minone != str::npos
+  if(has_found_symbol){
     RM_INT = true;
-    formula_.erase(minone,2);
+    formula_.erase(cursor,2);
   } else {
     str add_intercept = "b_intercept*1+";
     std::vector<char> add_intercept_vec(add_intercept.begin(),add_intercept.end());
     linear_predictor_.insert(linear_predictor_.end(),add_intercept_vec.begin(),add_intercept_vec.end());
   }
-  std::vector<char> formula_as_chars(formula_.begin(),formula_.end());
-  int nchar = formula_as_chars.size();
-  int cursor = 0;
-  int bracket_count = 0; // to deal with opening of brackets
-  if(formula_as_chars[0]=='+')Rcpp::stop("Cannot start a formula with +");
+  
+  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    if(has_found_symbol)Rcpp::Rcout << "\nfound remove intercept: " << formula_;
+  #endif
+  
+  #ifdef R_BUILD
+  if(formula_as_chars[0]=='+' && !has_found_symbol)Rcpp::stop("Cannot start a formula with +");
+  #endif
+  
+  if(formula_as_chars[0]=='+' && has_found_symbol)formula_as_chars.erase(formula_as_chars.begin());
   std::vector<char> temp_token;
   int idx = 0;
+  // split fixed and random effects in the formula
+  // random effects terms are defined as (*|*)
+  bracket_count = 0;
+  cursor = 0;
+  has_found_symbol = false;
+  nchar = formula_as_chars.size();
   while(cursor <= nchar){
     idx = cursor == nchar ? nchar - 1 : cursor;
     if(cursor == nchar || (formula_as_chars[idx]=='+' && bracket_count == 0 && cursor < nchar)){
@@ -60,7 +94,11 @@ inline void glmmr::Formula::tokenise(){
         linear_predictor_.insert(linear_predictor_.end(),temp_token.begin(),temp_token.end());
         linear_predictor_.push_back('+');
       } else {
+        
+        #ifdef R_BUILD
         if(temp_token.back()!=')')Rcpp::stop("Invalid formula, no closing bracket");
+        #endif
+        
         int mm = temp_token.size();
         int cursor_re = 1;
         std::vector<char> temp_token_re;
@@ -91,6 +129,13 @@ inline void glmmr::Formula::tokenise(){
     re_order_.push_back(i);
   }
   re_terms_ = re_;
+  
+  #ifdef ENABLE_DEBUG
+    Rcpp::Rcout << "\nLinear predictor: ";
+    for(const auto& i: linear_predictor_)Rcpp::Rcout << i;
+    Rcpp::Rcout << "\nRandom effects: ";
+    glmmr::print_vec_1d<strvec>(re_terms_);
+  #endif
 }
 
 inline void glmmr::Formula::formula_validate(){
@@ -109,7 +154,10 @@ inline void glmmr::Formula::formula_validate(){
     }
     if(ch=='+' && open > 0)has_a_plus = true;
     if(ch=='|' && open > 0)has_a_vert = true;
+    
+    #ifdef R_BUILD
     if(has_a_plus && has_a_vert)Rcpp::stop("Addition inside re term not currently supported");
+    #endif
   }
 }
 

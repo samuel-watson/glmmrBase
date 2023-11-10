@@ -14,6 +14,28 @@ SEXP Model__get_W(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__set_lower_bound(SEXP xp, SEXP bound_, int type = 0){
+  glmmrType model(xp,type);
+  std::vector<double> bound = as<std::vector<double> >(bound_);
+  auto functor = overloaded {
+    [](int) {}, 
+    [&bound](auto ptr){ptr->optim.set_bound(bound,true);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+void Model__set_upper_bound(SEXP xp, SEXP bound_, int type = 0){
+  glmmrType model(xp,type);
+  std::vector<double> bound = as<std::vector<double> >(bound_);
+  auto functor = overloaded {
+    [](int) {}, 
+    [&bound](auto ptr){ptr->optim.set_bound(bound,false);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
 SEXP Model__log_prob(SEXP xp, SEXP v_, int type = 0){
   Eigen::VectorXd v = as<Eigen::VectorXd>(v_);
   glmmrType model(xp,type);

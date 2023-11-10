@@ -47,7 +47,9 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
 template<>
 inline vector_matrix glmmr::RandomEffects<bits>::predict_re(const ArrayXXd& newdata_,
                                                       const ArrayXd& newoffset_){
+  #ifdef R_BUILD
   if(model.covariance.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
+  #endif
   // generate the merged data
   int nnew = newdata_.rows();
   ArrayXXd mergedata(model.n()+nnew,model.covariance.data_.cols());
@@ -87,7 +89,9 @@ inline vector_matrix glmmr::RandomEffects<bits>::predict_re(const ArrayXXd& newd
 template<>
 inline vector_matrix glmmr::RandomEffects<bits_nngp>::predict_re(const ArrayXXd& newdata_,
                                                             const ArrayXd& newoffset_){
+  #ifdef R_BUILD
   if(model.covariance.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
+  #endif
   // generate the merged data
   int nnew = newdata_.rows();
   ArrayXXd mergedata(model.n()+nnew,model.covariance.data_.cols());
@@ -127,7 +131,9 @@ inline vector_matrix glmmr::RandomEffects<bits_nngp>::predict_re(const ArrayXXd&
 template<>
 inline vector_matrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd& newdata_,
                                                                  const ArrayXd& newoffset_){
+  #ifdef R_BUILD
   if(model.covariance.data_.cols()!=newdata_.cols())Rcpp::stop("Different numbers of columns in new data");
+  #endif
  
   hsgpCovariance covariancenewnew(model.covariance.form_,
                                   newdata_,
