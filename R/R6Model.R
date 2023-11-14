@@ -131,12 +131,12 @@ Model <- R6::R6Class("Model",
                        #' @description
                        #' Create a new Model object
                        #' @param formula An optional model formula containing fixed and random effect terms. If not specified, then
-                       #' seaparate formulae need to be provided to the covariance and mean arguments below.
-                       #' @param covariance Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-                       #' that can be passed to `Covariance` to create a new object. At a minimum the list must specify a formula.
-                       #' If parameters are not included then they are initialised to 0.5.
-                       #' @param mean Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-                       #' that can be passed to `MeanFunction` to create a new object. At a minimum the list must specify a formula.
+                       #' separate formulae need to be provided to the covariance and mean arguments below.
+                       #' @param covariance (Optional) Either a \link[glmmrBase]{Covariance} object, an equivalent list of arguments
+                       #' that can be passed to `Covariance` to create a new object, or a vector of parameter values. At a minimum the list must specify a formula.
+                       #' If parameters are not included then they are initialised to 0.5. 
+                       #' @param mean (Optional) Either a \link[glmmrBase]{MeanFunction} object, an equivalent list of arguments
+                       #' that can be passed to `MeanFunction` to create a new object, or a vector of parameter values. At a minimum the list must specify a formula.
                        #' If parameters are not included then they are initialised to 0.
                        #' @param data A data frame with the data required for the mean function and covariance objects. This argument
                        #' can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
@@ -145,11 +145,11 @@ Model <- R6::R6Class("Model",
                        #' argument is optional if the family is provided either via a `MeanFunction` or `MeanFunction`
                        #' objects, or as members of the list of arguments to `mean`. Current accepts \link[stats]{binomial},
                        #' \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.
-                       #' @param var_par Scale parameter required for some distributions, including Gaussian. Default is NULL.
-                       #' @param offset A vector of offset values. Optional - could be provided to the argument to mean instead.
-                       #' @param trials For binomial family models, the number of trials for each observation. If it is not set, then it will
+                       #' @param var_par (Optional) Scale parameter required for some distributions, including Gaussian. Default is NULL.
+                       #' @param offset (Optional) A vector of offset values. Optional - could be provided to the argument to mean instead.
+                       #' @param trials (Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
                        #' default to 1 (a bernoulli model).
-                       #' @param weights A vector of weights. Optional..
+                       #' @param weights (Optional) A vector of weights. 
                        #' @param verbose Logical indicating whether to provide detailed output
                        #' @return A new Model class object
                        #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
@@ -172,7 +172,15 @@ Model <- R6::R6Class("Model",
                        #' df <- nelder(~ind(20) * t(6))
                        #' df$int <- 0
                        #' df[df$t > 3, 'int'] <- 1
-                       #'
+                       #' # the preferred way of specifying with parameter values
+                       #' des <- Model$new(
+                       #'   formula = ~ int + (1|gr(ind)),
+                       #'   covariance = c(0.05),
+                       #'   mean = c(1,0.5),
+                       #'   data = df,
+                       #'   family = stats::poisson()
+                       #'   )
+                       #' # also works:
                        #' des <- Model$new(
                        #'   covariance = list(
                        #'     formula = ~ (1|gr(ind)),
@@ -182,16 +190,6 @@ Model <- R6::R6Class("Model",
                        #'     parameters = c(1,0.5)),
                        #'   data = df,
                        #'   family = stats::poisson())
-                       #'
-                       #' # or as
-                       #' des <- Model$new(
-                       #'   formula = ~ int + (1|gr(ind)),
-                       #'   covariance = list(parameters = c(0.05)),
-                       #'   mean = list(parameters = c(1,0.5)),
-                       #'   data = df,
-                       #'   family = stats::poisson()
-                       #'   )
-                       #'
                        #'
                        #' #an example of a spatial grid with two time points
                        #' df <- nelder(~ (x(10)*y(10))*t(2))
@@ -223,33 +221,55 @@ Model <- R6::R6Class("Model",
                          }
 
                          if(!missing(formula)){
+                           if(!missing(covariance) && is(covariance,"R6"))stop("Do not specify both formula and Covariance class object")
+                           if(!missing(mean) && is(mean,"R6"))stop("Do not specify both formula and MeanFunction class object")
                            self$formula <- Reduce(paste,as.character(formula))
                            if(is.null(data)){
                             stop("Data must be specified with a formula")
                            } else {
-                             if(missing(covariance) || is.null(covariance$parameters)){
+                             if(missing(covariance) || (!all(is(covariance,"numeric")) & !"parameters"%in%names(covariance))){
                                self$covariance <- Covariance$new(
                                  formula = formula,
                                  data = data
                                )
                              } else {
-                               self$covariance <- Covariance$new(
-                                 formula = formula,
-                                 data = data,
-                                 parameters = covariance$parameters
-                               )
+                               if("parameters"%in%names(covariance)){
+                                 self$covariance <- Covariance$new(
+                                   formula = formula,
+                                   data = data,
+                                   parameters = covariance$parameters
+                                 )
+                               } else if(all(is(covariance,"numeric"))){
+                                 self$covariance <- Covariance$new(
+                                   formula = formula,
+                                   data = data,
+                                   parameters = covariance
+                                 )
+                               } else {
+                                 stop("Cannot interpret covariance argument")
+                               }
                              }
-                             if(missing(mean) || is.null(mean$parameters)){
+                             if(missing(mean) || (!"parameters"%in%names(mean) & !all(is(mean,"numeric")))){
                                self$mean <- MeanFunction$new(
                                  formula = formula,
                                  data = data
                                )
                              } else {
-                               self$mean <- MeanFunction$new(
-                                 formula = formula,
-                                 data = data,
-                                 parameters = mean$parameters
-                               )
+                               if("parameters"%in%names(mean)){
+                                 self$mean <- MeanFunction$new(
+                                   formula = formula,
+                                   data = data,
+                                   parameters = mean$parameters
+                                 )
+                               } else if(all(is(mean,"numeric"))){
+                                 self$mean <- MeanFunction$new(
+                                   formula = formula,
+                                   data = data,
+                                   parameters = mean
+                                 )
+                               } else {
+                                 stop("Cannot interpret mean argument")
+                               }
                              }
                            }
                          } else {

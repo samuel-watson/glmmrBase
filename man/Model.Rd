@@ -108,7 +108,15 @@ mod <- Model$new(
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
-
+# the preferred way of specifying with parameter values
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = c(0.05),
+  mean = c(1,0.5),
+  data = df,
+  family = stats::poisson()
+  )
+# also works:
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(ind)),
@@ -118,16 +126,6 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-
-# or as
-des <- Model$new(
-  formula = ~ int + (1|gr(ind)),
-  covariance = list(parameters = c(0.05)),
-  mean = list(parameters = c(1,0.5)),
-  data = df,
-  family = stats::poisson()
-  )
-
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -472,14 +470,14 @@ Create a new Model object
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then
-seaparate formulae need to be provided to the covariance and mean arguments below.}
+separate formulae need to be provided to the covariance and mean arguments below.}
 
-\item{\code{covariance}}{Either a \link[glmmrBase]{Covariance} object, or an equivalent list of arguments
-that can be passed to \code{Covariance} to create a new object. At a minimum the list must specify a formula.
+\item{\code{covariance}}{(Optional) Either a \link[glmmrBase]{Covariance} object, an equivalent list of arguments
+that can be passed to \code{Covariance} to create a new object, or a vector of parameter values. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.5.}
 
-\item{\code{mean}}{Either a \link[glmmrBase]{MeanFunction} object, or an equivalent list of arguments
-that can be passed to \code{MeanFunction} to create a new object. At a minimum the list must specify a formula.
+\item{\code{mean}}{(Optional) Either a \link[glmmrBase]{MeanFunction} object, an equivalent list of arguments
+that can be passed to \code{MeanFunction} to create a new object, or a vector of parameter values. At a minimum the list must specify a formula.
 If parameters are not included then they are initialised to 0.}
 
 \item{\code{data}}{A data frame with the data required for the mean function and covariance objects. This argument
@@ -491,13 +489,13 @@ argument is optional if the family is provided either via a \code{MeanFunction} 
 objects, or as members of the list of arguments to \code{mean}. Current accepts \link[stats]{binomial},
 \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
 
-\item{\code{var_par}}{Scale parameter required for some distributions, including Gaussian. Default is NULL.}
+\item{\code{var_par}}{(Optional) Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
-\item{\code{offset}}{A vector of offset values. Optional - could be provided to the argument to mean instead.}
+\item{\code{offset}}{(Optional) A vector of offset values. Optional - could be provided to the argument to mean instead.}
 
-\item{\code{weights}}{A vector of weights. Optional..}
+\item{\code{weights}}{(Optional) A vector of weights.}
 
-\item{\code{trials}}{For binomial family models, the number of trials for each observation. If it is not set, then it will
+\item{\code{trials}}{(Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
 default to 1 (a bernoulli model).}
 
 \item{\code{verbose}}{Logical indicating whether to provide detailed output}
@@ -527,7 +525,15 @@ mod <- Model$new(
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
-
+# the preferred way of specifying with parameter values
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  covariance = c(0.05),
+  mean = c(1,0.5),
+  data = df,
+  family = stats::poisson()
+  )
+# also works:
 des <- Model$new(
   covariance = list(
     formula = ~ (1|gr(ind)),
@@ -537,16 +543,6 @@ des <- Model$new(
     parameters = c(1,0.5)),
   data = df,
   family = stats::poisson())
-
-# or as
-des <- Model$new(
-  formula = ~ int + (1|gr(ind)),
-  covariance = list(parameters = c(0.05)),
-  mean = list(parameters = c(1,0.5)),
-  data = df,
-  family = stats::poisson()
-  )
-
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -696,7 +692,8 @@ ysim <- des$sim_data()
 Checks for any changes in linked objects and updates.
 
 Checks for any changes in any object and updates all linked objects if
-any are detected. Generally called automatically and not required by the user.
+any are detected. Generally not required by the user.
+This function will be deprecated in future versions as checking is automatic.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$check(verbose = TRUE)}\if{html}{\out{</div>}}
 }
@@ -954,7 +951,9 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   se = "gls",
   sparse = FALSE,
   usestan = TRUE,
-  se.theta = TRUE
+  se.theta = TRUE,
+  lower.bound = NULL,
+  upper.bound = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -989,6 +988,10 @@ covariance functions.}
 
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
+
+\item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.}
+
+\item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1044,7 +1047,9 @@ Maximum Likelihood model fitting with Laplace Approximation
   se = "gls",
   max.iter = 40,
   tol = 1e-04,
-  se.theta = TRUE
+  se.theta = TRUE,
+  lower.bound = NULL,
+  upper.bound = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -1070,6 +1075,10 @@ standard errors with between-within correction to the degrees of freedom.}
 
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
+
+\item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.}
+
+\item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.}
 }
 \if{html}{\out{</div>}}
 }

@@ -139,6 +139,8 @@ cov$subset(1:100)
 \item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
 \item \href{#method-Covariance-sparse}{\code{Covariance$sparse()}}
 \item \href{#method-Covariance-parameter_table}{\code{Covariance$parameter_table()}}
+\item \href{#method-Covariance-nngp}{\code{Covariance$nngp()}}
+\item \href{#method-Covariance-hsgp}{\code{Covariance$hsgp()}}
 \item \href{#method-Covariance-clone}{\code{Covariance$clone()}}
 }
 }
@@ -161,7 +163,7 @@ Scalar
 \subsection{Method \code{new()}}{
 Create a new Covariance object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(formula, data = NULL, parameters = NULL, verbose = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$new(formula, data = NULL, parameters = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -173,8 +175,6 @@ Create a new Covariance object
 
 \item{\code{parameters}}{(Optional) Vector with parameter values for the functions in the model
 formula. See Details.}
-
-\item{\code{verbose}}{Logical whether to provide detailed output.}
 }
 \if{html}{\out{</div>}}
 }
@@ -393,6 +393,55 @@ function term.
 
 \subsection{Returns}{
 A data frame
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-nngp"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-nngp}{}}}
+\subsection{Method \code{nngp()}}{
+Reports or sets the parameters for the nearest neighbour Gaussian process
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$nngp(nn = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nn}}{Integer. Number of nearest neighbours. Optional - leave as NULL to return
+details of the NNGP instead.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+If `nn` is NULL then the function will either return FALSE if not using a 
+Nearest neighbour approximation, or TRUE and the number of nearest neighbours, otherwise
+it will return nothing.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Covariance-hsgp"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-hsgp}{}}}
+\subsection{Method \code{hsgp()}}{
+Reports or sets the parameters for the Hilbert Space Gaussian process
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$hsgp(m = NULL, L = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{m}}{Integer or vector of integers. Number of basis functions per dimension. If only
+a single number is provided and there is more than one dimension the same number will be applied
+to all dimensions.}
+
+\item{\code{L}}{Decimal. The boundary extension.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+If `m` and `L` are NULL then the function will either return FALSE if not using a 
+Hilbert space approximation, or TRUE and the number of bases functions and boundary value, otherwise
+it will return nothing.
 }
 }
 \if{html}{\out{<hr>}}
