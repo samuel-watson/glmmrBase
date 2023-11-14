@@ -1376,6 +1376,7 @@ Model <- R6::R6Class("Model",
                          private$hash <- private$hash_do()
                        },
                        genW = function(){
+                         Model__update_W(private$ptr, private$model_type())
                          private$W <- Model__get_W(private$ptr, private$model_type())
                        },
                        attenuate_parameters = FALSE,
