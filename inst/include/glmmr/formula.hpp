@@ -58,12 +58,11 @@ inline void glmmr::Formula::tokenise(){
     cursor++;
   }
   
-  
-  
   //auto minone = formula_.find("-1");minone != str::npos
   if(has_found_symbol){
     RM_INT = true;
     formula_.erase(cursor,2);
+    formula_as_chars = std::vector<char>(formula_.begin(),formula_.end());
   } else {
     str add_intercept = "b_intercept*1+";
     std::vector<char> add_intercept_vec(add_intercept.begin(),add_intercept.end());

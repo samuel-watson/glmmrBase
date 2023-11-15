@@ -8,6 +8,7 @@
 #include "interpreter.h"
 #include "formula.hpp"
 #include "sparse.h"
+#include "calculator.hpp"
 
 using namespace Eigen;
 
@@ -350,7 +351,7 @@ inline void glmmr::Covariance::parse(){
   //now build the reverse polish notation and add distances
   int nvarfn;
   for(int i =0; i<fn_.size();i++){
-    intvec fn_instruct;
+    std::vector<Instruction> fn_instruct;
     intvec fn_par;
     int minvalue = 100;
     int ndata = re_temp_data_[i].size();
@@ -361,9 +362,9 @@ inline void glmmr::Covariance::parse(){
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
     }
     for(int j = 0; j<fn_[i].size();j++){
-      intvec A;
+      //std::vector<Instruction> A;
       if(fn_[i][j]!="gr"){
-        A.push_back(1);
+        //A.push_back(Instruction::PushCovData);
         nvarfn = re_cols_[i][j].size();
         double dist_val;
         double dist_ab;
@@ -379,7 +380,7 @@ inline void glmmr::Covariance::parse(){
           }
         }
       }
-      intvec B = glmmr::interpret_re(fn_[i][j],A);
+      std::vector<Instruction> B = glmmr::interpret_re(fn_[i][j]);
       intvec re_par_less_min_ = re_pars_[i][j];
       for(unsigned int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       intvec Bpar = glmmr::interpret_re_par(fn_[i][j],j,re_par_less_min_);
@@ -388,7 +389,7 @@ inline void glmmr::Covariance::parse(){
     }
     if(fn_[i].size() > 1){
       for(unsigned int j = 0; j < (fn_[i].size()-1); j++){
-        fn_instruct.push_back(5);
+        fn_instruct.push_back(Instruction::Multiply);
       }
     }
     calc_[i].instructions = fn_instruct;

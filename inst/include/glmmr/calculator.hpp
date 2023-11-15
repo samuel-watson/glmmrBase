@@ -2,19 +2,21 @@
 
 #include "general.h"
 #include "openmpheader.h"
+#include "instructions.h"
 
 namespace glmmr {
 
 class calculator {
   public:
-    intvec instructions;
+    std::vector<Instruction> instructions;
     intvec indexes;
     dblvec y;
-    dblvec numbers;
+    std::array<double,10> numbers;
     strvec parameter_names;
     ArrayXd variance = ArrayXd::Constant(1,1.0);
     int data_count = 0;
     int parameter_count = 0;
+    int user_number_count = 0;
     bool any_nonlinear = false;
     
     calculator() {};
@@ -34,6 +36,7 @@ class calculator {
     MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     matrix_matrix jacobian_and_hessian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     vector_matrix jacobian_and_hessian(const dblvec& parameters);
+    void print_instructions();
 };
 
 }
@@ -198,7 +201,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
                                            int order,
                                            double extraData,
                                            int n){
-  
+  using enum Instruction;
   int idx_iter = 0;
   double a,b;
   std::stack<double> stack;
@@ -227,16 +230,15 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
   };
   
-  for(unsigned int k = 0; k < instructions.size(); k++){
-    switch(instructions[k]){
-    case 0:
+  for(const auto& k: instructions){
+    switch(k){
+    case PushData:
   {
-    //push data (i)
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 0 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
     if(indexes[idx_iter] >= data.cols())Rcpp::stop("Index out of range: case 0 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
     if(i >= data.rows())Rcpp::stop("Row index out of range: case 0: "+std::to_string(i)+" versus "+std::to_string(data.rows()));
-    #endif
+#endif
     
     stack.push(data(i,indexes[idx_iter]));
     if(order > 0){
@@ -248,13 +250,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
     idx_iter++;
     break;
   }
-    case 1:
+    case PushCovData:
   {
-    // push data (j)
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 1 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
     if(indexes[idx_iter] >= data.cols())Rcpp::stop("Index out of range: case 1 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(data.cols()));
-    #endif
+#endif
     
     if(i==j){
       stack.push(0.0);
@@ -271,15 +272,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
     idx_iter++;
     break;
   }
-    case 2:
+    case PushParameter:
   {
-    // push parameter
-    //DEBUG
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if((unsigned)idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
     if(indexes[idx_iter] >= parameter_count)Rcpp::stop("Index out of range: case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameter_count));
     if(indexes[idx_iter] >= parameters.size())Rcpp::stop("Index out of range (pars): case 2 indexes: "+std::to_string(indexes[idx_iter])+" versus "+std::to_string(parameters.size()));
-    #endif
+#endif
     
     stack.push(parameters[indexes[idx_iter]]);
     if(order > 0){
@@ -297,12 +296,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
     idx_iter++;
     break;
   }
-    case 3:
+    case Add:
   {
-    // add
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (3)");
-    #endif
+#endif
     
     a = stack.top();
     stack.pop();
@@ -333,12 +331,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case 4:
+    case Subtract:
   {
-    // subtract
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (4)");
-    #endif
+#endif
     
     a = stack.top();
     stack.pop();
@@ -369,12 +366,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case 5:
+    case Multiply:
   {
-    // multiply
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (5)");
-    #endif
+#endif
     
     a = stack.top();
     stack.pop();
@@ -408,20 +404,19 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case 6:
+    case Divide:
   {
-    //division
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (6)");
-    #endif
+#endif
     
     a = stack.top();
     stack.pop();
     b = stack.top();
     
-    #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(b == 0)Rcpp::stop("Divide by zero (6)");
-    #endif
+#endif
     
     stack.pop();
     stack.push(a/b);
@@ -453,10 +448,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case 7:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Sqrt:
+      
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (7)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -483,11 +479,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 8:
+    case Power:
       {
-        #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
         if(stack.size()<2)Rcpp::stop("Stack too small (8)");
-        #endif
+#endif
         
         a = stack.top();
         stack.pop();
@@ -495,9 +491,9 @@ inline dblvec glmmr::calculator::calculate(const int i,
         stack.pop();
         double out = pow(a,b);
         
-        #ifdef R_BUILD
+#ifdef R_BUILD
         if(out != out)Rcpp::stop("Exponent fail: "+std::to_string(a)+"^"+std::to_string(b));
-        #endif
+#endif
         
         stack.push(out);
         if(order > 0){
@@ -531,11 +527,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         
         break;
       }
-    case 9:
+    case Exp:
       
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (9)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -562,11 +558,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 10:
+    case Negate:
       
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (10)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -592,11 +588,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 11:
+    case Bessel:
       
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (11)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -626,10 +622,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 12:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Gamma:
+      
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (12)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -658,10 +655,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 13:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Sin:
+      
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (13)");
-      #endif
+#endif
+      
       a = stack.top();
       stack.pop();
       stack.push(sin(a));
@@ -689,10 +688,10 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 14:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Cos:
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (14)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -721,11 +720,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 15:
+    case BesselK:
       
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (15)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -756,10 +755,10 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 16:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Log:
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (16)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -788,10 +787,10 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 17:
-      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+    case Square:
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (17)");
-      #endif
+#endif
       
       a = stack.top();
       stack.pop();
@@ -818,9 +817,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case 18:
+    case PushExtraData:
       {
-        //push data (i)
         stack.push(extraData);
         if(order > 0){
           addZeroDx();
@@ -830,7 +828,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
         break;
       }
-    case 19:
+    case PushY:
       {
         stack.push(y[i]);
         if(order > 0){
@@ -841,7 +839,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
         break;
       }
-    case 20:
+    case Int10:
       stack.push(10);
       if(order > 0){
         addZeroDx();
@@ -850,7 +848,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 21:
+    case Int1:
       stack.push(1);
       if(order > 0){
         addZeroDx();
@@ -859,7 +857,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 22:
+    case Int2:
       stack.push(2);
       if(order > 0){
         addZeroDx();
@@ -868,7 +866,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 23:
+    case Int3:
       stack.push(3);
       if(order > 0){
         addZeroDx();
@@ -877,7 +875,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 24:
+    case Int4:
       stack.push(4);
       if(order > 0){
         addZeroDx();
@@ -886,7 +884,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 25:
+    case Int5:
       stack.push(5);
       if(order > 0){
         addZeroDx();
@@ -895,7 +893,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 26:
+    case Int6:
       stack.push(6);
       if(order > 0){
         addZeroDx();
@@ -904,7 +902,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 27:
+    case Int7:
       stack.push(7);
       if(order > 0){
         addZeroDx();
@@ -913,7 +911,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 28:
+    case Int8:
       stack.push(8);
       if(order > 0){
         addZeroDx();
@@ -922,7 +920,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 29:
+    case Int9:
       stack.push(9);
       if(order > 0){
         addZeroDx();
@@ -931,7 +929,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 30:
+    case Pi:
       stack.push(M_PI);
       if(order > 0){
         addZeroDx();
@@ -940,7 +938,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 31:
+    case Constant1:
       stack.push(0.3275911);
       if(order > 0){
         addZeroDx();
@@ -949,7 +947,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 32:
+    case Constant2:
       stack.push(0.254829592);
       if(order > 0){
         addZeroDx();
@@ -958,7 +956,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 33:
+    case Constant3:
       stack.push(-0.284496736);
       if(order > 0){
         addZeroDx();
@@ -967,7 +965,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 34:
+    case Constant4:
       stack.push(1.421413741);
       if(order > 0){
         addZeroDx();
@@ -976,7 +974,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 35:
+    case Constant5:
       stack.push(-1.453152027);
       if(order > 0){
         addZeroDx();
@@ -985,7 +983,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 36:
+    case Constant6:
       stack.push(1.061405429);
       if(order > 0){
         addZeroDx();
@@ -994,7 +992,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         addZeroDx2();
       }
       break;
-    case 40:
+    case LogFactorialApprox:
       {
         //log factorial approximation
         #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -1021,10 +1019,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
         //}
         break;
       }
-    case 41:
+    case PushVariance:
       {
-        //push var par
-        //stack.push(var_par);
         stack.push(variance(i));
         if(order > 0){
           addZeroDx();
@@ -1034,23 +1030,96 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
         break;
       }
-    default:
-      {
-        // anything else is a number stored in the integer
-        #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-        if(instructions[k] - 100 >= numbers.size())Rcpp::stop("Numbers index out of range positive (default)");
-        if(instructions[k] - 100 < 0)Rcpp::stop("Numbers index out of range negative (default)");
-        #endif
-        
-        stack.push(numbers[instructions[k] - 100]);
-        if(order > 0){
-          addZeroDx();
-        }
-        if(order == 2){
-          addZeroDx2();
-        }
-        break;
+    case PushUserNumber0:
+      stack.push(numbers[0]);
+      if(order > 0){
+        addZeroDx();
       }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber1:
+      stack.push(numbers[1]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber2:
+      stack.push(numbers[2]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber3:
+      stack.push(numbers[3]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber4:
+      stack.push(numbers[4]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber5:
+      stack.push(numbers[5]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber6:
+      stack.push(numbers[6]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber7:
+      stack.push(numbers[7]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber8:
+      stack.push(numbers[8]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
+    case PushUserNumber9:
+      stack.push(numbers[9]);
+      if(order > 0){
+        addZeroDx();
+      }
+      if(order == 2){
+        addZeroDx2();
+      }
+      break;
     }
     
     #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -1061,6 +1130,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
     if(stack.top() != stack.top() || isnan(stack.top()))Rcpp::stop("Calculation evaluates to NaN");
     #endif
   }
+  
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if(stack.size()>1){
+    Rcpp::warning("More than one element on the stack at end of calculation");
+  }
+#endif
   
   dblvec result;
   result.push_back(stack.top());
@@ -1090,4 +1165,51 @@ inline dblvec glmmr::calculator::calculate(const int i,
   }
   
   return result;
+}
+
+inline void glmmr::calculator::print_instructions(){
+  //currently only setup for R
+  #ifdef R_BUILD
+  using enum Instruction;
+  int counter = 1;
+  Rcpp::Rcout << "\nInstructions:\n";
+  for(const auto& i: instructions){
+    Rcpp::Rcout << counter << ". " << instruction_str.at(i);
+    switch(i){
+      case PushUserNumber0:
+        Rcpp::Rcout << " = " << numbers[0] << "\n";
+        break;
+    case PushUserNumber1:
+      Rcpp::Rcout << " = " << numbers[1] << "\n";
+      break;
+    case PushUserNumber2:
+      Rcpp::Rcout << " = " << numbers[2] << "\n";
+      break;
+    case PushUserNumber3:
+      Rcpp::Rcout << " = " << numbers[3] << "\n";
+      break;
+    case PushUserNumber4:
+      Rcpp::Rcout << " = " << numbers[4] << "\n";
+      break;
+    case PushUserNumber5:
+      Rcpp::Rcout << " = " << numbers[5] << "\n";
+      break;
+    case PushUserNumber6:
+      Rcpp::Rcout << " = " << numbers[6] << "\n";
+      break;
+    case PushUserNumber7:
+      Rcpp::Rcout << " = " << numbers[7] << "\n";
+      break;
+    case PushUserNumber8:
+      Rcpp::Rcout << " = " << numbers[8] << "\n";
+      break;
+    case PushUserNumber9:
+      Rcpp::Rcout << " = " << numbers[9] << "\n";
+      break;
+    default:
+      Rcpp::Rcout << "\n";
+    }
+    counter++;
+  }
+  #endif
 }

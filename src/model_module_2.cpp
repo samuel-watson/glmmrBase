@@ -36,6 +36,27 @@ void Model__set_upper_bound(SEXP xp, SEXP bound_, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__print_instructions(SEXP xp, bool linpred, bool loglik, int type = 0){
+  glmmrType model(xp,type);
+  auto functor1 = overloaded {
+    [](int) {}, 
+    [](auto ptr){ptr->model.linear_predictor.calc.print_instructions();}
+  };
+  auto functor3 = overloaded {
+    [](int) {}, 
+    [](auto ptr){ptr->model.calc.print_instructions();}
+  };
+  if(linpred){
+    Rcpp::Rcout << "\nLINEAR PREDICTOR:\n";
+    std::visit(functor1,model.ptr);
+  }
+  if(loglik){
+    Rcpp::Rcout << "\nLOG-LIKELIHOOD:\n";
+    std::visit(functor3,model.ptr);
+  }
+}
+
+// [[Rcpp::export]]
 SEXP Model__log_prob(SEXP xp, SEXP v_, int type = 0){
   Eigen::VectorXd v = as<Eigen::VectorXd>(v_);
   glmmrType model(xp,type);

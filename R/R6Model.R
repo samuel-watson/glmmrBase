@@ -1383,7 +1383,19 @@ Model <- R6::R6Class("Model",
                                            refresh = 500,
                                            maxsteps = 100,
                                            target_accept = 0.95,
-                                           adapt = 50)
+                                           adapt = 50),
+                       #' @description
+                       #' Prints the internal instructions used to calculate the linear predictor and/or
+                       #' the log likelihood. Internally the class uses a reverse polish notation to store and 
+                       #' calculate different functions, including user-specified non-linear mean functions. This 
+                       #' function will print all the steps. Mainly used for debugging and determining how the 
+                       #' class has interpreted non-linear model specifications. 
+                       #' @field linpred Logical. Whether to print the linear predictor instructions.
+                       #' @field loglik Logical. Whether to print the log-likelihood instructions.
+                       #' @return None. Called for effects.
+                       calculator_instructions = function(linpred = TRUE, loglik = FALSE){
+                         Model__print_instructions(private$ptr,linpred,loglik,private$model_type())
+                       }
                      ),
                      private = list(
                        W = NULL,

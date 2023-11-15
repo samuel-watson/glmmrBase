@@ -686,6 +686,19 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__print_instructions
+void Model__print_instructions(SEXP xp, bool linpred, bool loglik, int type);
+RcppExport SEXP _glmmrBase_Model__print_instructions(SEXP xpSEXP, SEXP linpredSEXP, SEXP loglikSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type linpred(linpredSEXP);
+    Rcpp::traits::input_parameter< bool >::type loglik(loglikSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__print_instructions(xp, linpred, loglik, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__log_prob
 SEXP Model__log_prob(SEXP xp, SEXP v_, int type);
 RcppExport SEXP _glmmrBase_Model__log_prob(SEXP xpSEXP, SEXP v_SEXP, SEXP typeSEXP) {
@@ -1553,6 +1566,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
     {"_glmmrBase_Model__set_lower_bound", (DL_FUNC) &_glmmrBase_Model__set_lower_bound, 3},
     {"_glmmrBase_Model__set_upper_bound", (DL_FUNC) &_glmmrBase_Model__set_upper_bound, 3},
+    {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},
     {"_glmmrBase_Model__set_bobyqa_control", (DL_FUNC) &_glmmrBase_Model__set_bobyqa_control, 5},
     {"_glmmrBase_Model__log_gradient", (DL_FUNC) &_glmmrBase_Model__log_gradient, 4},

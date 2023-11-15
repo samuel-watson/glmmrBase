@@ -11,6 +11,7 @@
 #include <RcppEigen.h>
 #endif
 #include <vector>
+#include <array>
 #include <string>
 #include <cstring>
 #include <sstream>
@@ -92,12 +93,29 @@ const static std::unordered_map<str,int> string_to_case{
   {"dist",17}
 };
 
+const static std::unordered_map<std::string, int> link_to_case{
+  {"logit",1},
+  {"log",2},
+  {"probit",3},
+  {"identity",4},
+  {"inverse",5}
+};
+
+const static std::unordered_map<std::string, int> family_to_case{
+  {"gaussian",1},
+  {"bernoulli",2},
+  {"poisson",3},
+  {"gamma",4},
+  {"beta",5},
+  {"binomial",6}
+};
+
 inline bool validate_fn(const str& fn){
   bool not_fn = string_to_case.find(fn) == string_to_case.end();
   return not_fn;
 }
 
-const static intvec xvar_rpn = {0,1,4,17};
+//const static intvec xvar_rpn = {0,1,4,17};
 
 template<typename T>
 inline void print_vec_1d(const T& vec){

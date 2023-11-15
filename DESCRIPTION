@@ -14,10 +14,10 @@ License: GPL (>= 2)
 Imports: 
     methods,
     digest,
-    Rcpp (>= 1.0.7),
+    Rcpp (>= 1.0.11),
     R6
 LinkingTo: 
-    Rcpp (>= 0.12.0),
+    Rcpp (>= 1.0.11),
     RcppEigen,
     SparseChol (>= 0.2.2),
     BH,

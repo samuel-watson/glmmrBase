@@ -217,6 +217,10 @@ Model__set_upper_bound <- function(xp, bound_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_upper_bound`, xp, bound_, type))
 }
 
+Model__print_instructions <- function(xp, linpred, loglik, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__print_instructions`, xp, linpred, loglik, type))
+}
+
 Model__log_prob <- function(xp, v_, type = 0L) {
     .Call(`_glmmrBase_Model__log_prob`, xp, v_, type)
 }

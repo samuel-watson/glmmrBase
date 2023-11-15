@@ -66,14 +66,8 @@ inline Eigen::VectorXd exp_vec(const Eigen::VectorXd& x,
 inline Eigen::VectorXd mod_inv_func(Eigen::VectorXd mu,
                                     std::string link)
 {
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"logit",1},
-    {"log",2},
-    {"probit",3},
-    {"identity",4},
-    {"inverse",5}
-  };
-  switch (string_to_case.at(link)) {
+  
+  switch (link_to_case.at(link)) {
   case 1:
     mu = exp_vec(mu, true);
     break;

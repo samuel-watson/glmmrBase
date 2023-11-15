@@ -5,181 +5,188 @@
 
 namespace glmmr {
 
-inline intvec interpret_re(const std::string& fn,
-                           const intvec& A){
-  intvec B;
+inline std::vector<Instruction> interpret_re(const std::string& fn){
+  
+  using instructs = std::vector<Instruction>;
+  using enum Instruction;
+  // instruction lists for calculation of covariance functions
+  instructs B;
   switch(string_to_case.at(fn)){
   case 1:
-    B = {2}; //var par here
+    B = {PushParameter}; 
     break;
   case 2:
-    B.push_back(2);
-    B.insert(B.end(), A.begin(), A.end());
-    B.push_back(2);
-    B.push_back(8);
-    B.push_back(5);
+    B.push_back(PushParameter);
+    B.push_back(PushCovData);
+    B.push_back(PushParameter);
+    B.push_back(Power);
+    B.push_back(Multiply);
     break;
   case 3:
      {
-      const intvec C = {6,10,9};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Divide,Negate,Exp};
+      B.push_back(PushParameter);
+      B.push_back(PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
      }
   case 4:
     {
-       const intvec C = {6,10,9,2,5};  //var par here
-       B.push_back(2);
-       B.insert(B.end(), A.begin(), A.end());
+       const instructs C = {Divide,Negate,Exp,PushParameter,Multiply};  //var par here
+       B.push_back(PushParameter);
+       B.push_back(PushCovData);
        B.insert(B.end(), C.begin(), C.end());
        break;
     }
   case 5:
     {
-      const intvec C1 = {2,2,5};
-      const intvec C2 = {5,6,10,9};
+      const instructs C1 = {PushParameter,PushParameter,Multiply};
+      const instructs C2 = {Multiply,Divide,Negate,Exp};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
       break;
     }
   case 6:
     {
-      const intvec C1 = {2,2,5};
-      const intvec C2 = {5,6,10,9,2,5};//var par here
+      const instructs C1 = {PushParameter,PushParameter,Multiply};
+      const instructs C2 = {Multiply,Divide,Negate,Exp,PushParameter,Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
       break;
     }
   case 7:
     {
-      const intvec C = {6,11};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Divide,Bessel};
+      B.push_back(PushParameter);
+      B.push_back(PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
   case 8:
     {
-      const intvec C1 = {2,12,2,21,4,22,8,6,22,2,5,7,2};
-      const intvec C2 = {6,5,2,8,5,2,22,2,5,7,2};
-      const intvec C3 = {6,5,15,5};
+      const instructs C1 = {PushParameter,Gamma,PushParameter,Int1,Subtract,Int2,Power,Divide,
+                          Int2,PushParameter,Multiply,Sqrt,PushParameter};
+      const instructs C2 = {Divide,Multiply,PushParameter,Power,Multiply,PushParameter,Int2,PushParameter,
+                         Multiply,Sqrt,PushParameter};
+      const instructs C3 = {Divide,Multiply,BesselK,Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
   case 9:
     {
-      const intvec C = {21,4,8,5};
-      B.push_back(2);
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C = {Int1,Subtract,Power,Multiply};
+      B.push_back(PushParameter);
+      B.push_back(PushParameter);
+      B.push_back(PushCovData);
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
   case 10:
     {
-      const intvec C1 = {2,2,21,3};
-      const intvec C2 = {5,21,3,5,2,21,3};
-      const intvec C3 = {21,4,8,5};
+      const instructs C1 = {PushParameter,PushParameter,Int1,Add};
+      const instructs C2 = {Multiply,Int1,Add,Multiply,PushParameter,Int1,Add};
+      const instructs C3 = {Int1,Subtract,Power,Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
   case 11:
     {
-      const intvec C1 = {2,21};
-      const intvec C2 = {22,2,3,5,3,23,21,4,21,2,22,3,2,22,3,5,4,5};
-      const intvec C3 = {5,5,3,5,2,22,3};
-      const intvec C4 = {21,4,8,5};
+      const instructs C1 = {PushParameter,Int1};
+      const instructs C2 = {Int2,PushParameter,Add,Multiply,Add,Int3,Int1,Subtract,Int1,
+                         PushParameter,Int2,Add,PushParameter,Int2,Add,Multiply,Subtract,Multiply};
+      const instructs C3 = {Multiply,Multiply,Add,Multiply,PushParameter,Int2,Add};
+      const instructs C4 = {Int1,Subtract,Power,Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
       break;
     }
   case 12:
     {
-      const intvec C1 = {2,2,12,2,21,4,22,8,6,5,2};
-      const intvec C2 = {8,5,2};
-      const intvec C3 = {15,5};
-      const intvec C4 = {5,20,20,5,20,27,3,3,4,5,22,20,21,3,6};
-      const intvec C5 = {5,3,21,3,5};
-      const intvec C6 = {21,4,5};
+      const instructs C1 = {PushParameter,PushParameter,Gamma,PushParameter,Int1,Subtract,Int2,Power,Divide,
+                            Multiply,PushParameter};
+      const instructs C2 = {Power,Multiply,PushParameter};
+      const instructs C3 = {BesselK,Multiply};
+      const instructs C4 = {Multiply,Int10,Int10,Multiply,Int10,Int7,Add,Add,Subtract,
+                            Multiply,Int2,Int10,Int1,Add,Divide};
+      const instructs C5 = {Multiply,Add,Int1,Add,Multiply};
+      const instructs C6 = {Int1,Subtract,Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
+      B.push_back(PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C5.begin(), C5.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
   case 13:
     {
-      const intvec C1 = {8,21,4,23,10,8,2,5};
-      const intvec C2 = {30,5,14};
-      const intvec C3 = {21,4,5};
-      const intvec C4 = {30,13,30,21,6,5,3,5};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C1 = {Power,Int1,Subtract,Int3,Negate,Power,PushParameter,Multiply};
+      const instructs C2 = {Pi,Multiply,Cos};
+      const instructs C3 = {Int1,Subtract,Multiply};
+      const instructs C4 = {Pi,Sin,Pi,Int1,Divide,Multiply,Add,Multiply};
+      B.push_back(PushParameter);
+      B.push_back(PushCovData);
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       break;
     }
   case 14:
     {
-      const intvec C1 = {8,10,9,2,22,30};
-      const intvec C2 = {5,5,22,30};
-      const intvec C3 = {5,5,13,6};
-      const intvec C4 = {21,4,5,22,30};
-      const intvec C5 = {5,5,22,30};
-      const intvec C6 = {5,5,14,21,4,6,30,21,6,5,3,5};
-      B.push_back(2);
-      B.insert(B.end(), A.begin(), A.end());
+      const instructs C1 = {Power,Negate,Exp,PushParameter,Int2,Pi};
+      const instructs C2 = {Multiply,Multiply,Int2,Pi};
+      const instructs C3 = {Multiply,Multiply,Sin,Divide};
+      const instructs C4 = {Int1,Subtract,Multiply,Int2,Pi};
+      const instructs C6 = {Multiply,Multiply,Cos,Int1,Subtract,Divide,Pi,Int1,Divide,Multiply,Add,Multiply};
+      B.push_back(PushParameter);
+      B.push_back(PushCovData);
       B.insert(B.end(), C1.begin(), C1.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C2.begin(), C2.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C4.begin(), C4.end());
-      B.insert(B.end(), A.begin(), A.end());
-      B.insert(B.end(), C5.begin(), C5.end());
-      B.insert(B.end(), A.begin(), A.end());
+      B.push_back(PushCovData);
+      B.insert(B.end(), C2.begin(), C2.end());
+      B.push_back(PushCovData);
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
   case 15: case 16:
-    B.insert(B.end(), A.begin(), A.end());
-    B.push_back(2);
-    B.push_back(8);
+    B.push_back(PushCovData);
+    B.push_back(PushParameter);
+    B.push_back(Power);
     break;
   case 17:
-    B.insert(B.end(), A.begin(), A.end());
+    B.push_back(PushCovData);
     break;
   }
   return B;
@@ -301,9 +308,11 @@ inline intvec interpret_re_par(const std::string& fn,
 
 inline void re_linear_predictor(glmmr::calculator& calc,
                                 const int& Q){
+  using instructs = std::vector<Instruction>;
+  using enum Instruction;
   
-  intvec re_instruct;
-  intvec re_seq = {0,2,5,3};
+  instructs re_instruct;
+  instructs re_seq = {PushData,PushParameter,Multiply,Add};
   for(int i = 0; i < Q; i++){
     re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
     calc.parameter_names.push_back("v_"+std::to_string(i));
@@ -317,70 +326,66 @@ inline void re_linear_predictor(glmmr::calculator& calc,
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,
                                      const str& link){
-  intvec out;
-  intvec addzu = {18,3};
+  using instructs = std::vector<Instruction>;
+  using enum Instruction;
+  instructs out;
+  instructs addzu = {PushExtraData,Add};
   calc.instructions.insert(calc.instructions.end(),addzu.begin(),addzu.end());
-  const static std::unordered_map<std::string, int> link_to_case{
-    {"logit",1},
-    {"log",2},
-    {"probit",3},
-    {"identity",4},
-    {"inverse",5}
-  };
+  
   switch (link_to_case.at(link)) {
   case 1:
     {
       out = calc.instructions;
-      intvec logit_instruct = {10,9,21,3,21,6};
+      instructs logit_instruct = {Negate,Exp,Int1,Add,Int1,Divide};
       out.insert(out.end(),logit_instruct.begin(),logit_instruct.end());
       break;
     }
   case 2:
     {
       out = calc.instructions;
-      out.push_back(9);
+      out.push_back(Exp);
       break;
     }
   case 3:
     {
-      // probit is a pain in the ass because of the error function!
+      // probit is a pain because of the error function!
       // this uses Abramowitz and Stegun approximation.
-      intvec iStar = {22,7};
+      instructs iStar = {Int2,Sqrt};
       iStar.insert(iStar.end(),calc.instructions.begin(),calc.instructions.end());
-      iStar.push_back(6);
-      intvec M = iStar;
-      intvec MStar = {31,5,21,3,21,6};
+      iStar.push_back(Divide);
+      instructs M = iStar;
+      instructs MStar = {Constant1,Multiply,Int1,Add,Int1,Divide};
       M.insert(M.end(),MStar.begin(),MStar.end());
-      intvec Ltail = {8,5,3};
-      intvec L1 = {32};
+      instructs Ltail = {Power,Multiply,Add};
+      instructs L1 = {Constant2};
       L1.insert(L1.end(),M.begin(),M.end());
-      L1.push_back(5);
-      intvec L2 = {33,22};
+      L1.push_back(Multiply);
+      instructs L2 = {Constant3,Int2};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {34,23};
+      L2 = {Constant4,Int3};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {35,24};
+      L2 = {Constant5,Int4};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
       L1.insert(L1.end(),Ltail.begin(),Ltail.end());
-      L2 = {36,25};
+      L2 = {Constant6,Int5};
       L1.insert(L1.end(),L2.begin(),L2.end());
       L1.insert(L1.end(),M.begin(),M.end());
-      L1.push_back(8);
-      L1.push_back(5);
-      intvec L3 = {22};
+      L1.push_back(Power);
+      L1.push_back(Multiply);
+      instructs L3 = {Int2};
       L3.insert(L3.end(),iStar.begin(),iStar.end());
-      intvec L4 = {6,10,8};
+      instructs L4 = {Divide,Negate,Power};
       L3.insert(L3.end(),L4.begin(),L4.end());
       out = L1;
       out.insert(out.end(),L3.begin(),L3.end());
-      out.push_back(5);
-      out.push_back(21);
-      out.push_back(4);
+      out.push_back(Multiply);
+      out.push_back(Int1);
+      out.push_back(Subtract);
       break;
     }
   case 4:
@@ -391,7 +396,7 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
   case 5:
     {
       out = calc.instructions;
-      intvec inverse_instruct = {21,6};
+      instructs inverse_instruct = {Int1,Divide};
       out.insert(out.end(),inverse_instruct.begin(),inverse_instruct.end());
       break;
     }
@@ -402,24 +407,18 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
 
 inline void link_to_likelihood(glmmr::calculator& calc,
                                const str& family){
-  
-  intvec out;
+  using instructs = std::vector<Instruction>;
+  using enum Instruction;
+  instructs out;
   intvec idx;
-  const static std::unordered_map<std::string, int> family_to_case{
-    {"gaussian",1},
-    {"bernoulli",2},
-    {"poisson",3},
-    {"gamma",4},
-    {"beta",5},
-    {"binomial",6}
-  };
-  
   
   switch (family_to_case.at(family)){
     case 1:
       {
-        intvec gaus_instruct = {19,4,17,6,22,21,6,5,22,30,5,16,22,21,6,5,3,41,16,22,21,6,5,3,10};
-        out.push_back(41);
+        instructs gaus_instruct = {PushY,Subtract,Square,Divide,Int2,Int1,Divide,Multiply,Int2,Pi,Multiply,
+                                  Log,Int2,Int1,Divide,Multiply,Add,PushVariance,Log,Int2,Int1,Divide,
+                                  Multiply,Add,Negate};
+        out.push_back(PushVariance);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
@@ -427,9 +426,9 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 2:
       {
-        intvec binom_instruct = {16,5,19,21,4};
-        intvec binom_instruct2 = {21,4,16,5,3};
-        out.push_back(19);
+        instructs binom_instruct = {Log,Multiply,PushY,Int1,Subtract};
+        instructs binom_instruct2 = {Int1,Subtract,Log,Multiply,Add};
+        out.push_back(PushY);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
@@ -440,8 +439,8 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 3:
       {
-        intvec poisson_instruct = {19,40,3,19};
-        intvec poisson_instruct2 = {16,5,4};
+        instructs poisson_instruct = {PushY,LogFactorialApprox,Add,PushY};
+        instructs poisson_instruct2 = {Log,Multiply,Subtract};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),poisson_instruct.begin(),poisson_instruct.end());
@@ -452,8 +451,11 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 4:
       {
-        intvec gamma_instruct = {41,19,5,6};
-        intvec gamma_instruct2 = {41,19,5,6,16,41,5,4,41,12,19,5,21,6,1,6,3};
+        instructs gamma_instruct = {PushVariance,PushY,Multiply,Divide};
+        // instructs gamma_instruct2 = {PushVariance,PushY,Multiply,Divide,Log,PushVariance,Multiply,Subtract,
+        //                           PushVariance,Gamma,PushY,Multiply,Int1,Divide,PushData,Divide,Add};
+        instructs gamma_instruct2 = {Log,PushVariance,Log,Subtract,PushVariance,Multiply,PushY,Log,Int1,PushVariance,
+                                     Subtract,Multiply,Add,Subtract};
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),gamma_instruct.begin(),gamma_instruct.end());
@@ -464,11 +466,13 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 5:
       {
-        intvec beta_instruct = {41,4,19,16,5,21};
-        intvec beta_instruct2 = {21,4,41,5,4,19,21,4,16,5,3};
-        intvec beta_instruct3 = {41,5,12,16,10,3};
-        intvec beta_instruct4 = {21,4,41,5,12,16,10,3,41,12,16,3};
-        out.push_back(21);
+        instructs beta_instruct = {PushVariance,Subtract,PushY,Log,Multiply,Int1};
+        instructs beta_instruct2 = {Int1,Subtract,PushVariance,Multiply,Subtract,PushY,Int1,Subtract,Log,
+                                    Multiply,Add};
+        instructs beta_instruct3 = {PushVariance,Multiply,Gamma,Log,Negate,Add};
+        instructs beta_instruct4 = {Int1,Subtract,PushVariance,Multiply,Gamma,Log,Negate,Add,PushVariance,
+                                    Gamma,Log,Add};
+        out.push_back(Int1);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
         out.insert(out.end(),beta_instruct.begin(),beta_instruct.end());
@@ -485,9 +489,10 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case 6:
       {
-        intvec binom_instruct = {19,40,19,41,4,3,41,40,3};
-        intvec binom_instruct2 = {16,19,5,3};
-        intvec binom_instruct3 = {21,4,16,19,41,4,5,3};
+        instructs binom_instruct = {PushY,LogFactorialApprox,PushY,PushVariance,Subtract,Add,PushVariance,
+                                 LogFactorialApprox,Add};
+        instructs binom_instruct2 = {Log,PushY,Multiply,Add};
+        instructs binom_instruct3 = {Int1,Subtract,Log,PushY,PushVariance,Subtract,Multiply,Add};
         out.insert(out.end(),binom_instruct.begin(),binom_instruct.end());
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
