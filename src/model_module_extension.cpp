@@ -63,7 +63,7 @@ SEXP Model_hsgp__dim(SEXP xp){
 
 // [[Rcpp::export]]
 SEXP Model__aic(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->optim.aic());}
@@ -75,7 +75,7 @@ SEXP Model__aic(SEXP xp, int type = 0){
 // [[Rcpp::export]]
 void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
   double lambda = as<double>(lambda_);
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [&lambda](auto ptr){ptr->mcmc.mcmc_set_lambda(lambda);}
@@ -86,7 +86,7 @@ void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
 // [[Rcpp::export]]
 void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
   int max_steps = as<int>(max_steps_);
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [&max_steps](auto ptr){ptr->mcmc.mcmc_set_max_steps(max_steps);}
@@ -97,7 +97,7 @@ void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
 // [[Rcpp::export]]
 void Model__mcmc_set_refresh(SEXP xp, SEXP refresh_, int type = 0){
   int refresh = as<int>(refresh_);
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [&refresh](auto ptr){ptr->mcmc.mcmc_set_refresh(refresh);}
@@ -108,7 +108,7 @@ void Model__mcmc_set_refresh(SEXP xp, SEXP refresh_, int type = 0){
 // [[Rcpp::export]]
 void Model__mcmc_set_target_accept(SEXP xp, SEXP target_, int type = 0){
   double target = as<double>(target_);
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [&target](auto ptr){ptr->mcmc.mcmc_set_target_accept(target);}
@@ -118,7 +118,7 @@ void Model__mcmc_set_target_accept(SEXP xp, SEXP target_, int type = 0){
 
 // [[Rcpp::export]]
 void Model__make_sparse(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [](auto ptr){ptr->model.make_covariance_sparse();}
@@ -128,7 +128,7 @@ void Model__make_sparse(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 void Model__make_dense(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
     [](auto ptr){ptr->model.make_covariance_dense();}
@@ -138,7 +138,7 @@ void Model__make_dense(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__beta_parameter_names(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->model.linear_predictor.parameter_names());}
@@ -149,7 +149,7 @@ SEXP Model__beta_parameter_names(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__theta_parameter_names(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->model.covariance.parameter_names());}
@@ -160,7 +160,7 @@ SEXP Model__theta_parameter_names(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__hess_and_grad(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.hess_and_grad());}
@@ -171,7 +171,7 @@ SEXP Model__hess_and_grad(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__sandwich(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.sandwich_matrix());}
@@ -182,7 +182,7 @@ SEXP Model__sandwich(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__infomat_theta(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.information_matrix_theta());}
@@ -193,7 +193,7 @@ SEXP Model__infomat_theta(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__kenward_roger(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.kenward_roger());}
@@ -204,7 +204,7 @@ SEXP Model__kenward_roger(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__cov_deriv(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.sigma_derivatives());}
@@ -215,7 +215,7 @@ SEXP Model__cov_deriv(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__hessian(SEXP xp, int type = 0){
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
     [](auto ptr){return returnType(ptr->matrix.re_score());}
@@ -231,7 +231,7 @@ SEXP Model__predict(SEXP xp, SEXP newdata_,
   Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
   Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
   
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor_re = overloaded {
     [](int) {  return returnType(0);}, 
     [&](auto ptr){return returnType(ptr->re.predict_re(newdata,newoffset));}
@@ -264,7 +264,7 @@ SEXP Model__predict_re(SEXP xp, SEXP newdata_,
                     int m, int type = 0){
   Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
   Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
-  glmmrType model(xp,type);
+  glmmrType model(xp,static_cast<Type>(type));
   auto functor_re = overloaded {
     [](int) {  return returnType(0);}, 
     [&](auto ptr){return returnType(ptr->re.predict_re(newdata,newoffset));}

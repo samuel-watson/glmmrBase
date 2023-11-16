@@ -28,8 +28,6 @@ NeedsCompilation: yes
 Author: Sam Watson [aut, cre]
 URL: https://github.com/samuel-watson/glmmrBase
 BugReports: https://github.com/samuel-watson/glmmrBase/issues
-Suggests: 
-    testthat (>= 3.1.0)
 Biarch: true
 Depends: 
     R (>= 3.5.0), 

@@ -1390,8 +1390,8 @@ Model <- R6::R6Class("Model",
                        #' calculate different functions, including user-specified non-linear mean functions. This 
                        #' function will print all the steps. Mainly used for debugging and determining how the 
                        #' class has interpreted non-linear model specifications. 
-                       #' @field linpred Logical. Whether to print the linear predictor instructions.
-                       #' @field loglik Logical. Whether to print the log-likelihood instructions.
+                       #' @param linpred Logical. Whether to print the linear predictor instructions.
+                       #' @param loglik Logical. Whether to print the log-likelihood instructions.
                        #' @return None. Called for effects.
                        calculator_instructions = function(linpred = TRUE, loglik = FALSE){
                          Model__print_instructions(private$ptr,linpred,loglik,private$model_type())

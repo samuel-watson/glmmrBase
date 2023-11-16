@@ -10,16 +10,17 @@ class hsgpCovariance : public Covariance {
 public:
   int dim;
   intvec m;
-  ArrayXd L_boundary;
   ArrayXXd hsgp_data;
+  ArrayXd L_boundary;
+  
   
   hsgpCovariance(const std::string& formula,
                  const ArrayXXd& data,
                  const strvec& colnames) : Covariance(formula, data, colnames),
                   dim(this->re_cols_data_[0][0].size()),
                   m(dim),
-                  L_boundary(dim),
                   hsgp_data(data.rows(),dim),
+                  L_boundary(dim),
                   L(data.rows(),1), 
                   Lambda(1), 
                   indices(1,dim), 
@@ -37,8 +38,8 @@ public:
                  const strvec& colnames) : Covariance(formula, data, colnames),
                  dim(this->re_cols_data_[0][0].size()),
                  m(dim),
-                 L_boundary(dim),
                  hsgp_data(data.rows(),dim),
+                 L_boundary(dim),
                  L(data.rows(),1), 
                  Lambda(1), 
                  indices(1,dim), 
@@ -57,8 +58,8 @@ public:
                  const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                   dim(this->re_cols_data_[0][0].size()),
                   m(dim),
-                  L_boundary(dim),
                   hsgp_data(data.rows(),dim),
+                  L_boundary(dim),
                   L(data.rows(),1), 
                   Lambda(1),
                   indices(1,dim), 
@@ -78,8 +79,8 @@ public:
                  const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                  dim(this->re_cols_data_[0][0].size()),
                  m(dim),
-                 L_boundary(dim),
                  hsgp_data(data.rows(),dim),
+                 L_boundary(dim),
                  L(data.rows(),1), 
                  Lambda(1),
                  indices(1,dim), 
@@ -94,7 +95,7 @@ public:
   };
   
   hsgpCovariance(const glmmr::hsgpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_), 
-    m(cov.m), dim(cov.dim), hsgp_data(cov.hsgp_data),
+    dim(cov.dim),m(cov.m), hsgp_data(cov.hsgp_data),
     L_boundary(cov.L_boundary), L(cov.L), Lambda(cov.Lambda), 
     indices(cov.indices), Phi(cov.Phi), PhiT(cov.PhiT) {
       isSparse = false;

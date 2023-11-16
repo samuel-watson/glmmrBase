@@ -170,7 +170,10 @@ inline void glmmr::Covariance::parse(){
   strvec2d re_par_names_;
   
   // now process each step of the random effect terms
+  #ifdef R_BUILD
   if(colnames_.size()!= (unsigned int)data_.cols())Rcpp::stop("colnames length != data columns");
+  #endif 
+  
   int nre = form_.re_.size();
   
   for(int i = 0; i < nre; i++){
@@ -194,7 +197,9 @@ inline void glmmr::Covariance::parse(){
         while(getline(check3, intermediate3, ',')){
           auto colidx = std::find(colnames_.begin(),colnames_.end(),intermediate3);
           if(colidx == colnames_.end()){
-            Rcpp::stop("variable not in data");
+            #ifdef R_BUILD
+            Rcpp::stop("variable "+intermediate3+" not in data");
+            #endif 
           } else {
             int newidx = colidx - colnames_.begin();
             fnvars[iter].push_back(newidx);
@@ -203,7 +208,9 @@ inline void glmmr::Covariance::parse(){
       } else {
         auto colidx = std::find(colnames_.begin(),colnames_.end(),intermediate2);
         if(colidx == colnames_.end()){
-          Rcpp::stop("variable not in data");
+          #ifdef R_BUILD
+          Rcpp::stop("variable "+intermediate2+" not in data");
+          #endif
         } else {
           int newidx = colidx - colnames_.begin();
           fnvars[iter].push_back(newidx);
@@ -223,7 +230,9 @@ inline void glmmr::Covariance::parse(){
     } else {
       auto idxz = std::find(colnames_.begin(),colnames_.end(),form_.z_[i]);
       if(idxz == colnames_.end()){
-        Rcpp::stop("z variable not in column names");
+        #ifdef R_BUILD
+        Rcpp::stop("z variable "+form_.z_[i]+" not in column names");
+        #endif
       } else {
         zcol = idxz - colnames_.begin();
       }
@@ -324,7 +333,9 @@ inline void glmmr::Covariance::parse(){
           str fn_name = "";
           for(int k = 0; k < fn_[j].size(); k++) fn_name += fn_[j][k];
           for(int k = 0; k < fn_[j].size(); k++){
+            #ifdef R_BUILD
             if(glmmr::validate_fn(fn_[j][k]))Rcpp::stop("Function " + fn_[j][k] + " not valid");
+            #endif
             auto parget = nvars.find(fn_[j][k]);
             int npars = parget->second;
             intvec parcount2;
@@ -478,7 +489,9 @@ inline int glmmr::Covariance::B(){
 }
 
 inline int glmmr::Covariance::Q(){
+#ifdef R_BUILD
   if(Q_==0)Rcpp::stop("Random effects not initialised");
+#endif
   return Q_;
 }
 
@@ -517,6 +530,9 @@ inline void glmmr::Covariance::update_parameters(const dblvec& parameters){
 };
 
 inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters){
+  #ifdef R_BUILD
+  if(parameters.size()!=(unsigned)npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
+  #endif
   if(parameters_.size()==0){
     parameters_ = parameters;
     update_parameters_in_calculators();
@@ -543,7 +559,9 @@ inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
     update_parameters_in_calculators();
     update_ax();
   } else {
-    Rcpp::stop("Wrong number of parameters");
+#ifdef R_BUILD
+    Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(parameters_.size())+" required");
+#endif
   }
 };
 
@@ -552,9 +570,12 @@ inline double glmmr::Covariance::get_val(int b, int i, int j){
 }
 
 inline MatrixXd glmmr::Covariance::get_block(int b){
+  
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
   if(b > calc_.size()-1)Rcpp::stop("b larger than number of blocks");
   if(parameters_.size()==0)Rcpp::stop("no parameters");
   if(b > B_-1)Rcpp::stop("b is too large");
+#endif
   
   int dim = block_dim(b);
   MatrixXd D(dim,dim);
@@ -601,7 +622,7 @@ inline MatrixXd glmmr::Covariance::get_chol_block(int b,bool upper){
 
 inline VectorXd glmmr::Covariance::sim_re(){
   #ifdef R_BUILD
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
+  if(parameters_.size()==0)Rcpp::stop("no parameters, cannot simulate random effects");
   #endif
   VectorXd samps(Q_);
   int idx = 0;
@@ -691,7 +712,9 @@ inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
 }
 
 inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
+#ifdef R_BUILD
+  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log likelihood");
+#endif
   double logdet_val=0.0;
   double loglik_val=0.0;
   int obs_counter=0;
@@ -729,7 +752,9 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
 }
 
 inline double glmmr::Covariance::log_determinant(){
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
+#ifdef R_BUILD
+  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log determinant");
+#endif
   int blocksize;
   double logdet_val = 0.0;
   if(!isSparse){
@@ -741,8 +766,6 @@ inline double glmmr::Covariance::log_determinant(){
       }
     }
   } else {
-    //SparseChol chol(&mat);
-    //int d = chol.ldl_numeric();
     for (auto k : spchol.D) logdet_val += log(k);
   }
   
@@ -751,8 +774,9 @@ inline double glmmr::Covariance::log_determinant(){
 
 
 inline void glmmr::Covariance::make_sparse(){
-  
-  if(parameters_.size()==0)Rcpp::stop("no parameters");
+#ifdef R_BUILD
+  if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot make sparse");
+#endif
   //isSparse = true;
   int dim;
   double val;

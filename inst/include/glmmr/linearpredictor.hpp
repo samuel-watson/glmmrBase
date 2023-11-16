@@ -110,7 +110,7 @@ protected:
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
   #ifdef R_BUILD
-  if(parameters.size()!=(unsigned)P())Rcpp::stop("wrong number of parameters");
+  if(parameters.size()!=(unsigned)P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
   #endif
   
   parameters = parameters_;
@@ -122,7 +122,7 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
 
 inline void glmmr::LinearPredictor::update_parameters(const Eigen::ArrayXd& parameters_){
   #ifdef R_BUILD
-  if(parameters.size()!=P())Rcpp::stop("wrong number of parameters");
+  if(parameters.size()!=P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
   #endif 
   
   dblvec new_parameters(parameters_.data(),parameters_.data()+parameters_.size());

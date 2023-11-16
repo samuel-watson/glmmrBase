@@ -364,6 +364,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
+\item \href{#method-Model-calculator_instructions}{\code{Model$calculator_instructions()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -1249,6 +1250,32 @@ previous model fit then the random effects are assumed to be all zero.
 }
 \subsection{Returns}{
 The log-likelihood of the model parameters
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-calculator_instructions"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-calculator_instructions}{}}}
+\subsection{Method \code{calculator_instructions()}}{
+Prints the internal instructions used to calculate the linear predictor and/or
+the log likelihood. Internally the class uses a reverse polish notation to store and
+calculate different functions, including user-specified non-linear mean functions. This
+function will print all the steps. Mainly used for debugging and determining how the
+class has interpreted non-linear model specifications.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$calculator_instructions(linpred = TRUE, loglik = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{linpred}}{Logical. Whether to print the linear predictor instructions.}
+
+\item{\code{loglik}}{Logical. Whether to print the log-likelihood instructions.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None. Called for effects.
 }
 }
 \if{html}{\out{<hr>}}

@@ -13,84 +13,84 @@ Covariance_hsgp__new <- function(form_, data_, colnames_) {
     .Call(`_glmmrBase_Covariance_hsgp__new`, form_, data_, colnames_)
 }
 
-Covariance__Z <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__Z`, xp, type)
+Covariance__Z <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__Z`, xp, type_)
 }
 
-Covariance__ZL <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__ZL`, xp, type)
+Covariance__ZL <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__ZL`, xp, type_)
 }
 
-Covariance__LZWZL <- function(xp, w_, type = 0L) {
-    .Call(`_glmmrBase_Covariance__LZWZL`, xp, w_, type)
+Covariance__LZWZL <- function(xp, w_, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__LZWZL`, xp, w_, type_)
 }
 
-Covariance__Update_parameters <- function(xp, parameters_, type = 0L) {
-    invisible(.Call(`_glmmrBase_Covariance__Update_parameters`, xp, parameters_, type))
+Covariance__Update_parameters <- function(xp, parameters_, type_ = 0L) {
+    invisible(.Call(`_glmmrBase_Covariance__Update_parameters`, xp, parameters_, type_))
 }
 
-Covariance__D <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__D`, xp, type)
+Covariance__D <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__D`, xp, type_)
 }
 
-Covariance__D_chol <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__D_chol`, xp, type)
+Covariance__D_chol <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__D_chol`, xp, type_)
 }
 
-Covariance__B <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__B`, xp, type)
+Covariance__B <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__B`, xp, type_)
 }
 
-Covariance__Q <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__Q`, xp, type)
+Covariance__Q <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__Q`, xp, type_)
 }
 
-Covariance__log_likelihood <- function(xp, u_, type = 0L) {
-    .Call(`_glmmrBase_Covariance__log_likelihood`, xp, u_, type)
+Covariance__log_likelihood <- function(xp, u_, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__log_likelihood`, xp, u_, type_)
 }
 
-Covariance__log_determinant <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__log_determinant`, xp, type)
+Covariance__log_determinant <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__log_determinant`, xp, type_)
 }
 
-Covariance__n_cov_pars <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__n_cov_pars`, xp, type)
+Covariance__n_cov_pars <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__n_cov_pars`, xp, type_)
 }
 
-Covariance__simulate_re <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__simulate_re`, xp, type)
+Covariance__simulate_re <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__simulate_re`, xp, type_)
 }
 
-Covariance__make_sparse <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, type))
+Covariance__make_sparse <- function(xp, type_ = 0L) {
+    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, type_))
 }
 
-Covariance__make_dense <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Covariance__make_dense`, xp, type))
+Covariance__make_dense <- function(xp, type_ = 0L) {
+    invisible(.Call(`_glmmrBase_Covariance__make_dense`, xp, type_))
 }
 
 Covariance__set_nn <- function(xp, nn) {
     invisible(.Call(`_glmmrBase_Covariance__set_nn`, xp, nn))
 }
 
-Covariance__any_gr <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__any_gr`, xp, type)
+Covariance__any_gr <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__any_gr`, xp, type_)
 }
 
-Covariance__get_val <- function(xp, i, j, type = 0L) {
-    .Call(`_glmmrBase_Covariance__get_val`, xp, i, j, type)
+Covariance__get_val <- function(xp, i, j, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__get_val`, xp, i, j, type_)
 }
 
-Covariance__parameter_fn_index <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__parameter_fn_index`, xp, type)
+Covariance__parameter_fn_index <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__parameter_fn_index`, xp, type_)
 }
 
-Covariance__re_terms <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__re_terms`, xp, type)
+Covariance__re_terms <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__re_terms`, xp, type_)
 }
 
-Covariance__re_count <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__re_count`, xp, type)
+Covariance__re_count <- function(xp, type_ = 0L) {
+    .Call(`_glmmrBase_Covariance__re_count`, xp, type_)
 }
 
 Linpred__new <- function(formula_, data_, colnames_) {
@@ -151,14 +151,6 @@ Model_hsgp__new <- function(formula_, data_, colnames_, family_, link_) {
 
 Model_hsgp__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_, theta_) {
     .Call(`_glmmrBase_Model_hsgp__new_w_pars`, formula_, data_, colnames_, family_, link_, beta_, theta_)
-}
-
-Covariance__get_ptr_model <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Covariance__get_ptr_model`, xp, type)
-}
-
-LinearPredictor__get_ptr_model <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_LinearPredictor__get_ptr_model`, xp, type)
 }
 
 Model__set_y <- function(xp, y_, type = 0L) {
