@@ -1126,7 +1126,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
     #endif
     
-    #ifdef R_BUILD
+    #ifdef defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.top() != stack.top() || isnan(stack.top()))Rcpp::stop("Calculation evaluates to NaN");
     #endif
   }

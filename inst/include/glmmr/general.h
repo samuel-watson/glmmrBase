@@ -1,8 +1,8 @@
 #pragma once
 
+//defines
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define _USE_MATH_DEFINES
-
 //#define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG
 #define R_BUILD //Uncomment to build for R with RCPP
 
