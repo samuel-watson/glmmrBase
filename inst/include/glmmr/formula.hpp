@@ -64,7 +64,7 @@ inline void glmmr::Formula::tokenise(){
     formula_.erase(cursor,2);
     formula_as_chars = std::vector<char>(formula_.begin(),formula_.end());
   } else {
-    str add_intercept = "b_intercept*1+";
+    str add_intercept = "b_intercept+";
     std::vector<char> add_intercept_vec(add_intercept.begin(),add_intercept.end());
     linear_predictor_.insert(linear_predictor_.end(),add_intercept_vec.begin(),add_intercept_vec.end());
   }

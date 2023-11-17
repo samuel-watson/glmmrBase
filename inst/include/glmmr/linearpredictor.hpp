@@ -109,9 +109,18 @@ protected:
 }
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nUpdating parameters... Old parameters: ";
+  for(const auto& i: parameters)Rcpp::Rcout << i << " ";
+  Rcpp::Rcout << "\nNew parameters: ";
+  for(const auto& i: parameters_)Rcpp::Rcout << i << " ";
+#endif
+  
   #ifdef R_BUILD
-  if(parameters.size()!=(unsigned)P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(parameters_.size()!=(unsigned)P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(parameters_.size()!=(unsigned)calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   #endif
+  
   
   parameters = parameters_;
   if(!x_set){
@@ -121,10 +130,6 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const Eigen::ArrayXd& parameters_){
-  #ifdef R_BUILD
-  if(parameters.size()!=P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
-  #endif 
-  
   dblvec new_parameters(parameters_.data(),parameters_.data()+parameters_.size());
   update_parameters(new_parameters);
 };

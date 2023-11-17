@@ -37,7 +37,7 @@ public:
     family(family_,link_) { setup_calculator(); };
   
   virtual int n(){return linear_predictor.n();};
-  virtual ArrayXd xb(){return linear_predictor.xb() + data.offset;};
+  virtual ArrayXd xb(){return linear_predictor.xb().array() + data.offset.array();};
   virtual void make_covariance_sparse();
   virtual void make_covariance_dense();
   

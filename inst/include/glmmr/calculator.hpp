@@ -1124,17 +1124,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
     
     #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size() == 0)Rcpp::stop("Error stack empty!");
-    #endif
-    
-    #ifdef defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.top() != stack.top() || isnan(stack.top()))Rcpp::stop("Calculation evaluates to NaN");
     #endif
   }
   
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(stack.size()>1){
-    Rcpp::warning("More than one element on the stack at end of calculation");
-  }
+  if(stack.size()>1)Rcpp::warning("More than one element on the stack at end of calculation");
 #endif
   
   dblvec result;
@@ -1172,6 +1167,7 @@ inline void glmmr::calculator::print_instructions(){
   #ifdef R_BUILD
   using enum Instruction;
   int counter = 1;
+  int idx_iter = 0;
   Rcpp::Rcout << "\nInstructions:\n";
   for(const auto& i: instructions){
     Rcpp::Rcout << counter << ". " << instruction_str.at(i);
@@ -1205,6 +1201,18 @@ inline void glmmr::calculator::print_instructions(){
       break;
     case PushUserNumber9:
       Rcpp::Rcout << " = " << numbers[9] << "\n";
+      break;
+    case PushParameter:
+      Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "\n";
+      idx_iter++;
+      break;
+    case PushData:
+      Rcpp::Rcout << "(column " << indexes[idx_iter] << ")\n";
+      idx_iter++;
+      break;
+    case PushCovData:
+      Rcpp::Rcout << "(column " << indexes[idx_iter] << ")\n";
+      idx_iter++;
       break;
     default:
       Rcpp::Rcout << "\n";

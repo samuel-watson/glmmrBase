@@ -216,6 +216,7 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
   double ll = 0;
   ArrayXd xb(model.xb());
+  
   if(model.weighted){
     if(model.family.family=="gaussian"){
 #pragma omp parallel for reduction (+:ll) collapse(2)
@@ -467,6 +468,8 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,false,false);
   dblvec lower = get_lower_values(true,false,false);
+  dblvec upper = get_upper_values(true,false,false);
+  opt.set_upper(upper);
   opt.set_lower(lower);
   opt.control.iprint = trace;
   opt.minimize(ldl, start);
@@ -515,6 +518,8 @@ inline void glmmr::ModelOptim<modeltype>::ml_all(){
   dblvec start = get_start_values(true,true,false);
   dblvec lower = get_lower_values(true,true,false);
   opt.set_lower(lower);
+  dblvec upper = get_upper_values(true,true,false);
+  opt.set_upper(upper);
   opt.control.iprint = trace;
   opt.minimize(dl, start);
   calculate_var_par();
@@ -529,7 +534,15 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   opt.control.rhobeg = rhobeg;
   opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,false,false);
-  for(int i = 0; i< model.covariance.Q(); i++)start.push_back(re.u_(i,0));
+  dblvec lower = get_lower_values(true,false,false);
+  opt.set_lower(lower);
+  dblvec upper = get_upper_values(true,false,false);
+  opt.set_upper(upper);
+  for(int i = 0; i< model.covariance.Q(); i++){
+    start.push_back(re.u_(i,0));
+    lower.push_back(R_NegInf);
+    upper.push_back(R_PosInf);
+  }
   opt.control.iprint = trace;
   opt.minimize(ldl, start);
   calculate_var_par();
@@ -556,6 +569,8 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
   dblvec lower = get_lower_values(true,true,false);
   dblvec start = get_start_values(true,true,false);
   opt.set_lower(lower);
+  dblvec upper = get_upper_values(true,true,false);
+  opt.set_upper(upper);
   opt.control.iprint = trace;
   opt.control.npt = npt;
   opt.control.rhobeg = rhobeg;

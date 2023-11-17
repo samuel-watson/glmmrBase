@@ -105,10 +105,10 @@ Model <- R6::R6Class("Model",
                              ML <- chol(solve(M))
                              for(i in 1:sample_n){
                                u <- rnorm(length(b_curr))
-                               Model__update_beta(b_curr + ML%*%u)
-                               Xb[,i] <- self$mean$linear_predictor()
+                               Model__update_beta(private$ptr,b_curr + ML%*%u,private$model_type())
+                               Xb[,i] <- drop(Model__xb(private$ptr,private$model_type()))
                              }
-                             Model__update_beta(b_curr)
+                             Model__update_beta(private$ptr,b_curr,private$model_type())
                            }
                          } else {
                            Xb <- X%*%self$mean$parameters 
@@ -874,7 +874,6 @@ Model <- R6::R6Class("Model",
                              data$Z <- Model__ZL(private$ptr,private$model_type())
                              if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
                              if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
-                             data <<- data
                               capture.output(fit <- mod$sample(data = data,
                                                     chains = 1,
                                                     iter_warmup = self$mcmc_options$warmup,
