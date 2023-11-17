@@ -101,7 +101,7 @@ Model <- R6::R6Class("Model",
                            } else {
                              Xb <- matrix(NA,nrow=self$n(),ncol=sample_n)
                              b_curr <- Model__get_beta(private$ptr,private$model_type())
-                             M <- Model__information_matrix(private$ptr,private$model_type())
+                             M <- self$information_matrix()
                              ML <- chol(solve(M))
                              for(i in 1:sample_n){
                                u <- rnorm(length(b_curr))
@@ -608,10 +608,14 @@ Model <- R6::R6Class("Model",
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         if(include.re){
+                         if(include.re & !private$model_type()>0){
                            return(Model__obs_information_matrix(private$ptr,private$model_type()))
                          } else {
-                           return(Model__information_matrix(private$ptr,private$model_type()))
+                           if(private$model_type()==0){
+                             return(Model__information_matrix(private$ptr,private$model_type()))
+                           } else {
+                             return(Model__information_matrix_crude(private$ptr,private$model_type()))
+                           }
                          }
                        },
                        #' @description 
