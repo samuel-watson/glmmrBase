@@ -162,6 +162,8 @@ Covariance <- R6::R6Class("Covariance",
                           re <- re_names(self$formula)
                           cat("\U2BC8 Covariance")
                           cat("\n   \U2BA1 Terms:",re)
+                          if(private$type == 1)cat(" (NNGP)")
+                          if(private$type == 2)cat(" (HSGP)")
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
                         },
                         #' @description

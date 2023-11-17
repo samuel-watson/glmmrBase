@@ -84,24 +84,38 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description
                        #' Return fitted values. Does not account for the random effects. For simulated values based
-                       #' on resampling random effects, see `sim_data()`. To predict the values at a new location see 
+                       #' on resampling random effects, see also `sim_data()`. To predict the values including random effects at a new location see also
                        #' `predict()`.
                        #' @param type One of either "`link`" for values on the scale of the link function, or "`response`"
                        #' for values on the scale of the response
                        #' @param X (Optional) Fixed effects matrix to generate fitted values
                        #' @param u (Optional) Random effects values at which to generate fitted values
+                       #' @param sample Logical. If TRUE then the parameters will be re-sampled from their sampling distribution. Currently only works 
+                       #' with existing X matrix and not user supplied matrix X and this will also ignore any provided random effects.
+                       #' @param sample_n Integer. If sample is TRUE, then this is the number of samples.
                        #' @return A \link[Matrix]{Matrix} class object containing the predicted values
-                       fitted = function(type="link", X, u){
+                       fitted = function(type="link", X, u, sample= FALSE, sample_n = 100){
                          if(missing(X)){
-                           Xb <- self$mean$linear_predictor()
+                           if(!sample){
+                             Xb <- self$mean$linear_predictor()
+                           } else {
+                             Xb <- matrix(NA,nrow=self$n(),ncol=sample_n)
+                             b_curr <- Model__get_beta(private$ptr,private$model_type())
+                             M <- Model__information_matrix(private$ptr,private$model_type())
+                             ML <- chol(solve(M))
+                             for(i in 1:sample_n){
+                               u <- rnorm(length(b_curr))
+                               Model__update_beta(b_curr + ML%*%u)
+                               Xb[,i] <- self$mean$linear_predictor()
+                             }
+                             Model__update_beta(b_curr)
+                           }
                          } else {
                            Xb <- X%*%self$mean$parameters 
                          }
-                         
-                         if(!missing(u)){
+                         if(!missing(u) & !sample){
                            Xb <- Xb + self$covariance$Z%*%u
                          }
-                         
                          if(type=="response"){
                            Xb <- self$family$linkinv(Xb)
                          }
@@ -360,6 +374,8 @@ Model <- R6::R6Class("Model",
                          cat("\n   \U2223     \U2BA1 Parameters: ",self$mean$parameters)
                          cat("\n   \U2BA1 Covariance")
                          cat("\n   \U2223     \U2BA1 Terms: ",re_names(self$covariance$formula))
+                         if(private$model_type() == 1)cat(" (NNGP)")
+                         if(private$model_type() == 2)cat(" (HSGP)")
                          cat("\n   \U2223     \U2BA1 Parameters: ",self$covariance$parameters)
                          cat("\n   \U2223     \U2BA1 N random effects: ",ncol(self$covariance$Z))
                          cat("\n   \U2BA1 N:",self$n())
@@ -825,7 +841,7 @@ Model <- R6::R6Class("Model",
                          ## set up sampler
                          if(usestan){
                            if(!requireNamespace("cmdstanr")){
-                             stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
+                             stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                            } else {
                              if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
@@ -858,6 +874,7 @@ Model <- R6::R6Class("Model",
                              data$Z <- Model__ZL(private$ptr,private$model_type())
                              if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
                              if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
+                             data <<- data
                               capture.output(fit <- mod$sample(data = data,
                                                     chains = 1,
                                                     iter_warmup = self$mcmc_options$warmup,

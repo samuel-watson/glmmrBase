@@ -728,8 +728,10 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
   std::vector<MatrixXd> Sigmas;
   std::vector<MatrixXd> Xs;
   std::vector<glmmr::SigmaBlock> SB(matrix.get_sigma_blocks());
+#ifdef R_BUILD
   Rcpp::Rcout << "\n### Preparing data ###";
   Rcpp::Rcout << "\nThere are " << SB.size() << " independent blocks and " << model.n() << " cells.";
+#endif
   int maxprint = model.n() < 10 ? model.n() : 10;
   for(unsigned int i = 0 ; i < SB.size(); i++){
     sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),SB[i].RowIndexes);
@@ -746,10 +748,14 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
   int block_size;
   MatrixXd M(model.linear_predictor.P(),model.linear_predictor.P());
   int iter = 0;
+#ifdef R_BUILD
   Rcpp::Rcout << "\n### Starting optimisation ###";
+#endif
   while(diff > tol && iter < max_iter){
     iter++;
+#ifdef R_BUILD
     Rcpp::Rcout << "\nIteration " << iter << "\n------------\nweights: [" << weights.segment(0,maxprint).transpose() << " ...]";
+#endif
     //add check to remove weights that are below a certain threshold
     if((weights < 1e-8).any()){
       for(unsigned int i = 0 ; i < SB.size(); i++){
@@ -763,7 +769,9 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
             glmmr::Eigen_ext::removeColumn(ZDZ[i],idx);
             Sigmas[i].conservativeResize(ZDZ[i].rows(),ZDZ[i].cols());
             it = SB[i].RowIndexes.erase(it);
+#ifdef R_BUILD
             Rcpp::Rcout << "\n Removing point " << idx << " in block " << i;
+#endif
           } else {
             it++;
           }
@@ -785,13 +793,17 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
     //check if positive definite, if not remove the offending column(s)
     bool isspd = glmmr::Eigen_ext::issympd(M);
     if(isspd){
+#ifdef R_BUILD
       Rcpp::Rcout << "\n Information matrix not postive definite: ";
+#endif
       ArrayXd M_row_sums = M.rowwise().sum();
       int fake_it = 0;
       int countZero = 0;
       for(int j = 0; j < M_row_sums.size(); j++){
         if(M_row_sums(j) == 0){
+#ifdef R_BUILD
           Rcpp::Rcout << "\n   Removing column " << fake_it;
+#endif
           for(unsigned int k = 0; k < Xs.size(); k++){
             glmmr::Eigen_ext::removeColumn(Xs[k],fake_it);
           }
@@ -823,10 +835,12 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
     weights = weightsnew;
     Rcpp::Rcout << "\n(Max. diff: " << diff << ")\n";
   }
+#ifdef R_BUILD
   if(iter<max_iter){
     Rcpp::Rcout << "\n### CONVERGED Final weights: [" << weights.segment(0,maxprint).transpose() << "...]";
   } else {
     Rcpp::Rcout << "\n### NOT CONVERGED Reached maximum iterations";
   }
+#endif
   return weights;
 }

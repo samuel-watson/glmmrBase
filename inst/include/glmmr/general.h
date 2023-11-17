@@ -9,6 +9,8 @@
 // includes
 #ifdef R_BUILD
 #include <RcppEigen.h>
+#else
+#include <Eigen/Core>
 #endif
 #include <vector>
 #include <array>

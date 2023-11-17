@@ -228,7 +228,6 @@ template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   MatrixXd infomat = information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P(),model.linear_predictor.P()));
-  //infomat.conservativeResize(model.linear_predictor.P(),model.linear_predictor.P());
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
   MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
@@ -245,7 +244,6 @@ inline std::vector<MatrixXd> glmmr::ModelMatrix<modeltype>::sigma_derivatives(){
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
-  //if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,1);
@@ -297,7 +295,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
 
 template<typename modeltype>
 inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(){
-  //if(model.family.family=="gamma" || model.family.family=="beta")Rcpp::stop("Not currently supported for gamma or beta families");
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);

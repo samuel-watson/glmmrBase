@@ -95,3 +95,4 @@ inline void glmmr::Model<modeltype>::set_trace(int trace_){
     mcmc.verbose = false;
   }
 }
+

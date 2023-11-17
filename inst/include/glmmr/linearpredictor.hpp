@@ -180,3 +180,7 @@ inline VectorXd glmmr::LinearPredictor::predict_xb(const ArrayXXd& newdata_,
   VectorXd xb = newlinpred.xb() + newoffset_.matrix();
   return xb;
 }
+
+
+
+
