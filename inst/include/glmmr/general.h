@@ -23,7 +23,7 @@
 #include <cctype>
 #include <stack>
 #include <variant>
-#include <sparse.h>
+#include <SparseChol.h>
 #include <set>
 #include <queue>
 #include <boost/math/special_functions/bessel.hpp>
