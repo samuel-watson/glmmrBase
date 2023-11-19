@@ -18,12 +18,9 @@ class ModelMatrix{
     modeltype& model;
     glmmr::MatrixW<modeltype> W;
     glmmr::RandomEffects<modeltype>& re;
-    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
-    ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
-    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_): model(model_), W(model_), re(re_) { 
-      useBlock = useBlock_;
-      useSparse = useSparse_;
-      if(useBlock)gen_sigma_blocks();};
+    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_);
+    ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix);
+    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
     MatrixXd information_matrix();
     MatrixXd Sigma(bool inverse = false);
     MatrixXd observed_information_matrix();
@@ -49,6 +46,18 @@ class ModelMatrix{
 };
 
 }
+
+template<typename modeltype>
+inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
+
+template<typename modeltype>
+inline glmmr::ModelMatrix<modeltype>::ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
+
+template<typename modeltype>
+inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_): model(model_), W(model_), re(re_) { 
+  useBlock = useBlock_;
+  useSparse = useSparse_;
+  if(useBlock)gen_sigma_blocks();};
 
 template<typename modeltype>
 inline std::vector<glmmr::SigmaBlock> glmmr::ModelMatrix<modeltype>::get_sigma_blocks(){

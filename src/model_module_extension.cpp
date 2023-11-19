@@ -19,6 +19,13 @@ SEXP wrap(const matrix_matrix& x){
   ));
 }
 
+template<typename T1, typename T2> SEXP wrap( const std::pair<T1,T2>& _v ) {
+  return Rcpp::List::create(
+    Rcpp::Named("first")  = Rcpp::wrap<T1>( _v.first ),
+    Rcpp::Named("second") = Rcpp::wrap<T2>( _v.second )
+  );
+};
+
 template<>
 SEXP wrap(const kenward_data& x){
   return Rcpp::wrap(Rcpp::List::create(
@@ -27,6 +34,9 @@ SEXP wrap(const kenward_data& x){
       Rcpp::Named("dof") = Rcpp::wrap(x.dof)
   ));
 }
+
+
+
 }
 
 using namespace Rcpp;
@@ -70,6 +80,50 @@ SEXP Model__aic(SEXP xp, int type = 0){
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<double>(S));
+}
+
+// MarginType type, dydx, diff, ratio
+// const std::string& x,
+// const strvec& at,
+// const strvec& atmeans,
+// const strvec& average,
+// RandomEffectMargin re_type,
+// SE se_type,
+// const dblpair& xvals,
+// const dblvec& atvals,
+// const dblvec& atrevals
+// [[Rcpp::export]]
+SEXP Model__marginal(SEXP xp, 
+                     Rcpp::List x,
+                     Rcpp::List xtypes, 
+                     Rcpp::List values, 
+                     int type = 0){
+  
+  glmmrType model(xp,static_cast<Type>(type));
+  std::string xvar = as<std::string>(x["x"]);
+  std::vector<std::string> atvar = as<std::vector<std::string> >(x["at"]);
+  std::vector<std::string> atmeansvar = as<std::vector<std::string> >(x["atmeans"]);
+  std::vector<std::string> averagevar = as<std::vector<std::string> >(x["average"]);
+  int margintype = as<int>(xtypes["margin"]);
+  int retype = as<int>(xtypes["re"]);
+  int setype = as<int>(xtypes["se"]);
+  std::pair<double, double> xvals;
+  xvals.first = as<double>(values["xvals.first"]);
+  xvals.second = as<double>(values["xvals.second"]);
+  std::vector<double> atvals = as<std::vector<double> >(values["atvals"]);
+  std::vector<double> atrevals = as<std::vector<double> >(values["revals"]);
+  
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->marginal(static_cast<glmmr::MarginType>(margintype),
+                                      xvar,atvar,atmeansvar,averagevar,
+                                      static_cast<glmmr::RandomEffectMargin>(retype),
+                                      static_cast<glmmr::SE>(setype),
+                                      xvals,atvals,atrevals
+                                      ));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::pair<double,double> >(S));
 }
 
 // [[Rcpp::export]]

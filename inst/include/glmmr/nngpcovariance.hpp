@@ -13,32 +13,9 @@ public:
   MatrixXd A;
   VectorXd Dvec;
   int m = 10;
-  
-  nngpCovariance(const glmmr::Formula& formula,
-                 const ArrayXXd &data,
-                 const strvec& colnames,
-                 const dblvec& parameters) : Covariance(formula, data, colnames, parameters),  
-                  A(10,data.rows()), Dvec(data.rows()) {
-    isSparse = false;
-    parse_grid_data(data);
-    gen_AD();
-  }
-  
-  nngpCovariance(const glmmr::Formula& formula,
-                 const ArrayXXd &data,
-                 const strvec& colnames) : Covariance(formula, data, colnames),  
-                 A(10,data.rows()), Dvec(data.rows()) {
-    isSparse = false;
-    parse_grid_data(data);
-  }
-  
-  nngpCovariance(const glmmr::nngpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_),  
-    grid(cov.grid), A(grid.m,grid.N), Dvec(grid.N), m(cov.m) {
-    isSparse = false;
-    grid.genNN(m);
-    gen_AD();
-  }
-  
+  nngpCovariance(const glmmr::Formula& formula,const ArrayXXd &data,const strvec& colnames,const dblvec& parameters);
+  nngpCovariance(const glmmr::Formula& formula,const ArrayXXd &data,const strvec& colnames);
+  nngpCovariance(const glmmr::nngpCovariance& cov);
   MatrixXd D(bool chol = true, bool upper = false) override;
   MatrixXd ZL() override;
   MatrixXd LZWZL(const VectorXd& w) override;
@@ -60,6 +37,31 @@ public:
   
 };
 
+}
+
+inline glmmr::nngpCovariance::nngpCovariance(const glmmr::Formula& formula,
+               const ArrayXXd &data,
+               const strvec& colnames,
+               const dblvec& parameters) : Covariance(formula, data, colnames, parameters),  
+               A(10,data.rows()), Dvec(data.rows()) {
+  isSparse = false;
+  parse_grid_data(data);
+  gen_AD();
+}
+
+inline glmmr::nngpCovariance::nngpCovariance(const glmmr::Formula& formula,
+               const ArrayXXd &data,
+               const strvec& colnames) : Covariance(formula, data, colnames),  
+               A(10,data.rows()), Dvec(data.rows()) {
+  isSparse = false;
+  parse_grid_data(data);
+}
+
+inline glmmr::nngpCovariance::nngpCovariance(const glmmr::nngpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_),  
+grid(cov.grid), A(grid.m,grid.N), Dvec(grid.N), m(cov.m) {
+  isSparse = false;
+  grid.genNN(m);
+  gen_AD();
 }
 
 inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data){

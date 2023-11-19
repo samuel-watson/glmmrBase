@@ -231,6 +231,7 @@ inline bool parse_formula(std::vector<char>& formula,
                   calc.instructions.push_back(PushParameter);
                   str parname = "b_" + token_as_str2 + "_" + std::to_string(unique_values[i])[0];
                   calc.parameter_names.push_back(parname);
+                  calc.data_names.push_back(token_as_str2);
                   calc.indexes.push_back(calc.parameter_count);
                   calc.parameter_count++;
                 }
@@ -277,6 +278,7 @@ inline bool parse_formula(std::vector<char>& formula,
             #endif
             // token is the name of a variable
             calc.instructions.push_back(PushData);
+            calc.data_names.push_back(token_as_str);
             int column_index = colidx - colnames.begin();
             calc.indexes.push_back(calc.data_count);
             if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);

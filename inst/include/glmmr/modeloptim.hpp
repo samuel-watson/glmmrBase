@@ -22,11 +22,7 @@ public:
   glmmr::ModelMatrix<modeltype>& matrix;
   glmmr::RandomEffects<modeltype>& re;
   int trace = 0;
-  
-  ModelOptim(modeltype& model_, 
-             glmmr::ModelMatrix<modeltype>& matrix_,
-             glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
-  
+  ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
   virtual void update_beta(const dblvec &beta);
   virtual void update_theta(const dblvec &theta);
   virtual void update_beta(const VectorXd &beta);
@@ -172,6 +168,11 @@ protected:
 };
 
 }
+
+template<typename modeltype>
+inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
+           glmmr::ModelMatrix<modeltype>& matrix_,
+           glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){

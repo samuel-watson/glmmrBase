@@ -397,6 +397,10 @@ Model__aic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__aic`, xp, type)
 }
 
+Model__marginal <- function(xp, x, xtypes, values, type = 0L) {
+    .Call(`_glmmrBase_Model__marginal`, xp, x, xtypes, values, type)
+}
+
 Model__mcmc_set_lambda <- function(xp, lambda_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_lambda`, xp, lambda_, type))
 }

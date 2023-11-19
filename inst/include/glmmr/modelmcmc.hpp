@@ -19,18 +19,7 @@ public:
   glmmr::RandomEffects<modeltype>& re;
   bool verbose = true;
   int trace = 1;
-  
-  ModelMCMC(modeltype& model_, 
-             glmmr::ModelMatrix<modeltype>& matrix_,
-               glmmr::RandomEffects<modeltype>& re_) : 
-    model(model_), 
-    matrix(matrix_), 
-    re(re_),
-    u0(model.covariance.Q()),
-    up(model.covariance.Q()),
-    r(model.covariance.Q()),
-    grad(model.covariance.Q()){};
-  
+  ModelMCMC(modeltype& model_,glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_);
   double log_prob(const VectorXd &v);
   void mcmc_sample(int warmup_,int samples_,int adapt_ = 100);
   void mcmc_set_lambda(double lambda);
@@ -58,6 +47,18 @@ protected:
 };
 
 }
+
+template<typename modeltype>
+inline glmmr::ModelMCMC<modeltype>::ModelMCMC(modeltype& model_, 
+          glmmr::ModelMatrix<modeltype>& matrix_,
+          glmmr::RandomEffects<modeltype>& re_) : 
+  model(model_), 
+  matrix(matrix_), 
+  re(re_),
+  u0(model.covariance.Q()),
+  up(model.covariance.Q()),
+  r(model.covariance.Q()),
+  grad(model.covariance.Q()){};
 
 template<typename modeltype>
 inline double glmmr::ModelMCMC<modeltype>::log_prob(const VectorXd &v){

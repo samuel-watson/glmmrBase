@@ -1319,6 +1319,7 @@ Model <- R6::R6Class("Model",
                            }
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
+                           Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {
                            if(verbose)Model__set_trace(private$ptr,2, private$model_type())
@@ -1328,8 +1329,9 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh, private$model_type())
                            Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt, private$model_type())
                            dsamps <- Model__u(private$ptr,TRUE, private$model_type())
+                           dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% dsamps)
                          }
-                         return(dsamps)
+                         return(invisible(dsamps))
                        },
                        #' @description 
                        #' The gradient of the log-likelihood with respect to either the random effects or

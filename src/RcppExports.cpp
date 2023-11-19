@@ -1228,6 +1228,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__marginal
+SEXP Model__marginal(SEXP xp, Rcpp::List x, Rcpp::List xtypes, Rcpp::List values, int type);
+RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP xtypesSEXP, SEXP valuesSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type x(xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type xtypes(xtypesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__marginal(xp, x, xtypes, values, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__mcmc_set_lambda
 void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type);
 RcppExport SEXP _glmmrBase_Model__mcmc_set_lambda(SEXP xpSEXP, SEXP lambda_SEXP, SEXP typeSEXP) {
@@ -1587,6 +1602,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Covariance_hsgp__set_approx_pars, 3},
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
+    {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 5},
     {"_glmmrBase_Model__mcmc_set_lambda", (DL_FUNC) &_glmmrBase_Model__mcmc_set_lambda, 3},
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 3},
     {"_glmmrBase_Model__mcmc_set_refresh", (DL_FUNC) &_glmmrBase_Model__mcmc_set_refresh, 3},

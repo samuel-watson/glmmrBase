@@ -25,27 +25,28 @@ public:
   glmmr::calculator calc;
   glmmr::calculator vcalc;
   bool weighted = false;
-  ModelBits(const std::string& formula_,
-            const ArrayXXd& data_,
-            const strvec& colnames_,
-            std::string family_, 
-            std::string link_) : 
-    formula(formula_), 
-    covariance(formula,data_,colnames_),
-    linear_predictor(formula,data_,colnames_),
-    data(data_.rows()),
-    family(family_,link_) { setup_calculator(); };
-  
+  ModelBits(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
   virtual int n(){return linear_predictor.n();};
   virtual ArrayXd xb(){return linear_predictor.xb().array() + data.offset.array();};
   virtual void make_covariance_sparse();
   virtual void make_covariance_dense();
-  
 private:
   void setup_calculator();
 };
 
 }
+
+template<typename cov, typename linpred>
+inline glmmr::ModelBits<cov, linpred>::ModelBits(const std::string& formula_,
+          const ArrayXXd& data_,
+          const strvec& colnames_,
+          std::string family_, 
+          std::string link_) : 
+  formula(formula_), 
+  covariance(formula,data_,colnames_),
+  linear_predictor(formula,data_,colnames_),
+  data(data_.rows()),
+  family(family_,link_) { setup_calculator(); };
 
 template<typename cov, typename linpred>
 inline void glmmr::ModelBits<cov, linpred>::setup_calculator(){

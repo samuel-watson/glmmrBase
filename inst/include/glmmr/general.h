@@ -35,8 +35,8 @@
 #include <boost/random.hpp>
 #include <rbobyqa.h>
 
-
 using namespace Eigen;
+using namespace SparseOperators;
 
 typedef std::string str;
 typedef std::vector<str> strvec;
@@ -47,6 +47,8 @@ typedef std::vector<dblvec> dblvec2d;
 typedef std::vector<intvec> intvec2d;
 typedef std::vector<dblvec2d> dblvec3d;
 typedef std::vector<intvec2d> intvec3d;
+typedef std::pair<double, double> dblpair;
+typedef std::pair<std::string, double> strdblpair;
 
 // [[Rcpp::depends(BH)]]
 // [[Rcpp::depends(RcppEigen)]]
