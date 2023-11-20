@@ -1229,17 +1229,25 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__marginal
-SEXP Model__marginal(SEXP xp, Rcpp::List x, Rcpp::List xtypes, Rcpp::List values, int type);
-RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP xtypesSEXP, SEXP valuesSEXP, SEXP typeSEXP) {
+SEXP Model__marginal(SEXP xp, std::string x, int margin, int re, int se, Nullable<std::vector<std::string> > at, Nullable<std::vector<std::string> > atmeans, Nullable<std::vector<std::string> > average, double xvals_first, double xvals_second, Nullable<std::vector<double> > atvals, Nullable<std::vector<double> > revals, int type);
+RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP marginSEXP, SEXP reSEXP, SEXP seSEXP, SEXP atSEXP, SEXP atmeansSEXP, SEXP averageSEXP, SEXP xvals_firstSEXP, SEXP xvals_secondSEXP, SEXP atvalsSEXP, SEXP revalsSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type x(xSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type xtypes(xtypesSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type values(valuesSEXP);
+    Rcpp::traits::input_parameter< std::string >::type x(xSEXP);
+    Rcpp::traits::input_parameter< int >::type margin(marginSEXP);
+    Rcpp::traits::input_parameter< int >::type re(reSEXP);
+    Rcpp::traits::input_parameter< int >::type se(seSEXP);
+    Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type at(atSEXP);
+    Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type atmeans(atmeansSEXP);
+    Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type average(averageSEXP);
+    Rcpp::traits::input_parameter< double >::type xvals_first(xvals_firstSEXP);
+    Rcpp::traits::input_parameter< double >::type xvals_second(xvals_secondSEXP);
+    Rcpp::traits::input_parameter< Nullable<std::vector<double> > >::type atvals(atvalsSEXP);
+    Rcpp::traits::input_parameter< Nullable<std::vector<double> > >::type revals(revalsSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__marginal(xp, x, xtypes, values, type));
+    rcpp_result_gen = Rcpp::wrap(Model__marginal(xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1252,6 +1260,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type lambda_(lambda_SEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     Model__mcmc_set_lambda(xp, lambda_, type);
+    return R_NilValue;
+END_RCPP
+}
+// Model__print_names
+void Model__print_names(SEXP xp, bool data, bool parameters, int type);
+RcppExport SEXP _glmmrBase_Model__print_names(SEXP xpSEXP, SEXP dataSEXP, SEXP parametersSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< bool >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__print_names(xp, data, parameters, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1602,8 +1623,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Covariance_hsgp__set_approx_pars, 3},
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
-    {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 5},
+    {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 13},
     {"_glmmrBase_Model__mcmc_set_lambda", (DL_FUNC) &_glmmrBase_Model__mcmc_set_lambda, 3},
+    {"_glmmrBase_Model__print_names", (DL_FUNC) &_glmmrBase_Model__print_names, 4},
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 3},
     {"_glmmrBase_Model__mcmc_set_refresh", (DL_FUNC) &_glmmrBase_Model__mcmc_set_refresh, 3},
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 3},

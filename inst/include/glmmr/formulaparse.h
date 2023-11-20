@@ -229,9 +229,10 @@ inline bool parse_formula(std::vector<char>& formula,
                   calc.instructions.push_back(PushData);
                   // parameter
                   calc.instructions.push_back(PushParameter);
-                  str parname = "b_" + token_as_str2 + "_" + std::to_string(unique_values[i])[0];
+                  str dataname = token_as_str2 + "_" + std::to_string(unique_values[i])[0];
+                  str parname = "b_" + dataname;
                   calc.parameter_names.push_back(parname);
-                  calc.data_names.push_back(token_as_str2);
+                  calc.data_names.push_back(dataname);
                   calc.indexes.push_back(calc.parameter_count);
                   calc.parameter_count++;
                 }

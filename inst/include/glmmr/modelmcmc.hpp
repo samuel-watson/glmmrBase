@@ -62,7 +62,7 @@ inline glmmr::ModelMCMC<modeltype>::ModelMCMC(modeltype& model_,
 
 template<typename modeltype>
 inline double glmmr::ModelMCMC<modeltype>::log_prob(const VectorXd &v){
-  VectorXd zu = model.covariance.ZL_sparse() * v;
+  VectorXd zu = SparseOperators::operator*(model.covariance.ZL_sparse(), v);
   VectorXd mu = model.xb().matrix() + zu;
   double lp1 = 0;
   double lp2 = 0;
@@ -190,8 +190,8 @@ template<typename modeltype>
 inline void glmmr::ModelMCMC<modeltype>::mcmc_sample(int warmup_,
                                           int samples_,
                                           int adapt_){
-  if(re.u_.cols()!=samples_)re.u_.conservativeResize(NoChange,samples_);
-  if(re.u_.cols()!=re.zu_.cols())re.zu_.conservativeResize(NoChange,samples_);
+  if(re.u_.cols()!=samples_)re.u_.resize(NoChange,samples_);
+  if(re.zu_.cols()!=samples_)re.zu_.resize(NoChange,samples_);
   re.u_.setZero();
   sample(warmup_,samples_,adapt_);
   re.zu_ = model.covariance.ZLu(re.u_);

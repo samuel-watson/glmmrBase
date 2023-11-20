@@ -644,7 +644,7 @@ inline VectorXd glmmr::Covariance::sim_re(){
   } else {
     VectorXd zz(Q_);
     randomGaussian(generator, zz);
-    samps = matL * zz;
+    samps = SparseOperators::operator*(matL, zz);
   }
   
   return samps;
@@ -706,11 +706,14 @@ inline MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w){
 
 inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
   sparse ZL = ZL_sparse();
-  return ZL * u;
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if(ZL.m != u.rows())Rcpp::stop("ZL*u bad dimension: "+std::to_string(ZL.m)+" cols "+std::to_string(u.rows())+" rows");
+#endif
+  return SparseOperators::operator*(ZL,u);
 }
 
 inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
-  return matL * u;
+  return SparseOperators::operator*(matL, u);
 }
 
 inline double glmmr::Covariance::log_likelihood(const VectorXd &u){

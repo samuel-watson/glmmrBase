@@ -19,7 +19,6 @@ public:
   VectorXd W();
   void update();
 };
-
 }
 
 template<typename modeltype>

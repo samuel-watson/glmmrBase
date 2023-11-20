@@ -83,43 +83,43 @@ SEXP Model__aic(SEXP xp, int type = 0){
 }
 
 // MarginType type, dydx, diff, ratio
-// const std::string& x,
-// const strvec& at,
-// const strvec& atmeans,
-// const strvec& average,
-// RandomEffectMargin re_type,
-// SE se_type,
-// const dblpair& xvals,
-// const dblvec& atvals,
-// const dblvec& atrevals
 // [[Rcpp::export]]
 SEXP Model__marginal(SEXP xp, 
-                     Rcpp::List x,
-                     Rcpp::List xtypes, 
-                     Rcpp::List values, 
+                     std::string x,
+                     int margin = 0,
+                     int re = 3,
+                     int se = 0,
+                     Nullable<std::vector<std::string> > at = R_NilValue,
+                     Nullable<std::vector<std::string> > atmeans = R_NilValue,
+                     Nullable<std::vector<std::string> > average = R_NilValue,
+                     double xvals_first = 1,
+                     double xvals_second = 0,
+                     Nullable<std::vector<double> > atvals = R_NilValue,
+                     Nullable<std::vector<double> > revals = R_NilValue,
                      int type = 0){
   
   glmmrType model(xp,static_cast<Type>(type));
-  std::string xvar = as<std::string>(x["x"]);
-  std::vector<std::string> atvar = as<std::vector<std::string> >(x["at"]);
-  std::vector<std::string> atmeansvar = as<std::vector<std::string> >(x["atmeans"]);
-  std::vector<std::string> averagevar = as<std::vector<std::string> >(x["average"]);
-  int margintype = as<int>(xtypes["margin"]);
-  int retype = as<int>(xtypes["re"]);
-  int setype = as<int>(xtypes["se"]);
+  std::vector<std::string> atvar;
+  std::vector<std::string> atmeansvar;
+  std::vector<std::string> averagevar;
+  std::vector<double> atxvals;
+  std::vector<double> atrevals;
+  if(at.isNotNull())atvar = as<std::vector<std::string> >(at);
+  if(atmeans.isNotNull())atmeansvar = as<std::vector<std::string> >(atmeans);
+  if(average.isNotNull())averagevar = as<std::vector<std::string> >(average);
   std::pair<double, double> xvals;
-  xvals.first = as<double>(values["xvals.first"]);
-  xvals.second = as<double>(values["xvals.second"]);
-  std::vector<double> atvals = as<std::vector<double> >(values["atvals"]);
-  std::vector<double> atrevals = as<std::vector<double> >(values["revals"]);
+  xvals.first = xvals_first;
+  xvals.second = xvals_second;
+  if(atvals.isNotNull())atxvals = as<std::vector<double> >(atvals);
+  if(revals.isNotNull())atrevals = as<std::vector<double> >(revals);
   
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [&](auto ptr){return returnType(ptr->marginal(static_cast<glmmr::MarginType>(margintype),
-                                      xvar,atvar,atmeansvar,averagevar,
-                                      static_cast<glmmr::RandomEffectMargin>(retype),
-                                      static_cast<glmmr::SE>(setype),
-                                      xvals,atvals,atrevals
+    [&](auto ptr){return returnType(ptr->marginal(static_cast<glmmr::MarginType>(margin),
+                                      x,atvar,atmeansvar,averagevar,
+                                      static_cast<glmmr::RandomEffectMargin>(re),
+                                      static_cast<glmmr::SE>(se),
+                                      xvals,atxvals,atrevals
                                       ));}
   };
   auto S = std::visit(functor,model.ptr);
@@ -133,6 +133,16 @@ void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
   auto functor = overloaded {
     [](int) {}, 
     [&lambda](auto ptr){ptr->mcmc.mcmc_set_lambda(lambda);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+void Model__print_names(SEXP xp, bool data, bool parameters, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&](auto ptr){ptr->model.linear_predictor.calc.print_names(data,parameters);}
   };
   std::visit(functor,model.ptr);
 }

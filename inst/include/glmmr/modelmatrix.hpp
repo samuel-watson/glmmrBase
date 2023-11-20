@@ -483,10 +483,10 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   sparse ZLt = model.covariance.ZL_sparse();
   sparse ZL = ZLt;
   ZLt.transpose();
-  size_n_array += (ZL*v).array();
+  size_n_array += SparseOperators::operator*(ZL,v).array();
   
   if(beta){
-    VectorXd zuOffset = ZL*v;
+    VectorXd zuOffset = SparseOperators::operator*(ZL,v);
     zuOffset += model.data.offset;
     MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
     size_p_array = J.transpose().rowwise().sum().array();

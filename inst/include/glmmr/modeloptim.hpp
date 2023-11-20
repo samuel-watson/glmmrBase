@@ -274,12 +274,8 @@ template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
   if(beta){
-    for(int i =0 ; i < model.linear_predictor.P(); i++)start.push_back(model.linear_predictor.parameters[i]);
-    if(theta){
-      for(int i=0; i< model.covariance.npar(); i++) {
-        start.push_back(model.covariance.parameters_[i]);
-      }
-    }
+    for(const auto& i: model.linear_predictor.parameters)start.push_back(i);
+    if(theta)for(const auto& j: model.covariance.parameters_)start.push_back(j);
   } else {
     start = model.covariance.parameters_;
   }
@@ -749,13 +745,13 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
   Rcpp::Rcout << "\nThere are " << SB.size() << " independent blocks and " << model.n() << " cells.";
 #endif
   int maxprint = model.n() < 10 ? model.n() : 10;
-  for(unsigned int i = 0 ; i < SB.size(); i++){
-    sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),SB[i].RowIndexes);
+  for(auto& sb: SB){
+    sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sb.RowIndexes);
     MatrixXd ZL = sparse_to_dense(ZLs,false);
     MatrixXd S = ZL * ZL.transpose();
     ZDZ.push_back(S);
     Sigmas.push_back(S);
-    ArrayXi rows = Map<ArrayXi,Unaligned>(SB[i].RowIndexes.data(),SB[i].RowIndexes.size());
+    ArrayXi rows = Map<ArrayXi,Unaligned>(sb.RowIndexes.data(),sb.RowIndexes.size());
     MatrixXd X = glmmr::Eigen_ext::submat(model.linear_predictor.X(),rows,ArrayXi::LinSpaced(model.linear_predictor.P(),0,model.linear_predictor.P()-1));
     Xs.push_back(X);
   }
