@@ -1424,7 +1424,7 @@ Model <- R6::R6Class("Model",
                        #' Calculates the marginal effect of variable x. There are several options for 
                        #' marginal effect and several types of conditioning or averaging. The type of marginal
                        #' effect can be the derivative of the mean with respect to x (`dydx`), the expected 
-                       #' difference E(y|x=a)-E(y|x=b) (`diff`), or the expected ratio E(y|x=a)/E(y|x=b) (`ratio`).
+                       #' difference E(y|x=a)-E(y|x=b) (`diff`), or the expected log ratio log(E(y|x=a)/E(y|x=b)) (`ratio`).
                        #' Other fixed effect variables can be set at specific values (`at`), set at their mean values
                        #' (`atmeans`), or averaged over (`average`). Averaging over a fixed effects variable here means
                        #' using all observed values of the variable in the relevant calculation. 
@@ -1440,7 +1440,7 @@ Model <- R6::R6Class("Model",
                        #' factor variables are specified as the name of the `variable_value`, e.g. `t_1`. To see the names
                        #' of the stored parameters and data variables see the member function `names()`.
                        #' @param x String. Name of the variable to calculate the marginal effect for.
-                       #' @param type String. Either `dydx` for derivative, `diff` for difference, or `ratio` for ratio. See description.
+                       #' @param type String. Either `dydx` for derivative, `diff` for difference, or `ratio` for log ratio. See description.
                        #' @param re String. Either `estimated` to condition on estimated values, `zero` to set to zero, `at` to
                        #' provide specific values, or `average` to average over the random effects.
                        #' @param se String. Type of standard error to use, either `GLS` for the GLS standard errors, `KR` for 

@@ -8,8 +8,8 @@ using namespace Eigen;
 
 class griddata {
 public:
-  int N; // number of cells
   ArrayXXd X = ArrayXXd::Constant(1,1,1); // centroids
+  int N; // number of cells
   ArrayXXi NN = ArrayXXi::Constant(1,1,1);
   int m = 10;
   griddata(){};
