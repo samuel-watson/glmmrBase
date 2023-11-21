@@ -1291,7 +1291,7 @@ None. Called for effects.
 Calculates the marginal effect of variable x. There are several options for
 marginal effect and several types of conditioning or averaging. The type of marginal
 effect can be the derivative of the mean with respect to x (\code{dydx}), the expected
-difference E(y|x=a)-E(y|x=b) (\code{diff}), or the expected ratio E(y|x=a)/E(y|x=b) (\code{ratio}).
+difference E(y|x=a)-E(y|x=b) (\code{diff}), or the expected log ratio log(E(y|x=a)/E(y|x=b)) (\code{ratio}).
 Other fixed effect variables can be set at specific values (\code{at}), set at their mean values
 (\code{atmeans}), or averaged over (\code{average}). Averaging over a fixed effects variable here means
 using all observed values of the variable in the relevant calculation.
@@ -1326,7 +1326,7 @@ of the stored parameters and data variables see the member function \code{names(
 \describe{
 \item{\code{x}}{String. Name of the variable to calculate the marginal effect for.}
 
-\item{\code{type}}{String. Either \code{dydx} for derivative, \code{diff} for difference, or \code{ratio} for ratio. See description.}
+\item{\code{type}}{String. Either \code{dydx} for derivative, \code{diff} for difference, or \code{ratio} for log ratio. See description.}
 
 \item{\code{re}}{String. Either \code{estimated} to condition on estimated values, \code{zero} to set to zero, \code{at} to
 provide specific values, or \code{average} to average over the random effects.}
