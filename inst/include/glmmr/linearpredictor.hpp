@@ -19,14 +19,14 @@ public:
   LinearPredictor(const glmmr::LinearPredictor& linpred);
   virtual void update_parameters(const dblvec& parameters_);
   virtual void update_parameters(const Eigen::ArrayXd& parameters_);
-  int P();
-  int n();
-  strvec colnames();
+  int P() const;
+  int n() const;
+  strvec colnames() const;
   virtual VectorXd xb();
   virtual MatrixXd X();
-  strvec parameter_names();
+  strvec parameter_names() const;
   VectorXd parameter_vector();
-  bool any_nonlinear();
+  bool any_nonlinear() const;
   virtual VectorXd predict_xb(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
 protected:
   strvec colnames_vec;
@@ -136,15 +136,15 @@ inline void glmmr::LinearPredictor::update_parameters(const Eigen::ArrayXd& para
   update_parameters(new_parameters);
 };
 
-inline int glmmr::LinearPredictor::P(){
+inline int glmmr::LinearPredictor::P() const{
   return P_;
 }
 
-inline int glmmr::LinearPredictor::n(){
+inline int glmmr::LinearPredictor::n() const{
   return n_;
 }
 
-inline strvec glmmr::LinearPredictor::colnames(){
+inline strvec glmmr::LinearPredictor::colnames() const{
   return colnames_vec;
 }
 
@@ -156,7 +156,6 @@ inline VectorXd glmmr::LinearPredictor::xb(){
     Map<VectorXd> beta(parameters.data(),parameters.size());
     xb = X_ * beta;
   }
-  
   return xb;
 }
 
@@ -167,7 +166,7 @@ inline MatrixXd glmmr::LinearPredictor::X(){
   return X_;
 }
 
-inline strvec glmmr::LinearPredictor::parameter_names(){
+inline strvec glmmr::LinearPredictor::parameter_names() const{
   return calc.parameter_names;
 }
 
@@ -176,12 +175,12 @@ inline VectorXd glmmr::LinearPredictor::parameter_vector(){
   return pars;
 }
 
-inline bool glmmr::LinearPredictor::any_nonlinear(){
+inline bool glmmr::LinearPredictor::any_nonlinear() const{
   return calc.any_nonlinear;
 }
 
 inline VectorXd glmmr::LinearPredictor::predict_xb(const ArrayXXd& newdata_,
-                    const ArrayXd& newoffset_){
+                    const ArrayXd& newoffset_) {
   LinearPredictor newlinpred(form,newdata_,colnames());
   newlinpred.update_parameters(parameters);
   VectorXd xb = newlinpred.xb() + newoffset_.matrix();

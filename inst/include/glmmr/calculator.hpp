@@ -14,15 +14,6 @@ enum class CalcDyDx {
 
 namespace glmmr {
 
-// sets what the calculator differentiates over
-// None provides only calculation
-// BetaFirst provides first order wrt beta
-// BetaSecond provides first and second order wrt beta
-// XBeta provides first derivative wrt data and then wrt beta - the variable is set with the parameterIndex parameter
-// Zu provides derivate wrt random effects - currently assuming random effect is provided with 
-//  pushExtraData instruction. Currently only permits first order derivatives.
-
-
 class calculator {
   public:
     std::vector<Instruction> instructions;
@@ -45,7 +36,7 @@ class calculator {
                      const int j = 0,
                      const int parameterIndex = 0,
                      const double extraData = 0.0,
-                     const int n = 0);
+                     const int n = 0) const;
     
     calculator& operator= (const glmmr::calculator& calc);
     VectorXd linear_predictor(const dblvec& parameters,const MatrixXd& data);
@@ -54,8 +45,8 @@ class calculator {
     MatrixXd jacobian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     matrix_matrix jacobian_and_hessian(const dblvec& parameters,const MatrixXd& data,const MatrixXd& extraData);
     vector_matrix jacobian_and_hessian(const dblvec& parameters);
-    void print_instructions();
-    void print_names(bool data = true, bool parameters = false);
+    void print_instructions() const;
+    void print_names(bool data = true, bool parameters = false) const;
 };
 
 }
@@ -221,7 +212,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
                                            const int j,
                                            const int parameterIndex,
                                            const double extraData,
-                                           const int n){
+                                           const int n) const {
   using enum Instruction;
   using enum CalcDyDx;
   int idx_iter = 0;
@@ -1154,7 +1145,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
   return result;
 }
 
-inline void glmmr::calculator::print_instructions(){
+inline void glmmr::calculator::print_instructions() const {
   //currently only setup for R
   #ifdef R_BUILD
   using enum Instruction;
@@ -1214,7 +1205,7 @@ inline void glmmr::calculator::print_instructions(){
   #endif
 }
 
-inline void glmmr::calculator::print_names(bool data, bool parameters){
+inline void glmmr::calculator::print_names(bool data, bool parameters) const{
   #ifdef R_BUILD
   if(data){
     Rcpp::Rcout << "\nData names: \n";

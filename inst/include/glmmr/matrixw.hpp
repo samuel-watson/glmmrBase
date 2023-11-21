@@ -16,30 +16,36 @@ public:
   VectorXd W_ = VectorXd::Constant(1,1.0);
   modeltype& model;
   MatrixW(modeltype& model_): model(model_) { update(); };
-  VectorXd W();
+  VectorXd W() const;
   void update();
 };
 }
 
 template<typename modeltype>
-inline VectorXd glmmr::MatrixW<modeltype>::W(){
+inline VectorXd glmmr::MatrixW<modeltype>::W() const{
   return W_;
 }
 
 template<typename modeltype>
 inline void glmmr::MatrixW<modeltype>::update(){
+  using enum FamilyDistribution;
   if(W_.size() != model.n())W_.conservativeResize(model.n());
   ArrayXd nvar_par(model.n());
   ArrayXd xb(model.n());
-  if(model.family.family=="gaussian"){
+  switch(model.family.family){
+  case gaussian:
     nvar_par = model.data.variance;
-  } else if(model.family.family=="Gamma"){
+    break;
+  case gamma:
     nvar_par = model.data.variance.inverse();
-  } else if(model.family.family=="beta"){
+    break;
+  case beta:
     nvar_par = (1+model.data.variance);
-  } else if(model.family.family=="binomial"){
+    break;
+  case binomial:
     nvar_par = model.data.variance.inverse();
-  } else {
+    break;
+  default:
     nvar_par.setConstant(1.0);
   }
   

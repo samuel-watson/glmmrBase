@@ -219,18 +219,21 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
   ArrayXd xb(model.xb());
   
   if(model.weighted){
-    if(model.family.family=="gaussian"){
+    if(model.family.family==FamilyDistribution::gaussian){
 #pragma omp parallel for reduction (+:ll) collapse(2)
       for(int j=0; j<re.Zu().cols() ; j++){
         for(int i = 0; i<model.n(); i++){
-          ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),model.data.variance(i)/model.data.weights(i),model.family.flink);
+          ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+                                             model.data.variance(i)/model.data.weights(i),
+                                             model.family.family,model.family.link);
         }
       }
     } else {
 #pragma omp parallel for reduction (+:ll) collapse(2)
       for(int j=0; j<re.Zu().cols() ; j++){
         for(int i = 0; i<model.n(); i++){
-          ll += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),model.data.variance(i),model.family.flink);
+          ll += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+                                   model.data.variance(i),model.family.family,model.family.link);
         }
       }
       ll *= model.data.weights.sum()/model.n();
@@ -239,7 +242,9 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
 #pragma omp parallel for reduction (+:ll) collapse(2)
     for(int j=0; j<re.Zu().cols() ; j++){
       for(int i = 0; i<model.n(); i++){
-        ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),model.data.variance(i),model.family.flink);
+        ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+                                           model.data.variance(i),model.family.family,
+                                           model.family.link);
       }
     }
   }
@@ -279,7 +284,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
   } else {
     start = model.covariance.parameters_;
   }
-  if(var && (model.family.family=="gaussian"||model.family.family=="Gamma"||model.family.family=="beta")){
+  if(var && (model.family.family==FamilyDistribution::gaussian||model.family.family==FamilyDistribution::gamma||model.family.family==FamilyDistribution::beta)){
     start.push_back(model.data.var_par);
   }
   return start;
@@ -315,7 +320,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool the
       lower.push_back(1e-6);
     }
   }
-  if(var && (model.family.family=="gaussian"||model.family.family=="Gamma"||model.family.family=="beta")){
+  if(var && (model.family.family==FamilyDistribution::gaussian||model.family.family==FamilyDistribution::gamma||model.family.family==FamilyDistribution::beta)){
     lower.push_back(0.0);
   }
   return lower;
@@ -338,7 +343,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
       upper.push_back(R_PosInf);
     }
   }
-  if(var && (model.family.family=="gaussian"||model.family.family=="Gamma"||model.family.family=="beta")){
+  if(var && (model.family.family==FamilyDistribution::gaussian||model.family.family==FamilyDistribution::gamma||model.family.family==FamilyDistribution::beta)){
     upper.push_back(R_PosInf);
   }
   return upper;
@@ -346,6 +351,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::nr_beta(){
+  using enum FamilyDistribution;
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
@@ -358,24 +364,30 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     MatrixXd XtXW = MatrixXd::Zero(model.linear_predictor.P()*niter,model.linear_predictor.P());
     MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
     ArrayXd nvar_par(model.n());
-    if(model.family.family=="gaussian"){
-      nvar_par = model.data.variance;
-    } else if(model.family.family=="Gamma"){
-      nvar_par = model.data.variance.inverse();
-    } else if(model.family.family=="beta"){
-      nvar_par = (1+model.data.variance);
-    } else if(model.family.family=="binomial"){
-      nvar_par = model.data.variance.inverse();
-    } else {
-      nvar_par.setConstant(1.0);
+    switch(model.family.family){
+      case gaussian:
+        nvar_par = model.data.variance;
+        break;
+      case gamma:
+        nvar_par = model.data.variance.inverse();
+        break;
+      case beta:
+        nvar_par = (1+model.data.variance);
+        break;
+      case binomial:
+        nvar_par = model.data.variance.inverse();
+        break;
+      default:
+        nvar_par.setConstant(1.0);
     }
+    
 #pragma omp parallel for
     for(int i = 0; i < niter; ++i){
       VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
       w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
       VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
       VectorXd dmu = glmmr::maths::detadmu(zd.col(i),model.family.link);
-      if(model.family.family == "binomial"){
+      if(model.family.family == binomial){
         zdu = zdu.cwiseProduct(model.data.variance.matrix());
         dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
       }
@@ -404,7 +416,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   MatrixXd infomat = matrix.observed_information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P()+model.covariance.Q(),model.linear_predictor.P()+model.covariance.Q()));
   VectorXd zdu =  glmmr::maths::mod_inv_func(zd, model.family.link);
-  if(model.family.family == "binomial"){
+  if(model.family.family == FamilyDistribution::binomial){
     zdu = zdu.cwiseProduct(model.data.variance.matrix());
     dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
   }
@@ -439,7 +451,7 @@ inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
-  if(model.family.family=="gaussian"){
+  if(model.family.family==FamilyDistribution::gaussian){
     // revise this for beta and Gamma re residuals
     int niter = re.u(false).cols();
     ArrayXd sigmas(niter);
@@ -620,7 +632,7 @@ inline double glmmr::ModelOptim<modeltype>::F_likelihood::operator()(const dblve
   dblvec theta(last1,last2);
   M.update_beta(beta);
   M.update_theta(theta);
-  if(M.model.family.family=="gaussian" || M.model.family.family=="Gamma" || M.model.family.family=="beta")M.update_var_par(par[M.model.linear_predictor.P()+G]);
+  if(M.model.family.family==FamilyDistribution::gaussian || M.model.family.family==FamilyDistribution::gamma || M.model.family.family==FamilyDistribution::beta)M.update_var_par(par[M.model.linear_predictor.P()+G]);
   ll = M.full_log_likelihood();
   if(importance){
     return -1.0 * log(exp(ll)/ exp(denomD));
@@ -640,7 +652,7 @@ inline double glmmr::ModelOptim<modeltype>::LA_likelihood::operator()(const dblv
   M.update_u(v);
   logl = v.col(0).transpose()*v.col(0);
   ll = M.log_likelihood();
-  if(M.model.family.family!="gaussian"){
+  if(M.model.family.family!=FamilyDistribution::gaussian){
     M.matrix.W.update();
     LZWZL = M.model.covariance.LZWZL(M.matrix.W.W());
     LZWdet = glmmr::maths::logdet(LZWZL);

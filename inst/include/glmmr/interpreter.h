@@ -5,24 +5,23 @@
 
 namespace glmmr {
 
-inline std::vector<Instruction> interpret_re(const std::string& fn){
-  
+inline std::vector<Instruction> interpret_re(const CovarianceFunction& fn){
   using instructs = std::vector<Instruction>;
   using enum Instruction;
-  // instruction lists for calculation of covariance functions
+  using enum CovarianceFunction;
   instructs B;
-  switch(string_to_case.at(fn)){
-  case 1:
+  switch(fn){
+  case gr:
     B = {PushParameter}; 
     break;
-  case 2:
+  case ar:
     B.push_back(PushParameter);
     B.push_back(PushCovData);
     B.push_back(PushParameter);
     B.push_back(Power);
     B.push_back(Multiply);
     break;
-  case 3:
+  case fexp0:
      {
       const instructs C = {Divide,Negate,Exp};
       B.push_back(PushParameter);
@@ -30,7 +29,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C.begin(), C.end());
       break;
      }
-  case 4:
+  case fexp:
     {
        const instructs C = {Divide,Negate,Exp,PushParameter,Multiply};  //var par here
        B.push_back(PushParameter);
@@ -38,27 +37,21 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
        B.insert(B.end(), C.begin(), C.end());
        break;
     }
-  case 5:
+  case sqexp0:
     {
-      const instructs C1 = {PushParameter,PushParameter,Multiply};
-      const instructs C2 = {Multiply,Divide,Negate,Exp};
+      const instructs C1 = {PushParameter,Square,PushCovData,Square,Divide,Negate,Exp};
       B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(PushCovData);
-      B.push_back(PushCovData);
+      break;
+    }
+  case sqexp:
+    {
+      const instructs C1 = {PushParameter,Square};
+      const instructs C2 = {PushCovData,Square,Divide,Negate,Exp,PushParameter,Multiply};
+      B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), C2.begin(), C2.end());
       break;
     }
-  case 6:
-    {
-      const instructs C1 = {PushParameter,PushParameter,Multiply};
-      const instructs C2 = {Multiply,Divide,Negate,Exp,PushParameter,Multiply};
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(PushCovData);
-      B.push_back(PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      break;
-    }
-  case 7:
+  case bessel:
     {
       const instructs C = {Divide,Bessel};
       B.push_back(PushParameter);
@@ -66,7 +59,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
-  case 8:
+  case matern:
     {
       const instructs C1 = {PushParameter,Gamma,PushParameter,Int1,Subtract,Int2,Power,Divide,
                           Int2,PushParameter,Multiply,Sqrt,PushParameter};
@@ -80,7 +73,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
-  case 9:
+  case wend0:
     {
       const instructs C = {Int1,Subtract,Power,Multiply};
       B.push_back(PushParameter);
@@ -89,7 +82,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
-  case 10:
+  case wend1:
     {
       const instructs C1 = {PushParameter,PushParameter,Int1,Add};
       const instructs C2 = {Multiply,Int1,Add,Multiply,PushParameter,Int1,Add};
@@ -101,7 +94,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
-  case 11:
+  case wend2:
     {
       const instructs C1 = {PushParameter,Int1};
       const instructs C2 = {Int2,PushParameter,Add,Multiply,Add,Int3,Int1,Subtract,Int1,
@@ -118,7 +111,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C4.begin(), C4.end());
       break;
     }
-  case 12:
+  case prodwm:
     {
       const instructs C1 = {PushParameter,PushParameter,Gamma,PushParameter,Int1,Subtract,Int2,Power,Divide,
                             Multiply,PushParameter};
@@ -142,7 +135,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
-  case 13:
+  case prodcb:
     {
       const instructs C1 = {Power,Int1,Subtract,Int3,Negate,Power,PushParameter,Multiply};
       const instructs C2 = {Pi,Multiply,Cos};
@@ -158,7 +151,7 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.push_back(PushCovData);
       break;
     }
-  case 14:
+  case prodek:
     {
       const instructs C1 = {Power,Negate,Exp,PushParameter,Int2,Pi};
       const instructs C2 = {Multiply,Multiply,Int2,Pi};
@@ -180,12 +173,12 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
       B.insert(B.end(), C6.begin(), C6.end());
       break;
     }
-  case 15: case 16:
+  case ar1: case ar0:
     B.push_back(PushCovData);
     B.push_back(PushParameter);
     B.push_back(Power);
     break;
-  case 17:
+  case dist:
     B.push_back(PushCovData);
     break;
   }
@@ -193,9 +186,10 @@ inline std::vector<Instruction> interpret_re(const std::string& fn){
 }
 
 //add in the indexes for each function
-inline intvec interpret_re_par(const std::string& fn,
+inline intvec interpret_re_par(const CovarianceFunction& fn,
                                const int col_idx,
                                const intvec& par_idx){
+  using enum CovarianceFunction;
   intvec B;
 
   auto addA = [&] (){
@@ -208,36 +202,36 @@ inline intvec interpret_re_par(const std::string& fn,
   };
   
   
-  switch(string_to_case.at(fn)){
-  case 1:
+  switch(fn){
+  case gr:
     B.push_back(par_idx[0]);
     break;
-  case 2: 
+  case ar: 
     B.push_back(par_idx[0]);
     addA();
     B.push_back(par_idx[1]);
     break;
-  case 3: case 7:
+  case fexp0: case bessel:
     B.push_back(par_idx[0]);
     addA();
     break;
-  case 4:
+  case fexp:
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
     break;
-  case 5:
+  case sqexp0:
     addPar2(0);
     addA();
     addA();
     break;
-  case 6:
+  case sqexp:
     addPar2(1);
     addA();
     addA();
     B.push_back(par_idx[0]);
     break;
-  case 8:
+  case matern:
     addPar2(0);
     addPar2(0);
     B.push_back(par_idx[1]);
@@ -247,17 +241,17 @@ inline intvec interpret_re_par(const std::string& fn,
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 9:
+  case wend0:
     B.push_back(par_idx[0]);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 10:
+  case wend1:
     addPar2(0);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 11:
+  case wend2:
     B.push_back(par_idx[0]);
     addA();
     addPar2(1);
@@ -266,7 +260,7 @@ inline intvec interpret_re_par(const std::string& fn,
     B.push_back(par_idx[1]);
     addA();
     break;
-  case 12:
+  case prodwm:
     B.push_back(par_idx[0]);
     addPar2(1);
     addPar2(0);
@@ -277,7 +271,7 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 13:
+  case prodcb:
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
@@ -285,7 +279,7 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 14:
+  case prodek:
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
@@ -295,11 +289,11 @@ inline intvec interpret_re_par(const std::string& fn,
     addA();
     addA();
     break;
-  case 15: case 16:
+  case ar1: case ar0:
     addA();
     B.push_back(par_idx[0]);
     break;
-  case 17:
+  case dist:
     addA();
     break;
   }
@@ -325,28 +319,29 @@ inline void re_linear_predictor(glmmr::calculator& calc,
 }
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,
-                                     const str& link){
+                                     const LinkDistribution link){
   using instructs = std::vector<Instruction>;
   using enum Instruction;
+  using enum LinkDistribution;
   instructs out;
   instructs addzu = {PushExtraData,Add};
   calc.instructions.insert(calc.instructions.end(),addzu.begin(),addzu.end());
   
-  switch (link_to_case.at(link)) {
-  case 1:
+  switch (link) {
+  case logit:
     {
       out = calc.instructions;
       instructs logit_instruct = {Negate,Exp,Int1,Add,Int1,Divide};
       out.insert(out.end(),logit_instruct.begin(),logit_instruct.end());
       break;
     }
-  case 2:
+  case loglink:
     {
       out = calc.instructions;
       out.push_back(Exp);
       break;
     }
-  case 3:
+  case probit:
     {
       // probit is a pain because of the error function!
       // this uses Abramowitz and Stegun approximation.
@@ -388,12 +383,12 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
       out.push_back(Subtract);
       break;
     }
-  case 4:
+  case identity:
     {
       out = calc.instructions;
       break;
     }
-  case 5:
+  case inverse:
     {
       out = calc.instructions;
       instructs inverse_instruct = {Int1,Divide};
@@ -406,14 +401,15 @@ inline void linear_predictor_to_link(glmmr::calculator& calc,
 }
 
 inline void link_to_likelihood(glmmr::calculator& calc,
-                               const str& family){
+                               const FamilyDistribution family){
   using instructs = std::vector<Instruction>;
   using enum Instruction;
+  using enum FamilyDistribution;
   instructs out;
   intvec idx;
   
-  switch (family_to_case.at(family)){
-    case 1:
+  switch (family){
+    case gaussian:
       {
         instructs gaus_instruct = {PushY,Subtract,Square,Divide,Int2,Int1,Divide,Multiply,Int2,Pi,Multiply,
                                   Log,Int2,Int1,Divide,Multiply,Add,PushVariance,Log,Int2,Int1,Divide,
@@ -424,7 +420,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),gaus_instruct.begin(),gaus_instruct.end());
         break;
       }
-    case 2:
+    case bernoulli:
       {
         instructs binom_instruct = {Log,Multiply,PushY,Int1,Subtract};
         instructs binom_instruct2 = {Int1,Subtract,Log,Multiply,Add};
@@ -437,7 +433,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),binom_instruct2.begin(),binom_instruct2.end());
         break;
       }
-    case 3:
+    case poisson:
       {
         instructs poisson_instruct = {PushY,LogFactorialApprox,Add,PushY};
         instructs poisson_instruct2 = {Log,Multiply,Subtract};
@@ -449,7 +445,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),poisson_instruct2.begin(),poisson_instruct2.end());
         break;
       }
-    case 4:
+    case gamma:
       {
         instructs gamma_instruct = {PushVariance,PushY,Multiply,Divide};
         // instructs gamma_instruct2 = {PushVariance,PushY,Multiply,Divide,Log,PushVariance,Multiply,Subtract,
@@ -464,7 +460,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),gamma_instruct2.begin(),gamma_instruct2.end());
         break;
       }
-    case 5:
+    case beta:
       {
         instructs beta_instruct = {PushVariance,Subtract,PushY,Log,Multiply,Int1};
         instructs beta_instruct2 = {Int1,Subtract,PushVariance,Multiply,Subtract,PushY,Int1,Subtract,Log,
@@ -487,7 +483,7 @@ inline void link_to_likelihood(glmmr::calculator& calc,
         out.insert(out.end(),beta_instruct4.begin(),beta_instruct4.end());
         break;
       }
-    case 6:
+    case binomial:
       {
         instructs binom_instruct = {PushY,LogFactorialApprox,PushY,PushVariance,Subtract,Add,PushVariance,
                                  LogFactorialApprox,Add};

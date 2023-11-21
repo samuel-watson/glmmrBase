@@ -26,8 +26,8 @@ public:
   glmmr::calculator vcalc;
   bool weighted = false;
   ModelBits(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
-  virtual int n(){return linear_predictor.n();};
-  virtual ArrayXd xb(){return linear_predictor.xb().array() + data.offset.array();};
+  virtual int n() const {return linear_predictor.n();};
+  virtual ArrayXd xb() {return linear_predictor.xb().array() + data.offset.array();};
   virtual void make_covariance_sparse();
   virtual void make_covariance_dense();
 private:

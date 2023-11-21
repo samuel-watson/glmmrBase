@@ -25,9 +25,9 @@ public:
   void tokenise();
   void formula_validate();
   void calculate_linear_predictor(glmmr::calculator& calculator,const ArrayXXd& data,const strvec& colnames, MatrixXd& Xdata);
-  strvec re();
-  strvec z();
-  strvec re_terms();
+  strvec re() const;
+  strvec z() const;
+  strvec re_terms() const;
 private:
   strvec re_terms_;
 };
@@ -171,14 +171,14 @@ inline void glmmr::Formula::calculate_linear_predictor(glmmr::calculator& calcul
   std::reverse(calculator.indexes.begin(),calculator.indexes.end());
 }
 
-inline strvec glmmr::Formula::re(){
+inline strvec glmmr::Formula::re() const{
   return re_;
 }
 
-inline strvec glmmr::Formula::z(){
+inline strvec glmmr::Formula::z() const{
   return z_;
 }
 
-inline strvec glmmr::Formula::re_terms(){
+inline strvec glmmr::Formula::re_terms() const{
   return re_terms_;
 }

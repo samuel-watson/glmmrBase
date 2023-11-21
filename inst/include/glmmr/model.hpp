@@ -156,7 +156,6 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   
 #ifdef R_BUILD
-  // some checks
   int total_p = at.size() + atmeans.size() + average.size() + 1;
   if(total_p != model.linear_predictor.P())Rcpp::warning("Unnamed variables will be averaged");
   if(at.size() != atvals.size())Rcpp::stop("Not enough values specified for at");

@@ -23,7 +23,7 @@ public:
   MatrixXd Lu(const MatrixXd& u) override;
   VectorXd sim_re() override;
   sparse ZL_sparse() override;
-  int Q() override;
+  int Q() const override;
   double log_likelihood(const VectorXd &u) override;
   double log_determinant() override;
   void gen_AD();
@@ -135,7 +135,7 @@ inline sparse glmmr::nngpCovariance::ZL_sparse(){
   return dense_to_sparse(L);
 }
 
-inline int glmmr::nngpCovariance::Q(){
+inline int glmmr::nngpCovariance::Q() const {
   return grid.N;
 }
 

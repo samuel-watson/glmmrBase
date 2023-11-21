@@ -67,22 +67,25 @@ inline double glmmr::ModelMCMC<modeltype>::log_prob(const VectorXd &v){
   double lp1 = 0;
   double lp2 = 0;
   if(model.weighted){
-    if(model.family.family=="gaussian"){
+    if(model.family.family==FamilyDistribution::gaussian){
 #pragma omp parallel for reduction (+:lp1) 
       for(int i = 0; i<model.n(); i++){
-        lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i)/model.data.weights(i),model.family.flink);
+        lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i)/model.data.weights(i),
+                                            model.family.family,model.family.link);
       }
     } else {
 #pragma omp parallel for reduction (+:lp1) 
       for(int i = 0; i<model.n(); i++){
-        lp1 += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),model.family.flink);
+        lp1 += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),
+                                  model.family.family,model.family.link);
       }
       lp1 *= model.data.weights.sum()/model.n();
     }
   } else {
 #pragma omp parallel for reduction (+:lp1)
     for(int i = 0; i<model.n(); i++){
-      lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),model.family.flink);
+      lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),
+                                          model.family.family,model.family.link);
     }
   }
 #pragma omp parallel for reduction (+:lp2)

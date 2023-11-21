@@ -26,7 +26,7 @@ public:
   MatrixXd Lu(const MatrixXd& u) override;
   VectorXd sim_re() override;
   sparse ZL_sparse() override;
-  int Q() override;
+  int Q() const override;
   double log_likelihood(const VectorXd &u) override;
   double log_determinant() override;
   void update_parameters(const dblvec& parameters) override;
@@ -145,11 +145,11 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
   for(int i = 0; i < dim; i++){
     hsgp_data.col(i) = this->data_.col(this->re_cols_data_[0][0][i]);
   }
-  auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),"sqexp");
+  auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovarianceFunction::sqexp);
   if(!(sqexpidx == this->fn_[0].end())){
     sq_exp = true;
   } else {
-    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),"fexp");
+    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovarianceFunction::fexp);
     if(!(expidx == this->fn_[0].end())){
       sq_exp = false;
     } else {
@@ -294,7 +294,7 @@ inline sparse glmmr::hsgpCovariance::ZL_sparse(){
   return dummy;
 }
 
-inline int glmmr::hsgpCovariance::Q(){
+inline int glmmr::hsgpCovariance::Q() const{
   return this->Q_;
 }
 
