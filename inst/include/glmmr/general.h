@@ -3,7 +3,7 @@
 //defines
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define _USE_MATH_DEFINES
-//#define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG
+// #define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG - currently only useful in R builds as uses R print, will add more general error logging
 #define R_BUILD //Uncomment to build for R with RCPP
 
 // includes

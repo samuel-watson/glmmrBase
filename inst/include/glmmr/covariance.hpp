@@ -871,11 +871,6 @@ inline bool glmmr::Covariance::any_group_re() const{
 
 inline strvec glmmr::Covariance::parameter_names(){
   strvec parnames;
-  //for(int i = 0; i < B_; i++){
-  //  parnames.insert(parnames.end(),calc_[i].parameter_names.begin(),calc_[i].parameter_names.end());
-  //}
-  //auto last = std::unique(parnames.begin(),parnames.end());
-  //parnames.erase(last, parnames.end());
   for(unsigned int i = 0; i < form_.re_.size(); i++){
     for(int j = 0; j < B_; j++){
       if(re_order_[j]==i){
@@ -893,11 +888,9 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
   strvec pars = parameter_names();
   int R = pars.size();
   int matrix_n = order==2 ? R + R*(R+1)/2 + 1 : R+1;
-  //std::vector<MatrixXd> derivs;
   // initialise all the matrices to zero
   for(int i = 0; i < matrix_n; i++)derivs.push_back(MatrixXd::Zero(Q_,Q_));
   int block_count = 0;
-  
   // iterate over the blocks and insert if the parameter is in the list.
   for(int b = 0; b < B_; b++){
     int block_dimension = block_dim(b);
@@ -908,10 +901,21 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
       int par_pos_int = par_pos - pars.begin();
       par_index.push_back(par_pos_int);
     }
-    //check speed of adding parallelisation here with collapse...
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+    Rcpp::Rcout << "\nSIGMA DERIVATIVES\nBlock " << b << " with " << R_block << " parameters, " << block_dimension << " size";
+    Rcpp::Rcout << "\nPar indexes: ";
+    for(const auto& i: par_index)Rcpp::Rcout << i << " ";
+#endif
+    //added conditional parallelisation for large blocks
+    dblvec out(matrix_n);
+#pragma omp parallel for if(block_dimension > 50) private(out)
     for(int i = 0; i < block_dimension; i++){
       for(int j = i; j < block_dimension; j++){
-        dblvec out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,par_for_calcs_[b],dists[b],j,order,block_dimension);
+        if(order == 1){
+          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+        } else {
+          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+        }
         derivs[0](block_count+i,block_count+j) = out[0];
         if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];
         int index_count = R_block + 1;

@@ -226,7 +226,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       first_dx.resize(parameter_count);
     } else if constexpr(dydx == XBeta){
       first_dx.resize(1+parameter_count);
-    } else {
+    } else if constexpr(dydx == Zu){
       first_dx.resize(1);
     }
   }
@@ -293,6 +293,9 @@ inline dblvec glmmr::calculator::calculate(const int i,
       stack.push(0.0);
     } else {
       int i1 = i < j ? (n-1)*i - ((i-1)*i/2) + (j-i-1) : (n-1)*j - ((j-1)*j/2) + (i-j-1);
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+      if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
+#endif
       stack.push(data(i1,indexes[idx_iter]));
     }
     if constexpr (dydx != None)addZeroDx();
