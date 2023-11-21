@@ -2,7 +2,8 @@
 
 #include "general.h"
 // extends some of the SparseChol functions and operators to Eigen classes
-
+// I don't think these are required. This header will be removed in future
+// version
 
 namespace glmmr {
 

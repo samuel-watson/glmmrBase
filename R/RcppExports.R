@@ -397,8 +397,16 @@ Model__aic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__aic`, xp, type)
 }
 
+Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
+    .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
+}
+
 Model__mcmc_set_lambda <- function(xp, lambda_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_lambda`, xp, lambda_, type))
+}
+
+Model__print_names <- function(xp, data, parameters, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__print_names`, xp, data, parameters, type))
 }
 
 Model__mcmc_set_max_steps <- function(xp, max_steps_, type = 0L) {

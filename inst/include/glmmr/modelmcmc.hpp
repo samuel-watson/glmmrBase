@@ -19,18 +19,7 @@ public:
   glmmr::RandomEffects<modeltype>& re;
   bool verbose = true;
   int trace = 1;
-  
-  ModelMCMC(modeltype& model_, 
-             glmmr::ModelMatrix<modeltype>& matrix_,
-               glmmr::RandomEffects<modeltype>& re_) : 
-    model(model_), 
-    matrix(matrix_), 
-    re(re_),
-    u0(model.covariance.Q()),
-    up(model.covariance.Q()),
-    r(model.covariance.Q()),
-    grad(model.covariance.Q()){};
-  
+  ModelMCMC(modeltype& model_,glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_);
   double log_prob(const VectorXd &v);
   void mcmc_sample(int warmup_,int samples_,int adapt_ = 100);
   void mcmc_set_lambda(double lambda);
@@ -60,28 +49,43 @@ protected:
 }
 
 template<typename modeltype>
+inline glmmr::ModelMCMC<modeltype>::ModelMCMC(modeltype& model_, 
+          glmmr::ModelMatrix<modeltype>& matrix_,
+          glmmr::RandomEffects<modeltype>& re_) : 
+  model(model_), 
+  matrix(matrix_), 
+  re(re_),
+  u0(model.covariance.Q()),
+  up(model.covariance.Q()),
+  r(model.covariance.Q()),
+  grad(model.covariance.Q()){};
+
+template<typename modeltype>
 inline double glmmr::ModelMCMC<modeltype>::log_prob(const VectorXd &v){
-  VectorXd zu = model.covariance.ZL_sparse() * v;
+  VectorXd zu = SparseOperators::operator*(model.covariance.ZL_sparse(), v);
   VectorXd mu = model.xb().matrix() + zu;
   double lp1 = 0;
   double lp2 = 0;
   if(model.weighted){
-    if(model.family.family=="gaussian"){
+    if(model.family.family==FamilyDistribution::gaussian){
 #pragma omp parallel for reduction (+:lp1) 
       for(int i = 0; i<model.n(); i++){
-        lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i)/model.data.weights(i),model.family.flink);
+        lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i)/model.data.weights(i),
+                                            model.family.family,model.family.link);
       }
     } else {
 #pragma omp parallel for reduction (+:lp1) 
       for(int i = 0; i<model.n(); i++){
-        lp1 += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),model.family.flink);
+        lp1 += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),
+                                  model.family.family,model.family.link);
       }
       lp1 *= model.data.weights.sum()/model.n();
     }
   } else {
 #pragma omp parallel for reduction (+:lp1)
     for(int i = 0; i<model.n(); i++){
-      lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),model.family.flink);
+      lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i),
+                                          model.family.family,model.family.link);
     }
   }
 #pragma omp parallel for reduction (+:lp2)
@@ -189,8 +193,8 @@ template<typename modeltype>
 inline void glmmr::ModelMCMC<modeltype>::mcmc_sample(int warmup_,
                                           int samples_,
                                           int adapt_){
-  if(re.u_.cols()!=samples_)re.u_.conservativeResize(NoChange,samples_);
-  if(re.u_.cols()!=re.zu_.cols())re.zu_.conservativeResize(NoChange,samples_);
+  if(re.u_.cols()!=samples_)re.u_.resize(NoChange,samples_);
+  if(re.zu_.cols()!=samples_)re.zu_.resize(NoChange,samples_);
   re.u_.setZero();
   sample(warmup_,samples_,adapt_);
   re.zu_ = model.covariance.ZLu(re.u_);

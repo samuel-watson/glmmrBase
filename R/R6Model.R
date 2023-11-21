@@ -1296,13 +1296,15 @@ Model <- R6::R6Class("Model",
                            }
                            data <- list(
                              N = self$n(),
-                             Q = Model__Q(private$ptr, private$model_type()),
-                             Xb = Model__xb(private$ptr, private$model_type()),
-                             Z = Model__ZL(private$ptr, private$model_type()),
+                             Q = Model__Q(private$ptr,private$model_type()),
+                             Xb = Model__xb(private$ptr,private$model_type()),
+                             Z = Model__ZL(private$ptr,private$model_type()),
                              y = y,
-                             sigma = self$var_par,
                              type=as.numeric(file_type$type)
                            )
+                           if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
+                           if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
+                           if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
                            if(verbose){
                              fit <- mod$sample(data = data,
                                                chains = 1,
@@ -1319,6 +1321,7 @@ Model <- R6::R6Class("Model",
                            }
                            dsamps <- fit$draws("gamma",format = "matrix")
                            class(dsamps) <- "matrix"
+                           Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {
                            if(verbose)Model__set_trace(private$ptr,2, private$model_type())
@@ -1328,8 +1331,9 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh, private$model_type())
                            Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt, private$model_type())
                            dsamps <- Model__u(private$ptr,TRUE, private$model_type())
+                           dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% dsamps)
                          }
-                         return(dsamps)
+                         return(invisible(dsamps))
                        },
                        #' @description 
                        #' The gradient of the log-likelihood with respect to either the random effects or
@@ -1415,6 +1419,60 @@ Model <- R6::R6Class("Model",
                        #' @return None. Called for effects.
                        calculator_instructions = function(linpred = TRUE, loglik = FALSE){
                          Model__print_instructions(private$ptr,linpred,loglik,private$model_type())
+                       },
+                       #' @description
+                       #' Calculates the marginal effect of variable x. There are several options for 
+                       #' marginal effect and several types of conditioning or averaging. The type of marginal
+                       #' effect can be the derivative of the mean with respect to x (`dydx`), the expected 
+                       #' difference E(y|x=a)-E(y|x=b) (`diff`), or the expected log ratio log(E(y|x=a)/E(y|x=b)) (`ratio`).
+                       #' Other fixed effect variables can be set at specific values (`at`), set at their mean values
+                       #' (`atmeans`), or averaged over (`average`). Averaging over a fixed effects variable here means
+                       #' using all observed values of the variable in the relevant calculation. 
+                       #' The random effects can similarly be set at their 
+                       #' estimated value (`re="estimated"`), set to zero (`re="zero"`), set to a specific value 
+                       #' (`re="at"`), or averaged over (`re="average"`). Estimates of the expected values over the random
+                       #' effects are generated using MCMC samples. MCMC samples are generated either through 
+                       #' MCML model fitting or using `mcmc_sample`. In the absence of samples `average` and `estimated` 
+                       #' will produce the same result. The standard errors are calculated using the delta method with one 
+                       #' of several options for the variance matrix of the fixed effect parameters.
+                       #' Several of the arguments require the names
+                       #' of the variables as given to the model object. Most variables are as specified in the formula,
+                       #' factor variables are specified as the name of the `variable_value`, e.g. `t_1`. To see the names
+                       #' of the stored parameters and data variables see the member function `names()`.
+                       #' @param x String. Name of the variable to calculate the marginal effect for.
+                       #' @param type String. Either `dydx` for derivative, `diff` for difference, or `ratio` for log ratio. See description.
+                       #' @param re String. Either `estimated` to condition on estimated values, `zero` to set to zero, `at` to
+                       #' provide specific values, or `average` to average over the random effects.
+                       #' @param se String. Type of standard error to use, either `GLS` for the GLS standard errors, `KR` for 
+                       #' Kenward-Roger estimated standard errors, or `robust` to use a robust sandwich estimator.
+                       #' @param at Optional. A vector of strings naming the fixed effects for which a specified value is given.
+                       #' @param atmeans Optional. A vector of strings naming the fixed effects that will be set at their mean value.
+                       #' @param average Optional. A vector of strings naming the fixed effects which will be averaged over.
+                       #' @param xvals. Optional. A vector specifying the values of `a` and `b` for `diff` and `ratio`. The default is (1,0).
+                       #' @param atvals Optional. A vector specifying the values of fixed effects specified in `at` (in the same order).
+                       #' @param revals Optional. If `re="at"` then this argument provides a vector of values for the random effects.
+                       #' @return A named vector with elements `margin` specifying the point estimate and `se` giving the standard error.
+                       marginal = function(x,type,re,se,at = c(),atmeans = c(),average=c(),xvals=c(1,0),atvals=c(),revals=c()){
+                         margin_types <- c("dydx","diff","ratio")
+                         re_types <- c("estimated","at","zero","average")
+                         se_types <- c("GLS","KR","Robust","BW")
+                         if(!type%in%margin_types)stop("type not recognised")
+                         if(!re%in%re_types)stop("re not recognised")
+                         if(!se%in%se_types)stop("se not recognised")
+                         result <- Model__marginal(xp = private$ptr,
+                                                   x = x,
+                                                   margin = which(margin_types==type)-1,
+                                                   re = which(re_types==re)-1, 
+                                                   se = which(se_types==se)-1,
+                                                   at = at,
+                                                   atmeans = atmeans,
+                                                   average = average,
+                                                   xvals_first = xvals[1],
+                                                   xvals_second =xvals[2],
+                                                   atvals = atvals,
+                                                   revals = revals,
+                                                   type = private$model_type())
+                         return(c("margin"=unname(result[1]),"SE"=unname(result[2])))
                        }
                      ),
                      private = list(

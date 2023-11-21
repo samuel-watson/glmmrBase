@@ -17,26 +17,6 @@ inline double inner_sum(double* li, double* lj, int n)
   return s;
 }
 
-inline int get_flink(const std::string &family,
-                     const std::string &link){
-  const static std::unordered_map<std::string, int> string_to_case{
-    {"poissonlog",1},
-    {"poissonidentity",2},
-    {"binomiallogit",3},
-    {"binomiallog",4},
-    {"binomialidentity",5},
-    {"binomialprobit",6},
-    {"gaussianidentity",7},
-    {"gaussianlog",8},
-    {"Gammalog",9},
-    {"Gammainverse",10},
-    {"Gammaidentity",11},
-    {"betalogit",12}
-  };
-
-  return string_to_case.at(family + link);
-}
-
 inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
                                    const Eigen::VectorXd& u,
                                    const int& n)
