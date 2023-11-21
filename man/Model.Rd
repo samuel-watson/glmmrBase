@@ -365,6 +365,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-calculator_instructions}{\code{Model$calculator_instructions()}}
+\item \href{#method-Model-marginal}{\code{Model$marginal()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -394,10 +395,10 @@ None. Used for effects.
 \if{latex}{\out{\hypertarget{method-Model-fitted}{}}}
 \subsection{Method \code{fitted()}}{
 Return fitted values. Does not account for the random effects. For simulated values based
-on resampling random effects, see \code{sim_data()}. To predict the values at a new location see
+on resampling random effects, see also \code{sim_data()}. To predict the values including random effects at a new location see also
 \code{predict()}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link", X, u)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$fitted(type = "link", X, u, sample = FALSE, sample_n = 100)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -409,6 +410,11 @@ for values on the scale of the response}
 \item{\code{X}}{(Optional) Fixed effects matrix to generate fitted values}
 
 \item{\code{u}}{(Optional) Random effects values at which to generate fitted values}
+
+\item{\code{sample}}{Logical. If TRUE then the parameters will be re-sampled from their sampling distribution. Currently only works
+with existing X matrix and not user supplied matrix X and this will also ignore any provided random effects.}
+
+\item{\code{sample_n}}{Integer. If sample is TRUE, then this is the number of samples.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1276,6 +1282,74 @@ class has interpreted non-linear model specifications.
 }
 \subsection{Returns}{
 None. Called for effects.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-marginal"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-marginal}{}}}
+\subsection{Method \code{marginal()}}{
+Calculates the marginal effect of variable x. There are several options for
+marginal effect and several types of conditioning or averaging. The type of marginal
+effect can be the derivative of the mean with respect to x (\code{dydx}), the expected
+difference E(y|x=a)-E(y|x=b) (\code{diff}), or the expected log ratio log(E(y|x=a)/E(y|x=b)) (\code{ratio}).
+Other fixed effect variables can be set at specific values (\code{at}), set at their mean values
+(\code{atmeans}), or averaged over (\code{average}). Averaging over a fixed effects variable here means
+using all observed values of the variable in the relevant calculation.
+The random effects can similarly be set at their
+estimated value (\code{re="estimated"}), set to zero (\code{re="zero"}), set to a specific value
+(\code{re="at"}), or averaged over (\code{re="average"}). Estimates of the expected values over the random
+effects are generated using MCMC samples. MCMC samples are generated either through
+MCML model fitting or using \code{mcmc_sample}. In the absence of samples \code{average} and \code{estimated}
+will produce the same result. The standard errors are calculated using the delta method with one
+of several options for the variance matrix of the fixed effect parameters.
+Several of the arguments require the names
+of the variables as given to the model object. Most variables are as specified in the formula,
+factor variables are specified as the name of the \code{variable_value}, e.g. \code{t_1}. To see the names
+of the stored parameters and data variables see the member function \code{names()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$marginal(
+  x,
+  type,
+  re,
+  se,
+  at = c(),
+  atmeans = c(),
+  average = c(),
+  xvals = c(1, 0),
+  atvals = c(),
+  revals = c()
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{x}}{String. Name of the variable to calculate the marginal effect for.}
+
+\item{\code{type}}{String. Either \code{dydx} for derivative, \code{diff} for difference, or \code{ratio} for log ratio. See description.}
+
+\item{\code{re}}{String. Either \code{estimated} to condition on estimated values, \code{zero} to set to zero, \code{at} to
+provide specific values, or \code{average} to average over the random effects.}
+
+\item{\code{se}}{String. Type of standard error to use, either \code{GLS} for the GLS standard errors, \code{KR} for
+Kenward-Roger estimated standard errors, or \code{robust} to use a robust sandwich estimator.}
+
+\item{\code{at}}{Optional. A vector of strings naming the fixed effects for which a specified value is given.}
+
+\item{\code{atmeans}}{Optional. A vector of strings naming the fixed effects that will be set at their mean value.}
+
+\item{\code{average}}{Optional. A vector of strings naming the fixed effects which will be averaged over.}
+
+\item{\code{atvals}}{Optional. A vector specifying the values of fixed effects specified in \code{at} (in the same order).}
+
+\item{\code{revals}}{Optional. If \code{re="at"} then this argument provides a vector of values for the random effects.}
+
+\item{\code{xvals.}}{Optional. A vector specifying the values of \code{a} and \code{b} for \code{diff} and \code{ratio}. The default is (1,0).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A named vector with elements \code{margin} specifying the point estimate and \code{se} giving the standard error.
 }
 }
 \if{html}{\out{<hr>}}

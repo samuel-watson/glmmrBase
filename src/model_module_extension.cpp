@@ -19,6 +19,13 @@ SEXP wrap(const matrix_matrix& x){
   ));
 }
 
+template<typename T1, typename T2> SEXP wrap( const std::pair<T1,T2>& _v ) {
+  return Rcpp::List::create(
+    Rcpp::Named("first")  = Rcpp::wrap<T1>( _v.first ),
+    Rcpp::Named("second") = Rcpp::wrap<T2>( _v.second )
+  );
+};
+
 template<>
 SEXP wrap(const kenward_data& x){
   return Rcpp::wrap(Rcpp::List::create(
@@ -27,6 +34,9 @@ SEXP wrap(const kenward_data& x){
       Rcpp::Named("dof") = Rcpp::wrap(x.dof)
   ));
 }
+
+
+
 }
 
 using namespace Rcpp;
@@ -72,6 +82,50 @@ SEXP Model__aic(SEXP xp, int type = 0){
   return wrap(std::get<double>(S));
 }
 
+// MarginType type, dydx, diff, ratio
+// [[Rcpp::export]]
+SEXP Model__marginal(SEXP xp, 
+                     std::string x,
+                     int margin = 0,
+                     int re = 3,
+                     int se = 0,
+                     Nullable<std::vector<std::string> > at = R_NilValue,
+                     Nullable<std::vector<std::string> > atmeans = R_NilValue,
+                     Nullable<std::vector<std::string> > average = R_NilValue,
+                     double xvals_first = 1,
+                     double xvals_second = 0,
+                     Nullable<std::vector<double> > atvals = R_NilValue,
+                     Nullable<std::vector<double> > revals = R_NilValue,
+                     int type = 0){
+  
+  glmmrType model(xp,static_cast<Type>(type));
+  std::vector<std::string> atvar;
+  std::vector<std::string> atmeansvar;
+  std::vector<std::string> averagevar;
+  std::vector<double> atxvals;
+  std::vector<double> atrevals;
+  if(at.isNotNull())atvar = as<std::vector<std::string> >(at);
+  if(atmeans.isNotNull())atmeansvar = as<std::vector<std::string> >(atmeans);
+  if(average.isNotNull())averagevar = as<std::vector<std::string> >(average);
+  std::pair<double, double> xvals;
+  xvals.first = xvals_first;
+  xvals.second = xvals_second;
+  if(atvals.isNotNull())atxvals = as<std::vector<double> >(atvals);
+  if(revals.isNotNull())atrevals = as<std::vector<double> >(revals);
+  
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->marginal(static_cast<glmmr::MarginType>(margin),
+                                      x,atvar,atmeansvar,averagevar,
+                                      static_cast<glmmr::RandomEffectMargin>(re),
+                                      static_cast<glmmr::SE>(se),
+                                      xvals,atxvals,atrevals
+                                      ));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::pair<double,double> >(S));
+}
+
 // [[Rcpp::export]]
 void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
   double lambda = as<double>(lambda_);
@@ -79,6 +133,16 @@ void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
   auto functor = overloaded {
     [](int) {}, 
     [&lambda](auto ptr){ptr->mcmc.mcmc_set_lambda(lambda);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+void Model__print_names(SEXP xp, bool data, bool parameters, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&](auto ptr){ptr->model.linear_predictor.calc.print_names(data,parameters);}
   };
   std::visit(functor,model.ptr);
 }

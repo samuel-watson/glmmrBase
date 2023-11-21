@@ -17,14 +17,14 @@ Eigen::VectorXd attenuate_xb(const Eigen::VectorXd& xb,
                              const Eigen::MatrixXd& Z,
                              const Eigen::MatrixXd& D,
                              const std::string& link){
-  Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,link);
+  Eigen::VectorXd linpred = glmmr::maths::attenuted_xb(xb,Z,D,glmmr::str_to_link.at(link));
   return linpred;
 }
 
 // [[Rcpp::export]]
 Eigen::VectorXd dlinkdeta(const Eigen::VectorXd& xb,
                           const std::string& link){
-  Eigen::VectorXd deta = glmmr::maths::detadmu(xb,link);
+  Eigen::VectorXd deta = glmmr::maths::detadmu(xb,glmmr::str_to_link.at(link));
   return deta;
 }
 

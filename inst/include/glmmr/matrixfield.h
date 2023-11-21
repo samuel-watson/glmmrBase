@@ -20,23 +20,23 @@ public:
   MatrixField(){};
   
   MatrixField(const glmmr::MatrixField<T> &field) {
-    for(auto& e : field.data)data.push_back(std::make_unique<T>(*e));
+    for(const auto& e : field.data)data.push_back(std::make_unique<T>(*e));
   }
   
   void add(T matrix){
     data.push_back(std::make_unique<T>(matrix));
   }
   
-  T operator()(int i)
+  T operator()(int i) const
   {
     return *(data[i]);
   }
   
-  Eigen::RowVectorXd get_row(int n, int i){
+  Eigen::RowVectorXd get_row(int n, int i) const{
     return data[n]->row(i);
   }
   
-  std::unique_ptr<T> get_ptr(int n){
+  std::unique_ptr<T> get_ptr(int n) const{
     return data[n];
   }
   
@@ -44,19 +44,19 @@ public:
     *(data[i]) = matrix;
   }
   
-  int mat_size(int i){
+  int mat_size(int i) const{
     return data[i]->size();
   }
   
-  int size(){
+  int size() const{
     return data.size();
   }
   
-  int rows(int i){
+  int rows(int i) const{
     return data[i]->rows();
   }
   
-  int cols(int i){
+  int cols(int i) const{
     return data[i]->cols();
   }
   
