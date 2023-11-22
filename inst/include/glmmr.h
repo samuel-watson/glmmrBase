@@ -1,7 +1,5 @@
 #pragma once
 
-#define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
-
 #include "glmmr/general.h"
 #include "glmmr/maths.h"
 #include "glmmr/formula.hpp"

@@ -13,7 +13,7 @@
 #endif
 
 #ifdef __clang__
-#define EIGEN_HAS_STD_RESULT_OF=0
+#define EIGEN_HAS_STD_RESULT_OF 0
 #endif
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 // includes
