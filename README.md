@@ -1,13 +1,20 @@
 [![cran version](http://www.r-pkg.org/badges/version/glmmrBase)](  https://CRAN.R-project.org/package=glmmrBase)
 
 # glmmrBase
-(Version 0.4.2)
-R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using a Laplace approximation or full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood (MCML) and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
+(Version 0.5.2)
+R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood (MCML) and Laplacian approximation and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
 
 The full details and tutorials have moved to the [project home page](https://samuel-watson.github.io/glmmr-web/).
 
 ## Installation
-The package is available on CRAN, or the most up-to-date version can be installed from this repository in R using `devtools::install_github("samuel-watson/glmmrBase")`. A pre-compiled binary is also available with each release on this page.
+The package is available on CRAN, or the most up-to-date version can be installed from this repository in R using `devtools::install_github("samuel-watson/glmmrBase")`. A pre-compiled binary is also available with each release on this page. 
+
+### Building from source
+It is strongly recommended to build from source with the flags `-fno-math-errno -O3 -g`, this will cut the time to run many functions by as much as 90%. One way to do this is to set CPP_FLAGS in `~/.R/Makevars`. Another alternative is to download the package source `.tar.gz` file and run from the command line 
+```
+R CMD INSTALL --configure-args="CPPFLAGS=-fno-math-errno -O3 -g" glmmrBase_0.5.2.tar.gz
+```
+Yet another alternative would be to clone the package from this repository and edit the `makevars` or `makevars.win` file to include the flags. The package can then be installed using `devtools::install`.
 
 ## Generalised linear mixed models
 A generalised linear mixed model (GLMM) has a mean function for observation $i$ is
@@ -36,5 +43,50 @@ R>                    data = df,
 R>                    family = gaussian())
 ```
 
-## Model fitting
-A Laplace approximation approach can be used with a model object. If `y` is a vector of outcome values then `model$LA(y)` will fit the model. Alternatively, we also provide MCML, a full likelihood fitting algorithm. The default option requires the package cmdstanr and Stan and can be used as `model$MCML(y)`. To use with the in-built Hamiltonian Monte Carlo sampler `model$MCML(y,cmdstan=FALSE)`.
+A reproducible example is given below:
+```
+# Example: simulating and fitting a binomial-logit model with AR-1 covariance with continuous time 
+# using full maximum likelihood
+require(glmmrBase)
+
+# we will assume a binomial-logit model
+
+# simulate data
+# this generates data for a study with clusters crossed with time periods with nested
+# individuals, i.e. a stepped-wedge cluster trial with cross-sectional sampling
+# int is the intervention indicator
+df <- nelder(~(cl(6)*t(7))>ind(10))
+df$int <- 0
+df[df$cl > df$t, 'int'] <- 1
+df$time <- runif(nrow(df),df$t-1,df$t)/7
+
+# create a new model - we are providing parameter values for the fixed effects and covariance
+#intercept -1.5, random time effects, and a treatment effect of 0.3 (log odds ratio)
+mod <- Model$new(
+  formula = ~ factor(t) + int -1 + (1|gr(cl)*ar1(time)),
+  mean = c(-1.5,rnorm(6,0,0.5),0.3),
+  covariance = c(0.2,0.3),
+  family = binomial(link="logit"),
+  data = df
+)
+
+y <- mod$sim_data() # simulates data from the model using model 1 - useful for simulation projects requiring GLMMs easy to specify complex models!
+
+# fit the model
+fit <- mod$MCML(y=y,method = "mcem",verbose = TRUE)
+fit
+
+# the above uses the GLS SEs, we can retrieve Kenward Roger for example if we wanted using:
+kr <- mod$kenward_roger()
+sqrt(diag(kr$vcov_beta))
+kr$dof #degrees of freedom
+
+# and if it is of interest, we can use MCMC samples to get marginal effects including marginal log RR
+mod$marginal(x = "int",
+             type = "dydx",
+             re = "average",
+             se = "GLS",
+             average = c("t_1","t_2","t_3","t_4","t_5","t_6","t_7"))
+
+```
+
