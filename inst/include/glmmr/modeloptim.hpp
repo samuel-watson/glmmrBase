@@ -307,19 +307,13 @@ template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
   dblvec lower;
   if(beta){
-    for(int i = 0; i< model.linear_predictor.P(); i++){
-      if(lower_bound.size()==0){
-        lower.push_back(R_NegInf);
-      } else {
-        lower = lower_bound;
-      }
+    if(lower_bound.size()==0){
+      for(int i = 0; i< model.linear_predictor.P(); i++)lower.push_back(R_NegInf);
+    } else {
+      lower = lower_bound;
     }
   } 
-  if(theta){
-    for(int i=0; i< model.covariance.npar(); i++) {
-      lower.push_back(1e-6);
-    }
-  }
+  if(theta)for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
   if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
     lower.push_back(0.0);
   }
@@ -330,19 +324,13 @@ template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool theta, bool var){
   dblvec upper;
   if(beta){
-    for(int i = 0; i< model.linear_predictor.P(); i++){
-      if(upper_bound.size()==0){
-        upper.push_back(R_PosInf);
-      } else {
-        upper = upper_bound;
-      }
+    if(upper_bound.size()==0){
+      for(int i = 0; i< model.linear_predictor.P(); i++)upper.push_back(R_PosInf);
+    } else {
+      upper = upper_bound;
     }
   } 
-  if(theta){
-    for(int i = 0; i< model.covariance.npar(); i++){
-      upper.push_back(R_PosInf);
-    }
-  }
+  if(theta)for(int i = 0; i< model.covariance.npar(); i++)upper.push_back(R_PosInf);
   if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
     upper.push_back(R_PosInf);
   }
@@ -543,15 +531,14 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   opt.control.rhoend = rhoend;
   dblvec start = get_start_values(true,false,false);
   dblvec lower = get_lower_values(true,false,false);
-  opt.set_lower(lower);
   dblvec upper = get_upper_values(true,false,false);
-  opt.set_upper(upper);
   for(int i = 0; i< model.covariance.Q(); i++){
     start.push_back(re.u_(i,0));
     lower.push_back(R_NegInf);
     upper.push_back(R_PosInf);
   }
-  opt.control.iprint = trace;
+  opt.set_lower(lower);
+  opt.set_upper(upper);
   opt.minimize(ldl, start);
   calculate_var_par();
 }
