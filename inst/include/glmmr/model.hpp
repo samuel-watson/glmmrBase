@@ -170,7 +170,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   auto xidx = std::find(model.linear_predictor.calc.data_names.begin(),model.linear_predictor.calc.data_names.end(),x);
   int xcol = xidx - model.linear_predictor.calc.data_names.begin();
   
-  if(average.size() > 0){
+  if(average.size() > 0 || (total_p == 1 && (re_type == RandomEffectMargin::Average || re_type == RandomEffectMargin::AtEstimated))){
     single_row = false;
     N = model.n();
     newXdata.conservativeResize(model.n(),NoChange);
@@ -295,11 +295,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       double d_result = 0;
       dblvec m_result(2+2*P);
       dblvec delta_vec(P,0.0);
-      if(N==1){
-        newXdata(0,xcol) = xvals.first;
-      } else {
-        for(int i = 0; i < model.n(); i++)newXdata(i,xcol) = xvals.first;
-      }
+      for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
 #pragma omp parallel for reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) private(m_result)
       for(int i = 0; i < N; i++){
         newXdata(i,xcol) = xvals.first;
@@ -319,14 +315,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       dblvec delta_vec(P,0.0);
       dblvec m_result(1+P);
       MatrixXd newXdata1(newXdata);
-      if(N==1){
-        newXdata(0,xcol) = xvals.first;
-        newXdata1(0,xcol) = xvals.second;
-      } else {
-        for(int i = 0; i < model.n(); i++){
-          newXdata(i,xcol) = xvals.first;
-          newXdata1(i,xcol) = xvals.second;
-        }
+      for(int i = 0; i < newXdata.rows(); i++){
+        newXdata(i,xcol) = xvals.first;
+        newXdata1(i,xcol) = xvals.second;
       }
 #pragma omp parallel for reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) private(m_result)
       for(int i = 0; i < N; i++){
@@ -353,14 +344,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       dblvec m_result0(P+1);
       dblvec m_result1(P+1);
       MatrixXd newXdata1(newXdata);
-      if(N==1){
-        newXdata(0,xcol) = xvals.first;
-        newXdata1(0,xcol) = xvals.second;
-      } else {
-        for(int i = 0; i < model.n(); i++){
-          newXdata(i,xcol) = xvals.first;
-          newXdata1(i,xcol) = xvals.second;
-        }
+      for(int i = 0; i < newXdata.rows(); i++){
+        newXdata(i,xcol) = xvals.first;
+        newXdata1(i,xcol) = xvals.second;
       }
 #pragma omp parallel for private(m_result0,m_result1) reduction(+:d_result0) reduction(+:d_result1) \
       reduction(vec_dbl_plus:delta0) reduction(vec_dbl_plus:delta1) 
@@ -394,11 +380,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         double d_result = 0;
         dblvec m_result(2+2*P);
         dblvec delta_vec(P,0.0);
-        if(N==1){
-          newXdata(0,xcol) = xvals.first;
-        } else {
-          for(int i = 0; i < model.n(); i++)newXdata(i,xcol) = xvals.first;
-        }
+        for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
         for(int i = 0; i < model.n(); i++){
           for(int j = 0; j < iter; j++){
@@ -425,14 +407,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         dblvec m_result(P+1);
         dblvec delta_vec(P,0.0);
         MatrixXd newXdata1(newXdata);
-        if(N==1){
-          newXdata(0,xcol) = xvals.first;
-          newXdata1(0,xcol) = xvals.second;
-        } else {
-          for(int i = 0; i < model.n(); i++){
-            newXdata(i,xcol) = xvals.first;
-            newXdata1(i,xcol) = xvals.second;
-          }
+        for(int i = 0; i < newXdata.rows(); i++){
+          newXdata(i,xcol) = xvals.first;
+          newXdata1(i,xcol) = xvals.second;
         }
         
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
@@ -473,14 +450,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         dblvec m_result0(1+P);
         dblvec m_result1(1+P);
         MatrixXd newXdata1(newXdata);
-        if(N==1){
-          newXdata(0,xcol) = xvals.first;
-          newXdata1(0,xcol) = xvals.second;
-        } else {
-          for(int i = 0; i < model.n(); i++){
-            newXdata(i,xcol) = xvals.first;
-            newXdata1(i,xcol) = xvals.second;
-          }
+        for(int i = 0; i < newXdata.rows(); i++){
+          newXdata(i,xcol) = xvals.first;
+          newXdata1(i,xcol) = xvals.second;
         }
 #pragma omp parallel for private(m_result0,m_result1) reduction(+:d_result0) reduction(+:d_result1) \
         reduction(vec_dbl_plus:delta0) reduction(vec_dbl_plus:delta1) collapse(2)
