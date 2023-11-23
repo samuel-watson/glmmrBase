@@ -60,7 +60,7 @@ protected:
   std::vector<glmmr::calculator> calc_;
   intvec3d re_pars_;
   //strvec2d fn_;
-  std::vector<std::vector<CovarianceFunction> > fn_;
+  std::vector<std::vector<CovFunc> > fn_;
   dblvec2d par_for_calcs_;
   std::vector<MatrixXd> dists;
   intvec re_fn_par_link_;
@@ -368,7 +368,7 @@ inline int glmmr::Covariance::parse(){
   //now build the reverse polish notation and add distances
   int nvarfn;
   for(int i =0; i<fn_.size();i++){
-    std::vector<Instruction> fn_instruct;
+    std::vector<Do> fn_instruct;
     intvec fn_par;
     int minvalue = 100;
     int ndata = re_temp_data_[i].size();
@@ -379,7 +379,7 @@ inline int glmmr::Covariance::parse(){
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
     }
     for(int j = 0; j<fn_[i].size();j++){
-      if(fn_[i][j]!=CovarianceFunction::gr){
+      if(fn_[i][j]!=CovFunc::gr){
         nvarfn = re_cols_[i][j].size();
         double dist_val;
         double dist_ab;
@@ -395,7 +395,7 @@ inline int glmmr::Covariance::parse(){
           }
         }
       }
-      std::vector<Instruction> B = glmmr::interpret_re(fn_[i][j]);
+      std::vector<Do> B = glmmr::interpret_re(fn_[i][j]);
       intvec re_par_less_min_ = re_pars_[i][j];
       for(unsigned int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       intvec Bpar = glmmr::interpret_re_par(fn_[i][j],j,re_par_less_min_);
@@ -404,7 +404,7 @@ inline int glmmr::Covariance::parse(){
     }
     if(fn_[i].size() > 1){
       for(unsigned int j = 0; j < (fn_[i].size()-1); j++){
-        fn_instruct.push_back(Instruction::Multiply);
+        fn_instruct.push_back(Do::Multiply);
       }
     }
     calc_[i].instructions = fn_instruct;
@@ -859,7 +859,7 @@ inline bool glmmr::Covariance::any_group_re() const{
   bool gr = false;
   for(unsigned int i = 0; i < fn_.size(); i++){
     for(unsigned int j = 0; j < fn_[i].size(); j++){
-      if(fn_[i][j]==CovarianceFunction::gr){
+      if(fn_[i][j]==CovFunc::gr){
         gr = true;
         break;
       }

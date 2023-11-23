@@ -257,7 +257,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,1);
   int R = model.covariance.npar();
-  int Rmod = model.family.family==FamilyDistribution::gaussian ? R+1 : R;
+  int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
   MatrixXd M = information_matrix();
   M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
   MatrixXd SigmaInv = Sigma(true);
@@ -308,7 +308,7 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(){
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
   int R = model.covariance.npar();
-  int Rmod = model.family.family==FamilyDistribution::gaussian ? R+1 : R;
+  int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
   
   MatrixXd M = information_matrix();
   M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
@@ -477,8 +477,6 @@ inline vector_matrix glmmr::ModelMatrix<modeltype>::re_score(){
 template<typename modeltype>
 inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
                                                 bool betapars){
-  using enum FamilyDistribution;
-  using enum LinkDistribution;
   ArrayXd size_n_array = model.xb();
   ArrayXd size_q_array = ArrayXd::Zero(model.covariance.Q());
   ArrayXd size_p_array = ArrayXd::Zero(model.linear_predictor.P());
@@ -494,10 +492,10 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     size_p_array = J.transpose().rowwise().sum().array();
   } else {
     switch(model.family.family){
-    case poisson:
+    case Fam::poisson:
     {
       switch(model.family.link){
-    case identity:
+    case Link::identity:
     {
       size_n_array = size_n_array.inverse();
       size_n_array = model.data.y.array()*size_n_array;
@@ -523,10 +521,10 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     }
       break;
     }
-    case bernoulli: case binomial:
+    case Fam::bernoulli: case Fam::binomial:
     {
       switch(model.family.link){
-    case loglink:
+    case Link::loglink:
     {
       ArrayXd logitxb = model.xb().array().exp();
       logitxb += 1;
@@ -541,7 +539,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       }
       break;
     }
-    case identity:
+    case Link::identity:
     {
       size_n_array = size_n_array.inverse();
       size_n_array *= model.data.y.array();
@@ -556,7 +554,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       }
       break;
     }
-    case probit:
+    case Link::probit:
     {
       ArrayXd n_array2(model.n());
       boost::math::normal norm(0, 1);
@@ -592,10 +590,10 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     }
       break;
     }
-    case gaussian:
+    case Fam::gaussian:
     {
       switch(model.family.link){
-    case loglink:
+    case Link::loglink:
     {
       if(betapars){
       size_n_array -= model.data.y.array();
@@ -628,10 +626,10 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     }
       break;
     }
-    case gamma:
+    case Fam::gamma:
     {
       switch(model.family.link){
-    case inverse:
+    case Link::inverse:
     {
       size_n_array = size_n_array.inverse();
       if(betapars){
@@ -643,7 +641,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       }
       break;
     }
-    case identity:
+    case Link::identity:
     {
       size_n_array = size_n_array.inverse();
       if(betapars){
@@ -672,7 +670,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     }
       break;
     }
-    case beta:
+    case Fam::beta:
     {
 #pragma omp parallel for 
       for(int i = 0; i < model.n(); i++){

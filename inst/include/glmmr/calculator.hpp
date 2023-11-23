@@ -16,7 +16,7 @@ namespace glmmr {
 
 class calculator {
   public:
-    std::vector<Instruction> instructions;
+    std::vector<Do> instructions;
     intvec indexes;
     dblvec y;
     std::array<double,10> numbers;
@@ -213,28 +213,26 @@ inline dblvec glmmr::calculator::calculate(const int i,
                                            const int parameterIndex,
                                            const double extraData,
                                            const int n) const {
-  using enum Instruction;
-  using enum CalcDyDx;
   int idx_iter = 0;
   double a,b;
   std::stack<double> stack;
   std::vector<std::stack<double> > first_dx;
   std::vector<std::stack<double> > second_dx;
   
-  if constexpr(dydx != None){
-    if constexpr(dydx == BetaFirst || dydx == BetaSecond){
+  if constexpr(dydx != CalcDyDx::None){
+    if constexpr(dydx == CalcDyDx::BetaFirst || dydx == CalcDyDx::BetaSecond){
       first_dx.resize(parameter_count);
-    } else if constexpr(dydx == XBeta){
+    } else if constexpr(dydx == CalcDyDx::XBeta){
       first_dx.resize(1+parameter_count);
-    } else if constexpr(dydx == Zu){
+    } else if constexpr(dydx == CalcDyDx::Zu){
       first_dx.resize(1);
     }
   }
   
-  if constexpr(dydx == XBeta || dydx == BetaSecond){
-    if constexpr(dydx == BetaSecond){
+  if constexpr(dydx == CalcDyDx::XBeta || dydx == CalcDyDx::BetaSecond){
+    if constexpr(dydx == CalcDyDx::BetaSecond){
       second_dx.resize(parameter_count*(parameter_count + 1)/2);
-    } else if constexpr(dydx ==  XBeta){
+    } else if constexpr(dydx ==  CalcDyDx::XBeta){
       second_dx.resize(parameter_count);
     }
   }
@@ -252,13 +250,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
   };
   
   auto allDyDxZero = [&](){
-    if constexpr (dydx != None)addZeroDx();
-    if constexpr (dydx == BetaSecond || dydx == XBeta)addZeroDx2();
+    if constexpr (dydx != CalcDyDx::None)addZeroDx();
+    if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta)addZeroDx2();
   };
   
   for(const auto& k: instructions){
     switch(k){
-    case PushData:
+    case Do::PushData:
   {
 // debugging statements to find possible errors
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -267,9 +265,9 @@ inline dblvec glmmr::calculator::calculate(const int i,
     if(i >= data.rows())Rcpp::stop("Row index out of range: case 0: "+std::to_string(i)+" versus "+std::to_string(data.rows()));
 #endif
     stack.push(data(i,indexes[idx_iter]));
-    if constexpr (dydx == BetaFirst || dydx == BetaSecond)addZeroDx();
-    if constexpr (dydx == BetaSecond)addZeroDx2();
-    if constexpr (dydx == XBeta){
+    if constexpr (dydx == CalcDyDx::BetaFirst || dydx == CalcDyDx::BetaSecond)addZeroDx();
+    if constexpr (dydx == CalcDyDx::BetaSecond)addZeroDx2();
+    if constexpr (dydx == CalcDyDx::XBeta){
       if(parameterIndex == indexes[idx_iter]){
         first_dx[0].push(1.0);
       } else {
@@ -278,11 +276,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
       for(int i = 0; i < parameter_count; i++)first_dx[i+1].push(0.0);
       addZeroDx2();
     }
-    if constexpr (dydx == Zu)first_dx[0].push(0.0);
+    if constexpr (dydx == CalcDyDx::Zu)first_dx[0].push(0.0);
     idx_iter++;
     break;
   }
-    case PushCovData:
+    case Do::PushCovData:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 1 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
@@ -298,12 +296,12 @@ inline dblvec glmmr::calculator::calculate(const int i,
 #endif
       stack.push(data(i1,indexes[idx_iter]));
     }
-    if constexpr (dydx != None)addZeroDx();
-    if constexpr (dydx == BetaSecond || dydx == XBeta)addZeroDx2();
+    if constexpr (dydx != CalcDyDx::None)addZeroDx();
+    if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta)addZeroDx2();
     idx_iter++;
     break;
   }
-    case PushParameter:
+    case Do::PushParameter:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if((unsigned)idx_iter >= indexes.size())Rcpp::stop("Index out of range: case 2 idx iter: "+std::to_string(idx_iter)+" versus "+std::to_string(indexes.size()));
@@ -312,7 +310,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
 #endif
     
     stack.push(parameters[indexes[idx_iter]]);
-    if constexpr (dydx == BetaFirst || dydx == BetaSecond){
+    if constexpr (dydx == CalcDyDx::BetaFirst || dydx == CalcDyDx::BetaSecond){
       for(int idx = 0; idx < parameter_count; idx++){
         if(idx == indexes[idx_iter]){
           first_dx[idx].push(1.0);
@@ -321,8 +319,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
     }
-    if constexpr (dydx == BetaSecond)addZeroDx2();
-    if constexpr (dydx == XBeta){
+    if constexpr (dydx == CalcDyDx::BetaSecond)addZeroDx2();
+    if constexpr (dydx == CalcDyDx::XBeta){
       first_dx[0].push(0.0);
       for(int idx = 0; idx < parameter_count; idx++){
         if(idx == indexes[idx_iter]){
@@ -333,11 +331,11 @@ inline dblvec glmmr::calculator::calculate(const int i,
       }
       addZeroDx2();
     }
-    if constexpr (dydx == Zu)addZeroDx();
+    if constexpr (dydx == CalcDyDx::Zu)addZeroDx();
     idx_iter++;
     break;
   }
-    case Add:
+    case Do::Add:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (3)");
@@ -347,7 +345,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     b = stack.top();
     stack.pop();
     stack.push(a+b);
-    if constexpr (dydx != None){
+    if constexpr (dydx != CalcDyDx::None){
       for(auto& fstack: first_dx){
         a = fstack.top();
         fstack.pop();
@@ -356,7 +354,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         fstack.push(a+b);
       }
     }
-    if constexpr (dydx == BetaSecond || dydx == XBeta){
+    if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta){
       for(auto& sstack: second_dx){
         a = sstack.top();
         sstack.pop();
@@ -367,7 +365,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case Subtract:
+    case Do::Subtract:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (4)");
@@ -377,7 +375,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     b = stack.top();
     stack.pop();
     stack.push(a-b);
-    if constexpr (dydx != None){
+    if constexpr (dydx != CalcDyDx::None){
       for(auto& fstack: first_dx){
         a = fstack.top();
         fstack.pop();
@@ -386,7 +384,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         fstack.push(a-b);
       }
     }
-    if constexpr (dydx == BetaSecond || dydx == XBeta){
+    if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta){
       for(auto& sstack: second_dx){
         a = sstack.top();
         sstack.pop();
@@ -397,7 +395,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case Multiply:
+    case Do::Multiply:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (5)");
@@ -408,7 +406,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     b = stack.top();
     stack.pop();
     stack.push(a*b);
-    if constexpr (dydx != None){
+    if constexpr (dydx != CalcDyDx::None){
       dblvec a_top_dx;
       dblvec b_top_dx;
       for(auto& fstack: first_dx){
@@ -418,7 +416,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         fstack.pop();
         fstack.push(a*b_top_dx.back() + b*a_top_dx.back());
       }
-      if constexpr (dydx == BetaSecond){
+      if constexpr (dydx == CalcDyDx::BetaSecond){
         int index_count = 0;
         for(int idx = 0; idx < parameter_count; idx++){
           for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -432,7 +430,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           }
         }
       }
-      if constexpr (dydx == XBeta){
+      if constexpr (dydx == CalcDyDx::XBeta){
         for(int jdx = 0; jdx < parameter_count; jdx++){
           double adx2 = second_dx[jdx].top();
           second_dx[jdx].pop();
@@ -445,7 +443,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case Divide:
+    case Do::Divide:
   {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     if(stack.size()<2)Rcpp::stop("Stack too small (6)");
@@ -461,7 +459,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     
     stack.pop();
     stack.push(a/b);
-    if constexpr (dydx != None){
+    if constexpr (dydx != CalcDyDx::None){
       dblvec a_top_dx;
       dblvec b_top_dx;
       for(auto& fstack: first_dx){
@@ -472,7 +470,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         double result = (b*a_top_dx.back() - a*b_top_dx.back())/(b*b);
         fstack.push(result);
       }
-      if constexpr (dydx == BetaSecond){
+      if constexpr (dydx == CalcDyDx::BetaSecond){
         int index_count = 0;
         for(int idx = 0; idx < parameter_count; idx++){
           for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -486,7 +484,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           }
         }
       }
-      if constexpr (dydx == XBeta){
+      if constexpr (dydx == CalcDyDx::XBeta){
         for(int jdx = 0; jdx < parameter_count; jdx++){
           double adx2 = second_dx[jdx].top();
           second_dx[jdx].pop();
@@ -499,7 +497,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     break;
   }
-    case Sqrt:
+    case Do::Sqrt:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (7)");
@@ -508,7 +506,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(sqrt(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -516,7 +514,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = a==0 ? 0 : 0.5*pow(a,-0.5)*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -528,7 +526,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -538,7 +536,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Power:
+    case Do::Power:
       {
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
         if(stack.size()<2)Rcpp::stop("Stack too small (8)");
@@ -557,7 +555,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         
         stack.push(out);
         
-        if constexpr (dydx != None){
+        if constexpr (dydx != CalcDyDx::None){
           dblvec a_top_dx;
           dblvec b_top_dx;
           for(auto& fstack: first_dx){
@@ -572,7 +570,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
 #endif
             fstack.push(result);
           }
-          if constexpr (dydx == BetaSecond){
+          if constexpr (dydx == CalcDyDx::BetaSecond){
             int index_count = 0;
             for(int idx = 0; idx < parameter_count; idx++){
               for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -588,7 +586,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
               }
             }
           }
-          if constexpr (dydx == XBeta){
+          if constexpr (dydx == CalcDyDx::XBeta){
             for(int jdx = 0; jdx < parameter_count; jdx++){
               double adx2 = second_dx[jdx].top();
               second_dx[jdx].pop();
@@ -603,7 +601,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
         break;
       }
-    case Exp:
+    case Do::Exp:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (9)");
@@ -612,7 +610,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(exp(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -620,7 +618,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = stack.top()*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -632,7 +630,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -642,7 +640,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Negate:
+    case Do::Negate:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (10)");
@@ -651,14 +649,14 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(-1*a);
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         for(auto& fstack: first_dx){
           double ftop = fstack.top();
           fstack.pop();
           fstack.push(-1.0*ftop);
         }
       }
-      if constexpr (dydx == BetaSecond || dydx == XBeta){
+      if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta){
         for(auto& sstack: second_dx){
           double adx2 = sstack.top();
           sstack.pop();
@@ -666,7 +664,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Bessel:
+    case Do::Bessel:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (11)");
@@ -676,7 +674,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       stack.pop();
       b = boost::math::cyl_bessel_k(1,a);
       stack.push(b);
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -684,7 +682,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = -0.5*boost::math::cyl_bessel_k(0,a)-0.5*boost::math::cyl_bessel_k(2,a);
           fstack.push(result*a_top_dx.back());
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -698,7 +696,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -710,14 +708,14 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Gamma:
+    case Do::Gamma:
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (12)");
 #endif
       a = stack.top();
       stack.pop();
       stack.push(tgamma(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -725,7 +723,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = stack.top()*boost::math::polygamma(0,a);
           fstack.push(result*a_top_dx.back());
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -739,7 +737,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -751,7 +749,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Sin:
+    case Do::Sin:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (13)");
@@ -760,7 +758,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(sin(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -768,7 +766,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = cos(a)*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -782,7 +780,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -794,7 +792,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Cos:
+    case Do::Cos:
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (14)");
 #endif
@@ -802,7 +800,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(cos(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -810,7 +808,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = -1.0*sin(a)*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -824,7 +822,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -836,7 +834,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case BesselK:
+    case Do::BesselK:
       
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (15)");
@@ -847,7 +845,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       b = stack.top();
       stack.pop();
       stack.push(boost::math::cyl_bessel_k(b,a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -855,7 +853,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = -0.5*boost::math::cyl_bessel_k(b-1,a)-0.5*boost::math::cyl_bessel_k(b+1,a);
           fstack.push(result*a_top_dx.back());
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -869,7 +867,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -881,7 +879,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Log:
+    case Do::Log:
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (16)");
 #endif
@@ -889,7 +887,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       a = stack.top();
       stack.pop();
       stack.push(log(a));
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -897,7 +895,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = (1/a)*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -911,7 +909,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -923,14 +921,14 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case Square:
+    case Do::Square:
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(stack.size()==0)Rcpp::stop("Stack too small (17)");
 #endif
       a = stack.top();
       stack.pop();
       stack.push(a*a);
-      if constexpr (dydx != None){
+      if constexpr (dydx != CalcDyDx::None){
         dblvec a_top_dx;
         for(auto& fstack: first_dx){
           a_top_dx.push_back(fstack.top());
@@ -938,7 +936,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
           double result = 2*a*a_top_dx.back();
           fstack.push(result);
         }
-        if constexpr (dydx == BetaSecond){
+        if constexpr (dydx == CalcDyDx::BetaSecond){
           int index_count = 0;
           for(int idx = 0; idx < parameter_count; idx++){
             for(int jdx = idx; jdx < parameter_count; jdx++){
@@ -950,7 +948,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
             }
           }
         }
-        if constexpr (dydx == XBeta){
+        if constexpr (dydx == CalcDyDx::XBeta){
           for(int jdx = 0; jdx < parameter_count; jdx++){
             double adx2 = second_dx[jdx].top();
             second_dx[jdx].pop();
@@ -960,87 +958,87 @@ inline dblvec glmmr::calculator::calculate(const int i,
         }
       }
       break;
-    case PushExtraData:
+    case Do::PushExtraData:
       {
         stack.push(extraData);
         allDyDxZero();
         break;
       }
-    case PushY:
+    case Do::PushY:
       {
         stack.push(y[i]);
         allDyDxZero();
         break;
       }
-    case Int10:
+    case Do::Int10:
       stack.push(10);
       allDyDxZero();
       break;
-    case Int1:
+    case Do::Int1:
       stack.push(1);
       allDyDxZero();
       break;
-    case Int2:
+    case Do::Int2:
       stack.push(2);
       allDyDxZero();
       break;
-    case Int3:
+    case Do::Int3:
       stack.push(3);
       allDyDxZero();
       break;
-    case Int4:
+    case Do::Int4:
       stack.push(4);
       allDyDxZero();
       break;
-    case Int5:
+    case Do::Int5:
       stack.push(5);
       allDyDxZero();
       break;
-    case Int6:
+    case Do::Int6:
       stack.push(6);
       allDyDxZero();
       break;
-    case Int7:
+    case Do::Int7:
       stack.push(7);
       allDyDxZero();
       break;
-    case Int8:
+    case Do::Int8:
       stack.push(8);
       allDyDxZero();
       break;
-    case Int9:
+    case Do::Int9:
       stack.push(9);
       allDyDxZero();
       break;
-    case Pi:
+    case Do::Pi:
       stack.push(M_PI);
       allDyDxZero();
       break;
-    case Constant1:
+    case Do::Constant1:
       stack.push(0.3275911);
       allDyDxZero();
       break;
-    case Constant2:
+    case Do::Constant2:
       stack.push(0.254829592);
       allDyDxZero();
       break;
-    case Constant3:
+    case Do::Constant3:
       stack.push(-0.284496736);
       allDyDxZero();
       break;
-    case Constant4:
+    case Do::Constant4:
       stack.push(1.421413741);
       allDyDxZero();
       break;
-    case Constant5:
+    case Do::Constant5:
       stack.push(-1.453152027);
       allDyDxZero();
       break;
-    case Constant6:
+    case Do::Constant6:
       stack.push(1.061405429);
       allDyDxZero();
       break;
-    case LogFactorialApprox:
+    case Do::LogFactorialApprox:
       {
         //log factorial approximation
         #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -1067,49 +1065,49 @@ inline dblvec glmmr::calculator::calculate(const int i,
         //}
         break;
       }
-    case PushVariance:
+    case Do::PushVariance:
       {
         stack.push(variance(i));
         allDyDxZero();
         break;
       }
-    case PushUserNumber0:
+    case Do::PushUserNumber0:
       stack.push(numbers[0]);
       allDyDxZero();
       break;
-    case PushUserNumber1:
+    case Do::PushUserNumber1:
       stack.push(numbers[1]);
       allDyDxZero();
       break;
-    case PushUserNumber2:
+    case Do::PushUserNumber2:
       stack.push(numbers[2]);
       allDyDxZero();
       break;
-    case PushUserNumber3:
+    case Do::PushUserNumber3:
       stack.push(numbers[3]);
       allDyDxZero();
       break;
-    case PushUserNumber4:
+    case Do::PushUserNumber4:
       stack.push(numbers[4]);
       allDyDxZero();
       break;
-    case PushUserNumber5:
+    case Do::PushUserNumber5:
       stack.push(numbers[5]);
       allDyDxZero();
       break;
-    case PushUserNumber6:
+    case Do::PushUserNumber6:
       stack.push(numbers[6]);
       allDyDxZero();
       break;
-    case PushUserNumber7:
+    case Do::PushUserNumber7:
       stack.push(numbers[7]);
       allDyDxZero();
       break;
-    case PushUserNumber8:
+    case Do::PushUserNumber8:
       stack.push(numbers[8]);
       allDyDxZero();
       break;
-    case PushUserNumber9:
+    case Do::PushUserNumber9:
       stack.push(numbers[9]);
       allDyDxZero();
       break;
@@ -1128,7 +1126,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
   dblvec result;
   result.push_back(stack.top());
   
-  if constexpr (dydx != None){
+  if constexpr (dydx != CalcDyDx::None){
     for(const auto& fstack: first_dx){
       #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(fstack.size()==0)Rcpp::stop("Error derivative stack empty");
@@ -1136,7 +1134,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       result.push_back(fstack.top());
     }
   }
-  if constexpr (dydx == BetaSecond || dydx == XBeta){
+  if constexpr (dydx == CalcDyDx::BetaSecond || dydx == CalcDyDx::XBeta){
     for(const auto& sstack: second_dx){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
       if(sstack.size()==0)Rcpp::stop("Error second derivative stack empty");
@@ -1151,52 +1149,51 @@ inline dblvec glmmr::calculator::calculate(const int i,
 inline void glmmr::calculator::print_instructions() const {
   //currently only setup for R
   #ifdef R_BUILD
-  using enum Instruction;
   int counter = 1;
   int idx_iter = 0;
   Rcpp::Rcout << "\nInstructions:\n";
   for(const auto& i: instructions){
     Rcpp::Rcout << counter << ". " << instruction_str.at(i);
     switch(i){
-      case PushUserNumber0:
+      case Do::PushUserNumber0:
         Rcpp::Rcout << " = " << numbers[0] << "\n";
         break;
-    case PushUserNumber1:
+    case Do::PushUserNumber1:
       Rcpp::Rcout << " = " << numbers[1] << "\n";
       break;
-    case PushUserNumber2:
+    case Do::PushUserNumber2:
       Rcpp::Rcout << " = " << numbers[2] << "\n";
       break;
-    case PushUserNumber3:
+    case Do::PushUserNumber3:
       Rcpp::Rcout << " = " << numbers[3] << "\n";
       break;
-    case PushUserNumber4:
+    case Do::PushUserNumber4:
       Rcpp::Rcout << " = " << numbers[4] << "\n";
       break;
-    case PushUserNumber5:
+    case Do::PushUserNumber5:
       Rcpp::Rcout << " = " << numbers[5] << "\n";
       break;
-    case PushUserNumber6:
+    case Do::PushUserNumber6:
       Rcpp::Rcout << " = " << numbers[6] << "\n";
       break;
-    case PushUserNumber7:
+    case Do::PushUserNumber7:
       Rcpp::Rcout << " = " << numbers[7] << "\n";
       break;
-    case PushUserNumber8:
+    case Do::PushUserNumber8:
       Rcpp::Rcout << " = " << numbers[8] << "\n";
       break;
-    case PushUserNumber9:
+    case Do::PushUserNumber9:
       Rcpp::Rcout << " = " << numbers[9] << "\n";
       break;
-    case PushParameter:
+    case Do::PushParameter:
       Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "\n";
       idx_iter++;
       break;
-    case PushData:
+    case Do::PushData:
       Rcpp::Rcout << "(column " << data_names[indexes[idx_iter]] << ")\n";
       idx_iter++;
       break;
-    case PushCovData:
+    case Do::PushCovData:
       Rcpp::Rcout << "(column " << indexes[idx_iter] << ")\n";
       idx_iter++;
       break;

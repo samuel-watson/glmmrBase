@@ -10,7 +10,6 @@ inline bool parse_formula(std::vector<char>& formula,
                           const ArrayXXd& data,
                           const strvec& colnames,
                           MatrixXd& Xdata){
-  using enum Instruction;
   #ifdef ENABLE_DEBUG
   Rcpp::Rcout << "\nFORMULA PARSING\nFormula: ";
   for(const auto& i: formula) Rcpp::Rcout << i;
@@ -45,9 +44,9 @@ inline bool parse_formula(std::vector<char>& formula,
     #endif
     // split at +/-
     if(formula[cursor]=='+'){
-      calc.instructions.push_back(Add);
+      calc.instructions.push_back(Do::Add);
     } else if(formula[cursor]=='-'){
-      calc.instructions.push_back(Subtract);
+      calc.instructions.push_back(Do::Subtract);
     } else {
       #ifdef R_BUILD
       Rcpp::stop("Oops, something has gone wrong (f1)");
@@ -108,9 +107,9 @@ inline bool parse_formula(std::vector<char>& formula,
       #endif
       // split at *//
       if(formula[cursor]=='*'){
-        calc.instructions.push_back(Multiply);
+        calc.instructions.push_back(Do::Multiply);
       } else if(formula[cursor]=='/'){
-        calc.instructions.push_back(Divide);
+        calc.instructions.push_back(Do::Divide);
       } else {
         #ifdef R_BUILD
         Rcpp::stop("Oops, something has gone wrong (f2)");
@@ -153,7 +152,7 @@ inline bool parse_formula(std::vector<char>& formula,
         Rcpp::Rcout << " Split at ^";
         #endif
         if(formula[cursor]=='^'){
-          calc.instructions.push_back(Power);
+          calc.instructions.push_back(Do::Power);
         }  else {
           #ifdef R_BUILD
           Rcpp::stop("Oops, something has gone wrong (f3)");
@@ -218,17 +217,17 @@ inline bool parse_formula(std::vector<char>& formula,
                 auto findintercept = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"b_intercept");
                 int factorrange = findintercept == calc.parameter_names.end() ? unique_values.size() : unique_values.size()-1;
                 for(int i = 0; i < factorrange; i++){
-                  if(i < (factorrange - 1))calc.instructions.push_back(Add);
-                  calc.instructions.push_back(Multiply);
+                  if(i < (factorrange - 1))calc.instructions.push_back(Do::Add);
+                  calc.instructions.push_back(Do::Multiply);
                   if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);
                   for(int j = 0; j < data.rows(); j++){
                     Xdata(j,calc.data_count) = data(j,column_index)==unique_values[i] ? 1.0 : 0.0;
                   }
                   calc.indexes.push_back(calc.data_count);
                   calc.data_count++;
-                  calc.instructions.push_back(PushData);
+                  calc.instructions.push_back(Do::PushData);
                   // parameter
-                  calc.instructions.push_back(PushParameter);
+                  calc.instructions.push_back(Do::PushParameter);
                   str dataname = token_as_str2 + "_" + std::to_string(unique_values[i])[0];
                   str parname = "b_" + dataname;
                   calc.parameter_names.push_back(parname);
@@ -244,15 +243,15 @@ inline bool parse_formula(std::vector<char>& formula,
               }
             } else {
               if(token_as_str == "exp"){
-                calc.instructions.push_back(Exp);
+                calc.instructions.push_back(Do::Exp);
               } else if(token_as_str == "log"){
-                calc.instructions.push_back(Log);
+                calc.instructions.push_back(Do::Log);
               } else if(token_as_str == "sqrt"){
-                calc.instructions.push_back(Sqrt);
+                calc.instructions.push_back(Do::Sqrt);
               } else if(token_as_str == "sin"){
-                calc.instructions.push_back(Sin);
+                calc.instructions.push_back(Do::Sin);
               } else if(token_as_str == "cos"){
-                calc.instructions.push_back(Cos);
+                calc.instructions.push_back(Do::Cos);
               } else {
                 #ifdef R_BUILD
                 Rcpp::stop("String " + token_as_str + " is not a recognised function");
@@ -278,7 +277,7 @@ inline bool parse_formula(std::vector<char>& formula,
             Rcpp::Rcout << " data";
             #endif
             // token is the name of a variable
-            calc.instructions.push_back(PushData);
+            calc.instructions.push_back(Do::PushData);
             calc.data_names.push_back(token_as_str);
             int column_index = colidx - colnames.begin();
             calc.indexes.push_back(calc.data_count);
@@ -289,14 +288,14 @@ inline bool parse_formula(std::vector<char>& formula,
             double a = std::stod(token_as_str); 
             
             #ifdef ENABLE_DEBUG
-            Rcpp::Rcout << " double = " << a << " push index = " << instruction_str.at(static_cast<Instruction>(calc.user_number_count));
+            Rcpp::Rcout << " double = " << a << " push index = " << instruction_str.at(static_cast<Do>(calc.user_number_count));
             #endif
             
             #ifdef R_BUILD
             if(calc.user_number_count >=10)Rcpp::stop("Only ten user numbers currently permitted.");
             #endif
             
-            calc.instructions.push_back(static_cast<Instruction>(calc.user_number_count));
+            calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
             calc.numbers[calc.user_number_count] = a;
             calc.user_number_count++;
             
@@ -305,7 +304,7 @@ inline bool parse_formula(std::vector<char>& formula,
             Rcpp::Rcout << " parameter name";
             #endif
             // interpret any other string as the name of a parameter
-            calc.instructions.push_back(PushParameter);
+            calc.instructions.push_back(Do::PushParameter);
             calc.parameter_names.push_back(token_as_str);
             calc.indexes.push_back(calc.parameter_count);
             calc.parameter_count++;
