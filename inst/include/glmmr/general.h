@@ -13,7 +13,7 @@
 #endif
 
 #ifdef __clang__
-#define EIGEN_HAS_STD_RESULT_OF 0
+#define EIGEN_HAS_STD_RESULT_OF 0 // This has no effect with RcppEigen as it has Eigen <0.3.4
 #endif
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 // includes
@@ -62,7 +62,7 @@ typedef std::pair<std::string, double> strdblpair;
 
 namespace glmmr {
 
-enum class CovarianceFunction {
+enum class CovFunc {
   gr = 0,
   ar = 1,
   fexp0 = 2,
@@ -82,7 +82,7 @@ enum class CovarianceFunction {
   dist = 16
 };
 
-enum class FamilyDistribution {
+enum class Fam {
   gaussian = 0,
   bernoulli = 1,
   poisson = 2,
@@ -91,7 +91,7 @@ enum class FamilyDistribution {
   binomial = 5
 };
 
-enum class LinkDistribution {
+enum class Link {
   logit = 0,
   loglink = 1, // to avoid conflicting with log() function
   probit = 2,
@@ -99,103 +99,84 @@ enum class LinkDistribution {
   inverse = 4
 };
 
-const std::map<str, FamilyDistribution> str_to_family = {
-  {"gaussian",FamilyDistribution::gaussian},
-  {"bernoulli",FamilyDistribution::bernoulli},
-  {"poisson",FamilyDistribution::poisson},
-  {"gamma",FamilyDistribution::gamma},
-  {"Gamma",FamilyDistribution::gamma},
-  {"beta",FamilyDistribution::beta},
-  {"binomial",FamilyDistribution::binomial}
+const std::map<str, Fam> str_to_family = {
+  {"gaussian",Fam::gaussian},
+  {"bernoulli",Fam::bernoulli},
+  {"poisson",Fam::poisson},
+  {"gamma",Fam::gamma},
+  {"Gamma",Fam::gamma},
+  {"beta",Fam::beta},
+  {"binomial",Fam::binomial}
 };
 
-const std::map<str, LinkDistribution> str_to_link = {
-  {"logit",LinkDistribution::logit},
-  {"log",LinkDistribution::loglink},
-  {"probit",LinkDistribution::probit},
-  {"identity",LinkDistribution::identity},
-  {"inverse",LinkDistribution::inverse}
+const std::map<str, Link> str_to_link = {
+  {"logit",Link::logit},
+  {"log",Link::loglink},
+  {"probit",Link::probit},
+  {"identity",Link::identity},
+  {"inverse",Link::inverse}
 };
 
-const std::map<str, CovarianceFunction> str_to_covfunc = {
-  {"gr", CovarianceFunction::gr},
-  {"ar", CovarianceFunction::ar},
-  {"fexp0", CovarianceFunction::fexp0},
-  {"fexp", CovarianceFunction::fexp},
-  {"sqexp0",CovarianceFunction::sqexp0},
-  {"sqexp",CovarianceFunction::sqexp},
-  {"bessel",CovarianceFunction::bessel},
-  {"matern",CovarianceFunction::matern},
-  {"wend0",CovarianceFunction::wend0},
-  {"wend1",CovarianceFunction::wend1},
-  {"wend2",CovarianceFunction::wend2},
-  {"prodwm",CovarianceFunction::prodwm},
-  {"prodcb",CovarianceFunction::prodcb},
-  {"prodek",CovarianceFunction::prodek},
-  {"ar0", CovarianceFunction::ar0},
-  {"ar1", CovarianceFunction::ar1},
-  {"dist",CovarianceFunction::dist}
+const std::map<str, CovFunc> str_to_covfunc = {
+  {"gr", CovFunc::gr},
+  {"ar", CovFunc::ar},
+  {"fexp0", CovFunc::fexp0},
+  {"fexp", CovFunc::fexp},
+  {"sqexp0",CovFunc::sqexp0},
+  {"sqexp",CovFunc::sqexp},
+  {"bessel",CovFunc::bessel},
+  {"matern",CovFunc::matern},
+  {"wend0",CovFunc::wend0},
+  {"wend1",CovFunc::wend1},
+  {"wend2",CovFunc::wend2},
+  {"prodwm",CovFunc::prodwm},
+  {"prodcb",CovFunc::prodcb},
+  {"prodek",CovFunc::prodek},
+  {"ar0", CovFunc::ar0},
+  {"ar1", CovFunc::ar1},
+  {"dist",CovFunc::dist}
 };
 
 // unfortunately need bidirectional map so need to duplicate this unless there's
 // a better way??
-const std::map<CovarianceFunction, str> covfunc_to_str = {
-  {CovarianceFunction::gr, "gr"},
-  {CovarianceFunction::ar, "ar"},
-  {CovarianceFunction::fexp0, "fexp0"},
-  {CovarianceFunction::fexp, "fexp"},
-  {CovarianceFunction::sqexp0, "sqexp0"},
-  {CovarianceFunction::sqexp, "sqexp"},
-  {CovarianceFunction::bessel, "bessel"},
-  {CovarianceFunction::matern, "matern"},
-  {CovarianceFunction::wend0, "wend0"},
-  {CovarianceFunction::wend1, "wend1"},
-  {CovarianceFunction::wend2, "wend2"},
-  {CovarianceFunction::prodwm, "prodwm"},
-  {CovarianceFunction::prodcb, "prodcb"},
-  {CovarianceFunction::prodek, "prodek"},
-  {CovarianceFunction::ar0, "ar0"},
-  {CovarianceFunction::ar1, "ar1"},
-  {CovarianceFunction::dist, "dist"}
+const std::map<CovFunc, str> covfunc_to_str = {
+  {CovFunc::gr, "gr"},
+  {CovFunc::ar, "ar"},
+  {CovFunc::fexp0, "fexp0"},
+  {CovFunc::fexp, "fexp"},
+  {CovFunc::sqexp0, "sqexp0"},
+  {CovFunc::sqexp, "sqexp"},
+  {CovFunc::bessel, "bessel"},
+  {CovFunc::matern, "matern"},
+  {CovFunc::wend0, "wend0"},
+  {CovFunc::wend1, "wend1"},
+  {CovFunc::wend2, "wend2"},
+  {CovFunc::prodwm, "prodwm"},
+  {CovFunc::prodcb, "prodcb"},
+  {CovFunc::prodek, "prodek"},
+  {CovFunc::ar0, "ar0"},
+  {CovFunc::ar1, "ar1"},
+  {CovFunc::dist, "dist"}
 };
 
-const std::map<CovarianceFunction, int> covfunc_to_nvar = {
-  {CovarianceFunction::gr, 1},
-  {CovarianceFunction::ar, 2},
-  {CovarianceFunction::fexp0, 1},
-  {CovarianceFunction::fexp, 2},
-  {CovarianceFunction::sqexp0, 1},
-  {CovarianceFunction::sqexp, 2},
-  {CovarianceFunction::bessel, 1},
-  {CovarianceFunction::matern, 2},
-  {CovarianceFunction::wend0, 2},
-  {CovarianceFunction::wend1, 2},
-  {CovarianceFunction::wend2, 2},
-  {CovarianceFunction::prodwm, 2},
-  {CovarianceFunction::prodcb, 2},
-  {CovarianceFunction::prodek, 2},
-  {CovarianceFunction::ar0, 1},
-  {CovarianceFunction::ar1, 1},
-  {CovarianceFunction::dist, 0}
-};
-
-const static std::unordered_map<str, double> nvars = {  
-  {"gr", 1},
-  {"ar", 2},
-  {"fexp0", 1},
-  {"fexp", 2},
-  {"sqexp0",1},
-  {"sqexp",2},
-  {"bessel",1},
-  {"matern",2},
-  {"wend0",2},
-  {"wend1",2},
-  {"wend2",2},
-  {"prodwm",2},
-  {"prodcb",2},
-  {"prodek",2},
-  {"ar0", 1},
-  {"ar1", 1}
+const std::map<CovFunc, int> covfunc_to_nvar = {
+  {CovFunc::gr, 1},
+  {CovFunc::ar, 2},
+  {CovFunc::fexp0, 1},
+  {CovFunc::fexp, 2},
+  {CovFunc::sqexp0, 1},
+  {CovFunc::sqexp, 2},
+  {CovFunc::bessel, 1},
+  {CovFunc::matern, 2},
+  {CovFunc::wend0, 2},
+  {CovFunc::wend1, 2},
+  {CovFunc::wend2, 2},
+  {CovFunc::prodwm, 2},
+  {CovFunc::prodcb, 2},
+  {CovFunc::prodek, 2},
+  {CovFunc::ar0, 1},
+  {CovFunc::ar1, 1},
+  {CovFunc::dist, 0}
 };
 
 inline bool validate_fn(const str& fn){

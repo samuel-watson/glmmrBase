@@ -145,11 +145,11 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
   for(int i = 0; i < dim; i++){
     hsgp_data.col(i) = this->data_.col(this->re_cols_data_[0][0][i]);
   }
-  auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovarianceFunction::sqexp);
+  auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovFunc::sqexp);
   if(!(sqexpidx == this->fn_[0].end())){
     sq_exp = true;
   } else {
-    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovarianceFunction::fexp);
+    auto expidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovFunc::fexp);
     if(!(expidx == this->fn_[0].end())){
       sq_exp = false;
     } else {

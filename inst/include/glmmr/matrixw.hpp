@@ -28,21 +28,20 @@ inline VectorXd glmmr::MatrixW<modeltype>::W() const{
 
 template<typename modeltype>
 inline void glmmr::MatrixW<modeltype>::update(){
-  using enum FamilyDistribution;
   if(W_.size() != model.n())W_.conservativeResize(model.n());
   ArrayXd nvar_par(model.n());
   ArrayXd xb(model.n());
   switch(model.family.family){
-  case gaussian:
+  case Fam::gaussian:
     nvar_par = model.data.variance;
     break;
-  case gamma:
+  case Fam::gamma:
     nvar_par = model.data.variance.inverse();
     break;
-  case beta:
+  case Fam::beta:
     nvar_par = (1+model.data.variance);
     break;
-  case binomial:
+  case Fam::binomial:
     nvar_par = model.data.variance.inverse();
     break;
   default:

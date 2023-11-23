@@ -64,23 +64,22 @@ inline Eigen::VectorXd exp_vec(const Eigen::VectorXd& x,
 }
 
 inline VectorXd mod_inv_func(const VectorXd& muin,
-                                    LinkDistribution link)
+                                    Link link)
 {
-  using enum LinkDistribution;
   VectorXd mu(muin);
   switch (link) {
-  case logit:
+  case Link::logit:
     mu = exp_vec(mu, true);
     break;
-  case loglink:
+  case Link::loglink:
     mu = exp_vec(mu);
     break;
-  case probit:
+  case Link::probit:
     mu = gaussian_cdf_vec(mu);
     break;
-  case identity:
+  case Link::identity:
     break;
-  case inverse:
+  case Link::inverse:
     mu = mu.array().inverse().matrix();
     break;
   }
@@ -91,16 +90,14 @@ inline VectorXd mod_inv_func(const VectorXd& muin,
 
 inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
                              const glmmr::Family& family) {
-  using enum FamilyDistribution;
-  using enum LinkDistribution;
   Eigen::VectorXd wdiag(xb.size());
   Eigen::ArrayXd p(xb.size());
   
   switch(family.family){
-    case poisson:
+    case Fam::poisson:
       {
         switch(family.link){
-          case identity:
+          case Link::identity:
             wdiag = exp_vec(xb);
             break;
           default:
@@ -109,20 +106,20 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
           }
       break;
       }
-    case bernoulli: case binomial:
+    case Fam::bernoulli: case Fam::binomial:
       {
         switch(family.link){
-          case loglink:
+          case Link::loglink:
             p = mod_inv_func(xb, family.link);
             for(int i =0; i< xb.size(); i++){
               wdiag(i) = (1.0 - p(i))/p(i);
             }
             break;
-          case identity:
+          case Link::identity:
             p = mod_inv_func(xb, family.link);
             wdiag = (p * (1 - p)).matrix();
             break;
-          case probit:
+          case Link::probit:
           {
             p = mod_inv_func(xb, family.link);
             Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
@@ -140,10 +137,10 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
         }
       break;
       }
-    case gaussian:
+    case Fam::gaussian:
       {
         switch(family.link){
-          case loglink:
+          case Link::loglink:
             for(int i =0; i< xb.size(); i++){
               wdiag(i) = 1/exp(xb(i));
             }
@@ -157,15 +154,15 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
         }
       break;
       }
-    case gamma:
+    case Fam::gamma:
       {
         switch(family.link){
-          case inverse:
+          case Link::inverse:
             for(int i =0; i< xb.size(); i++){
               wdiag(i) = 1/(xb(i)*xb(i));
             }
             break;
-          case identity:
+          case Link::identity:
             for(int i =0; i< xb.size(); i++){
               wdiag(i) = (xb(i)*xb(i));
             }
@@ -179,7 +176,7 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
         }
       break;
       }
-    case beta:
+    case Fam::beta:
       {
         //only logit currently
         p = mod_inv_func(xb, family.link);
@@ -193,33 +190,32 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
 }
 
 inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
-                               const LinkDistribution link) {
-  using enum LinkDistribution;
+                               const Link link) {
   Eigen::VectorXd wdiag(xb.size());
   Eigen::VectorXd p(xb.size());
   
   switch (link) {
-  case loglink:
+  case Link::loglink:
     wdiag = glmmr::maths::exp_vec(-1.0 * xb);
     break;
-  case identity:
+  case Link::identity:
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1.0;
     }
     break;
-  case logit:
+  case Link::logit:
     p = glmmr::maths::mod_inv_func(xb, link);
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = 1/(p(i)*(1.0 - p(i)));
     }
     break;
-  case probit:
+  case Link::probit:
     {
       Eigen::ArrayXd pinv = gaussian_pdf_vec(xb);
       wdiag = (pinv.inverse()).matrix();
       break;
     }
-  case inverse:
+  case Link::inverse:
     for(int i =0; i< xb.size(); i++){
       wdiag(i) = -1.0 * xb(i) * xb(i);
     }
@@ -233,15 +229,14 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
 inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
                                     const Eigen::MatrixXd& Z,
                                     const Eigen::MatrixXd& D,
-                                    const LinkDistribution link){
-  using enum LinkDistribution;
+                                    const Link link){
   Eigen::ArrayXd xbnew(xb.array());
   int n = xb.size();
-  if(link==loglink){
+  if(link==Link::loglink){
     for(int i=0; i<n; i++){
       xbnew(i) += (Z.row(i)*D*Z.row(i).transpose())(0)/2;
     }
-  } else if(link==probit){
+  } else if(link==Link::probit){
     Eigen::ArrayXd zprod(n);
     Eigen::MatrixXd Dzz(D.rows(),D.cols());
     Eigen::PartialPivLU<Eigen::MatrixXd> pluDzz;
@@ -252,7 +247,7 @@ inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
     }
     zprod = zprod.inverse().sqrt();
     xbnew *= zprod;
-  } else if(link==logit){
+  } else if(link==Link::logit){
     double c = 0.5880842;
     Eigen::ArrayXd zprod(n);
     Eigen::MatrixXd Dzz(D.rows(),D.cols());
@@ -271,25 +266,24 @@ inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
 
 // is this function used anywhere? mark for deletion?
 inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
-                                    const FamilyDistribution family,
+                                    const Fam family,
                                     double var_par = 1.0){
-  using enum FamilyDistribution;
   Eigen::ArrayXd wdiag(mu.size());
   
   switch (family) {
-  case gaussian:
+  case Fam::gaussian:
     wdiag.setConstant(var_par);
     break;
-  case bernoulli: case binomial:
+  case Fam::bernoulli: case Fam::binomial:
     wdiag = mu.array()*(1-mu.array());
     break;
-  case poisson:
+  case Fam::poisson:
     wdiag = mu.array();
     break;
-  case gamma:
+  case Fam::gamma:
     wdiag = mu.array().square();
     break;
-  case beta:
+  case Fam::beta:
     wdiag = mu.array()*(1-mu.array())/(var_par+1);
     break;
   }
@@ -311,16 +305,14 @@ inline double log_factorial_approx(double n){
 inline double log_likelihood(const double y,
                              const double mu,
                              const double var_par,
-                             const FamilyDistribution family,
-                             const LinkDistribution link) {
-  using enum FamilyDistribution;
-  using enum LinkDistribution;
+                             const Fam family,
+                             const Link link) {
   double logl = 0;
   switch(family){
-  case poisson:
+  case Fam::poisson:
   {
     switch(link){
-  case identity:
+  case Link::identity:
   {
     double lf1 = log_factorial_approx(y);
     logl = y*log(mu) - mu-lf1;
@@ -335,24 +327,24 @@ inline double log_likelihood(const double y,
   }
     break;
   }
-  case bernoulli:
+  case Fam::bernoulli:
   {
     switch(link){
-  case loglink:
+  case Link::loglink:
     if(y==1){
       logl = mu;
     } else {
       logl = log(1 - exp(mu));
     }
     break;
-  case identity:
+  case Link::identity:
     if(y==1){
       logl = log(mu);
     } else {
       logl = log(1 - mu);
     }
     break;
-  case probit:
+  case Link::probit:
   {
     boost::math::normal norm(0,1);
     if (y == 1) {
@@ -374,10 +366,10 @@ inline double log_likelihood(const double y,
   }
     break;
   }
-  case binomial:
+  case Fam::binomial:
   {
     switch(link){
-  case loglink:
+  case Link::loglink:
   {
     double lfk = glmmr::maths::log_factorial_approx(y);
     double lfn = glmmr::maths::log_factorial_approx(var_par);
@@ -385,7 +377,7 @@ inline double log_likelihood(const double y,
     logl = lfn - lfk - lfnk + y*mu + (var_par - y)*log(1 - exp(mu));
     break;
   }
-  case identity:
+  case Link::identity:
   {
     double lfk = glmmr::maths::log_factorial_approx(y);
     double lfn = glmmr::maths::log_factorial_approx(var_par);
@@ -393,7 +385,7 @@ inline double log_likelihood(const double y,
     logl = lfn - lfk - lfnk + y*log(mu) + (var_par - y)*log(1 - mu);
     break;
   }
-  case probit:
+  case Link::probit:
   {
     boost::math::normal norm(0, 1);
     double lfk = glmmr::maths::log_factorial_approx(y);
@@ -413,10 +405,10 @@ inline double log_likelihood(const double y,
   }
     break;
   }
-  case gaussian:
+  case Fam::gaussian:
   {
     switch(link){
-  case loglink:
+  case Link::loglink:
     logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
       0.5*(log(y) - mu)*(log(y) - mu)/var_par;
     break;
@@ -428,16 +420,16 @@ inline double log_likelihood(const double y,
   }
     break;
   }
-  case gamma:
+  case Fam::gamma:
   {
     switch(link){
-  case inverse:
+  case Link::inverse:
   {
     double ymu = var_par*y*mu;
     logl = log(1/(tgamma(var_par)*y)) + var_par*log(ymu) - ymu;
     break;
   }
-  case identity:
+  case Link::identity:
     logl = log(1/(tgamma(var_par)*y)) + var_par*log(var_par*y/mu) - var_par*y/mu;
     break;
   default:
@@ -450,7 +442,7 @@ inline double log_likelihood(const double y,
   }
     break;
   }
-  case beta:
+  case Fam::beta:
   {
     //only logit currently
     logl = (mu*var_par - 1)*log(y) + ((1-mu)*var_par - 1)*log(1-y) - lgamma(mu*var_par) - lgamma((1-mu)*var_par) + lgamma(var_par);

@@ -30,14 +30,13 @@ struct glmmrType
 {
   std::variant<int, Rcpp::XPtr<glmm>, Rcpp::XPtr<glmm_nngp>, Rcpp::XPtr<glmm_hsgp> > ptr; 
   glmmrType(SEXP xp, Type type) : ptr(0) {
-    using enum Type;
-    if(type == GLMM){
+    if(type == Type::GLMM){
       Rcpp::XPtr<glmm> newptr(xp);
       ptr = newptr;
-    } else if(type== GLMM_NNGP){
+    } else if(type== Type::GLMM_NNGP){
       Rcpp::XPtr<glmm_nngp> newptr(xp);
       ptr = newptr;
-    } else if(type == GLMM_HSGP){
+    } else if(type == Type::GLMM_HSGP){
       Rcpp::XPtr<glmm_hsgp> newptr(xp);
       ptr = newptr;
     } 

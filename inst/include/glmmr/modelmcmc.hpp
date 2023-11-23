@@ -67,7 +67,7 @@ inline double glmmr::ModelMCMC<modeltype>::log_prob(const VectorXd &v){
   double lp1 = 0;
   double lp2 = 0;
   if(model.weighted){
-    if(model.family.family==FamilyDistribution::gaussian){
+    if(model.family.family==Fam::gaussian){
 #pragma omp parallel for reduction (+:lp1) 
       for(int i = 0; i<model.n(); i++){
         lp1 += glmmr::maths::log_likelihood(model.data.y(i),mu(i),model.data.variance(i)/model.data.weights(i),

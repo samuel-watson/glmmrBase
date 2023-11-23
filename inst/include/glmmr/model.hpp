@@ -157,12 +157,12 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   
 #ifdef R_BUILD
   int total_p = at.size() + atmeans.size() + average.size() + 1;
-  if(total_p != model.linear_predictor.P())Rcpp::warning("Unnamed variables will be averaged");
+  int intercept = 1- (int)model.linear_predictor.form.RM_INT;
+  if(total_p != (model.linear_predictor.P() - intercept))Rcpp::stop("All variables must be named");
   if(at.size() != atvals.size())Rcpp::stop("Not enough values specified for at");
   if(re_type == RandomEffectMargin::Average && re.zu_.cols()<=1)Rcpp::warning("No MCMC samples of random effects. Random effects will be set at estimated values.");
 #endif
     
-  using enum Instruction;
   bool single_row = true;
   MatrixXd newXdata(1,model.linear_predictor.Xdata.cols());
   int P = model.linear_predictor.P();
@@ -235,8 +235,8 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   
   // now create the new calculator object
   glmmr::calculator mcalc = model.linear_predictor.calc;
-  mcalc.instructions.push_back(Instruction::PushExtraData);
-  mcalc.instructions.push_back(Instruction::Add);
+  mcalc.instructions.push_back(Do::PushExtraData);
+  mcalc.instructions.push_back(Do::Add);
   glmmr::linear_predictor_to_link(mcalc,model.family.link);
   dblpair result;
   VectorXd delta = VectorXd::Zero(P);
