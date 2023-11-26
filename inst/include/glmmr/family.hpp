@@ -13,3 +13,4 @@ public:
   Family(const glmmr::Family& fam) : family(fam.family), link(fam.link) {};
 };
 }
+

@@ -15,34 +15,25 @@ namespace glmmr {
 using namespace rminqa;
 using namespace Eigen;
 
+
 template<typename modeltype>
-class ModelOptim{
+class ModelOptimBase {
+  using matrixtype = std::conditional<check_any_mixed_type<modeltype>::value,ModelMatrix<modeltype>,ModelMatrixBase<modeltype> >::type;
 public:
   modeltype& model;
-  glmmr::ModelMatrix<modeltype>& matrix;
-  glmmr::RandomEffects<modeltype>& re;
+  matrixtype& matrix;
   int trace = 0;
-  ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
+  ModelOptimBase(modeltype& model_, matrixtype& matrix_) ;
   virtual void update_beta(const dblvec &beta);
-  virtual void update_theta(const dblvec &theta);
   virtual void update_beta(const VectorXd &beta);
-  virtual void update_theta(const VectorXd &theta);
   virtual void update_u(const MatrixXd& u_);
   virtual double log_likelihood();
-  virtual double full_log_likelihood();
   virtual void nr_beta();
-  virtual void laplace_nr_beta_u();
   virtual void update_var_par(const double& v);
   virtual void update_var_par(const ArrayXd& v);
   virtual void ml_beta();
-  virtual void ml_theta();
-  virtual void ml_all();
-  virtual void laplace_ml_beta_u();
-  virtual void laplace_ml_theta();
-  virtual void laplace_ml_beta_theta();
   virtual double aic();
-  virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
-  virtual void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
+  void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
   virtual MatrixXd hessian_numerical(double tol = 1e-4);
   void set_bound(const dblvec& bound, bool lower = true);
   
@@ -52,19 +43,47 @@ protected:
   double rhoend = 0;
   dblvec lower_bound;
   dblvec upper_bound; // bounds for beta
-  void calculate_var_par();
+  virtual void calculate_var_par();
+  dblvec get_start_values(bool beta, bool var = true);
+  dblvec get_lower_values(bool beta, bool var = true);
+  dblvec get_upper_values(bool beta, bool var = true);
+  
+  class GLM_likelihood : public Functor<dblvec> {
+    ModelOptimBase<modeltype>& M;
+    double ll;
+  public:
+    L_likelihood(ModelOptimBase<modeltype>& M_) : M(M_), ll(0.0) {};
+    double operator()(const dblvec &par);
+  };
+  
+};
+
+template<typename modeltype>
+class ModelOptim : public ModelOptimBase<modeltype> {
+public:
+  glmmr::RandomEffects<modeltype>& re;
+  ModelOptim(modeltype& model_, ModelMatrix<modeltype>& matrix_, RandomEffects<modeltype>& re_) ;
+  virtual void update_theta(const dblvec &theta);
+  virtual void update_theta(const VectorXd &theta);
+  virtual void update_u(const MatrixXd& u_);
+  double log_likelihood() override;
+  virtual double full_log_likelihood();
+  virtual void laplace_nr_beta_u();
+  virtual void ml_theta();
+  virtual void ml_all();
+  void ml_beta() override;
+  virtual void laplace_ml_beta_u();
+  virtual void laplace_ml_theta();
+  virtual void laplace_ml_beta_theta();
+  double aic() override;
+  virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
+  MatrixXd hessian_numerical(double tol = 1e-4) override;
+  
+protected:
+  void calculate_var_par() override;
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   dblvec get_lower_values(bool beta, bool theta, bool var = true);
   dblvec get_upper_values(bool beta, bool theta, bool var = true);
-  
-  class L_likelihood : public Functor<dblvec> {
-    ModelOptim<modeltype>& M;
-    double ll;
-  public:
-    L_likelihood(ModelOptim<modeltype>& M_) :  
-      M(M_), ll(0.0) {};
-    double operator()(const dblvec &par);
-  };
   
   class D_likelihood : public Functor<dblvec> {
     ModelOptim<modeltype>& M;
@@ -170,24 +189,28 @@ protected:
 }
 
 template<typename modeltype>
-inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
-           glmmr::ModelMatrix<modeltype>& matrix_,
-           glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
+inline glmmr::ModelOptimBase<modeltype>::ModelOptim(modeltype& model_, 
+                                                    matrixtype& matrix_) : model(model_), matrix(matrix_) {};
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
+inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
+           glmmr::ModelMatrix<modeltype>& matrix_,
+           glmmr::RandomEffects<modeltype>& re_) : ModelOptimBase(model_,matrix_), re(re_) {};
+
+template<typename modeltype>
+inline void glmmr::ModelOptimBase<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
   npt = npt_;
   rhobeg = rhobeg_;
   rhoend = rhoend_;
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::update_beta(const dblvec &beta){
+inline void glmmr::ModelOptimBase<modeltype>::update_beta(const dblvec &beta){
   model.linear_predictor.update_parameters(beta);
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::update_beta(const VectorXd &beta){
+inline void glmmr::ModelOptimBase<modeltype>::update_beta(const VectorXd &beta){
   model.linear_predictor.update_parameters(beta.array());
 }
 
@@ -211,6 +234,37 @@ inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
   }
   re.u_ = u_;
   re.zu_ = model.covariance.ZLu(re.u_);
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptimBase<modeltype>::log_likelihood() {
+  double ll = 0;
+  ArrayXd xb(model.xb());
+  if(model.weighted){
+    if(model.family.family==Fam::gaussian){
+#pragma omp parallel for reduction (+:ll) 
+      for(int i = 0; i<model.n(); i++){
+        ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i),
+                                           model.data.variance(i)/model.data.weights(i),
+                                           model.family.family,model.family.link);
+      }
+    } else {
+#pragma omp parallel for reduction (+:ll)
+      for(int i = 0; i<model.n(); i++){
+        ll += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i),
+                                 model.data.variance(i),model.family.family,model.family.link);
+      }
+      ll *= model.data.weights.sum()/model.n();
+    }
+  } else {
+#pragma omp parallel for reduction (+:ll) 
+    for(int i = 0; i<model.n(); i++){
+      ll += glmmr::maths::log_likelihood(model.data.y(i),xb(i),
+                                         model.data.variance(i),model.family.family,
+                                         model.family.link);
+    }
+  }
+  return ll;
 }
 
 template<typename modeltype>
@@ -276,6 +330,18 @@ inline double glmmr::ModelOptim<modeltype>::full_log_likelihood(){
 }
 
 template<typename modeltype>
+inline dblvec glmmr::ModelOptimBase<modeltype>::get_start_values(bool beta, bool var){
+  dblvec start;
+  if(beta){
+    for(const auto& i: model.linear_predictor.parameters)start.push_back(i);
+  } 
+  if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
+    start.push_back(model.data.var_par);
+  }
+  return start;
+}
+
+template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool theta, bool var){
   dblvec start;
   if(beta){
@@ -291,7 +357,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower){
+inline void glmmr::ModelOptimBase<modeltype>::set_bound(const dblvec& bound, bool lower){
   #ifdef R_BUILD
   if(bound.size()!=model.linear_predictor.P())Rcpp::stop("Bound not equal to number of parameters");
   #endif
@@ -302,6 +368,21 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
   }
 }
 
+template<typename modeltype>
+inline dblvec glmmr::ModelOptimBase<modeltype>::get_lower_values(bool beta, bool var){
+  dblvec lower;
+  if(beta){
+    if(lower_bound.size()==0){
+      for(int i = 0; i< model.linear_predictor.P(); i++)lower.push_back(R_NegInf);
+    } else {
+      lower = lower_bound;
+    }
+  } 
+  if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
+    lower.push_back(0.0);
+  }
+  return lower;
+}
 
 template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
@@ -318,6 +399,22 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool the
     lower.push_back(0.0);
   }
   return lower;
+}
+
+template<typename modeltype>
+inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool var){
+  dblvec upper;
+  if(beta){
+    if(upper_bound.size()==0){
+      for(int i = 0; i< model.linear_predictor.P(); i++)upper.push_back(R_PosInf);
+    } else {
+      upper = upper_bound;
+    }
+  } 
+  if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
+    upper.push_back(R_PosInf);
+  }
+  return upper;
 }
 
 template<typename modeltype>
@@ -338,7 +435,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::nr_beta(){
+inline void glmmr::ModelOptimBase<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
@@ -424,16 +521,26 @@ inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::update_var_par(const double& v){
+inline void glmmr::ModelOptimBase<modeltype>::update_var_par(const double& v){
   model.data.var_par = v;
   model.data.variance.setConstant(v);
   model.calc.variance = model.data.variance;
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
+inline void glmmr::ModelOptimBase<modeltype>::update_var_par(const ArrayXd& v){
   model.data.variance = v;
   model.calc.variance = model.data.variance;
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptimBase<modeltype>::calculate_var_par(){
+  if(model.family.family==Fam::gaussian){
+    VectorXd zd = matrix.linpred();
+    ArrayXd resid = (model.data.y - zdu);
+    double sigma = (resid - resid.mean()).square().sum()/(resid.size()-1);
+    update_var_par(sigma);
+  }
 }
 
 template<typename modeltype>
@@ -455,8 +562,26 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
 }
 
 template<typename modeltype>
+inline void glmmr::ModelOptimBase<modeltype>::ml_beta(){
+  GLM_likelihood ldl(*this);
+  Rbobyqa<GLM_likelihood,dblvec> opt;
+  opt.control.iprint = trace;
+  opt.control.npt = npt;
+  opt.control.rhobeg = rhobeg;
+  opt.control.rhoend = rhoend;
+  dblvec start = get_start_values(true,false);
+  dblvec lower = get_lower_values(true,false);
+  dblvec upper = get_upper_values(true,false);
+  opt.set_upper(upper);
+  opt.set_lower(lower);
+  opt.control.iprint = trace;
+  opt.minimize(ldl, start);
+  calculate_var_par();
+}
+
+template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::ml_beta(){
-  L_likelihood ldl(*this);
+  GLM_likelihood ldl(static_cast<ModelOptimBase<modeltype>*>(this));
   Rbobyqa<L_likelihood,dblvec> opt;
   opt.control.iprint = trace;
   opt.control.npt = npt;
@@ -575,7 +700,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::L_likelihood::operator()(const dblvec &par) {
+inline double glmmr::ModelOptimBase<modeltype>::GLM_likelihood::operator()(const dblvec &par) {
   M.update_beta(par);
   ll = M.log_likelihood();
   return -1*ll;
@@ -681,6 +806,15 @@ inline double glmmr::ModelOptim<modeltype>::D_likelihood_hsgp::operator()(const 
   return -1*logl;
 }
 
+// The DoF are not correct!
+template<typename modeltype>
+inline double glmmr::ModelOptimBase<modeltype>::aic(){
+  int dof = model.linear_predictor.P();
+  double ll = log_likelihood();
+  return (-2*ll + 2*dof); 
+}
+
+// Fix the DoF!
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::aic(){
   MatrixXd Lu = re.u();
@@ -696,16 +830,30 @@ inline double glmmr::ModelOptim<modeltype>::aic(){
 }
 
 template<typename modeltype>
+inline MatrixXd glmmr::ModelOptimBase<modeltype>::hessian_numerical(double tol){
+  dblvec start = get_start_values(true,false);
+  dblvec lower = get_lower_values(true,false);
+  GLM_likelihood ldl(*this);
+  dblvec currbeta = model.linear_predictor.parameters;
+  dblvec hess(start.size()*start.size());
+  std::fill(hess.begin(),hess.end(),0.0);
+  dblvec ndeps(start.size());
+  std::fill(ndeps.begin(),ndeps.end(),tol);
+  ldl.os.ndeps_ = ndeps;
+  ldl.os.lower_ = lower;
+  ldl.Hessian(start,hess);
+  MatrixXd H = Map<MatrixXd>(hess.data(),model.linear_predictor.P(),model.linear_predictor.P());
+  update_beta(currbeta);
+  return H;
+}
+
+template<typename modeltype>
 inline MatrixXd glmmr::ModelOptim<modeltype>::hessian_numerical(double tol){
-  
-  F_likelihood dl(*this);
   dblvec start = get_start_values(true,true,false);
   dblvec lower = get_lower_values(true,true,false);
-  
   F_likelihood ldl(*this);
   dblvec currbeta = model.linear_predictor.parameters;
   dblvec currtheta = model.covariance.parameters_;
-  
   dblvec hess(start.size()*start.size());
   std::fill(hess.begin(),hess.end(),0.0);
   dblvec ndeps(start.size());

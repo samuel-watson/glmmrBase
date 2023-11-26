@@ -18,26 +18,40 @@ enum class RandomEffectMargin {
     Average = 3
 };
 
+template<typename modeltype>
+class RandomEffectsBase {
+public:
+  modeltype& model;
+  RandomEffectsBase(modeltype& model_) : model(model_) {};
+  RandomEffectsBase(const RandomEffectsBase<modeltype>& re) : model(re.model) {};
+};
 
 template<typename modeltype>
-class RandomEffects{
+class RandomEffects : public RandomEffectsBase<modeltype> {
 public:
   MatrixXd u_;
   MatrixXd zu_;
-  modeltype& model;
-  RandomEffects(modeltype& model_) : 
-    u_(MatrixXd::Zero(model_.covariance.Q(),1)),
-    zu_(model_.n(),1), model(model_) {};
-  RandomEffects(modeltype& model_, int n, int Q) : 
-    u_(MatrixXd::Zero(Q,1)),
-    zu_(n,1), model(model_) {};
-  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), zu_(re.zu_), model(re.model) {};
+  RandomEffects(modeltype& model_);
+  RandomEffects(modeltype& model_, int n, int Q);
+  RandomEffects(const RandomEffects<modeltype>& re) : u_(re.u_), zu_(re.zu_), model(re.model) {};
   MatrixXd Zu(){return zu_;};
   MatrixXd u(bool scaled = true);
   vector_matrix predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
 };
 
 }
+
+template<typename modeltype>
+inline glmmr::RandomEffects<modeltype>::RandomEffects(modeltype& model_) : 
+  RandomEffectsBase(model_),
+  u_(MatrixXd::Zero(model_.covariance.Q(),1)),
+  zu_(model_.n(),1) {};
+
+template<typename modeltype>
+inline glmmr::RandomEffects<modeltype>::RandomEffects(modeltype& model_, int n, int Q) : 
+  RandomEffectsBase(model_),
+  u_(MatrixXd::Zero(Q,1)),
+  zu_(n,1) {};
 
 template<typename modeltype>
 inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){

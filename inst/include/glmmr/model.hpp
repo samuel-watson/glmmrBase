@@ -11,12 +11,6 @@ namespace glmmr {
 
 using namespace Eigen;
 
-template<class>
-struct check_type : std::false_type {};
-
-template<>
-struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > : std::true_type {};
-
 enum class MarginType {
   DyDx = 0,
   Diff = 1,
@@ -30,14 +24,21 @@ enum class SE {
   BW = 3
 };
 
+// for non-mixed models then the base classes will be used - equivalent to an ordinary GLM model
+// this can later be expanded to include different types of estimator like GEE
+
 template<typename modeltype>
 class Model {
+  using retype = std::conditional_t<check_any_mixed_type<modeltype>::value,RandomEffects<modeltype>,RandomEffectsBase<modeltype> >;
+  using mcmctype = std::conditional_t<check_any_mixed_type<modeltype>::value,ModelMCMC<modeltype>,ModelMCMCBase<modeltype> >;
+  using matrixtype = std::conditional_t<check_any_mixed_type<modeltype>::value,ModelMatrix<modeltype>,ModelMatrixBase<modeltype> >;
+  using optimtype = std::conditional_t<check_any_mixed_type<modeltype>::value,ModelOptim<modeltype>,ModelOptimBase<modeltype> >;
 public:
   modeltype model;
-  glmmr::RandomEffects<modeltype> re;
-  glmmr::ModelMatrix<modeltype> matrix;
-  glmmr::ModelOptim<modeltype> optim;
-  glmmr::ModelMCMC<modeltype> mcmc;
+  retype re;
+  matrixtype matrix;
+  optimtype optim;
+  mcmctype mcmc;
   Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
   virtual void set_offset(const VectorXd& offset_);
   virtual void set_weights(const ArrayXd& weights_);
@@ -46,18 +47,12 @@ public:
   virtual void update_theta(const dblvec &theta_);
   virtual void update_u(const MatrixXd &u_);
   virtual void set_trace(int trace_);
-  virtual dblpair marginal(const MarginType type,
-                             const std::string& x,
-                             const strvec& at,
-                             const strvec& atmeans,
-                             const strvec& average,
-                             const RandomEffectMargin re_type,
-                             const SE se_type,
-                             const dblpair& xvals,
-                             const dblvec& atvals,
-                             const dblvec& atrevals);
+  virtual dblpair marginal(const MarginType type,const std::string& x,const strvec& at,
+                           const strvec& atmeans,const strvec& average,const RandomEffectMargin re_type,
+                            const SE se_type,const dblpair& xvals,const dblvec& atvals,const dblvec& atrevals);
                                              
 };
+
 
 }
 
@@ -68,7 +63,7 @@ inline glmmr::Model<modeltype>::Model(const std::string& formula_,
       std::string family_, 
       std::string link_) : model(formula_,data_,colnames_,family_,link_), 
       re(model), 
-      matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+      matrix(model,re,check_mixed_type<modeltype>::value,check_mixed_type<modeltype>::value),  
       optim(model,matrix,re), mcmc(model,matrix,re) {};
 
 template<typename modeltype>
@@ -96,37 +91,45 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
-  model.covariance.update_parameters(theta_);
-  re.zu_ = model.covariance.ZLu(re.u_);
+  if constexpr (check_any_mixed_type<modeltype>::value){
+    model.covariance.update_parameters(theta_);
+    re.zu_ = model.covariance.ZLu(re.u_);
+  }
 }
+
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_){
+  if constexpr (check_any_mixed_type<modeltype>::value){
 #ifdef R_BUILD
-  if(u_.rows()!=model.covariance.Q())Rcpp::stop(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
+    if(u_.rows()!=model.covariance.Q())Rcpp::stop(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
 #endif
-  
-  if(u_.cols()!=re.u_.cols()){
+    
+    if(u_.cols()!=re.u_.cols()){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-    Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
+      Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
 #endif
-    int newcolsize = u_.cols();
-    re.u_.resize(NoChange,newcolsize);
-    re.zu_.resize(NoChange,newcolsize);
+      int newcolsize = u_.cols();
+      re.u_.resize(NoChange,newcolsize);
+      re.zu_.resize(NoChange,newcolsize);
+    }
+    re.u_ = u_;
+    re.zu_ = model.covariance.ZLu(re.u_);
   }
-  re.u_ = u_;
-  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_trace(int trace_){
   optim.trace = trace_;
-  mcmc.trace = trace_;
-  if(trace_ > 0){
-    mcmc.verbose = true;
-  } else {
-    mcmc.verbose = false;
-  }
+  if constexpr (check_any_mixed_type<modeltype>::value){
+    mcmc.trace = trace_;
+    if(trace_ > 0){
+      mcmc.verbose = true;
+    } else {
+      mcmc.verbose = false;
+    }
+  }  
+  
 }
 
 // marginal effects:
@@ -493,4 +496,16 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   return result;
   
 }
+
+template<>
+inline dblpair glmmr::Model<glm>::marginal(const MarginType type,
+                                                 const std::string& x,
+                                                 const strvec& at,
+                                                 const strvec& atmeans,
+                                                 const strvec& average,
+                                                 const RandomEffectMargin re_type,
+                                                 const SE se_type,
+                                                 const dblpair& xvals,
+                                                 const dblvec& atvals,
+                                                 const dblvec& atrevals){}
 

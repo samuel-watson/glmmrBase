@@ -13,23 +13,42 @@ namespace glmmr {
 using namespace Eigen;
 
 template<typename modeltype>
-class ModelMatrix{
+class ModelMatrixBase {
+  using retype = std::conditional<check_any_mixed_type<modeltype>::value,RandomEffects<modeltype>,RandomEffectsBase<modeltype> >::type;
+public:
+  modeltype& model;
+  MatrixW<modeltype> W;
+  retype& re;
+  ModelMatrix(modeltype& model_, retype& re_);
+  ModelMatrix(const ModelMatrixBase<modeltype>& matrix);
+  ModelMatrix(modeltype& model_, retype& re_, bool useBlock_, bool useSparse_);
+  virtual MatrixXd information_matrix();
+  virtual MatrixXd Sigma(bool inverse = false);
+  virtual MatrixXd sandwich_matrix();
+  virtual MatrixXd linpred();
+  virtual vector_matrix b_score();
+  virtual matrix_matrix hess_and_grad();
+  
+protected:
+  bool useBlock = true;
+  bool useSparse = true;
+};
+
+template<typename modeltype>
+class ModelMatrix : public ModelMatrixBase<modeltype> {
   public:
-    modeltype& model;
-    glmmr::MatrixW<modeltype> W;
-    glmmr::RandomEffects<modeltype>& re;
     ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_);
     ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix);
     ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
-    MatrixXd information_matrix();
-    MatrixXd Sigma(bool inverse = false);
+    MatrixXd information_matrix() override;
+    MatrixXd Sigma(bool inverse = false) override;
     MatrixXd observed_information_matrix();
-    MatrixXd sandwich_matrix();
+    MatrixXd sandwich_matrix() override;
     std::vector<MatrixXd> sigma_derivatives();
     MatrixXd information_matrix_theta();
     kenward_data kenward_roger();
-    MatrixXd linpred();
-    vector_matrix b_score();
+    MatrixXd linpred() override;
+    vector_matrix b_score() override;
     vector_matrix re_score();
     matrix_matrix hess_and_grad();
     VectorXd log_gradient(const VectorXd &v,bool beta = false);
@@ -41,20 +60,36 @@ class ModelMatrix{
     MatrixXd sigma_block(int b, bool inverse = false);
     MatrixXd sigma_builder(int b, bool inverse = false);
     MatrixXd information_matrix_by_block(int b);
-    bool useBlock = true;
-    bool useSparse = true;
+    
 };
 
 }
 
 template<typename modeltype>
-inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
+inline glmmr::ModelMatrixBase<modeltype>::ModelMatrixBase(modeltype& model_, retype& re_): 
+  model(model_), W(model_), re(re_) {};
+
+template<typename modeltype>
+inline glmmr::ModelMatrixBase<modeltype>::ModelMatrixBase(const ModelMatrixBase<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { };
+
+template<typename modeltype>
+inline glmmr::ModelMatrixBase<modeltype>::ModelMatrixBase(modeltype& model_, retype& re_, bool useBlock_, bool useSparse_): model(model_), W(model_), re(re_) { 
+  useBlock = useBlock_;
+  useSparse = useSparse_;};
+
+template<typename modeltype>
+inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): 
+  ModelMatrixBase(model_,re_) { 
+  static_assert(check_any_mixed_type<modeltype>::value==true,"model matrix constructor requires mixed model type");
+  gen_sigma_blocks();
+};
 
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
 
 template<typename modeltype>
-inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_): model(model_), W(model_), re(re_) { 
+inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_): ModelMatrixBase(model_,re_,useBlock_,useSparse_) { 
+  static_assert(check_any_mixed_type<modeltype>::value==true,"model matrix constructor requires mixed model type");
   useBlock = useBlock_;
   useSparse = useSparse_;
   if(useBlock)gen_sigma_blocks();};
@@ -70,6 +105,13 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_by_block(int b
   MatrixXd X = glmmr::Eigen_ext::submat(model.linear_predictor.X(),rows,ArrayXi::LinSpaced(model.linear_predictor.P(),0,model.linear_predictor.P()-1));
   MatrixXd S = sigma_block(b,true);
   MatrixXd M = X.transpose()*S*X;
+  return M;
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrixGLM<modeltype>::information_matrix(){
+  W.update();
+  MatrixXd M = model.linear_predictor.X.transpose() * W.W() * model.linear_predictor.X;
   return M;
 }
 
@@ -135,6 +177,15 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
       }
     }
     idx_matches.clear();
+  }
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrixGLM<modeltype>::Sigma(bool inverse){
+  if(!inverse){
+    return W.W().asDiagonal();
+  } else {
+    return W.W().array().inverse().matrix().asDiagonal();
   }
 }
 
@@ -231,6 +282,15 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   infomat.bottomLeftCorner(model.covariance.Q(),model.linear_predictor.P()) = XtWZL.transpose();
   infomat.bottomRightCorner(model.covariance.Q(),model.covariance.Q()) = ZLWLZ;
   return infomat;
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrixGLM<modeltype>::sandwich_matrix(){
+  MatrixXd infomat = information_matrix();
+  infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P(),model.linear_predictor.P()));
+  MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,model.data.offset);
+  MatrixXd sandwich = infomat * (J * J.transpose()) * infomat;
+  return sandwich;
 }
 
 template<typename modeltype>
@@ -438,8 +498,23 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(){
 }
 
 template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrixGLM<modeltype>::linpred(){
+  return model.linear_predictor.xb()+model.data.offset;
+}
+
+template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::linpred(){
   return (re.zu_.colwise()+(model.linear_predictor.xb()+model.data.offset));
+}
+
+template<typename modeltype>
+inline vector_matrix glmmr::ModelMatrix<modeltype>::b_score(){
+  matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,model.data.offset);
+  vector_matrix out(hess.mat1.rows());
+  out.mat = hess.mat1;
+  out.mat *= -1.0;
+  out.vec = hess.mat2.rowwise().sum();
+  return out;
 }
 
 template<typename modeltype>
@@ -452,6 +527,12 @@ inline vector_matrix glmmr::ModelMatrix<modeltype>::b_score(){
   out.mat *= -1.0;
   out.vec = hess.mat2.rowwise().sum();
   return out;
+}
+
+template<typename modeltype>
+inline matrix_matrix glmmr::ModelMatrixGLM<modeltype>::hess_and_grad(){
+  matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,model.data.offset);
+  return hess;
 }
 
 template<typename modeltype>

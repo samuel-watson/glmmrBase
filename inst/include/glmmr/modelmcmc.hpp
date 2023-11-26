@@ -12,14 +12,22 @@ namespace glmmr {
 using namespace Eigen;
 
 template<typename modeltype>
-class ModelMCMC{
-public:
+class ModelMCMCBase {
+  using matrixtype = std::conditional<check_any_mixed_type<modeltype>::value,ModelMatrix<modeltype>,ModelMatrixBase<modeltype> >::type;
+  using retype = std::conditional<check_any_mixed_type<modeltype>::value,RandomEffects<modeltype>,RandomEffectsBase<modeltype> >::type;
   modeltype& model;
-  glmmr::ModelMatrix<modeltype>& matrix;
-  glmmr::RandomEffects<modeltype>& re;
+  matrixtype& matrix;
+  retype& re;
   bool verbose = true;
   int trace = 1;
-  ModelMCMC(modeltype& model_,glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_);
+  public:
+    ModelMCMCBase(modeltype& model_,matrixtype& matrix_,retype& re_);
+};
+
+template<typename modeltype>
+class ModelMCMC : public ModelMCMCBase<modeltype> {
+public:
+  ModelMCMC(modeltype& model_,ModelMatrix<modeltype>& matrix_,RandomEffects<modeltype>& re_);
   double log_prob(const VectorXd &v);
   void mcmc_sample(int warmup_,int samples_,int adapt_ = 100);
   void mcmc_set_lambda(double lambda);
@@ -49,12 +57,18 @@ protected:
 }
 
 template<typename modeltype>
+inline glmmr::ModelMCMCBase<modeltype>::ModelMCMC(modeltype& model_, 
+                                              matrixtype& matrix_,
+                                              retype& re_) : 
+  model(model_), 
+  matrix(matrix_), 
+  re(re_){};
+
+template<typename modeltype>
 inline glmmr::ModelMCMC<modeltype>::ModelMCMC(modeltype& model_, 
           glmmr::ModelMatrix<modeltype>& matrix_,
           glmmr::RandomEffects<modeltype>& re_) : 
-  model(model_), 
-  matrix(matrix_), 
-  re(re_),
+  ModelMCMCBase(model_,matrix_,re_),
   u0(model.covariance.Q()),
   up(model.covariance.Q()),
   r(model.covariance.Q()),
