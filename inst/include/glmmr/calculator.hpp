@@ -19,7 +19,7 @@ class calculator {
     std::vector<Do> instructions;
     intvec indexes;
     dblvec y;
-    std::array<double,10> numbers;
+    std::array<double,10> numbers = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
     strvec parameter_names;
     strvec data_names;
     ArrayXd variance = ArrayXd::Constant(1,1.0);
@@ -454,7 +454,8 @@ inline dblvec glmmr::calculator::calculate(const int i,
     b = stack.top();
     
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-    if(b == 0)Rcpp::stop("Divide by zero (6)");
+    if(b == 0.0)Rcpp::stop("Divide by zero (6)");
+    if(isinf(a/b))Rcpp::stop("Infinity in division (6b)");
 #endif
     
     stack.pop();

@@ -64,39 +64,39 @@ namespace glmmr {
 
 enum class CovFunc {
   gr = 0,
-  ar = 1,
-  fexp0 = 2,
-  fexp = 3,
-  sqexp0 = 4,
-  sqexp = 5,
-  bessel = 6,
-  matern = 7,
-  wend0 = 8,
-  wend1 = 9,
-  wend2 = 10,
-  prodwm = 11,
-  prodcb = 12,
-  prodek = 13,
-  ar0 = 14,
-  ar1 = 15,
-  dist = 16
+    ar = 1,
+    fexp0 = 2,
+    fexp = 3,
+    sqexp0 = 4,
+    sqexp = 5,
+    bessel = 6,
+    matern = 7,
+    wend0 = 8,
+    wend1 = 9,
+    wend2 = 10,
+    prodwm = 11,
+    prodcb = 12,
+    prodek = 13,
+    ar0 = 14,
+    ar1 = 15,
+    dist = 16
 };
 
 enum class Fam {
   gaussian = 0,
-  bernoulli = 1,
-  poisson = 2,
-  gamma = 3,
-  beta = 4,
-  binomial = 5
+    bernoulli = 1,
+    poisson = 2,
+    gamma = 3,
+    beta = 4,
+    binomial = 5
 };
 
 enum class Link {
   logit = 0,
-  loglink = 1, // to avoid conflicting with log() function
-  probit = 2,
-  identity = 3,
-  inverse = 4
+    loglink = 1, // to avoid conflicting with log() function
+    probit = 2,
+    identity = 3,
+    inverse = 4
 };
 
 const std::map<str, Fam> str_to_family = {
@@ -228,9 +228,9 @@ inline bool is_number(const std::string& s)
   }
   catch (std::invalid_argument const& ex)
   {
-    #ifdef ENABLE_DEBUG
+#ifdef ENABLE_DEBUG
     Rcpp::Rcout << " Not double: " << ex.what() << '\n';
-    #endif
+#endif
     isnum = false;
   }
   return isnum;

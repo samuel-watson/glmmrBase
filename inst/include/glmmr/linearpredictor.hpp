@@ -50,7 +50,12 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
   P_ = calc.parameter_names.size();
   parameters.resize(P_);
-  std::fill(parameters.begin(),parameters.end(),0.0);
+  if(!calc.any_nonlinear){
+    std::fill(parameters.begin(),parameters.end(),0.0);
+  } else {
+    // to avoid problems like dividing by zero
+    std::fill(parameters.begin(),parameters.end(),1.0);
+  }
   X_.conservativeResize(n_,P_);
   if(!calc.any_nonlinear){
     X_ = calc.jacobian(parameters,Xdata);
