@@ -35,17 +35,19 @@ print.mcml <- function(x, ...){
     "gls" = "GLS",
     "robust" = "Robust",
     "kr" = "Kenward Roger",
+    "kr2" = "Kenward Roger (improved)",
     "bw" = "GLS with between-within correction",
-    "bwrobust" = "Robust with between-within correction"
+    "bwrobust" = "Robust with between-within correction",
+    "box" = "Modified Box correction"
   )
   cat("\nStandard error: ",setype,"\n")
   if(x$method%in%c("mcem","mcnr"))cat("\nNumber of Monte Carlo simulations per iteration: ",x$m," with tolerance ",x$tol,"\n\n")
   
- 
   dim1 <- dim(x$re.samps)[1]
   pars <- x$coefficients[1:(length(x$coefficients$par)-dim1),2:7]
   colnames(pars) <- c("Estimate","Std. Err.","z value","p value","2.5% CI","97.5% CI")
-  if(x$se == "bw" || x$se == "bwrobust" || x$se == "kr")colnames(pars)[3] <- "t value"
+  if(x$se == "bw" || x$se == "bwrobust" || x$se == "kr" || x$se == "kr2")colnames(pars)[3] <- "t value"
+  if(x$se == "box")colnames(pars)[3] <- "F value"
   rnames <- x$coefficients$par[1:(length(x$coefficients$par)-dim1)]
   if(any(duplicated(rnames))){
     did <- unique(rnames[duplicated(rnames)])
@@ -56,15 +58,16 @@ print.mcml <- function(x, ...){
   rownames(pars) <- rnames
   total_vars <- x$P+x$Q
   if(x$var_par_family)total_vars <- total_vars + 1
-  if(x$se %in% c("kr","bw","bwrobust"))pars$DoF <- c(x$dof, rep(NA,total_vars - x$P))
+  if(x$se %in% c("kr","bw","bwrobust","kr2","box"))pars$DoF <- c(x$dof, rep(NA,total_vars - x$P))
   pars <- apply(pars,2,round,digits = digits)
+  colrange <- ifelse(x$se %in% c("kr","bw","bwrobust","kr2","box"),1:7,
+                      ifelse(x$se == "box",c(1:4,7),1:6))
   
   cat("\nRandom effects: \n")
   print(pars[(x$P+1):(total_vars),c(1,2)])
   
   cat("\nFixed effects: \n")
-  print(pars[1:x$P,])
-  
+  print(pars[1:x$P,colrange])
   
   cat("\ncAIC: ",round(x$aic,digits))
   cat("\nApproximate R-squared: Conditional: ",round(x$Rsq[1],digits)," Marginal: ",round(x$Rsq[2],digits))

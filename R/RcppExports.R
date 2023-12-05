@@ -449,8 +449,12 @@ Model__infomat_theta <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__infomat_theta`, xp, type)
 }
 
-Model__kenward_roger <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Model__kenward_roger`, xp, type)
+Model__kenward_roger <- function(xp, improved = FALSE, type = 0L) {
+    .Call(`_glmmrBase_Model__kenward_roger`, xp, improved, type)
+}
+
+Model__box <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__box`, xp, type)
 }
 
 Model__cov_deriv <- function(xp, type = 0L) {

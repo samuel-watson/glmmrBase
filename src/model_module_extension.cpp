@@ -35,6 +35,15 @@ SEXP wrap(const kenward_data& x){
   ));
 }
 
+template<>
+SEXP wrap(const BoxResults& x){
+  return Rcpp::wrap(Rcpp::List::create(
+      Rcpp::Named("dof") = Rcpp::wrap(x.dof),
+      Rcpp::Named("scale") = Rcpp::wrap(x.scale),
+      Rcpp::Named("test_stat") = Rcpp::wrap(x.test_stat),
+      Rcpp::Named("p_value") = Rcpp::wrap(x.p_value)
+  ));
+}
 
 
 }
@@ -256,14 +265,25 @@ SEXP Model__infomat_theta(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-SEXP Model__kenward_roger(SEXP xp, int type = 0){
+SEXP Model__kenward_roger(SEXP xp, bool improved = false, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.kenward_roger());}
+    [&](auto ptr){return returnType(ptr->matrix.kenward_roger(improved));}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<kenward_data>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__box(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->matrix.box());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<BoxResults>(S));
 }
 
 // [[Rcpp::export]]

@@ -73,12 +73,12 @@ inline void glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>::set
 }
 
 template<typename cov, typename linpred>
-void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(){
+inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(){
   covariance.set_sparse(true);
 }
 
 template<typename cov, typename linpred>
-void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
+inline void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
   covariance.set_sparse(false);
 }
 

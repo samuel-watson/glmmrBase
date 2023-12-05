@@ -311,20 +311,19 @@ inline intvec interpret_re_par(const CovFunc& fn,
 }
 
 inline void re_linear_predictor(glmmr::calculator& calc,
-                                const int& Q){
+                                const int Q){
   using instructs = std::vector<Do>;
   
-  instructs re_instruct;
   instructs re_seq = {Do::PushData,Do::PushParameter,Do::Multiply,Do::Add};
   for(int i = 0; i < Q; i++){
-    re_instruct.insert(re_instruct.end(),re_seq.begin(),re_seq.end());
+    calc.instructions.insert(calc.instructions.end(),re_seq.begin(),re_seq.end());
     calc.parameter_names.push_back("v_"+std::to_string(i));
-    calc.indexes.push_back(i+calc.data_count);
-    calc.indexes.push_back(i+calc.data_count);
+    calc.data_names.push_back("z_"+std::to_string(i));
+    calc.indexes.push_back(calc.data_count);
+    calc.indexes.push_back(calc.parameter_count);
+    calc.parameter_count++;
+    calc.data_count++;
   }
-  calc.parameter_count += Q;
-  calc.instructions.insert(calc.instructions.end(),re_instruct.begin(),re_instruct.end());
-  calc.data_count += Q;
 }
 
 inline void linear_predictor_to_link(glmmr::calculator& calc,

@@ -36,6 +36,7 @@
 #include <boost/math/special_functions/polygamma.hpp>
 #include <boost/math/special_functions/gamma.hpp>
 #include <boost/math/distributions/normal.hpp>
+#include <boost/math/distributions/fisher_f.hpp>
 #include <random>
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/random.hpp>
@@ -294,4 +295,12 @@ public:
     lambda = x.lambda;
     return *this;
   };
+};
+
+struct BoxResults {
+  dblvec dof;
+  dblvec scale;
+  dblvec test_stat;
+  dblvec p_value;
+  BoxResults(const int r) : dof(r), scale(r), test_stat(r), p_value(r) {};
 };

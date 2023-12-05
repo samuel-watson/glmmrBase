@@ -12,6 +12,11 @@ namespace glmmr {
 
 using namespace Eigen;
 
+// enum class SandwichType {
+//   CR0,
+//   CR2
+// };
+
 template<typename modeltype>
 class ModelMatrix{
   public:
@@ -24,16 +29,19 @@ class ModelMatrix{
     MatrixXd information_matrix();
     MatrixXd Sigma(bool inverse = false);
     MatrixXd observed_information_matrix();
-    MatrixXd sandwich_matrix();
+    MatrixXd sandwich_matrix();//SandwichType type = SandwichType::CR0
     std::vector<MatrixXd> sigma_derivatives();
     MatrixXd information_matrix_theta();
-    kenward_data kenward_roger();
+    kenward_data kenward_roger(bool improved = false);
     MatrixXd linpred();
     vector_matrix b_score();
     vector_matrix re_score();
     matrix_matrix hess_and_grad();
     VectorXd log_gradient(const VectorXd &v,bool beta = false);
     std::vector<glmmr::SigmaBlock> get_sigma_blocks();
+    BoxResults box();
+    int P() const;
+    int Q() const;
     
   private:
     std::vector<glmmr::SigmaBlock> sigma_blocks;
@@ -43,6 +51,7 @@ class ModelMatrix{
     MatrixXd information_matrix_by_block(int b);
     bool useBlock = true;
     bool useSparse = true;
+    
 };
 
 }
@@ -67,7 +76,7 @@ inline std::vector<glmmr::SigmaBlock> glmmr::ModelMatrix<modeltype>::get_sigma_b
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_by_block(int b){
   ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
-  MatrixXd X = glmmr::Eigen_ext::submat(model.linear_predictor.X(),rows,ArrayXi::LinSpaced(model.linear_predictor.P(),0,model.linear_predictor.P()-1));
+  MatrixXd X = glmmr::Eigen_ext::submat(model.linear_predictor.X(),rows,ArrayXi::LinSpaced(P(),0,P()-1));
   MatrixXd S = sigma_block(b,true);
   MatrixXd M = X.transpose()*S*X;
   return M;
@@ -76,7 +85,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_by_block(int b
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
   W.update();
-  MatrixXd M = MatrixXd::Zero(model.linear_predictor.P(),model.linear_predictor.P());
+  MatrixXd M = MatrixXd::Zero(P(),P());
   for(unsigned int i = 0; i< sigma_blocks.size(); i++){
     M += information_matrix_by_block(i);
   }
@@ -136,6 +145,16 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
     }
     idx_matches.clear();
   }
+}
+template<typename modeltype>
+inline int glmmr::ModelMatrix<modeltype>::P() const {
+  return model.linear_predictor.P();
+}
+
+
+template<typename modeltype>
+inline int glmmr::ModelMatrix<modeltype>::Q() const {
+  return model.covariance.Q();
 }
 
 template<typename modeltype>
@@ -224,24 +243,80 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   MatrixXd ZL = model.covariance.ZL();
   MatrixXd XtWZL = (model.linear_predictor.X()).transpose() * W.W_.asDiagonal() * ZL;
   MatrixXd ZLWLZ = ZL.transpose() * W.W_.asDiagonal() * ZL;
-  ZLWLZ += MatrixXd::Identity(model.covariance.Q(),model.covariance.Q());
-  MatrixXd infomat(model.linear_predictor.P()+model.covariance.Q(),model.linear_predictor.P()+model.covariance.Q());
-  infomat.topLeftCorner(model.linear_predictor.P(),model.linear_predictor.P()) = XtXW;
-  infomat.topRightCorner(model.linear_predictor.P(),model.covariance.Q()) = XtWZL;
-  infomat.bottomLeftCorner(model.covariance.Q(),model.linear_predictor.P()) = XtWZL.transpose();
-  infomat.bottomRightCorner(model.covariance.Q(),model.covariance.Q()) = ZLWLZ;
+  ZLWLZ += MatrixXd::Identity(Q(),Q());
+  MatrixXd infomat(P()+Q(),P()+Q());
+  infomat.topLeftCorner(P(),P()) = XtXW;
+  infomat.topRightCorner(P(),Q()) = XtWZL;
+  infomat.bottomLeftCorner(Q(),P()) = XtWZL.transpose();
+  infomat.bottomRightCorner(Q(),Q()) = ZLWLZ;
   return infomat;
 }
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
+  // none of these produce great results! Not sure what the best strategy is here.
+  
+  // MatrixXd XandZ(model.n(),P()+Q());
+  // XandZ.leftCols(P()) = model.linear_predictor.Xdata;
+  // XandZ.rightCols(Q()) = model.covariance.ZL();
+  // dblvec bu;
+  // for(const auto& b: model.linear_predictor.parameters) bu.push_back(b);
+  // VectorXd umean = re.u(false).rowwise().mean();
+  // for(int i = 0; i < umean.size(); i++) bu.push_back(umean(i));
+  // matrix_matrix result = model.vcalc.jacobian_and_hessian(bu,XandZ,model.data.offset);
+  // MatrixXd JmatFull = result.mat2 * result.mat2.transpose();
+  // MatrixXd Jmat = JmatFull.block(0,0,P(),P());
+  // MatrixXd invHFull = -1.0*result.mat1;
+  // invHFull = invHFull.llt().solve(MatrixXd::Identity(invHFull.rows(),invHFull.cols()));
+  // MatrixXd invH = invHFull.block(0,0,P(),P());
+  // MatrixXd sandwich = invH * Jmat * invH;
+  // 
+  // 
+  // #if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  //   if(result.mat1.rows() <= P())Rcpp::stop("mat1 <= p");
+  //   Rcpp::Rcout << "\nSANDWICH\n";
+  //   Rcpp::Rcout << "\nHessian: \n" << -1.0*result.mat1.block(0,0,P(),P());
+  //   Rcpp::Rcout << "\nInverse Hessian: \n" << invH;
+  //   Rcpp::Rcout << "\nGradient: \n" << Jmat;
+  //   Rcpp::Rcout << "\nSandwich: \n" << sandwich;
+  // #endif
+  // 
+  // return sandwich;
+  
   MatrixXd infomat = information_matrix();
-  infomat = infomat.llt().solve(MatrixXd::Identity(model.linear_predictor.P(),model.linear_predictor.P()));
-  MatrixXd zuOffset = re.Zu();
-  zuOffset.colwise() += model.data.offset;
-  MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
-  MatrixXd sandwich = infomat * (J * J.transpose()) * infomat;
-  return sandwich;
+  infomat = infomat.llt().solve(MatrixXd::Identity(P(),P()));
+  MatrixXd X = model.linear_predictor.X();
+  MatrixXd S = Sigma(true);
+  MatrixXd SX = S*X;
+  // MatrixXd resid_sum = MatrixXd::Zero(X.rows(),X.rows());
+  MatrixXd zd = linpred();
+  int niter = zd.cols();
+  for(int i = 0; i < niter; ++i){
+    zd.col(i) = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
+    if(model.family.family == Fam::binomial){
+      zd.col(i) = zd.col(i).cwiseProduct(model.data.variance.matrix());
+    }
+    zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
+  }
+  MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
+
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\nSANDWICH\n";
+  int size = resid_sum.rows() < 10 ? resid_sum.rows() : 10;
+  Rcpp::Rcout << "\nResidual cross prod: \n" << resid_sum.block(0,0,size,size).transpose();
+#endif
+
+  MatrixXd robust = infomat * SX.transpose() * resid_sum * SX * infomat;//(infomat.rows(),infomat.cols());
+
+  // if(type == SandwichType::CR2){
+  //   MatrixXd H = MatrixXd::Identity(X.rows(),X.rows()) - X*infomat * SX.transpose();
+  //   H = H.llt().solve(MatrixXd::Identity(X.rows(),X.rows()));
+  //   MatrixXd HL(H.llt().matrixL());
+  //   robust = infomat * SX.transpose()  * HL * resid_sum * HL * SX * infomat;
+  // } else {
+  //   robust = infomat * SX.transpose() * resid_sum * SX * infomat;
+  // }
+  return robust;
 }
 
 template<typename modeltype>
@@ -303,7 +378,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
 }
 
 template<typename modeltype>
-inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(){
+inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(bool improved){
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
@@ -395,16 +470,63 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(){
   }
   M_new = M + 2*M*meat*M;
   
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
+  Rcpp::Rcout << "\n(K-R) First correction matrix: \n" << 2*M*meat*M;
+#endif
+  
+  // new improved correction
+  if(improved){
+    MatrixXd SS = MatrixXd::Zero(SigmaInv.rows(),SigmaInv.cols());
+    for(int i = 0; i < Rmod; i++){
+      for(int j = i; j < Rmod; j++){
+        if(i < R && j < R){
+          int scnd_idx = i + j*(R-1) - j*(j-1)/2;
+          double rep = i == j ? 1.0 : 2.0;
+          SS += rep * M_theta(i,j) *Z*derivs[R+1+scnd_idx]*Z.transpose()*SigmaInv;
+        }
+      }
+    }
+    SS.applyOnTheLeft(SigmaInv);
+    MatrixXd XSXM = X.transpose()*SS*X*M;
+    dblvec V(Rmod,0.0);
+    for(int i = 0; i < Rmod; i++){
+      if(i < R){
+        partial1 = Z*derivs[1+i]*Z.transpose();
+      } else {
+        partial1 = MatrixXd::Identity(n,n);
+        if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
+      }
+      V[i] += (SS*partial1).trace();
+      V[i] -= 2*((SigX.transpose()*partial1*SS*X*M).trace());
+      V[i] += ((XSXM*SigX.transpose()*partial1*SigX*M).trace());
+    }
+    MatrixXd M_correction = MatrixXd::Zero(M.rows(),M.cols());
+    for(int i = 0; i < Rmod; i++){
+      for(int j = i; j < Rmod; j++){
+        double rep = i == j ? 0.25 : 0.5;
+        M_correction += rep*M_theta(i,j)*V[j]*M*P(i)*M;
+      }
+    }
+    
+    #if defined(R_BUILD) && defined(ENABLE_DEBUG)
+    Rcpp::Rcout << "\n(K-R) Improved correction matrix: \n" << M_correction;
+    Rcpp::Rcout << "\nV: ";
+    for(const auto& v: V)Rcpp::Rcout << v << " ";
+    #endif
+    
+    M_new -= M_correction;
+  }
+  
   // degrees of freedom correction
   
-  kenward_data out(model.linear_predictor.P(),model.linear_predictor.P(),Rmod,Rmod);
+  kenward_data out(this->P(),this->P(),Rmod,Rmod);
   out.vcov_beta = M_new;
   out.vcov_theta = M_theta;
   
   double a1, a2, B, g, c1, c2, c3, v0, v1, v2, rhotop, rho;
   int mult = 1;
-  VectorXd L = VectorXd::Zero(model.linear_predictor.P());
-  MatrixXd Theta(model.linear_predictor.P(),model.linear_predictor.P());
+  VectorXd L = VectorXd::Zero(this->P());
+  MatrixXd Theta(this->P(),this->P());
   for(int p = 0; p < L.size(); p++){
     L.setZero();
     L(p) = 1;
@@ -466,20 +588,61 @@ template<typename modeltype>
 inline vector_matrix glmmr::ModelMatrix<modeltype>::re_score(){
   VectorXd xbOffset = model.linear_predictor.xb() + model.data.offset;
   matrix_matrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),model.covariance.ZL(),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
-  vector_matrix out(model.covariance.Q());
+  vector_matrix out(Q());
   hess.mat1 *= -1.0;
-  out.mat = hess.mat1 + MatrixXd::Identity(model.covariance.Q(),model.covariance.Q());
+  out.mat = hess.mat1 + MatrixXd::Identity(Q(),Q());
   out.vec = hess.mat2.rowwise().sum();
   out.vec -= re.u(false).col(0);
   return out;
 }
 
 template<typename modeltype>
+inline BoxResults glmmr::ModelMatrix<modeltype>::box(){
+  int r = P(); // to follow notation in Skene and Kenward
+  BoxResults results(r);
+  MatrixXd S = Sigma();
+  MatrixXd X = model.linear_predictor.X();
+  MatrixXd XtX = X.transpose()*X;
+  XtX = XtX.llt().solve(MatrixXd::Identity(XtX.rows(),XtX.cols()));
+  MatrixXd Px = X*XtX*X.transpose();
+  MatrixXd A = MatrixXd::Identity(Px.rows(),Px.cols()) - Px;
+  MatrixXd ASig = A*S;
+  double asigtrace = ASig.trace();
+  double trasig = ((ASig*ASig.transpose()).trace())/(asigtrace*asigtrace);
+  MatrixXd Xr(model.n(),r-1);
+  MatrixXd B(Px.rows(),Px.cols());
+  MatrixXd XrtXr(r-1,r-1);
+  for(int i = 0; i < r; i++){
+    if(i == 0){
+      Xr = X.rightCols(r-1);
+    } else if(i == r-1){
+      Xr = X.leftCols(r-1);
+    } else {
+      Xr.leftCols(i) = X.leftCols(i);
+      Xr.rightCols(r-i-1) = Xr.rightCols(r-i-1);
+    }
+    XrtXr = Xr.transpose()*Xr;
+    XrtXr = XrtXr.llt().solve(MatrixXd::Identity(r-1,r-1));
+    B = Px - Xr*XrtXr*Xr.transpose();
+    MatrixXd BSig = B*S;
+    double bsigtrace = BSig.trace();
+    double trbsig = ((BSig*BSig.transpose()).trace())/(bsigtrace*bsigtrace);
+    double V = trbsig + trasig;
+    results.dof[i] = ((4*V+1)-2)/(V-1);
+    results.scale[i] = (X.rows() - r)*(results.dof[i] - 2)*bsigtrace/(results.dof[i] * asigtrace);
+    results.test_stat[i] = (X.rows() - r)*((model.data.y.transpose()*B*model.data.y)(0))/((model.data.y.transpose()*A*model.data.y)(0));
+    boost::math::fisher_f fdist(1.0,results.dof[i]);
+    results.p_value[i] = 1 - boost::math::cdf(fdist,results.test_stat[i]/results.scale[i]);
+  }
+  return results;
+}
+
+template<typename modeltype>
 inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
                                                 bool betapars){
   ArrayXd size_n_array = model.xb();
-  ArrayXd size_q_array = ArrayXd::Zero(model.covariance.Q());
-  ArrayXd size_p_array = ArrayXd::Zero(model.linear_predictor.P());
+  ArrayXd size_q_array = ArrayXd::Zero(Q());
+  ArrayXd size_p_array = ArrayXd::Zero(P());
   sparse ZLt = model.covariance.ZL_sparse();
   sparse ZL = ZLt;
   ZLt.transpose();
