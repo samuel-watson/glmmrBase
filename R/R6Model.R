@@ -1210,7 +1210,7 @@ Model <- R6::R6Class("Model",
                            }
                          } else if(se == "kr" || se == "kr2" || se == "sat"){
                            krtype <- se=="kr2"
-                           Mout <- Model__kenward_roger(private$ptr,krtype,private$model_type())
+                           Mout <- Model__small_sample_correction(private$ptr,krtype,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
