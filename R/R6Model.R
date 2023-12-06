@@ -1017,18 +1017,18 @@ Model <- R6::R6Class("Model",
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
                                res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
-                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=FALSE))
-                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
-                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=TRUE))
+                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
+                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
                              }
                              dof[i] <- Mout$dof[i]
                            }
                          } else if(se=="bw" || se == "bwrobust" ){
                            res$t <- res$est/res$SE
                            bwdof <- sum(repar_table$count) - length(beta)
-                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=FALSE))
-                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
-                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=TRUE))
+                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
+                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
                            dof <- rep(bwdof,length(beta))
                          } else if(se == "box"){
                            box_result <- Model__box(private$ptr,private$model_type())
@@ -1209,7 +1209,7 @@ Model <- R6::R6Class("Model",
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "kr" || se == "kr2" || se == "sat"){
-                           krtype <- se=="kr2"
+                           krtype <- ifelse(se=="kr",0,ifelse(se=="kr2",1,2))
                            Mout <- Model__small_sample_correction(private$ptr,krtype,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
@@ -1239,18 +1239,18 @@ Model <- R6::R6Class("Model",
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
                                res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
-                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=FALSE))
-                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
-                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=FALSE)*res$SE[i]
+                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=TRUE))
+                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
+                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
                              }
                              dof[i] <- Mout$dof[i]
                            }
                          } else if(se=="bw" || se == "bwrobust" ){
                            res$t <- res$est/res$SE
                            bwdof <- sum(repar_table$count) - length(beta)
-                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=FALSE))
-                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
-                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=FALSE)*res$SE
+                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=TRUE))
+                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
+                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
                            dof <- rep(bwdof,length(beta))
                          } else if (se == "box") {
                            box_result <- Model__box(private$ptr,private$model_type())

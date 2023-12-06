@@ -61,8 +61,13 @@ print.mcml <- function(x, ...){
   if(x$var_par_family)total_vars <- total_vars + 1
   if(x$se %in% c("kr","bw","bwrobust","kr2","box","sat"))pars$DoF <- c(x$dof, rep(NA,total_vars - x$P))
   pars <- apply(pars,2,round,digits = digits)
-  colrange <- ifelse(x$se %in% c("kr","bw","bwrobust","kr2","box","sat"),1:7,
-                      ifelse(x$se == "box",c(1:4,7),1:6))
+  if(x$se %in% c("kr","bw","bwrobust","kr2","box","sat")){
+    colrange <- 1:7
+  } else if(x$se == "box"){
+    colrange <- c(1:4,7)
+  } else {
+    colrange <- 1:6
+  }
   
   cat("\nRandom effects: \n")
   print(pars[(x$P+1):(total_vars),c(1,2)])
