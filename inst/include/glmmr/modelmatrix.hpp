@@ -289,16 +289,19 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   MatrixXd S = Sigma(true);
   MatrixXd SX = S*X;
   // MatrixXd resid_sum = MatrixXd::Zero(X.rows(),X.rows());
-  MatrixXd zd = linpred();
-  int niter = zd.cols();
-  for(int i = 0; i < niter; ++i){
-    zd.col(i) = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-    if(model.family.family == Fam::binomial){
-      zd.col(i) = zd.col(i).cwiseProduct(model.data.variance.matrix());
-    }
-    zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
-  }
-  MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
+  // MatrixXd zd = linpred();
+  VectorXd resid = model.linear_predictor.xb()+model.data.offset;
+  resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
+  MatrixXd resid_sum = resid * resid.transpose();
+  // int niter = zd.cols();
+  // for(int i = 0; i < niter; ++i){
+  //   zd.col(i) = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
+  //   if(model.family.family == Fam::binomial){
+  //     zd.col(i) = zd.col(i).cwiseProduct(model.data.variance.matrix());
+  //   }
+  //   zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
+  // }
+  // MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
 
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nSANDWICH\n";

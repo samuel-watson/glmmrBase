@@ -642,7 +642,7 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description 
                        #' Returns the inferential statistics (F-stat, p-value) for a modified Box correction <doi:10.1002/sim.4072>.
-                       #' @field y Optional. If provided, will update the vector of outcome data. Otherwise it will use the data from 
+                       #' @param y Optional. If provided, will update the vector of outcome data. Otherwise it will use the data from 
                        #' the previous model fit.
                        #' @return A data frame.
                        box = function(y){
@@ -1519,7 +1519,7 @@ Model <- R6::R6Class("Model",
                        #' 
                        #' Some functions require outcome data, which is by default set to all zero if no model fitting function 
                        #' has been run. This function can update the interval y data.
-                       #' @field y Vector of outcome data
+                       #' @param y Vector of outcome data
                        #' @return None. Called for effects
                        update_y = function(y){
                          private$verify_data(y)

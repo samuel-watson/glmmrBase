@@ -316,6 +316,8 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
 
+\item{\code{improved}}{Logical indicating whether to use the original (FALSE; default) or improved (TRUE) correction.}
+
 \item{\code{mcmc_options}}{There are five options for MCMC sampling that are specified in this list:
 \itemize{
 \item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
@@ -332,6 +334,13 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \code{refresh} How frequently to print to console MCMC progress if displaying verbose output.
 \item \code{maxsteps} (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
 }}
+}
+\if{html}{\out{</div>}}
+}
+\section{Active bindings}{
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{improved}}{Logical indicating whether to use the original (FALSE; default) or improved (TRUE) correction.}
 }
 \if{html}{\out{</div>}}
 }
@@ -352,6 +361,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
 \item \href{#method-Model-kenward_roger}{\code{Model$kenward_roger()}}
+\item \href{#method-Model-box}{\code{Model$box()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
@@ -366,6 +376,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-calculator_instructions}{\code{Model$calculator_instructions()}}
 \item \href{#method-Model-marginal}{\code{Model$marginal()}}
+\item \href{#method-Model-update_y}{\code{Model$update_y()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -816,7 +827,7 @@ A PxP matrix
 \subsection{Method \code{sandwich()}}{
 Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich(type)}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -827,13 +838,39 @@ A PxP matrix
 \if{html}{\out{<a id="method-Model-kenward_roger"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-kenward_roger}{}}}
 \subsection{Method \code{kenward_roger()}}{
-Returns the bias-corrected variance-covariance matrix for the fixed effect parameters.
+Returns the bias-corrected variance-covariance matrix for the fixed effect parameters. The option
+\code{improved} specified whether to return the original correction, or an improved correction given
+in Kenward & Roger (2009) \url{doi:j.csda.2008.12.013}. Note, that the corrected/improved version is invariant
+under reparameterisation of the covariance, and it will also make no difference if the covariance is linear
+in parameters. Exchangeable covariance structures in this package (i.e. \code{gr()}) are parameterised in terms of
+the variance rather than standard deviation, so the results will be unaffected.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$kenward_roger()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$kenward_roger(improved = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
 A PxP matrix
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-box"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-box}{}}}
+\subsection{Method \code{box()}}{
+Returns the inferential statistics (F-stat, p-value) for a modified Box correction \url{doi:10.1002/sim.4072}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$box(y)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Optional. If provided, will update the vector of outcome data. Otherwise it will use the data from
+the previous model fit.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A data frame.
 }
 }
 \if{html}{\out{<hr>}}
@@ -981,9 +1018,10 @@ between iterations at which to stop the algorithm.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
 
-\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-"robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
-GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
+\item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
+"robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
+"kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+"bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.}
 
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
@@ -1071,10 +1109,12 @@ Maximum Likelihood model fitting with Laplace Approximation
 
 \item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
 
-\item{\code{se}}{String. Type of standard error to return. Options are "gls" for GLS standard errors (the default),
-"robust" for Huber robust sandwich estimator, "kr" for Kenward-Roger bias corrected standard errors, "bw" to use
-GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
-standard errors with between-within correction to the degrees of freedom.}
+\item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
+"robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
+"kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+"bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
+standard errors with between-within correction to the degrees of freedom.
+Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 
@@ -1350,6 +1390,29 @@ Kenward-Roger estimated standard errors, or \code{robust} to use a robust sandwi
 }
 \subsection{Returns}{
 A named vector with elements \code{margin} specifying the point estimate and \code{se} giving the standard error.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-update_y"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-update_y}{}}}
+\subsection{Method \code{update_y()}}{
+Updates the outcome data y
+
+Some functions require outcome data, which is by default set to all zero if no model fitting function
+has been run. This function can update the interval y data.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$update_y(y)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{y}}{Vector of outcome data}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None. Called for effects
 }
 }
 \if{html}{\out{<hr>}}
