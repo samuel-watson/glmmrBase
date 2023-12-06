@@ -1395,15 +1395,27 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__kenward_roger
-SEXP Model__kenward_roger(SEXP xp, bool improved, int type);
-RcppExport SEXP _glmmrBase_Model__kenward_roger(SEXP xpSEXP, SEXP improvedSEXP, SEXP typeSEXP) {
+SEXP Model__kenward_roger(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__kenward_roger(SEXP xpSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type improved(improvedSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__kenward_roger(xp, improved, type));
+    rcpp_result_gen = Rcpp::wrap(Model__kenward_roger(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__small_sample_correction
+SEXP Model__small_sample_correction(SEXP xp, int ss_type, int type);
+RcppExport SEXP _glmmrBase_Model__small_sample_correction(SEXP xpSEXP, SEXP ss_typeSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type ss_type(ss_typeSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__small_sample_correction(xp, ss_type, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1649,7 +1661,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 2},
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 2},
     {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 2},
-    {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 3},
+    {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 2},
+    {"_glmmrBase_Model__small_sample_correction", (DL_FUNC) &_glmmrBase_Model__small_sample_correction, 3},
     {"_glmmrBase_Model__box", (DL_FUNC) &_glmmrBase_Model__box, 2},
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 2},
     {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 2},

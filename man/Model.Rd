@@ -316,8 +316,6 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
 
-\item{\code{improved}}{Logical indicating whether to use the original (FALSE; default) or improved (TRUE) correction.}
-
 \item{\code{mcmc_options}}{There are five options for MCMC sampling that are specified in this list:
 \itemize{
 \item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
@@ -337,13 +335,6 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 }
 \if{html}{\out{</div>}}
 }
-\section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{improved}}{Logical indicating whether to use the original (FALSE; default) or improved (TRUE) correction.}
-}
-\if{html}{\out{</div>}}
-}
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
@@ -360,7 +351,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
-\item \href{#method-Model-kenward_roger}{\code{Model$kenward_roger()}}
+\item \href{#method-Model-small_sample_correction}{\code{Model$small_sample_correction()}}
 \item \href{#method-Model-box}{\code{Model$box()}}
 \item \href{#method-Model-power}{\code{Model$power()}}
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
@@ -835,19 +826,27 @@ A PxP matrix
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-kenward_roger"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-kenward_roger}{}}}
-\subsection{Method \code{kenward_roger()}}{
-Returns the bias-corrected variance-covariance matrix for the fixed effect parameters. The option
-\code{improved} specified whether to return the original correction, or an improved correction given
+\if{html}{\out{<a id="method-Model-small_sample_correction"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-small_sample_correction}{}}}
+\subsection{Method \code{small_sample_correction()}}{
+Returns a small sample correction. The option "KR" returns the Kenward-Roger bias-corrected variance-covariance matrix
+for the fixed effect parameters and degrees of freedom. Option "KR2"  returns an improved correction given
 in Kenward & Roger (2009) \url{doi:j.csda.2008.12.013}. Note, that the corrected/improved version is invariant
 under reparameterisation of the covariance, and it will also make no difference if the covariance is linear
 in parameters. Exchangeable covariance structures in this package (i.e. \code{gr()}) are parameterised in terms of
-the variance rather than standard deviation, so the results will be unaffected.
+the variance rather than standard deviation, so the results will be unaffected. Option "sat" returns the "Satterthwaite"
+correction, which only includes corrected degrees of freedom, along with the GLS standard errors.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$kenward_roger(improved = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$small_sample_correction(type)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{type}}{Either "KR", "KR2", or "sat", see description.}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
 A PxP matrix
 }
@@ -856,7 +855,8 @@ A PxP matrix
 \if{html}{\out{<a id="method-Model-box"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-box}{}}}
 \subsection{Method \code{box()}}{
-Returns the inferential statistics (F-stat, p-value) for a modified Box correction \url{doi:10.1002/sim.4072}.
+Returns the inferential statistics (F-stat, p-value) for a modified Box correction \url{doi:10.1002/sim.4072} for
+Gaussian-identity models.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$box(y)}\if{html}{\out{</div>}}
 }
@@ -1020,7 +1020,8 @@ between iterations at which to stop the algorithm.}
 
 \item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
 "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
-"kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+"kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same
+degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.}
 
@@ -1111,7 +1112,8 @@ Maximum Likelihood model fitting with Laplace Approximation
 
 \item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
 "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
-"kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+"kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same
+degrees of freedom correction as Kenward-Roger, but with GLS standard errors)"box" to use a modified Box correction (does not return confidence intervals),
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.
 Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.}
@@ -1372,7 +1374,8 @@ of the stored parameters and data variables see the member function \code{names(
 provide specific values, or \code{average} to average over the random effects.}
 
 \item{\code{se}}{String. Type of standard error to use, either \code{GLS} for the GLS standard errors, \code{KR} for
-Kenward-Roger estimated standard errors, or \code{robust} to use a robust sandwich estimator.}
+Kenward-Roger estimated standard errors, \code{KR2} for the improved Kenward-Roger correction (see \code{small_sample_correction()}),
+or \code{robust} to use a robust sandwich estimator.}
 
 \item{\code{at}}{Optional. A vector of strings naming the fixed effects for which a specified value is given.}
 

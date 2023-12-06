@@ -265,11 +265,22 @@ SEXP Model__infomat_theta(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-SEXP Model__kenward_roger(SEXP xp, bool improved = false, int type = 0){
+SEXP Model__kenward_roger(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [&](auto ptr){return returnType(ptr->matrix.kenward_roger(improved));}
+    [](auto ptr){return returnType(ptr->matrix.small_sample_correction(glmmr::Correction::KenwardRoger));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<kenward_data>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->matrix.small_sample_correction(static_cast<glmmr::Correction>(ss_type)));}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<kenward_data>(S));

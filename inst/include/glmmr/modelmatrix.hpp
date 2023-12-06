@@ -12,10 +12,11 @@ namespace glmmr {
 
 using namespace Eigen;
 
-// enum class SandwichType {
-//   CR0,
-//   CR2
-// };
+enum class Correction {
+  KenwardRoger = 0,
+  KenwardRogerImproved = 1,
+  Satterthwaite = 2
+};
 
 template<typename modeltype>
 class ModelMatrix{
@@ -29,10 +30,11 @@ class ModelMatrix{
     MatrixXd information_matrix();
     MatrixXd Sigma(bool inverse = false);
     MatrixXd observed_information_matrix();
-    MatrixXd sandwich_matrix();//SandwichType type = SandwichType::CR0
+    MatrixXd sandwich_matrix(); 
     std::vector<MatrixXd> sigma_derivatives();
     MatrixXd information_matrix_theta();
-    kenward_data kenward_roger(bool improved = false);
+    kenward_data small_sample_correction(Correction type = Correction::KenwardRoger);
+    //kenward_data kenward_roger(bool improved = false); // kept for legacy version but will be deprecated
     MatrixXd linpred();
     vector_matrix b_score();
     vector_matrix re_score();
@@ -381,7 +383,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
 }
 
 template<typename modeltype>
-inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(bool improved){
+inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Correction type){
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
@@ -436,49 +438,53 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::kenward_roger(bool improved){
     }
   }
   M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
-  for(int i = 0; i < (Rmod-1); i++){
-    if(i < R){
-      partial1 = Z*derivs[1+i]*Z.transpose();
-    } else {
-      partial1 = MatrixXd::Identity(n,n);
-      if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
-    }
-    for(int j = (i+1); j < Rmod; j++){
-      if(j < R){
-        partial2 = Z*derivs[1+j]*Z.transpose();
-      } else {
-        partial2 = MatrixXd::Identity(n,n);
-      }
-      int scnd_idx = i + j*(Rmod-1) - j*(j-1)/2;
-      meat += M_theta(i,j)*(Q(scnd_idx) + Q(scnd_idx).transpose() - P(i)*M*P(j) -P(j)*M*P(i));//(SigX.transpose()*partial1*PG*partial2*SigX);//
-      if(i < R && j < R){
-        scnd_idx = i + j*(R-1) - j*(j-1)/2;
-        meat -= 0.5*M_theta(i,j)*(RR(scnd_idx));
-      }
-    }
-  }
-  for(int i = 0; i < Rmod; i++){
-    if(i < R){
-      partial1 = Z*derivs[1+i]*Z.transpose();
-    } else {
-      partial1 = MatrixXd::Identity(n,n);
-      if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
-    }
-    int scnd_idx = i + i*(Rmod-1) - i*(i-1)/2;
-    meat += M_theta(i,i)*(Q(scnd_idx) - P(i)*M*P(i));
-    if(i < R){
-      scnd_idx = i + i*(R-1) - i*(i-1)/2;
-      meat -= 0.25*M_theta(i,i)*RR(scnd_idx);
-    }
-  }
-  M_new = M + 2*M*meat*M;
   
+  if(type == Correction::KenwardRoger || type == Correction::KenwardRogerImproved){
+    for(int i = 0; i < (Rmod-1); i++){
+      if(i < R){
+        partial1 = Z*derivs[1+i]*Z.transpose();
+      } else {
+        partial1 = MatrixXd::Identity(n,n);
+        if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
+      }
+      for(int j = (i+1); j < Rmod; j++){
+        if(j < R){
+          partial2 = Z*derivs[1+j]*Z.transpose();
+        } else {
+          partial2 = MatrixXd::Identity(n,n);
+        }
+        int scnd_idx = i + j*(Rmod-1) - j*(j-1)/2;
+        meat += M_theta(i,j)*(Q(scnd_idx) + Q(scnd_idx).transpose() - P(i)*M*P(j) -P(j)*M*P(i));//(SigX.transpose()*partial1*PG*partial2*SigX);//
+        if(i < R && j < R){
+          scnd_idx = i + j*(R-1) - j*(j-1)/2;
+          meat -= 0.5*M_theta(i,j)*(RR(scnd_idx));
+        }
+      }
+    }
+    for(int i = 0; i < Rmod; i++){
+      if(i < R){
+        partial1 = Z*derivs[1+i]*Z.transpose();
+      } else {
+        partial1 = MatrixXd::Identity(n,n);
+        if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
+      }
+      int scnd_idx = i + i*(Rmod-1) - i*(i-1)/2;
+      meat += M_theta(i,i)*(Q(scnd_idx) - P(i)*M*P(i));
+      if(i < R){
+        scnd_idx = i + i*(R-1) - i*(i-1)/2;
+        meat -= 0.25*M_theta(i,i)*RR(scnd_idx);
+      }
+    }
+    M_new = M + 2*M*meat*M;
+    
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
-  Rcpp::Rcout << "\n(K-R) First correction matrix: \n" << 2*M*meat*M;
+    Rcpp::Rcout << "\n(K-R) First correction matrix: \n" << 2*M*meat*M;
 #endif
+  }
+  
   
   // new improved correction
-  if(improved){
+  if(type==Correction::KenwardRogerImproved){
     MatrixXd SS = MatrixXd::Zero(SigmaInv.rows(),SigmaInv.cols());
     for(int i = 0; i < Rmod; i++){
       for(int j = i; j < Rmod; j++){

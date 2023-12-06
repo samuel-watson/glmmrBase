@@ -449,8 +449,12 @@ Model__infomat_theta <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__infomat_theta`, xp, type)
 }
 
-Model__kenward_roger <- function(xp, improved = FALSE, type = 0L) {
-    .Call(`_glmmrBase_Model__kenward_roger`, xp, improved, type)
+Model__kenward_roger <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__kenward_roger`, xp, type)
+}
+
+Model__small_sample_correction <- function(xp, ss_type = 0L, type = 0L) {
+    .Call(`_glmmrBase_Model__small_sample_correction`, xp, ss_type, type)
 }
 
 Model__box <- function(xp, type = 0L) {

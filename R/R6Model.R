@@ -626,22 +626,27 @@ Model <- R6::R6Class("Model",
                          return(Model__sandwich(private$ptr,private$model_type()))
                        },
                        #' @description 
-                       #' Returns the bias-corrected variance-covariance matrix for the fixed effect parameters. The option
-                       #' `improved` specified whether to return the original correction, or an improved correction given 
+                       #' Returns a small sample correction. The option "KR" returns the Kenward-Roger bias-corrected variance-covariance matrix 
+                       #' for the fixed effect parameters and degrees of freedom. Option "KR2"  returns an improved correction given 
                        #' in Kenward & Roger (2009) <doi:j.csda.2008.12.013>. Note, that the corrected/improved version is invariant 
                        #' under reparameterisation of the covariance, and it will also make no difference if the covariance is linear 
                        #' in parameters. Exchangeable covariance structures in this package (i.e. `gr()`) are parameterised in terms of 
-                       #' the variance rather than standard deviation, so the results will be unaffected.
-                       #' @field improved Logical indicating whether to use the original (FALSE; default) or improved (TRUE) correction.
+                       #' the variance rather than standard deviation, so the results will be unaffected. Option "sat" returns the "Satterthwaite"
+                       #' correction, which only includes corrected degrees of freedom, along with the GLS standard errors.
+                       #' @param type Either "KR", "KR2", or "sat", see description.
                        #' @return A PxP matrix
-                       kenward_roger = function(improved = FALSE){
+                       small_sample_correction = function(type){
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         return(Model__kenward_roger(private$ptr,improved,private$model_type()))
+                         sstypes <- c("KR","KR2","sat")
+                         if(!type %in% sstypes)stop("type must be either KR, KR2, or sat")
+                         ss_type <- which(sstypes==type)-1
+                         return(Model__small_sample_correction(private$ptr,ss_type,private$model_type()))
                        },
                        #' @description 
-                       #' Returns the inferential statistics (F-stat, p-value) for a modified Box correction <doi:10.1002/sim.4072>.
+                       #' Returns the inferential statistics (F-stat, p-value) for a modified Box correction <doi:10.1002/sim.4072> for
+                       #' Gaussian-identity models.
                        #' @param y Optional. If provided, will update the vector of outcome data. Otherwise it will use the data from 
                        #' the previous model fit.
                        #' @return A data frame.
@@ -778,7 +783,8 @@ Model <- R6::R6Class("Model",
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
                        #'@param se String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
                        #' "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors, 
-                       #' "kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+                       #' "kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same 
+                       #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom.
                        #'@param sparse Logical indicating whether to use sparse matrix methods
@@ -836,7 +842,7 @@ Model <- R6::R6Class("Model",
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
-                         if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2"))stop("KR standard errors are not currently available with gamma or beta families")
+                         if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!usestan){
@@ -973,9 +979,9 @@ Model <- R6::R6Class("Model",
                              } else {
                                SE_theta <- rep(NA, ncovpar)
                              }
-                           } else if(se == "kr" || se == "kr2"){
-                             improved <- se == "kr2"
-                             Mout <- Model__kenward_roger(private$ptr,improved,private$model_type())
+                           } else if(se == "kr" || se == "kr2" || se == "sat"){
+                             ss_type <- ifelse(se=="kr",0,ifelse(se=="kr2",1,2))
+                             Mout <- Model__small_sample_correction(private$ptr,ss_type,private$model_type())
                              M <- Mout[[1]]
                              SE_theta <- sqrt(diag(Mout[[2]]))
                            } 
@@ -1007,7 +1013,7 @@ Model <- R6::R6Class("Model",
                                            lower = NA,
                                            upper = NA)
                          dof <- rep(self$n(),length(beta))
-                         if(se == "kr"){
+                         if(se == "kr" || se == "kr2" || se == "sat"){
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
                                res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
@@ -1086,7 +1092,8 @@ Model <- R6::R6Class("Model",
                        #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
                        #'@param se String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
                        #' "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors, 
-                       #' "kr2" for the improved Kenward-Roger correction, "box" to use a modified Box correction (does not return confidence intervals),
+                       #' "kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same 
+                       #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors)"box" to use a modified Box correction (does not return confidence intervals),
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom. 
                        #' Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.
@@ -1131,7 +1138,7 @@ Model <- R6::R6Class("Model",
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
-                         if(self$family[[1]]%in%c("Gamma","beta") & se == "kr")stop("KR standard errors are not currently available with gamma or beta families")
+                         if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se=="kr2"||se=="sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!is.null(lower.bound)){
@@ -1201,7 +1208,7 @@ Model <- R6::R6Class("Model",
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
-                         } else if(se == "kr" || se == "kr2"){
+                         } else if(se == "kr" || se == "kr2" || se == "sat"){
                            krtype <- se=="kr2"
                            Mout <- Model__kenward_roger(private$ptr,krtype,private$model_type())
                            M <- Mout[[1]]
@@ -1210,7 +1217,7 @@ Model <- R6::R6Class("Model",
                          SE <- sqrt(Matrix::diag(M))
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
-                         theta_names <- repar_table$term#unique(Model__theta_parameter_names(private$ptr))
+                         theta_names <- repar_table$term
                          if(self$family[[1]]%in%c("Gamma","beta")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
@@ -1228,7 +1235,7 @@ Model <- R6::R6Class("Model",
                                            upper = NA)
                          
                          dof <- rep(self$n(),length(beta))
-                         if(se == "kr"){
+                         if(se == "kr" || se == "kr2" || se == "sat"){
                            for(i in 1:length(beta)){
                              if(!is.na(res$SE[i])){
                                res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
@@ -1484,7 +1491,8 @@ Model <- R6::R6Class("Model",
                        #' @param re String. Either `estimated` to condition on estimated values, `zero` to set to zero, `at` to
                        #' provide specific values, or `average` to average over the random effects.
                        #' @param se String. Type of standard error to use, either `GLS` for the GLS standard errors, `KR` for 
-                       #' Kenward-Roger estimated standard errors, or `robust` to use a robust sandwich estimator.
+                       #' Kenward-Roger estimated standard errors, `KR2` for the improved Kenward-Roger correction (see `small_sample_correction()`),
+                       #'  or `robust` to use a robust sandwich estimator.
                        #' @param at Optional. A vector of strings naming the fixed effects for which a specified value is given.
                        #' @param atmeans Optional. A vector of strings naming the fixed effects that will be set at their mean value.
                        #' @param average Optional. A vector of strings naming the fixed effects which will be averaged over.
@@ -1495,7 +1503,7 @@ Model <- R6::R6Class("Model",
                        marginal = function(x,type,re,se,at = c(),atmeans = c(),average=c(),xvals=c(1,0),atvals=c(),revals=c()){
                          margin_types <- c("dydx","diff","ratio")
                          re_types <- c("estimated","at","zero","average")
-                         se_types <- c("GLS","KR","Robust","BW")
+                         se_types <- c("GLS","KR","Robust","BW","KR2","Sat")
                          if(!type%in%margin_types)stop("type not recognised")
                          if(!re%in%re_types)stop("re not recognised")
                          if(!se%in%se_types)stop("se not recognised")

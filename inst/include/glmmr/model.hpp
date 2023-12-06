@@ -27,7 +27,9 @@ enum class SE {
   GLS = 0,
   KR = 1,
   Robust = 2,
-  BW = 3
+  BW = 3,
+  KR2 = 4,
+  Sat = 5
 };
 
 template<typename modeltype>
@@ -254,10 +256,16 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   switch(se_type){
     case SE::KR:
       {
-      kenward_data kdata = matrix.kenward_roger();
+      kenward_data kdata = matrix.small_sample_correction(Correction::KenwardRoger);
       M = kdata.vcov_beta;
       break;
       }
+    case SE::KR2:
+    {
+      kenward_data kdata = matrix.small_sample_correction(Correction::KenwardRogerImproved);
+      M = kdata.vcov_beta;
+      break;
+    }
     case SE::Robust:
       M = matrix.sandwich_matrix();
       break;
