@@ -158,12 +158,22 @@ void Model__set_weights(SEXP xp, SEXP weights_, int type = 0){
 SEXP Model__P(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
+    [](int) {  return returnType(0);},
     [](auto ptr){return returnType(ptr->model.linear_predictor.P());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<int>(S));
 }
+
+// // [[Rcpp::export]]
+// SEXP Model__P(SEXP xp, int type = 0){
+//   auto functor = overloaded {
+//     [](int) {  return returnType(0);},
+//     [](auto ptr){return returnType(ptr->model.linear_predictor.P());}
+//   };
+//   Fn<int> func(xp,type);
+//   return wrap(func(functor));
+// }
 
 // [[Rcpp::export]]
 SEXP Model__Q(SEXP xp, int type = 0){

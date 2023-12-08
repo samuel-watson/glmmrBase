@@ -462,7 +462,7 @@ inline double logdet(const Eigen::MatrixXd& M) {
   return ld;
 }
 
-inline MatrixXd sample_MVN(const vector_matrix& mu,
+inline MatrixXd sample_MVN(const VectorMatrix& mu,
                            int m){
   int n = mu.vec.size();
   MatrixXd L = mu.mat.llt().matrixL();

@@ -639,9 +639,8 @@ Model <- R6::R6Class("Model",
                          if(is.null(private$ptr)){
                            private$update_ptr()
                          }
-                         sstypes <- c("KR","KR2","sat")
-                         if(!type %in% sstypes)stop("type must be either KR, KR2, or sat")
-                         ss_type <- which(sstypes==type)-1
+                         if(!type %in% c("KR","KR2","sat"))stop("type must be either KR, KR2, or sat")
+                         ss_type <- ifelse(type == "KR",1,ifelse(type == "KR2",4,5))
                          return(Model__small_sample_correction(private$ptr,ss_type,private$model_type()))
                        },
                        #' @description 
@@ -842,6 +841,7 @@ Model <- R6::R6Class("Model",
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
+                         if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
                          if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
@@ -980,7 +980,7 @@ Model <- R6::R6Class("Model",
                                SE_theta <- rep(NA, ncovpar)
                              }
                            } else if(se == "kr" || se == "kr2" || se == "sat"){
-                             ss_type <- ifelse(se=="kr",0,ifelse(se=="kr2",1,2))
+                             ss_type <- ifelse(se=="kr",1,ifelse(se=="kr2",4,5))
                              Mout <- Model__small_sample_correction(private$ptr,ss_type,private$model_type())
                              M <- Mout[[1]]
                              SE_theta <- sqrt(diag(Mout[[2]]))
@@ -1138,6 +1138,7 @@ Model <- R6::R6Class("Model",
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
+                         if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
                          if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se=="kr2"||se=="sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
@@ -1209,7 +1210,7 @@ Model <- R6::R6Class("Model",
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "kr" || se == "kr2" || se == "sat"){
-                           krtype <- ifelse(se=="kr",0,ifelse(se=="kr2",1,2))
+                           krtype <- ifelse(se=="kr",1,ifelse(se=="kr2",4,5))
                            Mout <- Model__small_sample_correction(private$ptr,krtype,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
