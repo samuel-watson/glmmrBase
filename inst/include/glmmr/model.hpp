@@ -142,9 +142,10 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
   initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   
-#ifdef R_BUILD
   int total_p = at.size() + atmeans.size() + average.size() + 1;
   int intercept = 1- (int)model.linear_predictor.form.RM_INT;
+  
+#ifdef R_BUILD
   if(total_p != (model.linear_predictor.P() - intercept))Rcpp::stop("All variables must be named");
   if(at.size() != atvals.size())Rcpp::stop("Not enough values specified for at");
   if(re_type == RandomEffectMargin::Average && re.zu_.cols()<=1)Rcpp::warning("No MCMC samples of random effects. Random effects will be set at estimated values.");

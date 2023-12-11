@@ -21,6 +21,8 @@ public:
     weights.setConstant(1.0);
     variance.conservativeResize(n);
     variance.setConstant(1.0);
+    y.conservativeResize(n);
+    y.setZero();
   }
   ModelExtraData(const glmmr::ModelExtraData& data) : offset(data.offset), weights(data.weights), variance(data.variance), var_par(data.var_par), y(data.y) {};
   

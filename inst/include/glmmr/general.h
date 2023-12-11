@@ -31,6 +31,7 @@
 #include <variant>
 #include <SparseChol.h>
 #include <set>
+#include <unordered_map>
 #include <queue>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/polygamma.hpp>
@@ -186,6 +187,7 @@ inline bool validate_fn(const str& fn){
 }
 
 //const static intvec xvar_rpn = {0,1,4,17};
+#ifdef R_BUILD
 
 template<typename T>
 inline void print_vec_1d(const T& vec){
@@ -221,6 +223,8 @@ inline void print_sparse(const sparse& A){
   for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
+#endif
+
 inline bool is_number(const std::string& s)
 {
   bool isnum = true;
@@ -229,7 +233,7 @@ inline bool is_number(const std::string& s)
   }
   catch (std::invalid_argument const& ex)
   {
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     Rcpp::Rcout << " Not double: " << ex.what() << '\n';
 #endif
     isnum = false;

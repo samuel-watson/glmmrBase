@@ -319,7 +319,7 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
 template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
 #ifndef R_BUILD
-  double R_PosInf = -1.0 * std::numeric_limits<double>::infinity();
+  double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
 #endif
   dblvec lower;
   if(beta){
@@ -551,6 +551,10 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   dblvec start = get_start_values(true,false,false);
   dblvec lower = get_lower_values(true,false,false);
   dblvec upper = get_upper_values(true,false,false);
+#ifndef R_BUILD
+  double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
+  double R_PosInf = std::numeric_limits<double>::infinity();
+#endif
   for(int i = 0; i< Q(); i++){
     start.push_back(re.u_(i,0));
     lower.push_back(R_NegInf);
@@ -862,7 +866,9 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
     weightsnew *= 1/weightsnew.sum();
     diff = ((weights-weightsnew).abs()).maxCoeff();
     weights = weightsnew;
+#ifdef R_BUILD
     Rcpp::Rcout << "\n(Max. diff: " << diff << ")\n";
+#endif
   }
 #ifdef R_BUILD
   if(iter<max_iter){

@@ -1,10 +1,5 @@
 #pragma once
 
-#define _USE_MATH_DEFINES
-
-#include <cmath> 
-#include <unordered_map>
-#include <RcppEigen.h>
 #include "algo.h"
 #include "general.h"
 #include "family.hpp"
