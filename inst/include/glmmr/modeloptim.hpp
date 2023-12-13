@@ -64,7 +64,7 @@ protected:
     double ll;
   public:
     L_likelihood(ModelOptim<modeltype>& M_) :  
-      M(M_), ll(0.0) {};
+    M(M_), ll(0.0) {};
     double operator()(const dblvec &par);
   };
   
@@ -75,9 +75,9 @@ protected:
   public:
     D_likelihood(ModelOptim<modeltype>& M_,
                  const MatrixXd& Lu_) :
-      M(M_),
-      Lu(Lu_),
-      logl(0.0) {};
+    M(M_),
+    Lu(Lu_),
+    logl(0.0) {};
     double operator()(const dblvec &par);
   };
   
@@ -91,20 +91,20 @@ protected:
   };
   
   class F_likelihood : public Functor<dblvec> {
-      ModelOptim<modeltype>& M;
-      int G;
-      bool importance;
-      double ll;
-      double denomD;
+    ModelOptim<modeltype>& M;
+    int G;
+    bool importance;
+    double ll;
+    double denomD;
   public:
     F_likelihood(ModelOptim<modeltype>& M_,
                  double denomD_ = 0,
                  bool importance_ = false) : 
-      M(M_),
-      G(M_.model.covariance.npar()), 
-      importance(importance_), 
-      ll(0.0), 
-      denomD(denomD_) {};
+    M(M_),
+    G(M_.model.covariance.npar()), 
+    importance(importance_), 
+    ll(0.0), 
+    denomD(denomD_) {};
     double operator()(const dblvec &par);
   };
   
@@ -117,15 +117,15 @@ protected:
     double ll;
   public:
     LA_likelihood(ModelOptim<modeltype>& M_) :
-      M(M_),
-      v(M.Q(),1),
-      LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
-      LZWdet(0.0),
-      logl(0.0),ll(0.0){
-        M.matrix.W.update();
-        LZWZL = M.model.covariance.LZWZL(M.matrix.W.W());
-        LZWdet = glmmr::maths::logdet(LZWZL);
-      };
+    M(M_),
+    v(M.Q(),1),
+    LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
+    LZWdet(0.0),
+    logl(0.0),ll(0.0){
+      M.matrix.W.update();
+      LZWZL = M.model.covariance.LZWZL(M.matrix.W.W());
+      LZWdet = glmmr::maths::logdet(LZWZL);
+    };
     double operator()(const dblvec &par);
   };
   
@@ -137,9 +137,9 @@ protected:
     double ll;
   public:
     LA_likelihood_cov(ModelOptim<modeltype>& M_) :
-      M(M_),
-      LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
-      LZWdet(0.0), logl(0.0), ll(0.0) {};
+    M(M_),
+    LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
+    LZWdet(0.0), logl(0.0), ll(0.0) {};
     double operator()(const dblvec &par);
   };
   
@@ -151,9 +151,9 @@ protected:
     double ll;
   public:
     LA_likelihood_btheta(ModelOptim<modeltype>& M_) :
-      M(M_),
-      LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
-      LZWdet(0.0), logl(0.0), ll(0.0) {};
+    M(M_),
+    LZWZL(MatrixXd::Zero(M.Q(),M.Q())),
+    LZWdet(0.0), logl(0.0), ll(0.0) {};
     double operator()(const dblvec &par);
   };
   
@@ -173,8 +173,8 @@ protected:
 
 template<typename modeltype>
 inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
-           glmmr::ModelMatrix<modeltype>& matrix_,
-           glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
+                                                glmmr::ModelMatrix<modeltype>& matrix_,
+                                                glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_) {};
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
@@ -305,9 +305,9 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower){
-  #ifdef R_BUILD
+#ifdef R_BUILD
   if(bound.size()!=P())Rcpp::stop("Bound not equal to number of parameters");
-  #endif
+#endif
   if(lower){
     lower_bound = bound; 
   } else {
@@ -319,7 +319,7 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
 template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
 #ifndef R_BUILD
-  double R_PosInf = -1.0 * std::numeric_limits<double>::infinity();
+  double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
 #endif
   dblvec lower;
   if(beta){
@@ -362,7 +362,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
   if(model.linear_predictor.any_nonlinear()){
-    vector_matrix score = matrix.b_score();
+    VectorMatrix score = matrix.b_score();
     MatrixXd infomat = score.mat.llt().solve(MatrixXd::Identity(P(),P()));
     VectorXd bplus = infomat*score.vec;
     for(int i = 0; i < bplus.size(); i++)model.linear_predictor.parameters[i] += bplus(i);
@@ -371,20 +371,20 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
     ArrayXd nvar_par(model.n());
     switch(model.family.family){
-      case Fam::gaussian:
-        nvar_par = model.data.variance;
-        break;
-      case Fam::gamma:
-        nvar_par = model.data.variance.inverse();
-        break;
-      case Fam::beta:
-        nvar_par = (1+model.data.variance);
-        break;
-      case Fam::binomial:
-        nvar_par = model.data.variance.inverse();
-        break;
-      default:
-        nvar_par.setConstant(1.0);
+    case Fam::gaussian:
+      nvar_par = model.data.variance;
+      break;
+    case Fam::gamma:
+      nvar_par = model.data.variance.inverse();
+      break;
+    case Fam::beta:
+      nvar_par = (1+model.data.variance);
+      break;
+    case Fam::binomial:
+      nvar_par = model.data.variance.inverse();
+      break;
+    default:
+      nvar_par.setConstant(1.0);
     }
     
 #pragma omp parallel for
@@ -551,6 +551,10 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
   dblvec start = get_start_values(true,false,false);
   dblvec lower = get_lower_values(true,false,false);
   dblvec upper = get_upper_values(true,false,false);
+#ifndef R_BUILD
+  double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
+  double R_PosInf = std::numeric_limits<double>::infinity();
+#endif
   for(int i = 0; i< Q(); i++){
     start.push_back(re.u_(i,0));
     lower.push_back(R_NegInf);
@@ -740,12 +744,12 @@ inline MatrixXd glmmr::ModelOptim<modeltype>::hessian_numerical(double tol){
 
 template<typename modeltype>
 inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N, 
-                                             VectorXd C,
-                                             double tol,
-                                             int max_iter){
-  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+                                                             VectorXd C,
+                                                             double tol,
+                                                             int max_iter){
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
   if(C.size()!=P())Rcpp::stop("C is wrong size");
-  #endif 
+#endif 
   
   VectorXd Cvec(C);
   ArrayXd weights = ArrayXd::Constant(model.n(),1.0*model.n());
@@ -862,7 +866,9 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
     weightsnew *= 1/weightsnew.sum();
     diff = ((weights-weightsnew).abs()).maxCoeff();
     weights = weightsnew;
+#ifdef R_BUILD
     Rcpp::Rcout << "\n(Max. diff: " << diff << ")\n";
+#endif
   }
 #ifdef R_BUILD
   if(iter<max_iter){

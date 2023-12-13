@@ -31,7 +31,7 @@ public:
   void update_parameters(const dblvec& parameters) override;
   void update_parameters(const ArrayXd& parameters) override;
   void update_parameters_extern(const dblvec& parameters) override;
-  vector_matrix submatrix(int i);
+  VectorMatrix submatrix(int i);
   MatrixXd inv_ldlt_AD(const MatrixXd &A,const VectorXd &D,const ArrayXXi &NN);
   void parse_grid_data(const ArrayXXd &data);
   
@@ -190,7 +190,7 @@ inline void glmmr::nngpCovariance::gen_AD(){
   }
 }
 
-inline vector_matrix glmmr::nngpCovariance::submatrix(int i){
+inline VectorMatrix glmmr::nngpCovariance::submatrix(int i){
   int idxlim = i <= m ? i : m;
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
@@ -210,7 +210,7 @@ inline vector_matrix glmmr::nngpCovariance::submatrix(int i){
   for(int j = 0; j<idxlim; j++){
     Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
   }
-  vector_matrix result(idxlim);
+  VectorMatrix result(idxlim);
   result.vec = Sv;
   result.mat = S;
   return result;

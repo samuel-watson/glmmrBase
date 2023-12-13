@@ -100,8 +100,12 @@ inline VectorXd glmmr::ModelMCMC<modeltype>::new_proposal(const VectorXd& u0_,
                                               bool adapt_, 
                                               int iter_,
                                               double runif_){
-  Rcpp::NumericVector z = Rcpp::rnorm(model.covariance.Q());
-  VectorXd r = Rcpp::as<Map<VectorXd> >(z);
+  
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+  generator(boost::mt19937(time(0)),
+            boost::normal_distribution<>());
+  VectorXd r(model.covariance.Q());
+  randomGaussian(generator, r);
   VectorXd grad = matrix.log_gradient(u0_,false);
   double lpr = 0.5*r.transpose()*r;
   VectorXd up = u0_;
@@ -119,6 +123,7 @@ inline VectorXd glmmr::ModelMCMC<modeltype>::new_proposal(const VectorXd& u0_,
   double l2 = log_prob(up);
   double prob = std::min(1.0,exp(-l1 + lpr + l2 - lprt));
   bool accepttf = runif_ < prob;
+#ifdef R_BUILD
   if(trace==2){
     int printSize = u0_.size() < 10 ? u0_.size() : 10;
     Rcpp::Rcout << "\nIter: " << iter_ << " l1 " << l1 << " h1 " << lpr << " l2 " << l2 << " h2 " << lprt;
@@ -132,6 +137,7 @@ inline VectorXd glmmr::ModelMCMC<modeltype>::new_proposal(const VectorXd& u0_,
       Rcpp::Rcout << " REJECT \n";
     }
   }
+#endif
   if(adapt_){
     double f1 = 1.0/(iter_ + 10);
     H = (1-f1)*H + f1*(target_accept - prob);
@@ -155,8 +161,11 @@ template<typename modeltype>
 inline void glmmr::ModelMCMC<modeltype>::sample(int warmup_,
                                  int nsamp_,
                                  int adapt_){
-  Rcpp::NumericVector z = Rcpp::rnorm(model.covariance.Q());
-  VectorXd unew = Rcpp::as<Map<VectorXd> >(z);
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+  generator(boost::mt19937(time(0)),
+            boost::normal_distribution<>());
+  VectorXd unew(model.covariance.Q());
+  randomGaussian(generator, unew);
   accept = 0;
   std::minstd_rand gen(std::random_device{}());
   std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -181,12 +190,16 @@ inline void glmmr::ModelMCMC<modeltype>::sample(int warmup_,
   for(i = 0; i < nsamp_-1; i++){
     prob = dist(gen);
     re.u_.col(i+1) = new_proposal(re.u_.col(i),false,i+1,prob);
+#ifdef R_BUILD
     if(verbose && i%refresh== 0){
       Rcpp::Rcout << "\nSampling: Iter " << i + warmup_ << " of " << totalsamps;
     }
+#endif
   }
+#ifdef R_BUILD
   if(trace>0)Rcpp::Rcout << "\nAccept rate: " << (double)accept/(warmup_+nsamp_) << " steps: " << steps << " step size: " << e;
   if(verbose)Rcpp::Rcout << "\n" << std::string(40, '-');
+#endif
 }
 
 template<typename modeltype>

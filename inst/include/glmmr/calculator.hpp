@@ -31,6 +31,7 @@ public:
   MatrixXd data = MatrixXd::Zero(1,1);
   dblvec parameters;
   intvec parameter_indexes;
+  bool any_nonlinear = false;
   calculator() {};
   
   template<CalcDyDx dydx>
@@ -47,6 +48,7 @@ public:
   MatrixMatrix jacobian_and_hessian(const MatrixXd& extraData);
   VectorMatrix jacobian_and_hessian();
   void update_parameters(const dblvec& parameters_in);
+
   void print_instructions() const;
   void print_names(bool data = true, bool parameters = false) const;
 };

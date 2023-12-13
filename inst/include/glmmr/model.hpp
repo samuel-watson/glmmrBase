@@ -17,21 +17,6 @@ struct check_type : std::false_type {};
 template<>
 struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > : std::true_type {};
 
-enum class MarginType {
-  DyDx = 0,
-  Diff = 1,
-  Ratio = 2
-};
-
-enum class SE {
-  GLS = 0,
-  KR = 1,
-  Robust = 2,
-  BW = 3,
-  KR2 = 4,
-  Sat = 5
-};
-
 template<typename modeltype>
 class Model {
 public:
@@ -157,9 +142,10 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
   initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   
-#ifdef R_BUILD
   int total_p = at.size() + atmeans.size() + average.size() + 1;
   int intercept = 1- (int)model.linear_predictor.form.RM_INT;
+  
+#ifdef R_BUILD
   if(total_p != (model.linear_predictor.P() - intercept))Rcpp::stop("All variables must be named");
   if(at.size() != atvals.size())Rcpp::stop("Not enough values specified for at");
   if(re_type == RandomEffectMargin::Average && re.zu_.cols()<=1)Rcpp::warning("No MCMC samples of random effects. Random effects will be set at estimated values.");
@@ -256,13 +242,13 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   switch(se_type){
     case SE::KR:
       {
-      kenward_data kdata = matrix.small_sample_correction(Correction::KenwardRoger);
+      CorrectionData<SE::KR> kdata = matrix.template small_sample_correction<SE::KR>();
       M = kdata.vcov_beta;
       break;
       }
     case SE::KR2:
     {
-      kenward_data kdata = matrix.small_sample_correction(Correction::KenwardRogerImproved);
+      CorrectionData<SE::KR2> kdata = matrix.template small_sample_correction<SE::KR2>();
       M = kdata.vcov_beta;
       break;
     }

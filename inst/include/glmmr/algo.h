@@ -1,10 +1,6 @@
 #pragma once
 
-#include <cmath>
-#include <RcppEigen.h>
 #include "general.h"
-
-// [[Rcpp::depends(RcppEigen)]]
 
 namespace glmmr {
 namespace algo {

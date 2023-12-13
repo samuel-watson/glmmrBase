@@ -31,6 +31,7 @@
 #include <variant>
 #include <SparseChol.h>
 #include <set>
+#include <unordered_map>
 #include <queue>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/polygamma.hpp>
@@ -186,6 +187,7 @@ inline bool validate_fn(const str& fn){
 }
 
 //const static intvec xvar_rpn = {0,1,4,17};
+#ifdef R_BUILD
 
 template<typename T>
 inline void print_vec_1d(const T& vec){
@@ -221,6 +223,8 @@ inline void print_sparse(const sparse& A){
   for(auto i: A.Ax)Rcpp::Rcout << " " << i;
 }
 
+#endif
+
 inline bool is_number(const std::string& s)
 {
   bool isnum = true;
@@ -229,7 +233,7 @@ inline bool is_number(const std::string& s)
   }
   catch (std::invalid_argument const& ex)
   {
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
     Rcpp::Rcout << " Not double: " << ex.what() << '\n';
 #endif
     isnum = false;
@@ -248,30 +252,47 @@ inline bool expect_number_of_unique_elements(const std::vector<T> vec,
   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
   return vec_size==n;
 }
+
+enum class MarginType {
+  DyDx = 0,
+    Diff = 1,
+    Ratio = 2
+};
+
+enum class SE {
+  GLS = 0,
+  KR = 1,
+  Robust = 2,
+  BW = 3,
+  KR2 = 4,
+  Sat = 5,
+  KRBoth = 6 // used for when two types of correction are required
+};
+
 }
 
-struct vector_matrix{
+struct VectorMatrix {
 public:
   VectorXd vec;
   MatrixXd mat;
-  vector_matrix(int n): vec(n), mat(n,n) {};
-  vector_matrix(const vector_matrix& x) : vec(x.vec), mat(x.mat) {};
-  vector_matrix& operator=(vector_matrix x){
+  VectorMatrix(int n): vec(n), mat(n,n) {};
+  VectorMatrix(const VectorMatrix& x) : vec(x.vec), mat(x.mat) {};
+  VectorMatrix& operator=(VectorMatrix x){
     vec = x.vec;
     mat = x.mat;
     return *this;
   };
 };
 
-struct matrix_matrix{
+struct MatrixMatrix {
 public:
   MatrixXd mat1;
   MatrixXd mat2;
   double a = 0;
   double b = 0;
-  matrix_matrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
-  matrix_matrix(const matrix_matrix& x) : mat1(x.mat1), mat2(x.mat2) {};
-  matrix_matrix& operator=(matrix_matrix x){
+  MatrixMatrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
+  MatrixMatrix(const MatrixMatrix& x) : mat1(x.mat1), mat2(x.mat2) {};
+  MatrixMatrix& operator=(MatrixMatrix x){
     mat1 = x.mat1;
     mat2 = x.mat2;
     a = x.a;
@@ -280,19 +301,39 @@ public:
   };
 };
 
-struct kenward_data{
+struct CorrectionDataBase {
 public:
   MatrixXd vcov_beta;
   MatrixXd vcov_theta;
   VectorXd dof;
   VectorXd lambda;
-  kenward_data(int n1, int m1, int n2, int m2): vcov_beta(n1,m1), vcov_theta(n2,m2), dof(n1), lambda(n1) {};
-  kenward_data(const kenward_data& x) : vcov_beta(x.vcov_beta), vcov_theta(x.vcov_theta), dof(x.dof), lambda(x.lambda) {};
-  kenward_data& operator=(kenward_data x){
-    vcov_beta = x.vcov_beta;
-    vcov_theta = x.vcov_theta;
-    dof = x.dof;
-    lambda = x.lambda;
+  CorrectionDataBase(int n1, int m1, int n2, int m2): vcov_beta(n1,m1), vcov_theta(n2,m2), dof(n1), lambda(n1) {};
+  CorrectionDataBase(const MatrixXd& vcov_beta_, const MatrixXd& vcov_theta_, const MatrixXd& dof_, const MatrixXd& lambda_) : 
+    vcov_beta(vcov_beta_), vcov_theta(vcov_theta_), dof(dof_), lambda(lambda_)  {};
+  CorrectionDataBase(const CorrectionDataBase& x) : vcov_beta(x.vcov_beta), vcov_theta(x.vcov_theta), dof(x.dof), lambda(x.lambda) {};
+  CorrectionDataBase& operator=(const CorrectionDataBase& x) = default;
+};
+
+template<glmmr::SE corr>
+struct CorrectionData : public CorrectionDataBase {
+public:
+  CorrectionData(int n1, int m1, int n2, int m2): CorrectionDataBase(n1,m1,n2,m2) {};
+  CorrectionData(const CorrectionData& x) : CorrectionDataBase(x.vcov_beta, x.vcov_theta, x.dof, x.lambda) {};
+  CorrectionData& operator=(const CorrectionData& x){
+    CorrectionDataBase::operator=(x);
+    return *this;
+  };
+};
+
+template<>
+struct CorrectionData<glmmr::SE::KRBoth> : public CorrectionDataBase {
+public:
+  MatrixXd vcov_beta_second;
+  CorrectionData(int n1, int m1, int n2, int m2): CorrectionDataBase(n1,m1,n2,m2), vcov_beta_second(n1,m1) {};
+  CorrectionData(const CorrectionData& x) : CorrectionDataBase(x.vcov_beta, x.vcov_theta, x.dof, x.lambda), vcov_beta_second(x.vcov_beta_second) {};
+  CorrectionData& operator=(const CorrectionData& x){
+    CorrectionDataBase::operator=(x);
+    vcov_beta_second = x.vcov_beta_second;
     return *this;
   };
 };

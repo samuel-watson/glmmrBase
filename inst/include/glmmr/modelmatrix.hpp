@@ -12,12 +12,6 @@ namespace glmmr {
 
 using namespace Eigen;
 
-enum class Correction {
-  KenwardRoger = 0,
-  KenwardRogerImproved = 1,
-  Satterthwaite = 2
-};
-
 template<typename modeltype>
 class ModelMatrix{
   public:
@@ -33,12 +27,12 @@ class ModelMatrix{
     MatrixXd sandwich_matrix(); 
     std::vector<MatrixXd> sigma_derivatives();
     MatrixXd information_matrix_theta();
-    kenward_data small_sample_correction(Correction type = Correction::KenwardRoger);
-    //kenward_data kenward_roger(bool improved = false); // kept for legacy version but will be deprecated
+    template<SE corr>
+    CorrectionData<corr> small_sample_correction();
     MatrixXd linpred();
-    vector_matrix b_score();
-    vector_matrix re_score();
-    matrix_matrix hess_and_grad();
+    VectorMatrix b_score();
+    VectorMatrix re_score();
+    MatrixMatrix hess_and_grad();
     VectorXd log_gradient(const VectorXd &v,bool beta = false);
     std::vector<glmmr::SigmaBlock> get_sigma_blocks();
     BoxResults box();
@@ -235,7 +229,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   //  for(int j = 0; j < Q_; j++){
   //    params[P_+j] = u_(j,i);
   //  }
-  //  matrix_matrix hess = vcalc_.jacobian_and_hessian(params,XZ,Map<MatrixXd>(offset_.data(),offset_.size(),1));
+  //  MatrixMatrix hess = vcalc_.jacobian_and_hessian(params,XZ,Map<MatrixXd>(offset_.data(),offset_.size(),1));
   //  result += hess.mat1;
   //}
   //result *= (1.0/iter);
@@ -265,7 +259,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   // for(const auto& b: model.linear_predictor.parameters) bu.push_back(b);
   // VectorXd umean = re.u(false).rowwise().mean();
   // for(int i = 0; i < umean.size(); i++) bu.push_back(umean(i));
-  // matrix_matrix result = model.vcalc.jacobian_and_hessian(bu,XandZ,model.data.offset);
+  // MatrixMatrix result = model.vcalc.jacobian_and_hessian(bu,XandZ,model.data.offset);
   // MatrixXd JmatFull = result.mat2 * result.mat2.transpose();
   // MatrixXd Jmat = JmatFull.block(0,0,P(),P());
   // MatrixXd invHFull = -1.0*result.mat1;
@@ -383,7 +377,11 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
 }
 
 template<typename modeltype>
-inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Correction type){
+template<glmmr::SE corr>
+inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correction(){
+  using namespace glmmr;
+  static_assert(corr == SE::KR || corr == SE::KR2 || corr == SE::Sat || corr == SE::KRBoth,"Only Kenward-Roger or Satterthwaite allowed for small sample correction");
+  
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
@@ -401,10 +399,10 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Corre
   MatrixXd partial1(model.n(),model.n());
   MatrixXd partial2(model.n(),model.n());
   MatrixXd meat = MatrixXd::Zero(SigX.cols(),SigX.cols());
-  glmmr::MatrixField<MatrixXd> P;
-  glmmr::MatrixField<MatrixXd> Q;
-  glmmr::MatrixField<MatrixXd> RR;
-  glmmr::MatrixField<MatrixXd> S;
+  MatrixField<MatrixXd> P;
+  MatrixField<MatrixXd> Q;
+  MatrixField<MatrixXd> RR;
+  MatrixField<MatrixXd> S;
   int counter = 0;
   for(int i = 0; i < Rmod; i++){
     if(i < R){
@@ -439,7 +437,7 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Corre
   }
   M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
   
-  if(type == Correction::KenwardRoger || type == Correction::KenwardRogerImproved){
+  if constexpr (corr == SE::KR || corr == SE::KR2 || corr == SE::KRBoth ){
     for(int i = 0; i < (Rmod-1); i++){
       if(i < R){
         partial1 = Z*derivs[1+i]*Z.transpose();
@@ -482,9 +480,13 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Corre
 #endif
   }
   
+  CorrectionData<corr> out(this->P(),this->P(),Rmod,Rmod);
+  out.vcov_beta = M_new;
+  out.vcov_theta = M_theta;
+  if constexpr (corr == SE::KRBoth) out.vcov_beta_second = M_new;
   
   // new improved correction
-  if(type==Correction::KenwardRogerImproved){
+  if constexpr (corr == SE::KR2 || corr == SE::KRBoth){
     MatrixXd SS = MatrixXd::Zero(SigmaInv.rows(),SigmaInv.cols());
     for(int i = 0; i < Rmod; i++){
       for(int j = i; j < Rmod; j++){
@@ -523,14 +525,14 @@ inline kenward_data glmmr::ModelMatrix<modeltype>::small_sample_correction(Corre
     for(const auto& v: V)Rcpp::Rcout << v << " ";
     #endif
     
-    M_new -= M_correction;
+    if constexpr (corr == SE::KR2) {
+      out.vcov_beta -= M_correction;
+    } else {
+      out.vcov_beta_second -= M_correction;
+    }
   }
   
   // degrees of freedom correction
-  
-  kenward_data out(this->P(),this->P(),Rmod,Rmod);
-  out.vcov_beta = M_new;
-  out.vcov_theta = M_theta;
   
   double a1, a2, B, g, c1, c2, c3, v0, v1, v2, rhotop, rho;
   int mult = 1;
@@ -574,11 +576,11 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::linpred(){
 }
 
 template<typename modeltype>
-inline vector_matrix glmmr::ModelMatrix<modeltype>::b_score(){
+inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
-  matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
-  vector_matrix out(hess.mat1.rows());
+  MatrixMatrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
+  VectorMatrix out(hess.mat1.rows());
   out.mat = hess.mat1;
   out.mat *= -1.0;
   out.vec = hess.mat2.rowwise().sum();
@@ -586,18 +588,18 @@ inline vector_matrix glmmr::ModelMatrix<modeltype>::b_score(){
 }
 
 template<typename modeltype>
-inline matrix_matrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
+inline MatrixMatrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
-  matrix_matrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
+  MatrixMatrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
   return hess;
 }
 
 template<typename modeltype>
-inline vector_matrix glmmr::ModelMatrix<modeltype>::re_score(){
+inline VectorMatrix glmmr::ModelMatrix<modeltype>::re_score(){
   VectorXd xbOffset = model.linear_predictor.xb() + model.data.offset;
-  matrix_matrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),model.covariance.ZL(),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
-  vector_matrix out(Q());
+  MatrixMatrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),model.covariance.ZL(),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
+  VectorMatrix out(Q());
   hess.mat1 *= -1.0;
   out.mat = hess.mat1 + MatrixXd::Identity(Q(),Q());
   out.vec = hess.mat2.rowwise().sum();
@@ -675,7 +677,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       if(betapars){
         size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
       } else {
-        size_q_array =  ZLt*size_n_array-v.array();
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       }
       break;
     }
@@ -684,7 +686,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       size_n_array = size_n_array.exp();
       if(!betapars){
         size_n_array = model.data.y.array() - size_n_array;
-        size_q_array = ZLt*size_n_array -v.array() ;
+        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
       } else {
         size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
       }
@@ -707,7 +709,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       if(betapars){
         size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
       } else {
-        size_q_array =  ZLt*size_n_array-v.array();
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       }
       break;
     }
@@ -722,7 +724,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       if(betapars){
         size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
       } else {
-        size_q_array =  ZLt*size_n_array-v.array();
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       }
       break;
     }
@@ -740,7 +742,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
       }
       else {
-        size_q_array = ZLt * size_n_array - v.array();
+        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
       }
       break;
     }
@@ -755,7 +757,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       if(betapars){
         size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
       } else {
-        size_q_array =  ZLt*size_n_array-v.array();
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       }
       break;
     }
@@ -775,7 +777,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     } else {
       size_n_array = model.data.y.array() - size_n_array;
       size_n_array *= model.data.weights;
-      size_q_array = ZLt*size_n_array-v.array();
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       size_q_array *= 1.0/(model.data.var_par);
     }
     break;
@@ -790,7 +792,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         } else {
           size_n_array = model.data.y.array() - size_n_array;
           size_n_array *= model.data.weights;
-          size_q_array = (ZLt*size_n_array)-v.array();
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
           size_q_array *= 1.0/(model.data.var_par);
         }
         break;
@@ -808,7 +810,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
       } else {
         size_n_array -= model.data.y.array();
-        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
         size_q_array *= model.data.var_par;
       }
       break;
@@ -820,7 +822,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
       } else {
         size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
         size_q_array *= model.data.var_par;
       }
       break;
@@ -834,7 +836,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
           size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
         } else {
           size_n_array *= model.data.y.array();
-          size_q_array = ZLt*size_n_array-v.array();
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
           size_q_array *= model.data.var_par;
         }
         break;
@@ -852,7 +854,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       if(betapars){
         size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
       } else {
-        size_q_array = ZLt*size_n_array-v.array();
+        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
       }
       break;
     }
