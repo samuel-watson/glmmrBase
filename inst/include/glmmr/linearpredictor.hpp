@@ -11,7 +11,6 @@ class LinearPredictor {
 public:
   dblvec parameters;
   glmmr::calculator calc;
-  MatrixXd Xdata;
   glmmr::Formula& form;
   LinearPredictor(glmmr::Formula& form_,const Eigen::ArrayXXd &data_,const strvec& colnames_);
   LinearPredictor(glmmr::Formula& form_,const Eigen::ArrayXXd &data_,const strvec& colnames_,const dblvec& parameters_);
@@ -41,24 +40,25 @@ protected:
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_) :
-  Xdata(data_.rows(),1),
+  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_),  
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   parameters.resize(P_);
+  calc.parameters.resize(P_);
   if(!calc.any_nonlinear){
     std::fill(parameters.begin(),parameters.end(),0.0);
   } else {
-    // to avoid problems like dividing by zero
     std::fill(parameters.begin(),parameters.end(),1.0);
   }
+  calc.parameters = parameters;
   X_.conservativeResize(n_,P_);
   if(!calc.any_nonlinear){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
   } else {
     X_.setZero();
   }
@@ -68,17 +68,17 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const dblvec& parameters_) :
-  Xdata(data_.rows(),1),
+  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
 };
 
@@ -86,32 +86,32 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const Eigen::ArrayXd& parameters_) :
-  Xdata(data_.rows(),1),
+  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,data_,colnames_,Xdata);
+  form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
-  Xdata(linpred.Xdata.rows(),1),
+  calc.data.conservativeResize(linpred.calc.data.rows(),NoChange),
   form(linpred.form),
   colnames_vec(linpred.colnames_vec), 
   n_(linpred.Xdata.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,Xdata);
+  form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(linpred.parameters);
   X_.conservativeResize(n_,P_);
-  X_ = calc.jacobian(parameters,Xdata);
+  X_ = calc.jacobian();
   x_set = true;
 };
 
@@ -128,10 +128,15 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
   if(parameters_.size()!=(unsigned)calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   #endif
   
+  if(parameters.size()==0){
+    parameters.resize(P_);
+    calc.parameters.resize(P_);
+  }
   
   parameters = parameters_;
+  calc.parameters = parameters_;
   if(!x_set){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
     x_set = true;
   }
 };
@@ -156,7 +161,7 @@ inline strvec glmmr::LinearPredictor::colnames() const{
 inline VectorXd glmmr::LinearPredictor::xb(){
   VectorXd xb(n());
   if(calc.any_nonlinear){
-    xb = calc.linear_predictor(parameters,Xdata);
+    xb = calc.linear_predictor();
   } else {
     Map<VectorXd> beta(parameters.data(),parameters.size());
     xb = X_ * beta;
@@ -166,7 +171,7 @@ inline VectorXd glmmr::LinearPredictor::xb(){
 
 inline MatrixXd glmmr::LinearPredictor::X(){
   if(calc.any_nonlinear){
-    X_ = calc.jacobian(parameters,Xdata);
+    X_ = calc.jacobian();
   }
   return X_;
 }

@@ -32,7 +32,7 @@ public:
   virtual void update_parameters_extern(const dblvec& parameters);
   virtual void update_parameters(const ArrayXd& parameters);
   virtual int parse();
-  virtual double get_val(int b, int i, int j) const;
+  double get_val(int b, int i, int j) const;
   virtual MatrixXd Z();
   virtual MatrixXd D(bool chol = false, bool upper = false);
   virtual VectorXd sim_re();
@@ -58,11 +58,7 @@ public:
   virtual void derivatives(std::vector<MatrixXd>& derivs,int order = 1);
 protected:
   std::vector<glmmr::calculator> calc_;
-  intvec3d re_pars_;
-  //strvec2d fn_;
   std::vector<std::vector<CovFunc> > fn_;
-  dblvec2d par_for_calcs_;
-  std::vector<MatrixXd> dists;
   intvec re_fn_par_link_;
   intvec re_count_;
   intvec re_order_;
@@ -170,7 +166,7 @@ zquad(max_block_dim()), spchol((make_sparse(),mat)) {
 inline int glmmr::Covariance::parse(){
   intvec3d re_cols_;
   strvec2d re_par_names_;
-  
+  intvec3d re_pars_;
   // now process each step of the random effect terms
   #ifdef R_BUILD
   if(colnames_.size()!= (unsigned int)data_.cols())Rcpp::stop("colnames length != data columns");
@@ -365,6 +361,14 @@ inline int glmmr::Covariance::parse(){
     }
   }
   
+  for(int i =0; i<fn_.size();i++){
+    for(unsigned int j = 0; j < re_pars_[i].size(); j++){
+      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
+        calc_[i].parameter_indexes.push_back(re_pars_[i][j][k]);
+      }
+    }
+  }
+  
   //now build the reverse polish notation and add distances
   int nvarfn;
   for(int i =0; i<fn_.size();i++){
@@ -372,8 +376,8 @@ inline int glmmr::Covariance::parse(){
     intvec fn_par;
     int minvalue = 100;
     int ndata = re_temp_data_[i].size();
-    MatrixXd distmat = MatrixXd::Zero(ndata*(ndata-1)/2,fn_[i].size());
-    dists.push_back(distmat);
+    calc_[i].data.conservativeResize(ndata*(ndata-1)/2,fn_[i].size());
+    calc_[i].data_size = ndata;
     for(unsigned int j = 0; j<fn_[i].size();j++){
       auto min_value_iterator = std::min_element(re_pars_[i][j].begin(),re_pars_[i][j].end());
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
@@ -391,7 +395,7 @@ inline int glmmr::Covariance::parse(){
               dist_val += dist_ab * dist_ab;
             }
             int idxval = (ndata-1)*k - ((k-1)*k/2) + (l-k-1);
-            dists[i](idxval,j) = sqrt(dist_val);
+            calc_[i].data(idxval,j) = sqrt(dist_val);
           }
         }
       }
@@ -461,15 +465,15 @@ inline void glmmr::Covariance::Z_constructor(){
 
 
 inline void glmmr::Covariance::update_parameters_in_calculators(){
-  if(par_for_calcs_.size()==0)par_for_calcs_.resize(B_);
   for(int i = 0; i < B_; i++){
-    dblvec par_for_calc;
-    for(unsigned int j = 0; j < re_pars_[i].size(); j++){
-      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
-        par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
-      }
-    }
-    par_for_calcs_[i] = par_for_calc;
+    calc_[i].update_parameters(parameters_);
+    // dblvec par_for_calc;
+    // for(unsigned int j = 0; j < re_pars_[i].size(); j++){
+    //   for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
+    //     par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
+    //   }
+    // }
+    // calc_[i].parameters = par_for_calc;
   }
 }
 
@@ -568,7 +572,7 @@ inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters){
 };
 
 inline double glmmr::Covariance::get_val(int b, int i, int j) const{
-  return calc_[b].calculate<CalcDyDx::None>(i,par_for_calcs_[b],dists[b],j,0,0,block_size[b])[0];
+  return calc_[b].calculate<CalcDyDx::None>(i,j,0,0)[0];
 }
 
 inline MatrixXd glmmr::Covariance::get_block(int b){
@@ -912,9 +916,9 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
     for(int i = 0; i < block_dimension; i++){
       for(int j = i; j < block_dimension; j++){
         if(order == 1){
-          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,j,0,0);
         } else {
-          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,par_for_calcs_[b],dists[b],j,0,0,block_dimension);
+          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,j,0,0);
         }
         derivs[0](block_count+i,block_count+j) = out[0];
         if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];

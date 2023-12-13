@@ -166,7 +166,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
 #endif
     
   bool single_row = true;
-  MatrixXd newXdata(1,model.linear_predictor.Xdata.cols());
+  MatrixXd newXdata(1,model.linear_predictor.calc.data.cols());
   int P = model.linear_predictor.P();
   int N = 1;
   auto xidx = std::find(model.linear_predictor.calc.data_names.begin(),model.linear_predictor.calc.data_names.end(),x);
@@ -176,7 +176,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
     single_row = false;
     N = model.n();
     newXdata.conservativeResize(model.n(),NoChange);
-    newXdata.col(xcol) = model.linear_predictor.Xdata.col(xcol);
+    newXdata.col(xcol) = model.linear_predictor.calc.data.col(xcol);
     
 #ifdef R_BUILD
    if(re_type == RandomEffectMargin::At && atrevals.size() != model.covariance.Q())Rcpp::stop("Need to provide values for u vector");
@@ -186,7 +186,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
      auto colidx = std::find(model.linear_predictor.calc.data_names.begin(),model.linear_predictor.calc.data_names.end(),p);
      if(colidx != model.linear_predictor.calc.data_names.end()){
        int pcol = colidx - model.linear_predictor.calc.data_names.begin();
-       newXdata.col(pcol) = model.linear_predictor.Xdata.col(pcol);
+       newXdata.col(pcol) = model.linear_predictor.calc.data.col(pcol);
      } else {
 #ifdef R_BUILD
        Rcpp::stop("Variable "+p+" not in data names");  
@@ -222,7 +222,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       if(colidx != model.linear_predictor.calc.data_names.end()){
         int pcol = colidx - model.linear_predictor.calc.data_names.begin();
         double xmean = 0;
-        for(int i = 0; i < model.n(); i++) xmean += model.linear_predictor.Xdata(i,pcol);
+        for(int i = 0; i < model.n(); i++) xmean += model.linear_predictor.calc.data(i,pcol);
         xmean *= (1.0/model.n());
         for(int i = 0; i < newXdata.rows(); i++){
           newXdata(i,pcol) = xmean;
