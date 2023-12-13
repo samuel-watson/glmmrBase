@@ -40,12 +40,12 @@ protected:
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_) :
-  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_),  
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
+  calc.data.conservativeResize(data_.rows(),NoChange);
   form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   parameters.resize(P_);
@@ -68,12 +68,12 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const dblvec& parameters_) :
-  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
+  calc.data.conservativeResize(data_.rows(),NoChange);
   form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
@@ -86,12 +86,12 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
                 const Eigen::ArrayXXd &data_,
                 const strvec& colnames_,
                 const Eigen::ArrayXd& parameters_) :
-  calc.data.conservativeResize(data_.rows(),NoChange),
   form(form_),
   colnames_vec(colnames_), 
   n_(data_.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
+  calc.data.conservativeResize(data_.rows(),NoChange);
   form.calculate_linear_predictor(calc,data_,colnames_,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(parameters);
@@ -101,13 +101,13 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
-  calc.data.conservativeResize(linpred.calc.data.rows(),NoChange),
   form(linpred.form),
   colnames_vec(linpred.colnames_vec), 
-  n_(linpred.Xdata.rows()),
+  n_(linpred.calc.data.rows()),
   X_(MatrixXd::Zero(n_,1))
 {
-  form.calculate_linear_predictor(calc,linpred.Xdata.array(),linpred.colnames_vec,calc.data);
+  calc.data.conservativeResize(linpred.calc.data.rows(),NoChange);
+  form.calculate_linear_predictor(calc,linpred.calc.data.array(),linpred.colnames_vec,calc.data);
   P_ = calc.parameter_names.size();
   update_parameters(linpred.parameters);
   X_.conservativeResize(n_,P_);

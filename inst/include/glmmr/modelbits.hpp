@@ -64,6 +64,10 @@ inline void glmmr::ModelBits<cov, linpred>::setup_calculator(){
   vcalc.y = yvec;
   vcalc.variance.conservativeResize(yvec.size());
   vcalc.variance = data.variance;
+  vcalc.data.conservativeResize(NoChange,covariance.Q());
+  vcalc.data = covariance.ZL();
+  vcalc.parameters.resize(covariance.Q());
+  std::fill(vcalc.parameters.begin(),vcalc.parameters.end(),0.0);
 }
 
 template<>

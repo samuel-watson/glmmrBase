@@ -31,7 +31,6 @@ public:
   MatrixXd data = MatrixXd::Zero(1,1);
   dblvec parameters;
   intvec parameter_indexes;
-  bool any_nonlinear = false;
   calculator() {};
   
   template<CalcDyDx dydx>
@@ -79,6 +78,10 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   data_count = calc.data_count;
   parameter_count = calc.parameter_count;
   any_nonlinear = calc.any_nonlinear;
+  data.conservativeResize(calc.data.rows(),calc.data.cols());
+  data = calc.data;
+  parameters.resize(calc.parameters.size());
+  parameters = calc.parameters;
   return *this;
 };
 
@@ -287,7 +290,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
       if(i==j){
         stack.push(0.0);
       } else {
-        int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (n-1)*j - ((j-1)*j/2) + (i-j-1);
+        int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
         if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
 #endif

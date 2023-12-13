@@ -579,7 +579,7 @@ template<typename modeltype>
 inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
-  MatrixMatrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
+  MatrixMatrix hess = model.calc.jacobian_and_hessian(zuOffset);
   VectorMatrix out(hess.mat1.rows());
   out.mat = hess.mat1;
   out.mat *= -1.0;
@@ -591,14 +591,16 @@ template<typename modeltype>
 inline MatrixMatrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
-  MatrixMatrix hess = model.calc.jacobian_and_hessian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
+  MatrixMatrix hess = model.calc.jacobian_and_hessian(zuOffset);
   return hess;
 }
 
 template<typename modeltype>
 inline VectorMatrix glmmr::ModelMatrix<modeltype>::re_score(){
   VectorXd xbOffset = model.linear_predictor.xb() + model.data.offset;
-  MatrixMatrix hess = model.vcalc.jacobian_and_hessian(dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows()),model.covariance.ZL(),Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
+  model.vcalc.parameters = dblvec(re.u(false).col(0).data(),re.u(false).col(0).data()+re.u(false).rows());
+  model.vcalc.data = model.covariance.ZL();
+  MatrixMatrix hess = model.vcalc.jacobian_and_hessian(Map<MatrixXd>(xbOffset.data(),xbOffset.size(),1));
   VectorMatrix out(Q());
   hess.mat1 *= -1.0;
   out.mat = hess.mat1 + MatrixXd::Identity(Q(),Q());
@@ -662,7 +664,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   if(betapars){
     VectorXd zuOffset = SparseOperators::operator*(ZL,v);
     zuOffset += model.data.offset;
-    MatrixXd J = model.calc.jacobian(model.linear_predictor.parameters,model.linear_predictor.Xdata,zuOffset);
+    MatrixXd J = model.calc.jacobian(zuOffset);
     size_p_array = J.transpose().rowwise().sum().array();
   } else {
     switch(model.family.family){
