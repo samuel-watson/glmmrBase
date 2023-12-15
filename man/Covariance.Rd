@@ -134,7 +134,7 @@ cov$subset(1:100)
 \item \href{#method-Covariance-update_parameters}{\code{Covariance$update_parameters()}}
 \item \href{#method-Covariance-print}{\code{Covariance$print()}}
 \item \href{#method-Covariance-subset}{\code{Covariance$subset()}}
-\item \href{#method-Covariance-get_chol_D}{\code{Covariance$get_chol_D()}}
+\item \href{#method-Covariance-chol_D}{\code{Covariance$chol_D()}}
 \item \href{#method-Covariance-log_likelihood}{\code{Covariance$log_likelihood()}}
 \item \href{#method-Covariance-simulate_re}{\code{Covariance$simulate_re()}}
 \item \href{#method-Covariance-sparse}{\code{Covariance$sparse()}}
@@ -313,12 +313,12 @@ cov$subset(1:100)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Covariance-get_chol_D"></a>}}
-\if{latex}{\out{\hypertarget{method-Covariance-get_chol_D}{}}}
-\subsection{Method \code{get_chol_D()}}{
+\if{html}{\out{<a id="method-Covariance-chol_D"></a>}}
+\if{latex}{\out{\hypertarget{method-Covariance-chol_D}{}}}
+\subsection{Method \code{chol_D()}}{
 Returns the Cholesky decomposition of the covariance matrix D
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$get_chol_D()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$chol_D()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -364,16 +364,18 @@ A vector of random effect values
 \if{html}{\out{<a id="method-Covariance-sparse"></a>}}
 \if{latex}{\out{\hypertarget{method-Covariance-sparse}{}}}
 \subsection{Method \code{sparse()}}{
-If this function is called then sparse matrix methods will be used for calculations
-involving D
+If this function is called then sparse matrix methods will be used for calculations involving D
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE, amd = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sparse}}{Logical. Whether to use sparse methods (TRUE) or not (FALSE)}
+
+\item{\code{amd}}{Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
+that the Cholesky decomposition of PAP^T is calculated rather than A.}
 }
 \if{html}{\out{</div>}}
 }

@@ -993,7 +993,6 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   tol = 0.01,
   max.iter = 30,
   se = "gls",
-  sparse = FALSE,
   usestan = TRUE,
   se.theta = TRUE,
   lower.bound = NULL,
@@ -1024,8 +1023,6 @@ between iterations at which to stop the algorithm.}
 degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.}
-
-\item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
 
 \item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
 the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
@@ -1167,13 +1164,16 @@ fit1 <- des$LA(y = ysim)
 Set whether to use sparse matrix methods for model calculations and fitting.
 By default the model does not use sparse matrix methods.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE, amd = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
+
+\item{\code{amd}}{Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so
+that the Cholesky decomposition of PAP^T is calculated rather than A.}
 }
 \if{html}{\out{</div>}}
 }
