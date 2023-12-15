@@ -28,7 +28,7 @@ public:
   ModelBits(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
   virtual int n() const {return linear_predictor.n();};
   virtual ArrayXd xb() {return linear_predictor.xb().array() + data.offset.array();};
-  virtual void make_covariance_sparse();
+  virtual void make_covariance_sparse(bool amd = true);
   virtual void make_covariance_dense();
 private:
   void setup_calculator();
@@ -65,7 +65,6 @@ inline void glmmr::ModelBits<cov, linpred>::setup_calculator(){
   vcalc.variance.conservativeResize(yvec.size());
   vcalc.variance = data.variance;
   vcalc.data.conservativeResize(NoChange,covariance.Q());
-  vcalc.data = covariance.ZL();
   vcalc.parameters.resize(covariance.Q());
   std::fill(vcalc.parameters.begin(),vcalc.parameters.end(),0.0);
 }
@@ -77,8 +76,8 @@ inline void glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>::set
 }
 
 template<typename cov, typename linpred>
-inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(){
-  covariance.set_sparse(true);
+inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(bool amd){
+  covariance.set_sparse(true,amd);
 }
 
 template<typename cov, typename linpred>

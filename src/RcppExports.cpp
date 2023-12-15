@@ -197,13 +197,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // Covariance__make_sparse
-void Covariance__make_sparse(SEXP xp, int type_);
-RcppExport SEXP _glmmrBase_Covariance__make_sparse(SEXP xpSEXP, SEXP type_SEXP) {
+void Covariance__make_sparse(SEXP xp, bool amd, int type_);
+RcppExport SEXP _glmmrBase_Covariance__make_sparse(SEXP xpSEXP, SEXP amdSEXP, SEXP type_SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type amd(amdSEXP);
     Rcpp::traits::input_parameter< int >::type type_(type_SEXP);
-    Covariance__make_sparse(xp, type_);
+    Covariance__make_sparse(xp, amd, type_);
     return R_NilValue;
 END_RCPP
 }
@@ -1313,13 +1314,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__make_sparse
-void Model__make_sparse(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__make_sparse(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__make_sparse(SEXP xp, bool amd, int type);
+RcppExport SEXP _glmmrBase_Model__make_sparse(SEXP xpSEXP, SEXP amdSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type amd(amdSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__make_sparse(xp, type);
+    Model__make_sparse(xp, amd, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1564,7 +1566,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__log_determinant", (DL_FUNC) &_glmmrBase_Covariance__log_determinant, 2},
     {"_glmmrBase_Covariance__n_cov_pars", (DL_FUNC) &_glmmrBase_Covariance__n_cov_pars, 2},
     {"_glmmrBase_Covariance__simulate_re", (DL_FUNC) &_glmmrBase_Covariance__simulate_re, 2},
-    {"_glmmrBase_Covariance__make_sparse", (DL_FUNC) &_glmmrBase_Covariance__make_sparse, 2},
+    {"_glmmrBase_Covariance__make_sparse", (DL_FUNC) &_glmmrBase_Covariance__make_sparse, 3},
     {"_glmmrBase_Covariance__make_dense", (DL_FUNC) &_glmmrBase_Covariance__make_dense, 2},
     {"_glmmrBase_Covariance__set_nn", (DL_FUNC) &_glmmrBase_Covariance__set_nn, 2},
     {"_glmmrBase_Covariance__any_gr", (DL_FUNC) &_glmmrBase_Covariance__any_gr, 2},
@@ -1654,7 +1656,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 3},
     {"_glmmrBase_Model__mcmc_set_refresh", (DL_FUNC) &_glmmrBase_Model__mcmc_set_refresh, 3},
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 3},
-    {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 2},
+    {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 3},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 2},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 2},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 2},

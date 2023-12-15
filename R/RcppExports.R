@@ -61,8 +61,8 @@ Covariance__simulate_re <- function(xp, type_ = 0L) {
     .Call(`_glmmrBase_Covariance__simulate_re`, xp, type_)
 }
 
-Covariance__make_sparse <- function(xp, type_ = 0L) {
-    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, type_))
+Covariance__make_sparse <- function(xp, amd = TRUE, type_ = 0L) {
+    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, amd, type_))
 }
 
 Covariance__make_dense <- function(xp, type_ = 0L) {
@@ -421,8 +421,8 @@ Model__mcmc_set_target_accept <- function(xp, target_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_target_accept`, xp, target_, type))
 }
 
-Model__make_sparse <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__make_sparse`, xp, type))
+Model__make_sparse <- function(xp, amd = TRUE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__make_sparse`, xp, amd, type))
 }
 
 Model__make_dense <- function(xp, type = 0L) {

@@ -786,7 +786,6 @@ Model <- R6::R6Class("Model",
                        #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom.
-                       #'@param sparse Logical indicating whether to use sparse matrix methods
                        #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
                        #'it generally produces a larger number of effective samplers per unit time, especially for more complex
@@ -833,7 +832,6 @@ Model <- R6::R6Class("Model",
                                        tol = 1e-2,
                                        max.iter = 30,
                                        se = "gls",
-                                       sparse = FALSE,
                                        usestan = TRUE,
                                        se.theta = TRUE,
                                        lower.bound = NULL,
@@ -1301,18 +1299,20 @@ Model <- R6::R6Class("Model",
                        #' Set whether to use sparse matrix methods for model calculations and fitting.
                        #' By default the model does not use sparse matrix methods.
                        #' @param sparse Logical indicating whether to use sparse matrix methods
+                       #' @param amd Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
+                       #' that the Cholesky decomposition of PAP^T is calculated rather than A.
                        #' @return None, called for effects
-                       sparse = function(sparse = TRUE){
+                       sparse = function(sparse = TRUE, amd = TRUE){
                          if(!is.null(private$ptr)){
                            if(private$model_type() == 1){
                              message("Sparse has no effect with NNGP models")
                            } else {
                              if(sparse){
-                               Model__make_sparse(private$ptr,private$model_type())
+                               Model__make_sparse(private$ptr,amd,private$model_type())
                              } else {
                                Model__make_dense(private$ptr,private$model_type())
                              }
-                             self$covariance$sparse(sparse)
+                             self$covariance$sparse(sparse,amd)
                            }
                            private$useSparse = sparse
                          } 

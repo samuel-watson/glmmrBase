@@ -65,7 +65,7 @@ typedef std::pair<std::string, double> strdblpair;
 namespace glmmr {
 
 enum class CovFunc {
-  gr = 0,
+    gr = 0,
     ar = 1,
     fexp0 = 2,
     fexp = 3,
@@ -73,19 +73,23 @@ enum class CovFunc {
     sqexp = 5,
     bessel = 6,
     matern = 7,
-    wend0 = 8,
-    wend1 = 9,
-    wend2 = 10,
-    prodwm = 11,
-    prodcb = 12,
-    prodek = 13,
-    ar0 = 14,
-    ar1 = 15,
-    dist = 16
+    truncpow2 = 8,
+    truncpow3 = 9,
+    truncpow4 = 10,
+    cauchy = 11,
+    cauchy3 = 12,
+    truncpow20 = 13,
+    truncpow30 = 14,
+    truncpow40 = 15,
+    cauchy0 = 16,
+    cauchy30 = 17,
+    ar0 = 18,
+    ar1 = 19,
+    dist = 20
 };
 
 enum class Fam {
-  gaussian = 0,
+    gaussian = 0,
     bernoulli = 1,
     poisson = 2,
     gamma = 3,
@@ -94,7 +98,7 @@ enum class Fam {
 };
 
 enum class Link {
-  logit = 0,
+   logit = 0,
     loglink = 1, // to avoid conflicting with log() function
     probit = 2,
     identity = 3,
@@ -128,12 +132,16 @@ const std::map<str, CovFunc> str_to_covfunc = {
   {"sqexp",CovFunc::sqexp},
   {"bessel",CovFunc::bessel},
   {"matern",CovFunc::matern},
-  {"wend0",CovFunc::wend0},
-  {"wend1",CovFunc::wend1},
-  {"wend2",CovFunc::wend2},
-  {"prodwm",CovFunc::prodwm},
-  {"prodcb",CovFunc::prodcb},
-  {"prodek",CovFunc::prodek},
+  {"truncpow2",CovFunc::truncpow2},
+  {"truncpow3",CovFunc::truncpow3},
+  {"truncpow4",CovFunc::truncpow4},
+  {"cauchy",CovFunc::cauchy},
+  {"cauchy3",CovFunc::cauchy3},
+  {"truncpow20",CovFunc::truncpow20},
+  {"truncpow30",CovFunc::truncpow30},
+  {"truncpow40",CovFunc::truncpow40},
+  {"cauchy0",CovFunc::cauchy0},
+  {"cauchy30",CovFunc::cauchy30},
   {"ar0", CovFunc::ar0},
   {"ar1", CovFunc::ar1},
   {"dist",CovFunc::dist}
@@ -150,12 +158,16 @@ const std::map<CovFunc, str> covfunc_to_str = {
   {CovFunc::sqexp, "sqexp"},
   {CovFunc::bessel, "bessel"},
   {CovFunc::matern, "matern"},
-  {CovFunc::wend0, "wend0"},
-  {CovFunc::wend1, "wend1"},
-  {CovFunc::wend2, "wend2"},
-  {CovFunc::prodwm, "prodwm"},
-  {CovFunc::prodcb, "prodcb"},
-  {CovFunc::prodek, "prodek"},
+  {CovFunc::truncpow2, "truncpow2"},
+  {CovFunc::truncpow3, "truncpow3"},
+  {CovFunc::truncpow4, "truncpow4"},
+  {CovFunc::cauchy, "cauchy"},
+  {CovFunc::cauchy3, "cauchy3"},
+  {CovFunc::truncpow20, "truncpow20"},
+  {CovFunc::truncpow30, "truncpow30"},
+  {CovFunc::truncpow40, "truncpow40"},
+  {CovFunc::cauchy0, "cauchy0"},
+  {CovFunc::cauchy30, "cauchy30"},
   {CovFunc::ar0, "ar0"},
   {CovFunc::ar1, "ar1"},
   {CovFunc::dist, "dist"}
@@ -170,12 +182,16 @@ const std::map<CovFunc, int> covfunc_to_nvar = {
   {CovFunc::sqexp, 2},
   {CovFunc::bessel, 1},
   {CovFunc::matern, 2},
-  {CovFunc::wend0, 2},
-  {CovFunc::wend1, 2},
-  {CovFunc::wend2, 2},
-  {CovFunc::prodwm, 2},
-  {CovFunc::prodcb, 2},
-  {CovFunc::prodek, 2},
+  {CovFunc::truncpow2, 2},
+  {CovFunc::truncpow3, 2},
+  {CovFunc::truncpow4, 2},
+  {CovFunc::cauchy, 3},
+  {CovFunc::cauchy3, 2},
+  {CovFunc::truncpow20, 1},
+  {CovFunc::truncpow30, 1},
+  {CovFunc::truncpow40, 1},
+  {CovFunc::cauchy0, 2},
+  {CovFunc::cauchy30, 1},
   {CovFunc::ar0, 1},
   {CovFunc::ar1, 1},
   {CovFunc::dist, 0}
@@ -251,6 +267,13 @@ inline bool expect_number_of_unique_elements(const std::vector<T> vec,
                                              int n){
   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
   return vec_size==n;
+}
+
+inline bool is_compact_fn(const CovFunc& fn){
+  bool compact = false;
+  if(fn == CovFunc::truncpow2 || fn == CovFunc::truncpow3 || fn == CovFunc::truncpow4 || fn == CovFunc::truncpow20 || fn == CovFunc::truncpow30
+       || fn == CovFunc::truncpow40 || fn == CovFunc::cauchy || fn == CovFunc::cauchy3 || fn == CovFunc::cauchy0  || fn == CovFunc::cauchy30) compact = true;
+  return compact;
 }
 
 enum class MarginType {

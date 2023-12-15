@@ -185,7 +185,7 @@ Covariance <- R6::R6Class("Covariance",
                         #' @description
                         #' Returns the Cholesky decomposition of the covariance matrix D
                         #' @return A matrix
-                        get_chol_D = function(){
+                        chol_D = function(){
                           if(is.null(private$model_ptr)){
                             return(Matrix::Matrix(Covariance__D_chol(private$ptr,private$type)))
                           } else {
@@ -222,16 +222,17 @@ Covariance <- R6::R6Class("Covariance",
                           return(re)
                         },
                         #' @description
-                        #' If this function is called then sparse matrix methods will be used for calculations
-                        #' involving D
+                        #' If this function is called then sparse matrix methods will be used for calculations involving D
                         #' @param sparse Logical. Whether to use sparse methods (TRUE) or not (FALSE)
+                        #' @param amd Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
+                        #' that the Cholesky decomposition of PAP^T is calculated rather than A.
                         #' @return None. Called for effects.
-                        sparse = function(sparse = TRUE){
+                        sparse = function(sparse = TRUE, amd = TRUE){
                           if(sparse){
                             if(is.null(private$model_ptr)){
-                              Covariance__make_sparse(private$ptr,private$type)
+                              Covariance__make_sparse(private$ptr,amd,private$type)
                             } else {
-                              Model__make_sparse(private$model_ptr,private$type)
+                              Model__make_sparse(private$model_ptr,amd,private$type)
                             }
                           } else {
                             if(is.null(private$model_ptr)){

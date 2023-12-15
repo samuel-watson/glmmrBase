@@ -75,115 +75,68 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
       B.insert(B.end(), C3.begin(), C3.end());
       break;
     }
-  case CovFunc::wend0:
+  case CovFunc::truncpow2:
     {
-      const instructs C = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
-      B.push_back(Do::PushParameter);
-      B.push_back(Do::PushParameter);
-      B.push_back(Do::PushCovData);
+      const instructs C = {Do::PushParameter,Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
       B.insert(B.end(), C.begin(), C.end());
       break;
     }
-  case CovFunc::wend1:
-    {
-      const instructs C1 = {Do::PushParameter,Do::PushParameter,Do::Int1,Do::Add};
-      const instructs C2 = {Do::Multiply,Do::Int1,Do::Add,Do::Multiply,Do::PushParameter,Do::Int1,Do::Add};
-      const instructs C3 = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C3.begin(), C3.end());
-      break;
-    }
-  case CovFunc::wend2:
-    {
-      const instructs C1 = {Do::PushParameter,Do::Int1};
-      const instructs C2 = {Do::Int2,Do::PushParameter,Do::Add,Do::Multiply,Do::Add,Do::Int3,
-                            Do::Int1,Do::Subtract,Do::Int1,
-                            Do::PushParameter,Do::Int2,Do::Add,Do::PushParameter,Do::Int2,
-                            Do::Add,Do::Multiply,Do::Subtract,Do::Multiply};
-      const instructs C3 = {Do::Multiply,Do::Multiply,Do::Add,Do::Multiply,Do::PushParameter,
-                            Do::Int2,Do::Add};
-      const instructs C4 = {Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C3.begin(), C3.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C4.begin(), C4.end());
-      break;
-    }
-  case CovFunc::prodwm:
-    {
-      const instructs C1 = {Do::PushParameter,Do::PushParameter,Do::Gamma,Do::PushParameter,
-                            Do::Int1,Do::Subtract,Do::Int2,Do::Power,Do::Divide,
-                            Do::Multiply,Do::PushParameter};
-      const instructs C2 = {Do::Power,Do::Multiply,Do::PushParameter};
-      const instructs C3 = {Do::BesselK,Do::Multiply};
-      const instructs C4 = {Do::Multiply,Do::Int10,Do::Int10,Do::Multiply,Do::Int10,Do::Int7,
-                            Do::Add,Do::Add,Do::Subtract,
-                            Do::Multiply,Do::Int2,Do::Int10,Do::Int1,Do::Add,Do::Divide};
-      const instructs C5 = {Do::Multiply,Do::Add,Do::Int1,Do::Add,Do::Multiply};
-      const instructs C6 = {Do::Int1,Do::Subtract,Do::Multiply};
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C3.begin(), C3.end());
-      B.push_back(Do::PushCovData);
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C4.begin(), C4.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C5.begin(), C5.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C6.begin(), C6.end());
-      break;
-    }
-  case CovFunc::prodcb:
-    {
-      const instructs C1 = {Do::Power,Do::Int1,Do::Subtract,Do::Int3,Do::Negate,Do::Power,
-                            Do::PushParameter,Do::Multiply};
-      const instructs C2 = {Do::Pi,Do::Multiply,Do::Cos};
-      const instructs C3 = {Do::Int1,Do::Subtract,Do::Multiply};
-      const instructs C4 = {Do::Pi,Do::Sin,Do::Pi,Do::Int1,Do::Divide,Do::Multiply,Do::Add,
-                            Do::Multiply};
-      B.push_back(Do::PushParameter);
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C3.begin(), C3.end());
-      B.push_back(Do::PushCovData);
-      break;
-    }
-  case CovFunc::prodek:
-    {
-      const instructs C1 = {Do::Power,Do::Negate,Do::Exp,Do::PushParameter,Do::Int2,Do::Pi};
-      const instructs C2 = {Do::Multiply,Do::Multiply,Do::Int2,Do::Pi};
-      const instructs C3 = {Do::Multiply,Do::Multiply,Do::Sin,Do::Divide};
-      const instructs C4 = {Do::Int1,Do::Subtract,Do::Multiply,Do::Int2,Do::Pi};
-      const instructs C6 = {Do::Multiply,Do::Multiply,Do::Cos,Do::Int1,Do::Subtract,
-                            Do::Divide,Do::Pi,Do::Int1,Do::Divide,Do::Multiply,Do::Add,
-                            Do::Multiply};
-      B.push_back(Do::PushParameter);
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C1.begin(), C1.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C3.begin(), C3.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C4.begin(), C4.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C2.begin(), C2.end());
-      B.push_back(Do::PushCovData);
-      B.insert(B.end(), C6.begin(), C6.end());
-      break;
-    }
+  case CovFunc::truncpow3:
+  {
+    const instructs C = {Do::PushParameter,Do::Int3,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::truncpow4:
+  {
+    const instructs C = {Do::PushParameter,Do::Int4,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::cauchy3:
+  {
+    const instructs C = {Do::PushParameter,Do::Int3,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Add,Do::Power,Do::Multiply};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::cauchy:
+  {
+    const instructs C = {Do::PushParameter,Do::PushParameter,Do::PushParameter,Do::Divide,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,
+                         Do::Int1,Do::Add,Do::Power,Do::Multiply};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::truncpow20:
+  {
+    const instructs C = {Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::truncpow30:
+  {
+    const instructs C = {Do::Int3,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::truncpow40:
+  {
+    const instructs C = {Do::Int4,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::cauchy30:
+  {
+    const instructs C = {Do::Int3,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Add,Do::Power};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
+  case CovFunc::cauchy0:
+  {
+    const instructs C = {Do::PushParameter,Do::PushParameter,Do::Divide,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,
+                         Do::Int1,Do::Add,Do::Power};
+    B.insert(B.end(), C.begin(), C.end());
+    break;
+  }
   case CovFunc::ar1: case CovFunc::ar0:
     B.push_back(Do::PushCovData);
     B.push_back(Do::PushParameter);
@@ -251,52 +204,26 @@ inline intvec interpret_re_par(const CovFunc& fn,
     B.push_back(par_idx[1]);
     addA();
     break;
-  case CovFunc::wend0:
+  case CovFunc::truncpow2: case CovFunc::truncpow3: case CovFunc::truncpow4: case CovFunc::cauchy3:
     B.push_back(par_idx[0]);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case CovFunc::wend1:
-    addPar2(0);
+  case CovFunc::cauchy:
+    B.push_back(par_idx[0]);
+    B.push_back(par_idx[1]);
+    B.push_back(par_idx[2]);
     B.push_back(par_idx[1]);
     addA();
     break;
-  case CovFunc::wend2:
+  case CovFunc::truncpow20: case CovFunc::truncpow30: case CovFunc::truncpow40: case CovFunc::cauchy30:
     B.push_back(par_idx[0]);
-    addA();
-    addPar2(1);
-    addA();
-    addA();
-    B.push_back(par_idx[1]);
     addA();
     break;
-  case CovFunc::prodwm:
+  case CovFunc::cauchy0:
     B.push_back(par_idx[0]);
-    addPar2(1);
-    addPar2(0);
-    addA();
-    addA();
-    addA();
-    addA();
-    addA();
-    addA();
-    break;
-  case CovFunc::prodcb:
     B.push_back(par_idx[1]);
-    addA();
     B.push_back(par_idx[0]);
-    addA();
-    addA();
-    addA();
-    break;
-  case CovFunc::prodek:
-    B.push_back(par_idx[1]);
-    addA();
-    B.push_back(par_idx[0]);
-    addA();
-    addA();
-    addA();
-    addA();
     addA();
     break;
   case CovFunc::ar1: case CovFunc::ar0:

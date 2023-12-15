@@ -47,6 +47,7 @@ public:
   MatrixMatrix jacobian_and_hessian(const MatrixXd& extraData);
   VectorMatrix jacobian_and_hessian();
   void update_parameters(const dblvec& parameters_in);
+  double get_covariance_data(const int i, const int j, const int fn);
 
   void print_instructions() const;
   void print_names(bool data = true, bool parameters = false) const;
@@ -55,6 +56,9 @@ public:
 }
 
 inline void glmmr::calculator::update_parameters(const dblvec& parameters_in){
+#ifdef R_BUILD
+  if(parameters_in.size() != parameter_count)Rcpp::stop("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
+#endif
   for(int i = 0; i < parameter_indexes.size(); i++)parameters[i] = parameters_in[parameter_indexes[i]];
 }
 
@@ -207,6 +211,14 @@ inline VectorMatrix glmmr::calculator::jacobian_and_hessian(){
   result.vec = J;
   return result;
 };
+
+inline double glmmr::calculator::get_covariance_data(const int i, const int j, const int fn){
+  int i1 = i < j ? (data_size-1)*i - ((i-1)*i/2) + (j-i-1) : (data_size-1)*j - ((j-1)*j/2) + (i-j-1);
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  if(i1 >= data.rows())Rcpp::stop("PushCovData: Index out of range: "+std::to_string(i1)+" versus "+std::to_string(data.rows()));
+#endif
+  return data(i1,fn);
+}
 
 template<CalcDyDx dydx>
 inline dblvec glmmr::calculator::calculate(const int i, 

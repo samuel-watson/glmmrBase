@@ -398,25 +398,25 @@ SEXP Covariance__simulate_re(SEXP xp, int type_ = 0){
 }
 
 // [[Rcpp::export]]
-void Covariance__make_sparse(SEXP xp, int type_ = 0){
+void Covariance__make_sparse(SEXP xp, bool amd = true, int type_ = 0){
   Type type = static_cast<Type>(type_);
   switch(type){
   case Type::GLMM:
     {
       XPtr<covariance> ptr(xp);
-      ptr->set_sparse(true);
+      ptr->set_sparse(true, amd);
       break;
     }
   case Type::GLMM_NNGP:
     {
       XPtr<nngp> ptr(xp);
-      ptr->set_sparse(true);
+      ptr->set_sparse(true, amd);
       break;
     }
   case Type::GLMM_HSGP:
     {
       XPtr<hsgp> ptr(xp);
-      ptr->set_sparse(true);
+      ptr->set_sparse(true, amd);
       break;
     }
   }

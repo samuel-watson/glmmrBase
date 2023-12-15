@@ -200,11 +200,11 @@ void Model__mcmc_set_target_accept(SEXP xp, SEXP target_, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__make_sparse(SEXP xp, int type = 0){
+void Model__make_sparse(SEXP xp, bool amd = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->model.make_covariance_sparse();}
+    [&](auto ptr){ptr->model.make_covariance_sparse(amd);}
   };
   std::visit(functor,model.ptr);
 }
