@@ -13,16 +13,20 @@ Description: Specification, analysis, simulation, and fitting of generalised lin
 License: GPL (>= 2)
 Imports: 
     methods,
-    digest,
+    R6,
     Rcpp (>= 1.0.11),
-    R6
-LinkingTo: 
-    Rcpp (>= 1.0.11),
-    RcppEigen,
-    SparseChol (>= 0.3.1),
-    BH,
     RcppParallel (>= 5.0.1),
-    rminqa (>= 0.2.2)
+    rstan (>= 2.18.1),
+    rstantools (>= 2.3.1.1)
+LinkingTo: 
+    BH (>= 1.66.0),
+    Rcpp (>= 1.0.11),
+    RcppEigen (>= 0.3.3.3.0),
+    RcppParallel (>= 5.0.1),
+    rminqa (>= 0.2.2),
+    rstan (>= 2.18.1),
+    SparseChol (>= 0.3.1),
+    StanHeaders (>= 2.18.0)
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]

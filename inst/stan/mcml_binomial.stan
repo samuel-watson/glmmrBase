@@ -1,13 +1,13 @@
 functions {
   real partial_sum1_lpdf(array[] real y, int start, int end){
-    return std_normal_lpdf(y[start:end]);
+    return std_normal_lpdf(y[1:(1+end-start)]);
   }
   real partial_sum2_lpmf(array[] int y,int start, int end,array[] int n, vector mu,int type){
     real out;
-    if(type==1) out = binomial_logit_lpmf(y[start:end]|n[start:end],mu[start:end]);
-    if(type==2) out = binomial_lpmf(y[start:end]|n[start:end],exp(mu[start:end]));
-    if(type==3) out = binomial_lpmf(y[start:end]|n[start:end],mu[start:end]);
-    if(type==4) out = binomial_lpmf(y[start:end]|n[start:end],Phi_approx(mu[start:end]));
+    if(type==1) out = binomial_logit_lpmf(y[1:(1+end-start)]|n[1:(1+end-start)],mu[1:(1+end-start)]);
+    if(type==2) out = binomial_lpmf(y[1:(1+end-start)]|n[1:(1+end-start)],exp(mu[1:(1+end-start)]));
+    if(type==3) out = binomial_lpmf(y[1:(1+end-start)]|n[1:(1+end-start)],mu[1:(1+end-start)]);
+    if(type==4) out = binomial_lpmf(y[1:(1+end-start)]|n[1:(1+end-start)],Phi_approx(mu[1:(1+end-start)]));
     return out;
   }
 }
