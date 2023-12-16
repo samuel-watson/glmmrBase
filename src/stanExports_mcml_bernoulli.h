@@ -90,17 +90,17 @@ static const std::vector<string> locations_array__ = {" (found before start of p
                                                       " (in 'string', line 19, column 2 to column 17)",
                                                       " (in 'string', line 20, column 2 to column 11)",
                                                       " (in 'string', line 23, column 8 to column 9)",
-                                                      " (in 'string', line 3, column 4 to column 41)",
+                                                      " (in 'string', line 3, column 4 to column 47)",
                                                       " (in 'string', line 2, column 60 to line 4, column 3)",
                                                       " (in 'string', line 6, column 4 to column 13)",
-                                                      " (in 'string', line 7, column 16 to column 71)",
-                                                      " (in 'string', line 7, column 4 to column 71)",
-                                                      " (in 'string', line 8, column 16 to column 70)",
-                                                      " (in 'string', line 8, column 4 to column 70)",
-                                                      " (in 'string', line 9, column 16 to column 65)",
-                                                      " (in 'string', line 9, column 4 to column 65)",
-                                                      " (in 'string', line 10, column 16 to column 77)",
-                                                      " (in 'string', line 10, column 4 to column 77)",
+                                                      " (in 'string', line 7, column 16 to column 83)",
+                                                      " (in 'string', line 7, column 4 to column 83)",
+                                                      " (in 'string', line 8, column 16 to column 82)",
+                                                      " (in 'string', line 8, column 4 to column 82)",
+                                                      " (in 'string', line 9, column 16 to column 77)",
+                                                      " (in 'string', line 9, column 4 to column 77)",
+                                                      " (in 'string', line 10, column 16 to column 89)",
+                                                      " (in 'string', line 10, column 4 to column 89)",
                                                       " (in 'string', line 11, column 4 to column 15)",
                                                       " (in 'string', line 5, column 78 to line 12, column 3)"};
 template <bool propto__>
@@ -119,7 +119,8 @@ partial_sum1_lpdf(const std::vector<T0__>& y, const int& start,
     current_statement__ = 16;
     return std_normal_lpdf<false>(
              rvalue(y,
-               cons_list(index_min_max(start, end), nil_index_list()), "y"));
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "y"));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
       // Next line prevents compiler griping about no return
@@ -165,40 +166,46 @@ partial_sum2_lpmf(const std::vector<int>& y, const int& start,
       current_statement__ = 19;
       out = bernoulli_logit_lpmf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"),
               rvalue(mu,
-                cons_list(index_min_max(start, end), nil_index_list()), "mu"));
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "mu"));
     } 
     current_statement__ = 22;
     if (logical_eq(type, 2)) {
       current_statement__ = 21;
       out = bernoulli_lpmf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"),
               stan::math::exp(
                 rvalue(mu,
-                  cons_list(index_min_max(start, end), nil_index_list()),
-                  "mu")));
+                  cons_list(index_min_max(1, ((1 + end) - start)),
+                    nil_index_list()), "mu")));
     } 
     current_statement__ = 24;
     if (logical_eq(type, 3)) {
       current_statement__ = 23;
       out = bernoulli_lpmf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"),
               rvalue(mu,
-                cons_list(index_min_max(start, end), nil_index_list()), "mu"));
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "mu"));
     } 
     current_statement__ = 26;
     if (logical_eq(type, 4)) {
       current_statement__ = 25;
       out = bernoulli_lpmf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"),
               Phi_approx(
                 rvalue(mu,
-                  cons_list(index_min_max(start, end), nil_index_list()),
-                  "mu")));
+                  cons_list(index_min_max(1, ((1 + end) - start)),
+                    nil_index_list()), "mu")));
     } 
     current_statement__ = 27;
     return out;

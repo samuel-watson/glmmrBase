@@ -91,15 +91,15 @@ static const std::vector<string> locations_array__ = {" (found before start of p
                                                       " (in 'string', line 19, column 2 to column 15)",
                                                       " (in 'string', line 20, column 2 to column 11)",
                                                       " (in 'string', line 23, column 8 to column 9)",
-                                                      " (in 'string', line 3, column 4 to column 41)",
+                                                      " (in 'string', line 3, column 4 to column 47)",
                                                       " (in 'string', line 2, column 60 to line 4, column 3)",
                                                       " (in 'string', line 6, column 4 to column 13)",
-                                                      " (in 'string', line 7, column 16 to column 81)",
-                                                      " (in 'string', line 7, column 4 to column 81)",
-                                                      " (in 'string', line 8, column 16 to column 74)",
-                                                      " (in 'string', line 8, column 4 to column 74)",
-                                                      " (in 'string', line 9, column 16 to column 86)",
-                                                      " (in 'string', line 9, column 4 to column 86)",
+                                                      " (in 'string', line 7, column 16 to column 93)",
+                                                      " (in 'string', line 7, column 4 to column 93)",
+                                                      " (in 'string', line 8, column 16 to column 86)",
+                                                      " (in 'string', line 8, column 4 to column 86)",
+                                                      " (in 'string', line 9, column 16 to column 98)",
+                                                      " (in 'string', line 9, column 4 to column 98)",
                                                       " (in 'string', line 10, column 4 to column 15)",
                                                       " (in 'string', line 5, column 88 to line 11, column 3)"};
 template <bool propto__>
@@ -118,7 +118,8 @@ partial_sum1_lpdf(const std::vector<T0__>& y, const int& start,
     current_statement__ = 17;
     return std_normal_lpdf<false>(
              rvalue(y,
-               cons_list(index_min_max(start, end), nil_index_list()), "y"));
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "y"));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
       // Next line prevents compiler griping about no return
@@ -167,39 +168,39 @@ partial_sum2_lpdf(const std::vector<T0__>& y, const int& start,
       current_statement__ = 20;
       out = gamma_lpdf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
-              (1.0 / phi),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"), (1.0 / phi),
               elt_divide(1.0,
                 multiply(phi,
                   rvalue(mu,
-                    cons_list(index_min_max(start, end), nil_index_list()),
-                    "mu"))));
+                    cons_list(index_min_max(1, ((1 + end) - start)),
+                      nil_index_list()), "mu"))));
     } 
     current_statement__ = 23;
     if (logical_eq(type, 2)) {
       current_statement__ = 22;
       out = gamma_lpdf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
-              (1.0 / phi),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"), (1.0 / phi),
               divide(
                 rvalue(mu,
-                  cons_list(index_min_max(start, end), nil_index_list()),
-                  "mu"), phi));
+                  cons_list(index_min_max(1, ((1 + end) - start)),
+                    nil_index_list()), "mu"), phi));
     } 
     current_statement__ = 25;
     if (logical_eq(type, 3)) {
       current_statement__ = 24;
       out = gamma_lpdf<false>(
               rvalue(y,
-                cons_list(index_min_max(start, end), nil_index_list()), "y"),
-              (1.0 / phi),
+                cons_list(index_min_max(1, ((1 + end) - start)),
+                  nil_index_list()), "y"), (1.0 / phi),
               elt_divide(1.0,
                 multiply(phi,
                   stan::math::log(
                     rvalue(mu,
-                      cons_list(index_min_max(start, end), nil_index_list()),
-                      "mu")))));
+                      cons_list(index_min_max(1, ((1 + end) - start)),
+                        nil_index_list()), "mu")))));
     } 
     current_statement__ = 26;
     return out;

@@ -61,7 +61,7 @@ progress_bar <- function(i,n,len=30){
 #' @param family family object
 #' @param cmdstan Logical indicating whether cmdstan is being used and the function will return the filename
 #' @return list with filename and type
-mcnr_family <- function(family){
+mcnr_family <- function(family, cmdstan){
   f1 <- tolower(family[[1]])
   link <- family[[2]]
   gaussian_list <- c("identity")

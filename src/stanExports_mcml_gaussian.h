@@ -92,9 +92,9 @@ static const std::vector<string> locations_array__ = {" (found before start of p
                                                       " (in 'string', line 15, column 2 to column 18)",
                                                       " (in 'string', line 16, column 2 to column 11)",
                                                       " (in 'string', line 19, column 8 to column 9)",
-                                                      " (in 'string', line 3, column 4 to column 41)",
+                                                      " (in 'string', line 3, column 4 to column 47)",
                                                       " (in 'string', line 2, column 60 to line 4, column 3)",
-                                                      " (in 'string', line 6, column 4 to column 68)",
+                                                      " (in 'string', line 6, column 4 to column 86)",
                                                       " (in 'string', line 5, column 83 to line 7, column 3)"};
 template <bool propto__>
 struct partial_sum1_lpdf_rsfunctor__;
@@ -112,7 +112,8 @@ partial_sum1_lpdf(const std::vector<T0__>& y, const int& start,
     current_statement__ = 18;
     return std_normal_lpdf<false>(
              rvalue(y,
-               cons_list(index_min_max(start, end), nil_index_list()), "y"));
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "y"));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
       // Next line prevents compiler griping about no return
@@ -157,12 +158,14 @@ partial_sum2_lpdf(const std::vector<T0__>& y, const int& start,
     current_statement__ = 20;
     return normal_lpdf<false>(
              rvalue(y,
-               cons_list(index_min_max(start, end), nil_index_list()), "y"),
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "y"),
              rvalue(mu,
-               cons_list(index_min_max(start, end), nil_index_list()), "mu"),
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "mu"),
              rvalue(sigma,
-               cons_list(index_min_max(start, end), nil_index_list()),
-               "sigma"));
+               cons_list(index_min_max(1, ((1 + end) - start)),
+                 nil_index_list()), "sigma"));
   } catch (const std::exception& e) {
     stan::lang::rethrow_located(e, locations_array__[current_statement__]);
       // Next line prevents compiler griping about no return
