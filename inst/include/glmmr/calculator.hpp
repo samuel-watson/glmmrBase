@@ -57,7 +57,7 @@ public:
 
 inline void glmmr::calculator::update_parameters(const dblvec& parameters_in){
 #ifdef R_BUILD
-  if(parameters_in.size() != parameter_count)Rcpp::stop("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
+  if(parameters_in.size() < parameter_count)Rcpp::stop("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
 #endif
   for(int i = 0; i < parameter_indexes.size(); i++)parameters[i] = parameters_in[parameter_indexes[i]];
 }
