@@ -6,6 +6,7 @@
 #include "modelmatrix.hpp"
 #include "modelmcmc.hpp"
 #include "modeloptim.hpp"
+//#include "stanExports_mcml_gaussian.h"
 
 namespace glmmr {
 
@@ -43,6 +44,7 @@ public:
                              const dblpair& xvals,
                              const dblvec& atvals,
                              const dblvec& atrevals);
+  //Rcpp::List stan_test();
                                              
 };
 
@@ -56,7 +58,7 @@ inline glmmr::Model<modeltype>::Model(const std::string& formula_,
       std::string link_) : model(formula_,data_,colnames_,family_,link_), 
       re(model), 
       matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
-      optim(model,matrix,re), mcmc(model,matrix,re) {};
+      optim(model,matrix,re), mcmc(model,matrix,re) {}; 
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
@@ -116,6 +118,21 @@ inline void glmmr::Model<modeltype>::set_trace(int trace_){
     mcmc.verbose = false;
   }
 }
+
+// template<typename modeltype>
+// inline Rcpp::List glmmr::Model<modeltype>::stan_test(){
+//   Rcpp::List data = Rcpp::List::create(
+//     _["N"] = wrap(model.n()),
+//     _["Q"] = wrap(model.covariance.Q()),
+//     _["Xb"] = wrap(model.xb().matrix()),
+//     _["y"] = wrap(model.data.y),
+//     _["sigma"] = wrap(model.data.variance.matrix())
+//   );
+//   Rcpp::Rcout << "\nInitialise MCMC object";
+//   rstan::stan_fit<stan_model, boost::random::ecuyer1988> > rstan_model(data);
+//   Rcpp::List result = rstan_model.call_sampler();
+//   return result;
+// }
 
 // marginal effects:
 // type is margin type 
