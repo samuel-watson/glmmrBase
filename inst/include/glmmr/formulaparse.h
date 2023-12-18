@@ -64,21 +64,23 @@ inline bool parse_formula(std::vector<char>& formula,
     str s1_as_str(s1.begin(),s1.end());
     auto col_idx = std::find(colnames.begin(),colnames.end(),s1_as_str);
     if(col_idx != colnames.end()){
-      str s1_parname = "b_" + s1_as_str;
-      s1.push_back('*');
-      for(unsigned int j = 0; j < s1_parname.size(); j++){
-        s1.push_back(s1_parname[j]);
-      }
+      str s1_parname = "b_" + s1_as_str + "*";
+      s1.insert(s1.begin(),s1_parname.begin(),s1_parname.end());
+      // s1.push_back('*');
+      // for(unsigned int j = 0; j < s1_parname.size(); j++){
+      //   s1.push_back(s1_parname[j]);
+      // }
     }
     
     str s2_as_str(s2.begin(),s2.end());
     col_idx = std::find(colnames.begin(),colnames.end(),s2_as_str);
     if(col_idx != colnames.end()){
-      str s2_parname = "b_" + s2_as_str;
-      s2.push_back('*');
-      for(unsigned int j = 0; j < s2_parname.size(); j++){
-        s2.push_back(s2_parname[j]);
-      }
+      str s2_parname = "b_" + s2_as_str + "*";
+      s2.insert(s2.begin(),s2_parname.begin(),s2_parname.end());
+      // s2.push_back('*');
+      // for(unsigned int j = 0; j < s2_parname.size(); j++){
+      //   s2.push_back(s2_parname[j]);
+      // }
     }
     parse_formula(s1,calc,data,colnames,Xdata,bracket_flag);
     parse_formula(s2,calc,data,colnames,Xdata,bracket_flag);
@@ -176,7 +178,6 @@ inline bool parse_formula(std::vector<char>& formula,
         cursor=0;
         bracket_count = 0;
         while(!has_found_symbol && cursor < nchar){
-          //if(cursor==0 && formula[cursor]=='(')break;
           if(formula[cursor]=='('){
             has_found_symbol = true;
             break;
@@ -238,7 +239,7 @@ inline bool parse_formula(std::vector<char>& formula,
                   calc.indexes.push_back(calc.parameter_count);
                   calc.parameter_count++;
                 }
-                added_a_parameter = true;
+                // added_a_parameter = true;
               } else {
                 #ifdef R_BUILD
                 Rcpp::stop("Factor variable " + token_as_str + " not in data");

@@ -361,56 +361,66 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
-  if(model.linear_predictor.any_nonlinear()){
-    VectorMatrix score = matrix.b_score();
-    MatrixXd infomat = score.mat.llt().solve(MatrixXd::Identity(P(),P()));
-    VectorXd bplus = infomat*score.vec;
-    for(int i = 0; i < bplus.size(); i++)model.linear_predictor.parameters[i] += bplus(i);
-  } else {
-    MatrixXd XtXW = MatrixXd::Zero(P()*niter,P());
-    MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
-    ArrayXd nvar_par(model.n());
-    switch(model.family.family){
-    case Fam::gaussian:
-      nvar_par = model.data.variance;
-      break;
-    case Fam::gamma:
-      nvar_par = model.data.variance.inverse();
-      break;
-    case Fam::beta:
-      nvar_par = (1+model.data.variance);
-      break;
-    case Fam::binomial:
-      nvar_par = model.data.variance.inverse();
-      break;
-    default:
-      nvar_par.setConstant(1.0);
-    }
-    
-#pragma omp parallel for
-    for(int i = 0; i < niter; ++i){
-      VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
-      w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
-      VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-      VectorXd dmu = glmmr::maths::detadmu(zd.col(i),model.family.link);
-      if(model.family.family == Fam::binomial){
-        zdu = zdu.cwiseProduct(model.data.variance.matrix());
-        dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
-      }
-      ArrayXd resid = (model.data.y - zdu);
-      XtXW.block(P()*i, 0, P(), P()) = model.linear_predictor.X().transpose() * w.asDiagonal() * model.linear_predictor.X();
-      w = w.cwiseProduct(dmu);
-      w = w.cwiseProduct(resid.matrix());
-      Wu.col(i) = w;
-    }
-    XtXW *= (double)1/niter;
-    MatrixXd XtWXm = XtXW.block(0,0,P(),P());
-    for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
-    XtWXm = XtWXm.inverse();
-    VectorXd Wum = Wu.rowwise().mean();
-    VectorXd bincr = XtWXm * (model.linear_predictor.X().transpose()) * Wum;
-    update_beta(model.linear_predictor.parameter_vector() + bincr);
+//   if(model.linear_predictor.any_nonlinear()){
+// #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+//     Rcpp::Rcout << "\nNR Beta: using non-linear";
+// #endif
+//     VectorMatrix score = matrix.b_score();
+//     MatrixXd infomat = score.mat.llt().solve(MatrixXd::Identity(P(),P()));
+//     VectorXd bplus = infomat*score.vec;
+//     for(int i = 0; i < bplus.size(); i++)model.linear_predictor.parameters[i] += bplus(i);
+//   } else {
+// 
+//   }
+  
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
+  Rcpp::Rcout << "\nNR Beta: XtWX";
+#endif
+  MatrixXd XtXW = MatrixXd::Zero(P()*niter,P());
+  MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
+  MatrixXd X = model.linear_predictor.X();
+  ArrayXd nvar_par(model.n());
+  switch(model.family.family){
+  case Fam::gaussian:
+    nvar_par = model.data.variance;
+    break;
+  case Fam::gamma:
+    nvar_par = model.data.variance.inverse();
+    break;
+  case Fam::beta:
+    nvar_par = (1+model.data.variance);
+    break;
+  case Fam::binomial:
+    nvar_par = model.data.variance.inverse();
+    break;
+  default:
+    nvar_par.setConstant(1.0);
   }
+  
+#pragma omp parallel for
+  for(int i = 0; i < niter; ++i){
+    VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
+    w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
+    // w = ((w.array() *nvar_par) * model.data.weights.inverse()).matrix();
+    VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
+    VectorXd dmu = glmmr::maths::detadmu(zd.col(i),model.family.link);
+    if(model.family.family == Fam::binomial){
+      zdu = zdu.cwiseProduct(model.data.variance.matrix());
+      dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
+    }
+    ArrayXd resid = (model.data.y - zdu);
+    XtXW.block(P()*i, 0, P(), P()) = X.transpose() * w.asDiagonal() * X;
+    w = w.cwiseProduct(dmu);
+    w = w.cwiseProduct(resid.matrix());
+    Wu.col(i) = w;
+  }
+  XtXW *= (double)1.0/niter;
+  MatrixXd XtWXm = XtXW.block(0,0,P(),P());
+  for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
+  XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
+  VectorXd Wum = Wu.rowwise().mean();
+  VectorXd bincr = XtWXm * X.transpose() * Wum;
+  update_beta(model.linear_predictor.parameter_vector() + bincr);
   calculate_var_par();
 }
 
@@ -427,7 +437,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
     dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
   }
   ArrayXd resid = (model.data.y - zdu).array();
-  VectorXd w = matrix.W.W();
+  VectorXd w = matrix.W.W();//.array().inverse().matrix();
   w = w.cwiseProduct(dmu);
   w = w.cwiseProduct(resid.matrix());
   VectorXd params(P()+Q());
