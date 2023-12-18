@@ -2,7 +2,7 @@ Package: glmmrBase
 Type: Package
 Title: Generalised Linear Mixed Models in R
 Version: 0.6.1
-Date: 2023-12-15
+Date: 2023-12-18
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 
@@ -13,7 +13,6 @@ Description: Specification, analysis, simulation, and fitting of generalised lin
 License: GPL (>= 2)
 Imports: 
     methods,
-    digest,
     Rcpp (>= 1.0.11),
     R6
 LinkingTo: 

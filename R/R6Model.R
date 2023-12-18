@@ -336,8 +336,6 @@ Model <- R6::R6Class("Model",
                              }
                              if(!is.null(mean$parameters))self$mean$update_parameters(mean$parameters)
                            }
-                           self$mean$check(verbose = verbose)
-                           self$covariance$check(verbose=verbose)
                          }
                          if(is.null(offset)){
                            self$mean$offset <- rep(0,nrow(self$mean$data))
@@ -357,7 +355,6 @@ Model <- R6::R6Class("Model",
                              self$trials <- trials
                            }
                          }
-                         private$hash <- private$hash_do()
                          private$update_ptr()
                        },
                        #' @description
@@ -394,21 +391,11 @@ Model <- R6::R6Class("Model",
                        #' Given a vector of row indices, the corresponding rows will be kept and the
                        #' other rows will be removed from the mean function and covariance
                        #' @param index Integer or vector integers listing the rows to keep
-                       #' @return The function updates the object and nothing is returned
+                       #' @return The function updates the object and nothing is returned.
                        subset_rows = function(index){
                          self$mean$subset_rows(index)
                          self$covariance$subset(index)
-                         self$check(verbose=FALSE)
-                       },
-                       #' @description
-                       #' Subsets the columns of the design
-                       #'
-                       #' Removes the specified columns from the linked mean function object's X matrix.
-                       #' @param index Integer or vector of integers specifying the indexes of the columns to keep
-                       #' @return The function updates the object and nothing is returned
-                       subset_cols = function(index){
-                         self$mean$subset_cols(index)
-                         self$check(verbose=FALSE)
+                         private$update_ptr(TRUE)
                        },
                        #'@description
                        #'Generates a realisation of the design
@@ -510,43 +497,6 @@ Model <- R6::R6Class("Model",
                          return(y)
 
                        },
-                       #'@description
-                       #' Checks for any changes in linked objects and updates.
-                       #'
-                       #' Checks for any changes in any object and updates all linked objects if
-                       #' any are detected. Generally not required by the user.
-                       #' This function will be deprecated in future versions as checking is automatic.
-                       #'@param verbose Logical indicating whether to report if any updates are made, defaults to TRUE
-                       #'@return Linked objects are updated by nothing is returned
-                       #'@examples
-                       #' \dontshow{
-                       #' setParallel(FALSE) # for the CRAN check
-                       #' }
-                       #' df <- nelder(~(cl(10)*t(5)) > ind(10))
-                       #' df$int <- 0
-                       #' df[df$cl > 5, 'int'] <- 1
-                       #' des <- Model$new(
-                       #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar0(t)),
-                       #'     parameters = c(0.05,0.8)),
-                       #'   mean = list(
-                       #'     formula = ~ factor(t) + int - 1,
-                       #'     parameters = c(rep(0,5),0.6)),
-                       #'   data = df,
-                       #'   family = stats::binomial()
-                       #' )
-                       #' des$check() #does nothing
-                       #' des$covariance$parameters <- c(0.1,0.9)
-                       #' des$check() #updates
-                       #' des$mean$parameters <- c(rnorm(5),0.1)
-                       #' des$check() #updates
-                       check = function(verbose=TRUE){
-                         self$covariance$check(verbose=verbose)
-                         self$mean$check(verbose = verbose)
-                         if(private$hash != private$hash_do()){
-                           private$generate()
-                         }
-                       },
                        #' @description
                        #' Updates the parameters of the mean function and/or the covariance function
                        #'
@@ -554,7 +504,6 @@ Model <- R6::R6Class("Model",
                        #' Using `update_parameters()` is the preferred way of updating the parameters of the
                        #' mean or covariance objects as opposed to direct assignment, e.g. `self$covariance$parameters <- c(...)`.
                        #' The function calls check functions to automatically update linked matrices with the new parameters.
-                       #' If using direct assignment, call `self$check()` afterwards.
                        #'
                        #' @param mean.pars (Optional) Vector of new mean function parameters
                        #' @param cov.pars (Optional) Vector of new covariance function(s) parameters
@@ -597,7 +546,6 @@ Model <- R6::R6Class("Model",
                              Model__set_var_par(private$ptr,var.par,private$model_type())
                            }
                          }
-                         self$check(FALSE)
                        },
                        #' @description
                        #' Generates the information matrix of the GLS estimator
@@ -698,7 +646,6 @@ Model <- R6::R6Class("Model",
                        #' )
                        #' des$power() #power of 0.90 for the int parameter
                        power = function(alpha=0.05,two.sided=TRUE,alternative = "pos"){
-                         self$check(verbose=FALSE)
                          M <- self$information_matrix()
                          v0 <- solve(M)
                          v0 <- as.vector(sqrt(diag(v0)))
@@ -1542,19 +1489,11 @@ Model <- R6::R6Class("Model",
                        logit = function(x){
                          exp(x)/(1+exp(x))
                        },
-                       generate = function(){
-                         private$hash <- private$hash_do()
-                       },
                        genW = function(){
                          Model__update_W(private$ptr, private$model_type())
                          private$W <- Model__get_W(private$ptr, private$model_type())
                        },
                        attenuate_parameters = FALSE,
-                       hash = NULL,
-                       hash_do = function(){
-                         digest::digest(c(self$covariance$.__enclos_env__$private$hash,
-                                          self$mean$.__enclos_env__$private$hash))
-                       },
                        ptr = NULL,
                        set_y = function(y){
                          if(is.null(private$ptr))private$update_ptr()
@@ -1564,8 +1503,8 @@ Model <- R6::R6Class("Model",
                          type <- self$covariance$.__enclos_env__$private$type
                          return(type)
                        },
-                       update_ptr = function(){
-                         if(is.null(private$ptr)){
+                       update_ptr = function(force = FALSE){
+                         if(is.null(private$ptr) | force){
                            if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
                            if(gsub(" ","",self$mean$formula) != gsub(" ","",self$covariance$formula)){
                              form <- paste0(self$mean$formula,"+",self$covariance$formula)
