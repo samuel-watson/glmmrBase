@@ -14,25 +14,23 @@ SEXP Model__get_W(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__set_lower_bound(SEXP xp, SEXP bound_, int type = 0){
+void Model__set_bound(SEXP xp, SEXP bound_, bool beta = true, bool lower = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   std::vector<double> bound = as<std::vector<double> >(bound_);
-  auto functor = overloaded {
-    [](int) {}, 
-    [&bound](auto ptr){ptr->optim.set_bound(bound,true);}
-  };
-  std::visit(functor,model.ptr);
-}
-
-// [[Rcpp::export]]
-void Model__set_upper_bound(SEXP xp, SEXP bound_, int type = 0){
-  glmmrType model(xp,static_cast<Type>(type));
-  std::vector<double> bound = as<std::vector<double> >(bound_);
-  auto functor = overloaded {
-    [](int) {}, 
-    [&bound](auto ptr){ptr->optim.set_bound(bound,false);}
-  };
-  std::visit(functor,model.ptr);
+  if(beta){
+    auto functor = overloaded {
+      [](int) {}, 
+      [&](auto ptr){ptr->optim.set_bound(bound,lower);}
+    };
+    std::visit(functor,model.ptr);
+  } else {
+    auto functor = overloaded {
+      [](int) {}, 
+      [&](auto ptr){ptr->optim.set_theta_bound(bound,lower);}
+    };
+    std::visit(functor,model.ptr);
+  }
+  
 }
 
 // [[Rcpp::export]]

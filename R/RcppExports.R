@@ -201,12 +201,8 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
-Model__set_lower_bound <- function(xp, bound_, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__set_lower_bound`, xp, bound_, type))
-}
-
-Model__set_upper_bound <- function(xp, bound_, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__set_upper_bound`, xp, bound_, type))
+Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_bound`, xp, bound_, beta, lower, type))
 }
 
 Model__print_instructions <- function(xp, linpred, loglik, type = 0L) {

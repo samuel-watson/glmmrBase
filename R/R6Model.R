@@ -164,7 +164,6 @@ Model <- R6::R6Class("Model",
                        #' @param trials (Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
                        #' default to 1 (a bernoulli model).
                        #' @param weights (Optional) A vector of weights. 
-                       #' @param verbose Logical indicating whether to provide detailed output
                        #' @return A new Model class object
                        #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
                        #' @examples
@@ -219,8 +218,7 @@ Model <- R6::R6Class("Model",
                                              var_par = NULL,
                                              offset = NULL,
                                              weights = NULL,
-                                             trials = NULL,
-                                             verbose=TRUE){
+                                             trials = NULL){
 
                          if(is.null(family)){
                            stop("No family specified.")
@@ -508,7 +506,6 @@ Model <- R6::R6Class("Model",
                        #' @param mean.pars (Optional) Vector of new mean function parameters
                        #' @param cov.pars (Optional) Vector of new covariance function(s) parameters
                        #' @param var.par (Optional) A scalar value for var_par
-                       #' @param verbose Logical indicating whether to provide more detailed feedback
                        #' @examples
                        #' \dontshow{
                        #' setParallel(FALSE) # for the CRAN check
@@ -714,7 +711,8 @@ Model <- R6::R6Class("Model",
                        #'The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
                        #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
                        #'
-                       #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`.
+                       #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`. The information printed to the console
+                       #' during model fitting can be controlled with the `self$set_trace()` function.
                        #' 
                        #' To provide weights for the model fitting, store them in self$weights. To set the number of 
                        #' trials for binomial models, set self$trials.
@@ -723,7 +721,6 @@ Model <- R6::R6Class("Model",
                        #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, see Details. Default is `mcem`.
                        #'@param sim.lik.step Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
                        #'not do this step), defaults to FALSE.
-                       #'@param verbose Logical indicating whether to provide detailed output, defaults to TRUE.
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
@@ -741,6 +738,8 @@ Model <- R6::R6Class("Model",
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
+                       #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
+                       #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -775,14 +774,15 @@ Model <- R6::R6Class("Model",
                        MCML = function(y,
                                        method = "mcnr",
                                        sim.lik.step = FALSE,
-                                       verbose=TRUE,
                                        tol = 1e-2,
                                        max.iter = 30,
                                        se = "gls",
                                        usestan = TRUE,
                                        se.theta = TRUE,
                                        lower.bound = NULL,
-                                       upper.bound = NULL){
+                                       upper.bound = NULL,
+                                       lower.bound.theta = NULL,
+                                       upper.bound.theta = NULL){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -796,12 +796,18 @@ Model <- R6::R6Class("Model",
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,private$model_type())
                          }
                          if(!is.null(lower.bound)){
-                           Model__set_lower_bound(private$ptr,lower.bound,private$model_type())
+                           Model__set_bound(private$ptr,lower.bound,TRUE,TRUE,private$model_type())
                          }
                          if(!is.null(upper.bound)){
-                           Model__set_upper_bound(private$ptr,upper.bound,private$model_type())
+                           Model__set_bound(private$ptr,upper.bound,TRUE,FALSE,private$model_type())
                          }
-                         trace <- ifelse(verbose,2,0)
+                         if(!is.null(lower.bound.theta)){
+                           if(any(lower.bound.theta < 0))stop("Theta lower bound cannot be negative")
+                           Model__set_bound(private$ptr,lower.bound.theta,FALSE,TRUE,private$model_type())
+                         }
+                         if(!is.null(upper.bound.theta)){
+                           Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
+                         }
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
@@ -811,8 +817,8 @@ Model <- R6::R6Class("Model",
                          if(var_par_family)all_pars <- c(all_pars,var_par)
                          all_pars_new <- rep(1,length(all_pars))
                          var_par_new <- var_par
-                         if(verbose)message(paste0("using method: ",method))
-                         if(verbose)cat("\nStart: ",all_pars,"\n")
+                         if(private$trace >= 1)message(paste0("using method: ",method))
+                         if(private$trace >= 1)cat("\nStart: ",all_pars,"\n")
                          niter <- self$mcmc_options$samps
                          invfunc <- self$family$linkinv
                          L <- Matrix::Matrix(Model__L(private$ptr,private$model_type()))
@@ -824,7 +830,7 @@ Model <- R6::R6Class("Model",
                              stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                            } else {
-                             if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                             if(private$trace >= 1)message("If this is the first time running this model, it will be compiled by cmdstan.")
                              model_file <- system.file("stan",
                                                        file_type$file,
                                                        package = "glmmrBase",
@@ -847,8 +853,8 @@ Model <- R6::R6Class("Model",
                          while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
-                           if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
-                           if(trace==2)t1 <- Sys.time()
+                           if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
+                           if(private$trace == 2)t1 <- Sys.time()
                            if(usestan){
                              data$Xb <-  Model__xb(private$ptr,private$model_type())
                              data$Z <- Model__ZL(private$ptr,private$model_type())
@@ -869,8 +875,8 @@ Model <- R6::R6Class("Model",
                                                  self$mcmc_options$samps,
                                                  self$mcmc_options$adapt,private$model_type())
                            }
-                           if(trace==2)t2 <- Sys.time()
-                           if(trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
+                           if(private$trace==2)t2 <- Sys.time()
+                           if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
                            if(method=="mcem"){
@@ -884,9 +890,9 @@ Model <- R6::R6Class("Model",
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
-                           if(trace==2)t3 <- Sys.time()
-                           if(trace==2)cat("\nModel fitting took: ",t3-t2,"s")
-                           if(verbose){
+                           if(private$trace==2)t3 <- Sys.time()
+                           if(private$trace==2)cat("\nModel fitting took: ",t3-t2,"s")
+                           if(private$trace >= 1){
                              cat("\nBeta: ", beta_new)
                              cat("\nTheta: ", theta_new)
                              if(var_par_family)cat("\nSigma: ",var_par_new)
@@ -897,8 +903,8 @@ Model <- R6::R6Class("Model",
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          if(sim.lik.step){
-                           if(verbose)cat("\n\n")
-                           if(verbose)message("Optimising simulated likelihood")
+                           if(private$trace >= 1)cat("\n\n")
+                           if(private$trace >= 1)message("Optimising simulated likelihood")
                            Model__ml_all(private$ptr,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
@@ -906,7 +912,7 @@ Model <- R6::R6Class("Model",
                          }
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
-                         if(verbose)cat("\n\nCalculating standard errors...\n")
+                         if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr, TRUE,private$model_type())
                          if(private$model_type()==0){
@@ -1029,12 +1035,12 @@ Model <- R6::R6Class("Model",
                        #'quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
                        #'can be further adjusted following the proposal of Zeger et al (1988), use the member function `use_attenuated()` in this
                        #'class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To 
-                       #'set the number of trials for binomial models, set self$trials.
+                       #'set the number of trials for binomial models, set self$trials. To control the information printed to the console 
+                       #' during model fitting use the `self$set_trace()` function.
                        #'
                        #'@param y A numeric vector of outcome data
                        #'@param start Optional. A numeric vector indicating starting values for the model parameters.
                        #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
-                       #'@param verbose logical indicating whether to provide detailed algorithm feedback (default is TRUE).
                        #'@param se String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
                        #' "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors, 
                        #' "kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same 
@@ -1048,6 +1054,8 @@ Model <- R6::R6Class("Model",
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.
+                       #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
+                       #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
                        #'@return A `mcml` object
                        #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -1073,13 +1081,14 @@ Model <- R6::R6Class("Model",
                        LA = function(y,
                                      start,
                                      method = "nr",
-                                     verbose = FALSE,
                                      se = "gls",
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
                                      lower.bound = NULL,
-                                     upper.bound = NULL){
+                                     upper.bound = NULL,
+                                     lower.bound.theta = NULL,
+                                     upper.bound.theta = NULL){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -1093,9 +1102,14 @@ Model <- R6::R6Class("Model",
                          if(!is.null(upper.bound)){
                            Model__set_upper_bound(private$ptr,upper.bound,private$model_type())
                          }
-                         trace <- ifelse(verbose,1,0)
+                         if(!is.null(lower.bound.theta)){
+                           if(any(lower.bound.theta < 0))stop("Theta lower bound cannot be negative")
+                           Model__set_bound(private$ptr,lower.bound.theta,FALSE,TRUE,private$model_type())
+                         }
+                         if(!is.null(upper.bound.theta)){
+                           Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
+                         }
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
-                         trace <- ifelse(verbose,2,0)
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
@@ -1107,7 +1121,7 @@ Model <- R6::R6Class("Model",
                          while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
-                           if(verbose)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
+                           if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
                            if(method=="nr"){
                              Model__laplace_nr_beta_u(private$ptr,private$model_type())
                            } else {
@@ -1119,7 +1133,7 @@ Model <- R6::R6Class("Model",
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
-                           if(verbose){
+                           if(private$trace >= 1){
                              cat("\nBeta: ", beta_new)
                              cat("\nTheta: ", theta_new)
                              if(var_par_family)cat("\nSigma: ",var_par_new)
@@ -1139,7 +1153,7 @@ Model <- R6::R6Class("Model",
                                                 cov.pars = theta_new)
                          self$var_par <- var_par_new
                          u <- Model__u(private$ptr,TRUE,private$model_type())
-                         if(verbose)cat("\n\nCalculating standard errors...\n")
+                         if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
                          if(se == "gls" || se =="bw" || se == "box"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                            if(se.theta){
@@ -1271,9 +1285,8 @@ Model <- R6::R6Class("Model",
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
                        #'it generally produces a larger number of effective samplers per unit time, especially for more complex
                        #'covariance functions.
-                       #' @param verbose Logical indicating whether to provide detailed output to the console
                        #' @return A matrix of samples of the random effects
-                       mcmc_sample = function(y,usestan = TRUE,verbose=TRUE){
+                       mcmc_sample = function(y,usestan = TRUE){
                          private$verify_data(y)
                          private$set_y(y)
                          if(usestan){
@@ -1282,7 +1295,7 @@ Model <- R6::R6Class("Model",
                              stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                            } else {
-                             if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                             if(private$trace >= 1)message("If this is the first time running this model, it will be compiled by cmdstan.")
                              model_file <- system.file("stan",
                                                        file_type$file,
                                                        package = "glmmrBase",
@@ -1300,7 +1313,7 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
                            if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                            if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
-                           if(verbose){
+                           if(private$trace >= 1){
                              fit <- mod$sample(data = data,
                                                chains = 1,
                                                iter_warmup = self$mcmc_options$warmup,
@@ -1319,7 +1332,6 @@ Model <- R6::R6Class("Model",
                            Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {
-                           if(verbose)Model__set_trace(private$ptr,2, private$model_type())
                            Model__use_attenuation(private$ptr,private$attenuate_parameters, private$model_type())
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda, private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps, private$model_type())
@@ -1480,11 +1492,21 @@ Model <- R6::R6Class("Model",
                        update_y = function(y){
                          private$verify_data(y)
                          private$set_y(y)
+                       },
+                       #' @description
+                       #' Controls the information printed to the console for other functions. 
+                       #' @param trace Integer, either 0 = no information, 1 = some information, 2 = all information
+                       #' @return None. Called for effects.
+                       set_trace = function(trace){
+                         if(!trace%in%c(0,1,2))stop("trace must be 0, 1, or 2")
+                         private$trace <- trace
+                         Model__set_trace(private$ptr,trace, private$model_type())
                        }
                      ),
                      private = list(
                        W = NULL,
                        Xb = NULL,
+                       trace = 0,
                        useSparse = TRUE,
                        logit = function(x){
                          exp(x)/(1+exp(x))

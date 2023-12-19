@@ -19,7 +19,7 @@ public:
   std::vector<Do> instructions;
   intvec indexes;
   dblvec y;
-  std::array<double,10> numbers = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+  std::array<double,20> numbers = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
   strvec parameter_names;
   strvec data_names;
   ArrayXd variance = ArrayXd::Constant(1,1.0);
@@ -1122,6 +1122,46 @@ inline dblvec glmmr::calculator::calculate(const int i,
       break;
     case Do::PushUserNumber9:
       stack.push(numbers[9]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber10:
+      stack.push(numbers[10]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber11:
+      stack.push(numbers[11]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber12:
+      stack.push(numbers[12]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber13:
+      stack.push(numbers[13]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber14:
+      stack.push(numbers[14]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber15:
+      stack.push(numbers[15]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber16:
+      stack.push(numbers[16]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber17:
+      stack.push(numbers[17]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber18:
+      stack.push(numbers[18]);
+      allDyDxZero();
+      break;
+    case Do::PushUserNumber19:
+      stack.push(numbers[19]);
       allDyDxZero();
       break;
     }

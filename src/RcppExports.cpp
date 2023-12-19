@@ -639,27 +639,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__set_lower_bound
-void Model__set_lower_bound(SEXP xp, SEXP bound_, int type);
-RcppExport SEXP _glmmrBase_Model__set_lower_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP typeSEXP) {
+// Model__set_bound
+void Model__set_bound(SEXP xp, SEXP bound_, bool beta, bool lower, int type);
+RcppExport SEXP _glmmrBase_Model__set_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP betaSEXP, SEXP lowerSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< SEXP >::type bound_(bound_SEXP);
+    Rcpp::traits::input_parameter< bool >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type lower(lowerSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__set_lower_bound(xp, bound_, type);
-    return R_NilValue;
-END_RCPP
-}
-// Model__set_upper_bound
-void Model__set_upper_bound(SEXP xp, SEXP bound_, int type);
-RcppExport SEXP _glmmrBase_Model__set_upper_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type bound_(bound_SEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__set_upper_bound(xp, bound_, type);
+    Model__set_bound(xp, bound_, beta, lower, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1601,8 +1591,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
-    {"_glmmrBase_Model__set_lower_bound", (DL_FUNC) &_glmmrBase_Model__set_lower_bound, 3},
-    {"_glmmrBase_Model__set_upper_bound", (DL_FUNC) &_glmmrBase_Model__set_upper_bound, 3},
+    {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},
     {"_glmmrBase_Model__set_bobyqa_control", (DL_FUNC) &_glmmrBase_Model__set_bobyqa_control, 5},

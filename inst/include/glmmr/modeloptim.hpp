@@ -45,6 +45,7 @@ public:
   virtual void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
   virtual MatrixXd hessian_numerical(double tol = 1e-4);
   void set_bound(const dblvec& bound, bool lower = true);
+  void set_theta_bound(const dblvec& bound, bool lower = true);
   int P() const;
   int Q() const;
   
@@ -54,6 +55,8 @@ protected:
   double rhoend = 0;
   dblvec lower_bound;
   dblvec upper_bound; // bounds for beta
+  dblvec lower_bound_theta;
+  dblvec upper_bound_theta; // bounds for beta
   void calculate_var_par();
   dblvec get_start_values(bool beta, bool theta, bool var = true);
   dblvec get_lower_values(bool beta, bool theta, bool var = true);
@@ -315,6 +318,15 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
   }
 }
 
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_theta_bound(const dblvec& bound, bool lower){
+  if(lower){
+    lower_bound_theta = bound; 
+  } else {
+    upper_bound_theta = bound;
+  }
+}
+
 
 template<typename modeltype>
 inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool theta, bool var){
@@ -329,7 +341,13 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool the
       lower = lower_bound;
     }
   } 
-  if(theta)for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+  if(theta){
+    if(lower_bound_theta.size()==0){
+      for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+    } else {
+      for(const auto& par: lower_bound_theta)lower.push_back(par);
+    }
+  }
   if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
     lower.push_back(0.0);
   }
@@ -349,7 +367,13 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
       upper = upper_bound;
     }
   } 
-  if(theta)for(int i = 0; i< model.covariance.npar(); i++)upper.push_back(R_PosInf);
+  if(theta){
+    if(upper_bound_theta.size()==0){
+      for(int i=0; i< model.covariance.npar(); i++)upper.push_back(1e-6);
+    } else {
+      for(const auto& par: upper_bound_theta)upper.push_back(par);
+    }
+  }
   if(var && (model.family.family==Fam::gaussian||model.family.family==Fam::gamma||model.family.family==Fam::beta)){
     upper.push_back(R_PosInf);
   }
