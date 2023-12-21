@@ -52,7 +52,6 @@ The matrices X and Z both have n rows, where n is the number of observations in 
 Using \code{update_parameters()} is the preferred way of updating the parameters of the
 mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
-If using direct assignment, call \code{self$check()} afterwards.
 
 \strong{MCMCML}
 Fits generalised linear mixed models using one of three algorithms: Markov Chain Newton
@@ -155,32 +154,6 @@ des <- Model$new(
   family = stats::binomial()
 )
 ysim <- des$sim_data()
-
-## ------------------------------------------------
-## Method `Model$check`
-## ------------------------------------------------
-
-\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.05,0.8)),
-  mean = list(
-    formula = ~ factor(t) + int - 1,
-    parameters = c(rep(0,5),0.6)),
-  data = df,
-  family = stats::binomial()
-)
-des$check() #does nothing
-des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates
-des$mean$parameters <- c(rnorm(5),0.1)
-des$check() #updates
 
 ## ------------------------------------------------
 ## Method `Model$update_parameters`
@@ -345,9 +318,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-print}{\code{Model$print()}}
 \item \href{#method-Model-n}{\code{Model$n()}}
 \item \href{#method-Model-subset_rows}{\code{Model$subset_rows()}}
-\item \href{#method-Model-subset_cols}{\code{Model$subset_cols()}}
 \item \href{#method-Model-sim_data}{\code{Model$sim_data()}}
-\item \href{#method-Model-check}{\code{Model$check()}}
 \item \href{#method-Model-update_parameters}{\code{Model$update_parameters()}}
 \item \href{#method-Model-information_matrix}{\code{Model$information_matrix()}}
 \item \href{#method-Model-sandwich}{\code{Model$sandwich()}}
@@ -619,29 +590,7 @@ other rows will be removed from the mean function and covariance
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-The function updates the object and nothing is returned
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-subset_cols"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-subset_cols}{}}}
-\subsection{Method \code{subset_cols()}}{
-Subsets the columns of the design
-
-Removes the specified columns from the linked mean function object's X matrix.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$subset_cols(index)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{index}}{Integer or vector of integers specifying the indexes of the columns to keep}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-The function updates the object and nothing is returned
+The function updates the object and nothing is returned.
 }
 }
 \if{html}{\out{<hr>}}
@@ -688,58 +637,6 @@ des <- Model$new(
   family = stats::binomial()
 )
 ysim <- des$sim_data()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-check"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-check}{}}}
-\subsection{Method \code{check()}}{
-Checks for any changes in linked objects and updates.
-
-Checks for any changes in any object and updates all linked objects if
-any are detected. Generally not required by the user.
-This function will be deprecated in future versions as checking is automatic.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$check(verbose = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{Logical indicating whether to report if any updates are made, defaults to TRUE}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Linked objects are updated by nothing is returned
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)*ar0(t)),
-    parameters = c(0.05,0.8)),
-  mean = list(
-    formula = ~ factor(t) + int - 1,
-    parameters = c(rep(0,5),0.6)),
-  data = df,
-  family = stats::binomial()
-)
-des$check() #does nothing
-des$covariance$parameters <- c(0.1,0.9)
-des$check() #updates
-des$mean$parameters <- c(rnorm(5),0.1)
-des$check() #updates
 }
 \if{html}{\out{</div>}}
 

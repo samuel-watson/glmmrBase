@@ -37,7 +37,6 @@ specify `~ int + b_1*exp(b_2*x)`.
 Using `update_parameters()` is the preferred way of updating the parameters of the 
 mean or covariance objects as opposed to direct assignment, e.g. `self$parameters <- c(...)`. 
 The function calls check functions to automatically update linked matrices with the new parameters.
-If using direct assignment, call `self$check()` afterwards.
 }
 \examples{
 
@@ -56,23 +55,6 @@ mf1 <- MeanFunction$new(formula = ~ int ,
                         parameters = c(-1,1)
                         )
 mf1$n()
-
-## ------------------------------------------------
-## Method `MeanFunction$check`
-## ------------------------------------------------
-
-\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(4)*t(5)) > ind(5))
-df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
-mf1 <- MeanFunction$new(formula = ~ int ,
-                        data=df,
-                        parameters = c(-1,1)
-                        )
-mf1$parameters <- c(0,0)
-mf1$check()
 
 ## ------------------------------------------------
 ## Method `MeanFunction$new`
@@ -121,22 +103,6 @@ mf1 <- MeanFunction$new(formula = ~ int ,
                         parameters = c(-1,1)
                         )
 mf1$subset_rows(1:20) 
-
-## ------------------------------------------------
-## Method `MeanFunction$subset_cols`
-## ------------------------------------------------
-
-\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(4)*t(5)) > ind(5))
-df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
-mf1 <- MeanFunction$new(formula = ~ int ,
-                        data=df,
-                        parameters = c(-1,1)
-                        )
-mf1$subset_cols(1:2) 
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -158,13 +124,11 @@ covariance matrix of observations for non-linear models.}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-MeanFunction-n}{\code{MeanFunction$n()}}
-\item \href{#method-MeanFunction-check}{\code{MeanFunction$check()}}
 \item \href{#method-MeanFunction-new}{\code{MeanFunction$new()}}
 \item \href{#method-MeanFunction-print}{\code{MeanFunction$print()}}
 \item \href{#method-MeanFunction-update_parameters}{\code{MeanFunction$update_parameters()}}
 \item \href{#method-MeanFunction-colnames}{\code{MeanFunction$colnames()}}
 \item \href{#method-MeanFunction-subset_rows}{\code{MeanFunction$subset_rows()}}
-\item \href{#method-MeanFunction-subset_cols}{\code{MeanFunction$subset_cols()}}
 \item \href{#method-MeanFunction-linear_predictor}{\code{MeanFunction$linear_predictor()}}
 \item \href{#method-MeanFunction-clone}{\code{MeanFunction$clone()}}
 }
@@ -201,47 +165,6 @@ mf1 <- MeanFunction$new(formula = ~ int ,
                         parameters = c(-1,1)
                         )
 mf1$n()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MeanFunction-check"></a>}}
-\if{latex}{\out{\hypertarget{method-MeanFunction-check}{}}}
-\subsection{Method \code{check()}}{
-Checks if any changes have been made and updates
-
-Checks if any changes have been made and updates, usually called automatically.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$check(verbose = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{Logical whether to report if any changes detected.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-NULL
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(4)*t(5)) > ind(5))
-df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
-mf1 <- MeanFunction$new(formula = ~ int ,
-                        data=df,
-                        parameters = c(-1,1)
-                        )
-mf1$parameters <- c(0,0)
-mf1$check()
 }
 \if{html}{\out{</div>}}
 
@@ -408,47 +331,6 @@ mf1 <- MeanFunction$new(formula = ~ int ,
                         parameters = c(-1,1)
                         )
 mf1$subset_rows(1:20) 
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-MeanFunction-subset_cols"></a>}}
-\if{latex}{\out{\hypertarget{method-MeanFunction-subset_cols}{}}}
-\subsection{Method \code{subset_cols()}}{
-Keeps a subset of the columns of X 
-
-All indices not in the provided vector of column numbers will be removed from the fixed effects design
-matrix X.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$subset_cols(index)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{index}}{Columns of X to keep}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-NULL
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-df <- nelder(~(cl(4)*t(5)) > ind(5))
-df$int <- 0
-df[df$cl <= 5, 'int'] <- 1
-mf1 <- MeanFunction$new(formula = ~ int ,
-                        data=df,
-                        parameters = c(-1,1)
-                        )
-mf1$subset_cols(1:2) 
 }
 \if{html}{\out{</div>}}
 
