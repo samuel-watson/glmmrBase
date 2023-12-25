@@ -20,19 +20,22 @@ struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > 
 template<typename modeltype>
 class Model {
 public:
-  modeltype model;
+  // model objects
+  modeltype                       model;
   glmmr::RandomEffects<modeltype> re;
-  glmmr::ModelMatrix<modeltype> matrix;
-  glmmr::ModelOptim<modeltype> optim;
-  glmmr::ModelMCMC<modeltype> mcmc;
+  glmmr::ModelMatrix<modeltype>   matrix;
+  glmmr::ModelOptim<modeltype>    optim;
+  glmmr::ModelMCMC<modeltype>     mcmc;
+  // constructor
   Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
-  virtual void set_offset(const VectorXd& offset_);
-  virtual void set_weights(const ArrayXd& weights_);
-  virtual void set_y(const VectorXd& y_);
-  virtual void update_beta(const dblvec &beta_);
-  virtual void update_theta(const dblvec &theta_);
-  virtual void update_u(const MatrixXd &u_);
-  virtual void set_trace(int trace_);
+  //functions
+  virtual void    set_offset(const VectorXd& offset_);
+  virtual void    set_weights(const ArrayXd& weights_);
+  virtual void    set_y(const VectorXd& y_);
+  virtual void    update_beta(const dblvec &beta_);
+  virtual void    update_theta(const dblvec &theta_);
+  virtual void    update_u(const MatrixXd &u_);
+  virtual void    set_trace(int trace_);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
                              const strvec& at,

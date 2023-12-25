@@ -201,6 +201,10 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
+Model__direct_test <- function(xp, max_iter = 100L, epsilon = 1e-4, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__direct_test`, xp, max_iter, epsilon, type))
+}
+
 Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_bound`, xp, bound_, beta, lower, type))
 }

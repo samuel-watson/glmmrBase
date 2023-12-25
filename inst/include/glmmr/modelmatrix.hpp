@@ -15,38 +15,40 @@ using namespace Eigen;
 template<typename modeltype>
 class ModelMatrix{
   public:
-    modeltype& model;
-    glmmr::MatrixW<modeltype> W;
-    glmmr::RandomEffects<modeltype>& re;
+    modeltype&                        model;
+    glmmr::MatrixW<modeltype>         W;
+    glmmr::RandomEffects<modeltype>&  re;
+    // constructors
     ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_);
     ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix);
     ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
-    MatrixXd information_matrix();
-    MatrixXd Sigma(bool inverse = false);
-    MatrixXd observed_information_matrix();
-    MatrixXd sandwich_matrix(); 
-    std::vector<MatrixXd> sigma_derivatives();
-    MatrixXd information_matrix_theta();
+    // functions
+    MatrixXd                information_matrix();
+    MatrixXd                Sigma(bool inverse = false);
+    MatrixXd                observed_information_matrix();
+    MatrixXd                sandwich_matrix(); 
+    std::vector<MatrixXd>   sigma_derivatives();
+    MatrixXd                information_matrix_theta();
     template<SE corr>
-    CorrectionData<corr> small_sample_correction();
-    MatrixXd linpred();
-    VectorMatrix b_score();
-    VectorMatrix re_score();
-    MatrixMatrix hess_and_grad();
-    VectorXd log_gradient(const VectorXd &v,bool beta = false);
+    CorrectionData<corr>    small_sample_correction();
+    MatrixXd                linpred();
+    VectorMatrix            b_score();
+    VectorMatrix            re_score();
+    MatrixMatrix            hess_and_grad();
+    VectorXd                log_gradient(const VectorXd &v,bool beta = false);
     std::vector<glmmr::SigmaBlock> get_sigma_blocks();
-    BoxResults box();
-    int P() const;
-    int Q() const;
+    BoxResults              box();
+    int                     P() const;
+    int                     Q() const;
     
   private:
-    std::vector<glmmr::SigmaBlock> sigma_blocks;
-    void gen_sigma_blocks();
-    MatrixXd sigma_block(int b, bool inverse = false);
-    MatrixXd sigma_builder(int b, bool inverse = false);
-    MatrixXd information_matrix_by_block(int b);
-    bool useBlock = true;
-    bool useSparse = true;
+    std::vector<glmmr::SigmaBlock>  sigma_blocks;
+    void                            gen_sigma_blocks();
+    MatrixXd                        sigma_block(int b, bool inverse = false);
+    MatrixXd                        sigma_builder(int b, bool inverse = false);
+    MatrixXd                        information_matrix_by_block(int b);
+    bool                            useBlock = true;
+    bool                            useSparse = true;
     
 };
 

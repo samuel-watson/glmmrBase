@@ -639,6 +639,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__direct_test
+void Model__direct_test(SEXP xp, int max_iter, double epsilon, int type);
+RcppExport SEXP _glmmrBase_Model__direct_test(SEXP xpSEXP, SEXP max_iterSEXP, SEXP epsilonSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__direct_test(xp, max_iter, epsilon, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__set_bound
 void Model__set_bound(SEXP xp, SEXP bound_, bool beta, bool lower, int type);
 RcppExport SEXP _glmmrBase_Model__set_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP betaSEXP, SEXP lowerSEXP, SEXP typeSEXP) {
@@ -1591,6 +1604,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
+    {"_glmmrBase_Model__direct_test", (DL_FUNC) &_glmmrBase_Model__direct_test, 4},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},

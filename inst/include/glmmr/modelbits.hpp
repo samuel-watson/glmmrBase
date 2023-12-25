@@ -17,21 +17,23 @@ using namespace Eigen;
 template<typename cov, typename linpred>
 class ModelBits{
 public:
-  glmmr::Formula formula;
-  cov covariance;
-  linpred linear_predictor;
+  glmmr::Formula        formula;
+  cov                   covariance;
+  linpred               linear_predictor;
   glmmr::ModelExtraData data;
-  glmmr::Family family;
-  glmmr::calculator calc;
-  glmmr::calculator vcalc;
-  bool weighted = false;
+  glmmr::Family         family;
+  glmmr::calculator     calc;
+  glmmr::calculator     vcalc;
+  bool                  weighted = false;
+    
   ModelBits(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
-  virtual int n() const {return linear_predictor.n();};
-  virtual ArrayXd xb() {return linear_predictor.xb().array() + data.offset.array();};
-  virtual void make_covariance_sparse(bool amd = true);
-  virtual void make_covariance_dense();
+  //functions
+  virtual int       n() const {return linear_predictor.n();};
+  virtual ArrayXd   xb() {return linear_predictor.xb().array() + data.offset.array();};
+  virtual void      make_covariance_sparse(bool amd = true);
+  virtual void      make_covariance_dense();
 private:
-  void setup_calculator();
+  void              setup_calculator();
 };
 
 }

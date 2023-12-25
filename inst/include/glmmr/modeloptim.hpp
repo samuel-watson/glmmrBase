@@ -9,6 +9,7 @@
 #include "algo.h"
 #include "sparse.h"
 #include "calculator.hpp"
+#include "direct.h"
 
 namespace glmmr {
 
@@ -18,49 +19,59 @@ using namespace Eigen;
 template<typename modeltype>
 class ModelOptim{
 public:
-  modeltype& model;
-  glmmr::ModelMatrix<modeltype>& matrix;
-  glmmr::RandomEffects<modeltype>& re;
-  int trace = 0;
+  // members 
+  modeltype&                        model;
+  glmmr::ModelMatrix<modeltype>&    matrix;
+  glmmr::RandomEffects<modeltype>&  re;
+  int                               trace = 0;
+  // constructor
   ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
-  virtual void update_beta(const dblvec &beta);
-  virtual void update_theta(const dblvec &theta);
-  virtual void update_beta(const VectorXd &beta);
-  virtual void update_theta(const VectorXd &theta);
-  virtual void update_u(const MatrixXd& u_);
-  virtual double log_likelihood();
-  virtual double full_log_likelihood();
-  virtual void nr_beta();
-  virtual void laplace_nr_beta_u();
-  virtual void update_var_par(const double& v);
-  virtual void update_var_par(const ArrayXd& v);
-  virtual void ml_beta();
-  virtual void ml_theta();
-  virtual void ml_all();
-  virtual void laplace_ml_beta_u();
-  virtual void laplace_ml_theta();
-  virtual void laplace_ml_beta_theta();
-  virtual double aic();
+  
+  // functions
+  virtual void    update_beta(const dblvec &beta);
+  virtual void    update_theta(const dblvec &theta);
+  virtual void    update_beta(const VectorXd &beta);
+  virtual void    update_theta(const VectorXd &theta);
+  virtual void    update_u(const MatrixXd& u_);
+  virtual double  log_likelihood();
+  virtual double  full_log_likelihood();
+  virtual void    nr_beta();
+  virtual void    laplace_nr_beta_u();
+  virtual void    update_var_par(const double& v);
+  virtual void    update_var_par(const ArrayXd& v);
+  virtual void    ml_beta();
+  virtual void    ml_theta();
+  virtual void    ml_all();
+  virtual void    laplace_ml_beta_u();
+  virtual void    laplace_ml_theta();
+  virtual void    laplace_ml_beta_theta();
+  virtual double  aic();
   virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
-  virtual void set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
+  virtual void    set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
   virtual MatrixXd hessian_numerical(double tol = 1e-4);
-  void set_bound(const dblvec& bound, bool lower = true);
-  void set_theta_bound(const dblvec& bound, bool lower = true);
-  int P() const;
-  int Q() const;
+  void            set_bound(const dblvec& bound, bool lower = true);
+  void            set_theta_bound(const dblvec& bound, bool lower = true);
+  int             P() const;
+  int             Q() const;
+  double          log_likelihood_update(const dblvec &beta);
+  void            test_direct(const int max_iter_direct = 100, const double epsilon = 1e-4);
   
 protected:
-  int npt = 0;
-  double rhobeg = 0;
-  double rhoend = 0;
-  dblvec lower_bound;
-  dblvec upper_bound; // bounds for beta
-  dblvec lower_bound_theta;
-  dblvec upper_bound_theta; // bounds for beta
-  void calculate_var_par();
-  dblvec get_start_values(bool beta, bool theta, bool var = true);
-  dblvec get_lower_values(bool beta, bool theta, bool var = true);
-  dblvec get_upper_values(bool beta, bool theta, bool var = true);
+// objects
+  int     npt = 0;
+  double  rhobeg = 0;
+  double  rhoend = 0;
+  dblvec  lower_bound;
+  dblvec  upper_bound; // bounds for beta
+  dblvec  lower_bound_theta;
+  dblvec  upper_bound_theta; // bounds for beta
+// functions
+  void    calculate_var_par();
+  dblvec  get_start_values(bool beta, bool theta, bool var = true);
+  dblvec  get_lower_values(bool beta, bool theta, bool var = true);
+  dblvec  get_upper_values(bool beta, bool theta, bool var = true);
+  
+  // likelihood classes for optimisation
   
   class L_likelihood : public Functor<dblvec> {
     ModelOptim<modeltype>& M;
@@ -172,6 +183,30 @@ protected:
   
 };
 
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::test_direct(const int max_iter_direct, const double epsilon){
+  dblvec start = get_start_values(true,false,false);
+  dblvec range(start.size());
+  std::fill(range.begin(),range.end(),3.0);
+  directd op(start,range);
+  op.control.max_iter = max_iter_direct;
+  op.control.epsilon = epsilon;
+  if constexpr (std::is_same_v<modeltype,bits>){
+    op.fn<&glmmr::ModelOptim<bits>::log_likelihood_update, glmmr::ModelOptim<bits> >(this);
+    op.optim();
+    dblvec final = op.values();
+    Rcpp::Rcout << "\nFinal values: ";
+    for(const auto& val: final)Rcpp::Rcout << val << " ";
+  }
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_update(const dblvec& beta){
+  update_beta(beta);
+  double ll = log_likelihood();
+  return -1*ll;
 }
 
 template<typename modeltype>
