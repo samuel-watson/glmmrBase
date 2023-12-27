@@ -14,11 +14,11 @@ SEXP Model__get_W(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__direct_test(SEXP xp, int max_iter = 100, double epsilon = 1e-4, int type = 0){
+void Model__direct_test(SEXP xp, int max_iter = 100, double epsilon = 1e-4, bool select_one = true, bool trisect_once = false, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->optim.test_direct(max_iter, epsilon);}
+    [&](auto ptr){ptr->optim.test_direct(max_iter, epsilon, select_one, trisect_once);}
   };
   std::visit(functor,model.ptr);
 }

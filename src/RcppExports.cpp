@@ -640,15 +640,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__direct_test
-void Model__direct_test(SEXP xp, int max_iter, double epsilon, int type);
-RcppExport SEXP _glmmrBase_Model__direct_test(SEXP xpSEXP, SEXP max_iterSEXP, SEXP epsilonSEXP, SEXP typeSEXP) {
+void Model__direct_test(SEXP xp, int max_iter, double epsilon, bool select_one, bool trisect_once, int type);
+RcppExport SEXP _glmmrBase_Model__direct_test(SEXP xpSEXP, SEXP max_iterSEXP, SEXP epsilonSEXP, SEXP select_oneSEXP, SEXP trisect_onceSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
     Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type select_one(select_oneSEXP);
+    Rcpp::traits::input_parameter< bool >::type trisect_once(trisect_onceSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__direct_test(xp, max_iter, epsilon, type);
+    Model__direct_test(xp, max_iter, epsilon, select_one, trisect_once, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1604,7 +1606,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
-    {"_glmmrBase_Model__direct_test", (DL_FUNC) &_glmmrBase_Model__direct_test, 4},
+    {"_glmmrBase_Model__direct_test", (DL_FUNC) &_glmmrBase_Model__direct_test, 6},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},

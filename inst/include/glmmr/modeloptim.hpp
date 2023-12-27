@@ -54,7 +54,7 @@ public:
   int             P() const;
   int             Q() const;
   double          log_likelihood_update(const dblvec &beta);
-  void            test_direct(const int max_iter_direct = 100, const double epsilon = 1e-4);
+  void            test_direct(const int max_iter_direct = 100, const double epsilon = 1e-4, bool select_one = true, bool trisect_once = false);
   
 protected:
 // objects
@@ -186,19 +186,23 @@ protected:
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::test_direct(const int max_iter_direct, const double epsilon){
+inline void glmmr::ModelOptim<modeltype>::test_direct(const int max_iter_direct, const double epsilon, bool select_one, bool trisect_once){
   dblvec start = get_start_values(true,false,false);
   dblvec range(start.size());
   std::fill(range.begin(),range.end(),3.0);
   directd op(start,range);
   op.control.max_iter = max_iter_direct;
   op.control.epsilon = epsilon;
+  op.control.select_one = select_one;
+  op.control.trisect_once = trisect_once;
+  op.control.trace = trace;
   if constexpr (std::is_same_v<modeltype,bits>){
     op.fn<&glmmr::ModelOptim<bits>::log_likelihood_update, glmmr::ModelOptim<bits> >(this);
     op.optim();
     dblvec final = op.values();
     Rcpp::Rcout << "\nFinal values: ";
     for(const auto& val: final)Rcpp::Rcout << val << " ";
+    update_beta(final);
   }
 }
 

@@ -55,7 +55,7 @@ public:
   std::vector<T>        centroid(const size_t& dim, const T& delta); // returns the centroid offset by delta in dimension dim
   void                  unit_hyperrectangle(); //sets the rectangle to be the unit hyper-rectangle
   std::pair<T,size_t>   longest_side(); // returns 0.5 times the longest side
-  T                     dim_size(const size_t& dim); // returns the size of the dimension
+  T                     dim_size(const size_t& dim) const; // returns the size of the dimension
   void                  trim_dimension(const size_t& dim_t, const Position pos); // reduces the dimension to a third of the size - either lower, middle or upper
   void                  set_bounds(const std::vector<T>& min, const std::vector<T>& max); //set min x, max x
 };
@@ -70,7 +70,8 @@ public:
     int max_iter = 1;
     T tol = 1e-4;
     bool select_one = true; //select only one potentially optimal rectangle on each iteration
-    bool adaptive = false; // use adaptive epsilon setting
+    bool trisect_once = false;
+    int trace = 0;
   } control;
   
   direct(){};
@@ -112,45 +113,50 @@ private:
   //functions
   auto            eval(const std::vector<T>& vec) -> T;
   std::vector<T>  transform(const std::vector<T>& vec);
-  void            update_map();
-  void            filter_rectangles();
+  size_t          update_map();
+  void            filter_rectangles(size_t n_optimal);
   void            divide_rectangles();
 };
 
 template <typename T>
-inline std::vector<T> Rectangle<T>::centroid(){
+inline std::vector<T> Rectangle<T>::centroid()
+{
   std::vector<T> centre(dim);
   for(size_t i = 0; i < dim; i++){
-    centre[i] = 0.5*(max_x[i] - min_x[i]);
+    centre[i] = 0.5*(max_x[i] + min_x[i]);
   }
   return(centre);
 };
 
 template <typename T>
-inline void Rectangle<T>::unit_hyperrectangle(){
+inline void Rectangle<T>::unit_hyperrectangle()
+{
   std::fill(max_x.begin(),max_x.end(),1.0);
   std::fill(min_x.begin(),min_x.end(),0.0);
 };
 
 template <typename T>
-inline std::vector<T> Rectangle<T>::centroid(const size_t& dim_ex, const T& delta){
+inline std::vector<T> Rectangle<T>::centroid(const size_t& dim_ex, const T& delta)
+{
   std::vector<T> centre(dim);
   for(size_t i = 0; i < dim; i++){
-    centre[i] = 0.5*(max_x[i] - min_x[i]);
+    centre[i] = 0.5*(max_x[i] + min_x[i]);
     if(i == dim_ex) centre[i] += delta;
   }
   return(centre);
 };
 
 template <typename T>
-inline void Rectangle<T>::set_bounds(const std::vector<T>& min, const std::vector<T>& max) {
+inline void Rectangle<T>::set_bounds(const std::vector<T>& min, const std::vector<T>& max) 
+{
   dim = min.size();
   min_x = min;
   max_x = max;
 }
 
 template <typename T>
-inline std::pair<T,size_t> Rectangle<T>::longest_side(){
+inline std::pair<T,size_t> Rectangle<T>::longest_side()
+{
   T long_len = 0;
   size_t which_dim;
   for(size_t i = 0; i < dim; i++){
@@ -164,39 +170,45 @@ inline std::pair<T,size_t> Rectangle<T>::longest_side(){
 };
 
 template <typename T>
-inline T Rectangle<T>::dim_size(const size_t& dim_){
+inline T Rectangle<T>::dim_size(const size_t& dim_) const
+{
   return max_x[dim_] - min_x[dim_];
 };
 
 template <typename T>
-inline void Rectangle<T>::trim_dimension(const size_t& dim_t, const Position pos){
+inline void Rectangle<T>::trim_dimension(const size_t& dim_t, const Position pos)
+{
   T dsize = dim_size(dim_t);
-  switch(pos){
+  switch(pos)
+  {
   case Position::Lower:
-    max_x[dim_t] -= 2*dsize/3.0;
+    max_x[dim_t] -= 2.0*dsize/3.0;
     break;
   case Position::Middle:
     min_x[dim_t] += dsize/3.0;
     max_x[dim_t] -= dsize/3.0;
     break;
   case Position::Upper:
-    min_x[dim_t] += 2*dsize/3.0;
+    min_x[dim_t] += 2.0*dsize/3.0;
     break;
-  }        
+  } 
 };
 
 template <typename T>
-inline direct<T(const std::vector<T>&)>::direct(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) {
+inline direct<T(const std::vector<T>&)>::direct(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
+{
   set_bounds(x,y,starting_vals);
 };
 
 template <typename T>
-inline std::vector<T> direct<T(const std::vector<T>&)>::values() const {
+inline std::vector<T> direct<T(const std::vector<T>&)>::values() const 
+{
   return current_values;
 }
 
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::set_bounds(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) {
+inline void direct<T(const std::vector<T>&)>::set_bounds(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
+{
   dim = x.size();
   lower_bound.resize(dim);
   upper_bound.resize(dim);
@@ -218,6 +230,7 @@ inline void direct<T(const std::vector<T>&)>::set_bounds(const std::vector<T>& x
   rects.push_back(std::make_unique<Rectangle<T>>(dim));
   rects.back()->unit_hyperrectangle();
   rects.back()->max_dim_size = 0.5;
+  current_largest_dim = rects.back()->longest_side();
 };
 
 template <typename T>
@@ -248,12 +261,15 @@ inline auto direct<T(const std::vector<T>&)>::operator()(const std::vector<T>& v
 }  
 
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::optim(){
+inline void direct<T(const std::vector<T>&)>::optim()
+{
 #ifdef R_BUILD
-  Rcpp::Rcout << "\nSTARTING DIRECT-L";
-  Rcpp::Rcout << "\nTolerance: " << control.tol << " | Max iter : " << control.max_iter << "\n Starting values :";
-  std::vector<T> vals = transform(rects.front()->centroid());
-  for(const auto& val: vals) Rcpp::Rcout << val << " ";    
+  if(trace >= 1){
+    Rcpp::Rcout << "\nSTARTING DIRECT-L";
+    Rcpp::Rcout << "\nTolerance: " << control.tol << " | Max iter : " << control.max_iter << "\n Starting values :";
+    std::vector<T> vals = transform(rects.front()->centroid());
+    for(const auto& val: vals) Rcpp::Rcout << val << " ";    
+  }
 #endif
   current_values = transform(rects.back()->centroid());
   rects.back()->fn_value = eval(current_values);
@@ -265,19 +281,25 @@ inline void direct<T(const std::vector<T>&)>::optim(){
   while(max_diff > control.tol && iter <= control.max_iter){
     
 #ifdef R_BUILD
-    Rcpp::Rcout << "\n---------------------------------------------------------------------------------- ";
-    Rcpp::Rcout << "\n| Iter: " << iter << " | Evaluations: " << fn_counter << " | Rectangles: " << rects.size() << " | Dimensions: " << dim << " | Start fn: " << min_f << " |";
+    if(trace >= 1)
+      {
+      Rcpp::Rcout << "\n---------------------------------------------------------------------------------- ";
+      Rcpp::Rcout << "\n| Iter: " << iter << " | Evaluations: " << fn_counter << " | Rectangles: " << rects.size() << " | Dimensions: " << dim << " | Start fn: " << min_f << " |";
+      }
 #endif
     
-    update_map();
-    if(control.select_one) filter_rectangles();
+    size_t n_optimal = update_map();
+    if(control.select_one) filter_rectangles(n_optimal);
     divide_rectangles();    
-    max_diff = 2*current_largest_dim.first*dim_size[current_largest_dim.second];
+    max_diff = 2 * current_largest_dim.first * dim_size[current_largest_dim.second];
     
 #ifdef R_BUILD
+    if(trace >= 1)
+    {
     Rcpp::Rcout << "\n| New best fn: " << min_f << " | Max difference: " << max_diff << " | New values: ";
     for(const auto& val: current_values) Rcpp::Rcout << val << " ";
     Rcpp::Rcout << " |\n----------------------------------------------------------------------------------";
+    }
 #endif
     // erase the rectangles from the size map
     iter++;
@@ -294,6 +316,7 @@ inline auto direct<T(const std::vector<T>&)>::eval(const std::vector<T>& vec) ->
 template <typename T>
 inline std::vector<T> direct<T(const std::vector<T>&)>::transform(const std::vector<T>& vec)
 {
+  // transform from the unit hyperrectangle
   std::vector<T> transformed_vec(dim);
   for(int i = 0; i < dim; i++){
     transformed_vec[i] = vec[i]*dim_size[i] + lower_bound[i];
@@ -303,62 +326,72 @@ inline std::vector<T> direct<T(const std::vector<T>&)>::transform(const std::vec
 
 // after running this function size_fn should contain the potentially optimal rectangles
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::update_map()
+inline size_t direct<T(const std::vector<T>&)>::update_map()
 {
-  std::sort(rects.begin(), rects.end(), [](const std::unique_ptr<Rectangle<T>>& x, const std::unique_ptr<Rectangle<T>>& y){return x->max_dim_size < y->max_dim_size;});
+  
+  std::sort(rects.begin(), rects.end(), [](const std::unique_ptr<Rectangle<T>>& x, const std::unique_ptr<Rectangle<T>>& y){
+    if(x->max_dim_size != y->max_dim_size)
+      return (x->max_dim_size < y->max_dim_size);
+    return x->fn_value > y->fn_value;
+  });
+
   
   // variables
-  std::pair<T,T>                  coord = {0.0, min_f - control.epsilon*abs(min_f)};
-  size_t                          index = 0; 
-  size_t                          end = rects.size();
-  T                               angle = M_PI*0.5;
-  T                               x, y, new_angle;
-  bool                            better_value = false;
+  std::pair<T,T>      coord = {0.0, min_f - control.epsilon*abs(min_f)};
+  size_t              index = 0; 
+  size_t              end = rects.size();
+  T                   x, y, angle, new_angle;
+  size_t              iter, min_index;
+  size_t              n_potentially_optimal = 0;
   
   // function body
-  while(index < end){
-    if(index == (end-1)){
+  while(index < end)
+  {
+    if(index == end - 1)
+    {
       rects[index]->potentially_optimal = true;
-      index = end;
+      n_potentially_optimal++;
+      index++;
     } else {
-      better_value = false;
-      y = abs(rects[index]->fn_value - coord.second);
-      x = abs(rects[index]->max_dim_size - coord.first);
-      angle = abs(atan(y/x));
-      size_t iter = index + 1;
-      while(iter < end && !better_value){
+      iter = index;
+      min_index = index;
+      angle = M_PI*0.5;
+      while(iter < end)
+      {
         y = abs(rects[iter]->fn_value - coord.second);
         x = abs(rects[iter]->max_dim_size - coord.first);
-        new_angle = abs(atan(y/x));
+        new_angle = atan(y/x);
         if(new_angle < angle){
-          better_value = true;
-        } else {
-          iter++;
+          min_index = iter;
+          angle = new_angle;
         }
+        iter++;
       }
-      if(better_value){
-        index = iter;
-      } else {
-        coord.first = rects[index]->max_dim_size;
-        coord.second = rects[index]->fn_value;
-        rects[index]->potentially_optimal = true;
-        index++;
-      }
+#ifdef R_BUILD
+      if(trace >= 2)
+        {
+        Rcpp::Rcout << "\nNEXT POTENTIALLY OPTIMAL: (" << coord.first << ", " << coord.second << ") => (" << min_index << ": " << rects[min_index]->max_dim_size << ", " << rects[min_index]->fn_value << ")";
+        }
+#endif
+      index = min_index;
+      rects[index]->potentially_optimal = true;
+      coord.second = rects[index]->fn_value;
+      coord.first = rects[index]->max_dim_size;
+      index++;
+      n_potentially_optimal++;
     }
   }
+  
+  return n_potentially_optimal;
 };
 
 
 // selects just one potentially optimal rectangle
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::filter_rectangles()
+inline void direct<T(const std::vector<T>&)>::filter_rectangles(size_t n_optimal)
 {
-  size_t rect_fn_size = 0;
-  for(const auto& r: rects){
-    if(r->potentially_optimal) rect_fn_size++;
-  }
-  if(rect_fn_size > 1){
-    size_t keep_index = random_index(rect_fn_size -1);
+  if(n_optimal > 1){
+    size_t keep_index = random_index(n_optimal - 1);
     size_t counter = 0;
     for(auto& r: rects){
       if(r->potentially_optimal){
@@ -373,63 +406,62 @@ inline void direct<T(const std::vector<T>&)>::filter_rectangles()
 // it adds the rectangles to rects, and then erases the original 
 // rectangles, while also clearing size_fn
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::divide_rectangles(){
+inline void direct<T(const std::vector<T>&)>::divide_rectangles()
+{
   //identify the largest dimensions
-  typedef std::pair<T,size_t> dimpair;
+  typedef std::pair<std::pair<T,T>,size_t> dimpair;
   
   struct compare_pair {
     bool operator()(const dimpair& elt1, const dimpair& elt2) const {
-      return elt1.first < elt2.first;
+      return std::min(elt1.first.first,elt1.first.second) < std::min(elt2.first.first,elt2.first.second);
     };
   };
   
-#ifdef R_BUILD
-  Rcpp::Rcout << "\nDIVIDING RECTANGLES ";
-#endif
-  
   std::vector<size_t> largest_dims;
   std::priority_queue< dimpair, std::vector<dimpair>, compare_pair > pq;
-  T curr_dim_size;
   std::vector<std::unique_ptr<Rectangle<T>>> new_rectangles;
   size_t counter = 0;
   
   for(auto& r: rects){
-    if(r->potentially_optimal){
+    if(r->potentially_optimal)
+    {
       largest_dims.clear();
-      curr_dim_size = 2*r->longest_side().first; 
-      for(size_t i = 0; i < dim; i++){
-        if(r->dim_size(i) == curr_dim_size) largest_dims.push_back(i);
+      for(size_t i = 0; i < dim; i++)
+      {
+        if(r->dim_size(i) == 2*r->max_dim_size) largest_dims.push_back(i);
       }
-      T delta = curr_dim_size / 3;
+      
+      T delta = 2 * r->max_dim_size / 3.0;
       
 #ifdef R_BUILD
       if(largest_dims.size()==0)Rcpp::stop("No dimension data");
-      Rcpp::Rcout << "\nRECTANGLE " << counter << " | Largest dim size: " << r->max_dim_size << " delta: " << delta << " in dimensions: ";
-      for(const auto& val: largest_dims) Rcpp::Rcout << val << " ";
+      if(trace >= 2)
+        {
+        Rcpp::Rcout << "\nDIVIDING RECTANGLE " << counter << " | Largest dim size: " << r->max_dim_size << " delta: " << delta << " in dimensions: ";
+        for(const auto& val: largest_dims) Rcpp::Rcout << val << " ";
+        Rcpp::Rcout << " | fn : " << r->fn_value;
+        }
 #endif
       
       T fn1, fn2, fnmin;
       for(const auto& dd: largest_dims){
         fn1 = eval(transform(r->centroid(dd, delta)));
         fn2 = eval(transform(r->centroid(dd, -delta)));
-        fnmin = std::min(fn1,fn2);
-        pq.push(dimpair(fnmin, dd));
+        pq.push(dimpair(std::pair<T,T>(fn1,fn2), dd));
       }
       
-      if(r->fn_value < min_f){
-        current_values = transform(r->centroid());
-        current_largest_dim = r->longest_side();  
-        min_f = r->fn_value;
-      }
+      bool dim_control = true;
       
-      while(!pq.empty()){
+      while(!pq.empty() && dim_control){
         size_t dim_vvv = pq.top().second;
         new_rectangles.push_back(std::make_unique<Rectangle<T>>(dim));
         new_rectangles.back()->set_bounds(r->min_x,r->max_x);
         new_rectangles.back()->trim_dimension(dim_vvv,Position::Lower);
-        new_rectangles.back()->fn_value = eval(transform(new_rectangles.back()->centroid()));
+        new_rectangles.back()->fn_value = pq.top().first.second;
         new_rectangles.back()->max_dim_size = new_rectangles.back()->longest_side().first;
-        if(new_rectangles.back()->fn_value < min_f){
+        
+        if(new_rectangles.back()->fn_value <= min_f)
+        {
           current_values = transform(new_rectangles.back()->centroid());
           current_largest_dim = new_rectangles.back()->longest_side();  
           min_f = new_rectangles.back()->fn_value;
@@ -438,9 +470,11 @@ inline void direct<T(const std::vector<T>&)>::divide_rectangles(){
         new_rectangles.push_back(std::make_unique<Rectangle<T>>(dim));
         new_rectangles.back()->set_bounds(r->min_x,r->max_x);
         new_rectangles.back()->trim_dimension(dim_vvv,Position::Upper);
-        new_rectangles.back()->fn_value = eval(transform(new_rectangles.back()->centroid()));
+        new_rectangles.back()->fn_value = pq.top().first.first;
         new_rectangles.back()->max_dim_size = new_rectangles.back()->longest_side().first;
-        if(new_rectangles.back()->fn_value < min_f){
+        
+        if(new_rectangles.back()->fn_value <= min_f)
+        {
           current_values = transform(new_rectangles.back()->centroid());
           current_largest_dim = new_rectangles.back()->longest_side();  
           min_f = new_rectangles.back()->fn_value;
@@ -448,9 +482,16 @@ inline void direct<T(const std::vector<T>&)>::divide_rectangles(){
         
         r->trim_dimension(dim_vvv, Position::Middle);
         pq.pop();
-
+        if(control.trisect_once)dim_control = false;
       }
       r->potentially_optimal = false;
+      r->max_dim_size = r->longest_side().first;
+      
+      if(r->fn_value <= min_f){
+        current_values = transform(r->centroid());
+        current_largest_dim = r->longest_side();  
+        min_f = r->fn_value;
+      }
     } 
     counter++;
   }
