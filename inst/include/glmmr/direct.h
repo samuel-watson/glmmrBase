@@ -1,6 +1,6 @@
 #pragma once
 
-#define R_BUILD
+// #define R_BUILD
 
 #include <vector>
 #include <functional>
@@ -12,9 +12,14 @@
 #include <type_traits>
 #include <memory>
 #include <tuple>
+#include "bobyqa_algo.h"
 #ifdef R_BUILD
 #include <Rcpp.h> // for printing to R
 #endif
+
+class optim_algo {};
+class BOBYQA : public optim_algo {};
+class DIRECT : public optim_algo {};
 
 enum class Position {
   Lower,
@@ -22,8 +27,8 @@ enum class Position {
   Upper
 };
 
-template<typename Signature>
-class direct;
+template<typename Signature, class algo>
+class optim;
 
 inline size_t random_index(size_t max_index) {
   std::random_device                      rand_dev;
@@ -62,24 +67,31 @@ public:
 
 // class for handling function binding
 template <typename T>
-class direct<T(const std::vector<T>&)> {
+class optim<T(const std::vector<T>&),DIRECT> {
   using func = T(*)(const void*, const std::vector<T>&); 
 public:
-  struct DirectControl {
+  struct optimControl {
     T epsilon = 1e-4;
     int max_iter = 1;
     T tol = 1e-4;
     bool select_one = true; //select only one potentially optimal rectangle on each iteration
-    bool trisect_once = false;
+    bool trisect_once = false; // trisect only one side per division
     int trace = 0;
+    int max_eval = 0;
+    bool mrdirect = false; // use a multilevel refinement process
+    T l2_tol = 1e-2;
+    T l1_tol = 1e-4;
+    T l2_epsilon = 1e-5;
+    T l1_epsilon = 1e-7;
+    T l0_epsilon = 0;
   } control;
   
-  direct(){};
+  optim(){};
   // if starting vals is true, it assumes x is a vector of starting values, and y sets the bounds by adding +/- either side of x
   // otherwise it assumes x is a lower bound, and y is an upper bound
-  direct(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals = true);
-  direct(const direct& x) = default;
-  auto operator=(const direct& x) -> direct& = default;
+  optim(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals = true);
+  optim(const optim& x) = default;
+  auto operator=(const optim& x) -> optim& = default;
   
   // functions
   // the two functions fn() enable capturing of functions to use in the algorithm
@@ -88,10 +100,11 @@ public:
   template<auto Function, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<T, decltype(Function), Class*, const std::vector<T>& > > >
   void    fn(Class* cls);
   
-  void    set_bounds(const std::vector<T>& lower, const std::vector<T>& upper, bool starting_vals = true);
-  auto    operator()(const std::vector<T>& vec) const -> T;
-  void    optim(); // the direct algorithm
-  std::vector<T> values() const;
+  void            set_bounds(const std::vector<T>& lower, const std::vector<T>& upper, bool starting_vals = true);
+  auto            operator()(const std::vector<T>& vec) const -> T;
+  void            minimise(); // the optim algorithm
+  std::vector<T>  values() const;
+  T               rect_size() const;
   
 private:
   [[noreturn]]
@@ -109,6 +122,8 @@ private:
   int                       iter = 0;
   std::vector<T>            current_values;
   std::pair<T,size_t>       current_largest_dim;
+  size_t                    mrdirect_level = 2;
+  T                         max_diff = control.tol * 1.1;
   
   //functions
   auto            eval(const std::vector<T>& vec) -> T;
@@ -195,19 +210,25 @@ inline void Rectangle<T>::trim_dimension(const size_t& dim_t, const Position pos
 };
 
 template <typename T>
-inline direct<T(const std::vector<T>&)>::direct(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
+inline optim<T(const std::vector<T>&),DIRECT>::optim(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
 {
   set_bounds(x,y,starting_vals);
 };
 
 template <typename T>
-inline std::vector<T> direct<T(const std::vector<T>&)>::values() const 
+inline std::vector<T> optim<T(const std::vector<T>&),DIRECT>::values() const 
 {
   return current_values;
 }
 
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::set_bounds(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
+inline T optim<T(const std::vector<T>&),DIRECT>::rect_size() const 
+{
+  return max_diff;
+}
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),DIRECT>::set_bounds(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals) 
 {
   dim = x.size();
   lower_bound.resize(dim);
@@ -235,7 +256,7 @@ inline void direct<T(const std::vector<T>&)>::set_bounds(const std::vector<T>& x
 
 template <typename T>
 template <auto Function, typename>
-inline void direct<T(const std::vector<T>&)>::fn() 
+inline void optim<T(const std::vector<T>&),DIRECT>::fn() 
 {
   optim_instance = nullptr;
   optim_fn = static_cast<func>([](const void*, const std::vector<T>& vec) -> T {
@@ -245,7 +266,7 @@ inline void direct<T(const std::vector<T>&)>::fn()
 
 template <typename T>
 template<auto Function, typename Class, typename>
-inline void direct<T(const std::vector<T>&)>::fn(Class* cls)
+inline void optim<T(const std::vector<T>&),DIRECT>::fn(Class* cls)
 {
   optim_instance = cls;
   optim_fn = static_cast<func>([](const void* p, const std::vector<T>& vec) -> T {
@@ -255,17 +276,17 @@ inline void direct<T(const std::vector<T>&)>::fn(Class* cls)
 }
 
 template <typename T>
-inline auto direct<T(const std::vector<T>&)>::operator()(const std::vector<T>& vec) const -> T
+inline auto optim<T(const std::vector<T>&),DIRECT>::operator()(const std::vector<T>& vec) const -> T
 {
   return std::invoke(optim_fn,optim_instance,vec);
 }  
 
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::optim()
+inline void optim<T(const std::vector<T>&),DIRECT>::minimise()
 {
 #ifdef R_BUILD
-  if(trace >= 1){
-    Rcpp::Rcout << "\nSTARTING DIRECT-L";
+  if(control.trace >= 1){
+    Rcpp::Rcout << "\nSTARTING optim-L";
     Rcpp::Rcout << "\nTolerance: " << control.tol << " | Max iter : " << control.max_iter << "\n Starting values :";
     std::vector<T> vals = transform(rects.front()->centroid());
     for(const auto& val: vals) Rcpp::Rcout << val << " ";    
@@ -274,17 +295,19 @@ inline void direct<T(const std::vector<T>&)>::optim()
   current_values = transform(rects.back()->centroid());
   rects.back()->fn_value = eval(current_values);
   min_f = rects.back()->fn_value;
-  T max_diff = control.tol*1.1;
+  max_diff = control.tol*1.1;
   iter = 0;
   fn_counter = 0;
+  bool min_check = true;
+  if(control.mrdirect) control.epsilon = control.l2_epsilon;
   
-  while(max_diff > control.tol && iter <= control.max_iter){
+  while(max_diff > control.tol && iter <= control.max_iter && min_check){
     
 #ifdef R_BUILD
-    if(trace >= 1)
+    if(control.trace >= 1)
       {
-      Rcpp::Rcout << "\n---------------------------------------------------------------------------------- ";
-      Rcpp::Rcout << "\n| Iter: " << iter << " | Evaluations: " << fn_counter << " | Rectangles: " << rects.size() << " | Dimensions: " << dim << " | Start fn: " << min_f << " |";
+        Rcpp::Rcout << "\n---------------------------------------------------------------------------------- ";
+        Rcpp::Rcout << "\n| Iter: " << iter << " | Evaluations: " << fn_counter << " | Rectangles: " << rects.size() << " | Dimensions: " << dim << " | Start fn: " << min_f << " |";
       }
 #endif
     
@@ -294,27 +317,80 @@ inline void direct<T(const std::vector<T>&)>::optim()
     max_diff = 2 * current_largest_dim.first * dim_size[current_largest_dim.second];
     
 #ifdef R_BUILD
-    if(trace >= 1)
+    if(control.trace >= 1)
     {
-    Rcpp::Rcout << "\n| New best fn: " << min_f << " | Max difference: " << max_diff << " | New values: ";
-    for(const auto& val: current_values) Rcpp::Rcout << val << " ";
-    Rcpp::Rcout << " |\n----------------------------------------------------------------------------------";
+      Rcpp::Rcout << "\n| New best fn: " << min_f << " | Max difference: " << max_diff << " | New values: ";
+      for(const auto& val: current_values) Rcpp::Rcout << val << " ";
+      Rcpp::Rcout << " |\n----------------------------------------------------------------------------------";
     }
 #endif
     // erase the rectangles from the size map
     iter++;
+    if(control.max_eval > 0 && fn_counter > control.max_eval) min_check = false;
+    if(control.mrdirect)
+    {
+      switch(mrdirect_level)
+      {
+        case 2:
+        {
+          if(max_diff < control.l2_tol)
+          {
+#ifdef R_BUILD
+            if(control.trace >= 2)
+            {
+              Rcpp::Rcout << "\nMRDIRECT Shrinking epsilon (level 1)";
+            }
+#endif
+            control.epsilon = control.l1_tol;
+            mrdirect_level--;
+            std::sort(rects.begin(), rects.end(), [](const std::unique_ptr<Rectangle<T>>& x, const std::unique_ptr<Rectangle<T>>& y){
+              if(x->max_dim_size != y->max_dim_size)
+                return (x->max_dim_size < y->max_dim_size);
+              return x->fn_value < y->fn_value;
+            });
+            size_t new_size = 0.9*rects.size();
+            rects.resize(new_size);
+          }
+          break;
+        }
+        case 1:
+        {
+          if(max_diff < control.l1_tol)
+          {
+#ifdef R_BUILD
+          if(control.trace >= 2)
+          {
+            Rcpp::Rcout << "\nMRDIRECT Shrinking epsilon (level 0)";
+          }
+#endif
+            control.epsilon = 0;
+            mrdirect_level--;
+            std::sort(rects.begin(), rects.end(), [](const std::unique_ptr<Rectangle<T>>& x, const std::unique_ptr<Rectangle<T>>& y){
+              if(x->max_dim_size != y->max_dim_size)
+                return (x->max_dim_size < y->max_dim_size);
+              return x->fn_value < y->fn_value;
+            });
+            size_t new_size = 0.1*rects.size();
+            rects.resize(new_size);
+          }
+          break;
+        }
+        case 0:
+          break;
+      };
+    }
   }
 }
 
 template <typename T>
-inline auto direct<T(const std::vector<T>&)>::eval(const std::vector<T>& vec) -> T
+inline auto optim<T(const std::vector<T>&),DIRECT>::eval(const std::vector<T>& vec) -> T
 {   
   fn_counter++;
   return std::invoke(optim_fn,optim_instance,vec);
 }  
 
 template <typename T>
-inline std::vector<T> direct<T(const std::vector<T>&)>::transform(const std::vector<T>& vec)
+inline std::vector<T> optim<T(const std::vector<T>&),DIRECT>::transform(const std::vector<T>& vec)
 {
   // transform from the unit hyperrectangle
   std::vector<T> transformed_vec(dim);
@@ -326,7 +402,7 @@ inline std::vector<T> direct<T(const std::vector<T>&)>::transform(const std::vec
 
 // after running this function size_fn should contain the potentially optimal rectangles
 template <typename T>
-inline size_t direct<T(const std::vector<T>&)>::update_map()
+inline size_t optim<T(const std::vector<T>&),DIRECT>::update_map()
 {
   
   std::sort(rects.begin(), rects.end(), [](const std::unique_ptr<Rectangle<T>>& x, const std::unique_ptr<Rectangle<T>>& y){
@@ -368,7 +444,7 @@ inline size_t direct<T(const std::vector<T>&)>::update_map()
         iter++;
       }
 #ifdef R_BUILD
-      if(trace >= 2)
+      if(control.trace >= 2)
         {
         Rcpp::Rcout << "\nNEXT POTENTIALLY OPTIMAL: (" << coord.first << ", " << coord.second << ") => (" << min_index << ": " << rects[min_index]->max_dim_size << ", " << rects[min_index]->fn_value << ")";
         }
@@ -388,7 +464,7 @@ inline size_t direct<T(const std::vector<T>&)>::update_map()
 
 // selects just one potentially optimal rectangle
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::filter_rectangles(size_t n_optimal)
+inline void optim<T(const std::vector<T>&),DIRECT>::filter_rectangles(size_t n_optimal)
 {
   if(n_optimal > 1){
     size_t keep_index = random_index(n_optimal - 1);
@@ -406,7 +482,7 @@ inline void direct<T(const std::vector<T>&)>::filter_rectangles(size_t n_optimal
 // it adds the rectangles to rects, and then erases the original 
 // rectangles, while also clearing size_fn
 template <typename T>
-inline void direct<T(const std::vector<T>&)>::divide_rectangles()
+inline void optim<T(const std::vector<T>&),DIRECT>::divide_rectangles()
 {
   //identify the largest dimensions
   typedef std::pair<std::pair<T,T>,size_t> dimpair;
@@ -435,7 +511,7 @@ inline void direct<T(const std::vector<T>&)>::divide_rectangles()
       
 #ifdef R_BUILD
       if(largest_dims.size()==0)Rcpp::stop("No dimension data");
-      if(trace >= 2)
+      if(control.trace >= 2)
         {
         Rcpp::Rcout << "\nDIVIDING RECTANGLE " << counter << " | Largest dim size: " << r->max_dim_size << " delta: " << delta << " in dimensions: ";
         for(const auto& val: largest_dims) Rcpp::Rcout << val << " ";
@@ -443,8 +519,9 @@ inline void direct<T(const std::vector<T>&)>::divide_rectangles()
         }
 #endif
       
-      T fn1, fn2, fnmin;
-      for(const auto& dd: largest_dims){
+      T fn1, fn2;
+      for(const auto& dd: largest_dims)
+      {
         fn1 = eval(transform(r->centroid(dd, delta)));
         fn2 = eval(transform(r->centroid(dd, -delta)));
         pq.push(dimpair(std::pair<T,T>(fn1,fn2), dd));
@@ -502,5 +579,187 @@ inline void direct<T(const std::vector<T>&)>::divide_rectangles()
 };
 
 
-typedef direct<double(const std::vector<double>&)> directd;
-typedef direct<float(const std::vector<float>&)> directf;
+
+
+// class for bobyqa
+template <typename T>
+class optim<T(const std::vector<T>&),BOBYQA> {
+  using func = T(*)(long, const T*, void*); 
+public:
+  struct optimControl {
+    int npt = 0;
+    double rhobeg = 0.0;
+    double rhoend = 0.0;
+    int trace = 0;
+    int maxfun = 0;
+  } control;
+  
+  optim(){};
+  optim(const std::vector<T>& start);
+  optim(const optim& x) = default;
+  auto operator=(const optim& x) -> optim& = default;
+  
+  // functions
+  // the two functions fn() enable capturing of functions to use in the algorithm
+  template<auto Function, typename = std::enable_if_t<std::is_invocable_r_v<T, decltype(Function), const std::vector<T>& > > >
+  void    fn();
+  template<auto Function, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<T, decltype(Function), Class*, const std::vector<T>& > > >
+  void    fn(Class* cls);
+  
+  void    set_bounds(const std::vector<T>& lower, const std::vector<T>& upper);
+  void    set_bounds(const std::vector<T>& bound, bool lower = true);
+  auto    operator()(const std::vector<T>& vec) const -> T;
+  void    minimise(); // the optim algorithm
+  std::vector<T> values() const;
+  
+private:
+  [[noreturn]]
+  static auto null_fn(long n, const T* x, void* p) -> T {throw std::exception{};}
+  
+  void*                   optim_instance = nullptr;  // pointer to the class if a member function
+  func                    optim_fn = &null_fn;        // pointer to the function
+  size_t                  dim;                       // number of dimensions
+  std::vector<T>          lower_bound;               // bounds
+  std::vector<T>          upper_bound;   
+  T                       min_f;                     // current best value
+  int                     fn_counter = 0;
+  int                     iter = 0;
+  std::vector<T>          current_values;
+  std::string             msg_;
+  
+  //functions
+  auto            eval(const std::vector<T>& vec) -> T;
+  void            update_msg(int res);
+};
+
+
+template <typename T>
+inline optim<T(const std::vector<T>&),BOBYQA>::optim(const std::vector<T>& start) {
+  dim = start.size();
+  current_values.resize(dim);
+  current_values = start;
+}
+
+template <typename T>
+inline std::vector<T> optim<T(const std::vector<T>&),BOBYQA>::values() const {
+  return current_values;
+}
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),BOBYQA>::set_bounds(const std::vector<T>& lower, const std::vector<T>& upper) {
+  lower_bound.resize(dim);
+  upper_bound.resize(dim);
+  lower_bound = lower; 
+  upper_bound = upper;
+};
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),BOBYQA>::set_bounds(const std::vector<T>& bound, bool lower) {
+  if(lower){
+    lower_bound.resize(dim);
+    lower_bound = bound;
+  } else {
+    upper_bound.resize(dim);
+    upper_bound = bound;
+  }
+};
+
+template <typename T>
+template <auto Function, typename>
+inline void optim<T(const std::vector<T>&),BOBYQA>::fn() 
+{
+  optim_instance = nullptr;
+  optim_fn = static_cast<func>([](long n, const T* x, void*) -> T {
+    return std::invoke(Function, std::vector<T>(x,x+n));
+  });
+};
+
+template <typename T>
+template<auto Function, typename Class, typename>
+inline void optim<T(const std::vector<T>&),BOBYQA>::fn(Class* cls)
+{
+  optim_instance = cls;
+  optim_fn = static_cast<func>([](long n, const T* x, void* p) -> T {
+    auto* c = static_cast<Class*>(p);
+    return std::invoke(Function,c,std::vector<T>(x,x+n));
+  });
+}
+
+template <typename T>
+inline auto optim<T(const std::vector<T>&),BOBYQA>::operator()(const std::vector<T>& vec) const -> T
+{
+  return std::invoke(optim_fn,vec.size(),vec.data(),optim_instance);
+}    
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),BOBYQA>::minimise(){
+    fn_counter = 0;
+#ifndef R_BUILD
+    double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
+    double R_PosInf = std::numeric_limits<double>::infinity();
+#endif
+    if (!control.npt) control.npt = std::min(dim + 2, (dim+2)*(dim+1)/2);     
+    if(lower_bound.empty()){
+      lower_bound.resize(dim);
+      for(int i = 0; i< dim; i++) lower_bound[i] = R_NegInf;
+    }    
+    if(upper_bound.empty()){
+      upper_bound.resize(dim);
+      for(int i = 0; i< dim; i++)upper_bound[i] = R_PosInf;
+    }
+    double max_par = *std::max_element(current_values.begin(),current_values.end());
+    if (!control.rhobeg) control.rhobeg = std::min(0.95, 0.2*max_par);
+    if (!control.rhoend) control.rhoend = 1.0e-6 * control.rhobeg;    
+    if (!control.maxfun) control.maxfun = 10000;
+    std::vector<double> w;
+    w.resize((control.npt + 5) * (control.npt + dim) + (3 * dim * (dim + 5))/2);    
+    int res = bobyqa(dim, control.npt, optim_fn, optim_instance, current_values.data(), 
+                     lower_bound.data(), upper_bound.data(),
+                     control.rhobeg, control.rhoend, control.trace, 
+                     control.maxfun, w.data());
+    update_msg(res);
+    min_f = eval(current_values);
+#ifdef R_BUILD
+    if(control.trace >= 1)
+    {
+      Rcpp::Rcout << "\nEND BOBYQA | fn: " << fn_counter << " | " << msg_;  
+    }
+#endif
+}
+
+template <typename T>
+inline auto optim<T(const std::vector<T>&),BOBYQA>::eval(const std::vector<T>& vec) -> T
+{   
+  fn_counter++;
+  return std::invoke(optim_fn,vec.size(),vec.data(),optim_instance);
+}  
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),BOBYQA>::update_msg(int res) {
+    switch(res) {
+    case 0:
+      msg_ = "Normal exit from optim";
+      break;
+    case -1:
+      msg_ = "optim -- NPT is not in the required interval";
+      break;
+    case -2:
+      msg_ = "optim -- one of the box constraint ranges is too small (< 2*RHOBEG)";
+      break;
+    case -3:
+      msg_ = "optim detected too much cancellation in denominator";
+      break;
+    case -4:
+      msg_ = "optim -- maximum number of function evaluations exceeded";
+      break;
+    case -5:
+      msg_ = "optim -- a trust region step failed to reduce q";
+      break;
+    default: ;
+    }
+  }
+
+typedef optim<double(const std::vector<double>&),DIRECT> directd;
+typedef optim<float(const std::vector<float>&),DIRECT> directf;
+typedef optim<double(const std::vector<double>&),BOBYQA> bobyqad;
+typedef optim<float(const std::vector<float>&),BOBYQA> bobyqaf;

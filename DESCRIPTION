@@ -20,8 +20,7 @@ LinkingTo:
     RcppEigen,
     SparseChol (>= 0.3.1),
     BH,
-    RcppParallel (>= 5.0.1),
-    rminqa (>= 0.2.2)
+    RcppParallel (>= 5.0.1)
 RoxygenNote: 7.2.3
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]

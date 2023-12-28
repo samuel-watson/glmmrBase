@@ -41,7 +41,6 @@
 #include <random>
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/random.hpp>
-#include <rbobyqa.h>
 
 using namespace Eigen;
 using namespace SparseOperators;

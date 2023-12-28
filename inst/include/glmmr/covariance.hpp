@@ -745,11 +745,14 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
 #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log likelihood");
 #endif
+  
   double logdet_val=0.0;
   double loglik_val=0.0;
   int obs_counter=0;
   ArrayXd size_B_array(B_);
-  if(!isSparse){
+  
+  if(!isSparse)
+  {
     int blocksize;
     size_B_array.setZero();
     for(int b=0;b<B_;b++){
@@ -771,9 +774,10 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
       obs_counter += blocksize;
     }
     loglik_val = size_B_array.sum();
+    
   } else {
+    dblvec v(u.data(),u.data()+u.size());
     for (auto k : spchol.D) logdet_val += log(k);
-    dblvec v(u.data(), u.data()+u.size());
     spchol.ldl_lsolve(&v[0]);
     spchol.ldl_d2solve(&v[0]);
     double quad = glmmr::algo::inner_sum(&v[0],&v[0],Q_);

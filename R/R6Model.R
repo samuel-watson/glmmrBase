@@ -532,7 +532,7 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          if(!is.null(cov.pars)){
-                           #self$covariance$update_parameters(cov.pars)
+                           self$covariance$update_parameters(cov.pars)
                            if(!is.null(private$ptr)){
                              Model__update_theta(private$ptr,cov.pars,private$model_type())
                            }
@@ -1280,15 +1280,12 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
-                       #' @param y Numeric vector of outcome data
                        #' @param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
                        #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
                        #'it generally produces a larger number of effective samplers per unit time, especially for more complex
                        #'covariance functions.
                        #' @return A matrix of samples of the random effects
-                       mcmc_sample = function(y,usestan = TRUE){
-                         private$verify_data(y)
-                         private$set_y(y)
+                       mcmc_sample = function(usestan = TRUE){
                          if(usestan){
                            file_type <- mcnr_family(self$family)
                            if(!requireNamespace("cmdstanr")){
@@ -1307,7 +1304,7 @@ Model <- R6::R6Class("Model",
                              Q = Model__Q(private$ptr,private$model_type()),
                              Xb = Model__xb(private$ptr,private$model_type()),
                              Z = Model__ZL(private$ptr,private$model_type()),
-                             y = y,
+                             y = Model__y(private$ptr,private$model_type()),
                              type=as.numeric(file_type$type)
                            )
                            if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
