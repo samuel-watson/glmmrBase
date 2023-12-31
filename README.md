@@ -1,7 +1,7 @@
 [![cran version](http://www.r-pkg.org/badges/version/glmmrBase)](  https://CRAN.R-project.org/package=glmmrBase)
 
 # glmmrBase
-(Version 0.5.2)
+(Version 0.6.1)
 R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood (MCML) and Laplacian approximation and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
 
 The full details and tutorials have moved to the [project home page](https://samuel-watson.github.io/glmmr-web/).
@@ -10,7 +10,7 @@ The full details and tutorials have moved to the [project home page](https://sam
 The package is available on CRAN, or the most up-to-date version can be installed from this repository in R using `devtools::install_github("samuel-watson/glmmrBase")`. A pre-compiled binary is also available with each release on this page. 
 
 ### Building from source
-It is strongly recommended to build from source with the flags `-fno-math-errno -O3`, this will cut the time to run many functions by as much as 90%. One way to do this is to set CPP_FLAGS in `~/.R/Makevars`. Another alternative is to download the package source `.tar.gz` file and run from the command line 
+It is strongly recommended to build from source with the flags `-fno-math-errno -O3` or `-Ofast` for gcc, this will cut the time to run many functions by as much as 90%. One way to do this is to set CPP_FLAGS in `~/.R/Makevars`. Another alternative is to download the package source `.tar.gz` file and run from the command line 
 ```
 R CMD INSTALL --configure-args="CPPFLAGS=-fno-math-errno -O3" glmmrBase_0.5.4.tar.gz
 ```
