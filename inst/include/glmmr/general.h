@@ -3,7 +3,7 @@
 //defines
 
 #define _USE_MATH_DEFINES
-#define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG - currently only useful in R builds as uses R print, will add more general error logging
+// #define ENABLE_DEBUG // COMMENT/UNCOMMENT FOR DEBUG - currently only useful in R builds as uses R print, will add more general error logging
 #define R_BUILD //Uncomment to build for R with RCPP
 
 #ifdef R_BUILD
@@ -41,7 +41,6 @@
 #include <random>
 #include <boost/math/special_functions/digamma.hpp>
 #include <boost/random.hpp>
-#include <rbobyqa.h>
 
 using namespace Eigen;
 using namespace SparseOperators;

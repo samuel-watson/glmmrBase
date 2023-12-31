@@ -16,11 +16,13 @@ namespace glmmr {
 
 class Covariance {
 public:
-  glmmr::Formula form_;
-  const ArrayXXd data_;
-  const strvec colnames_;
-  dblvec parameters_;
-  dblvec other_pars_;
+  // objects
+  glmmr::Formula  form_;
+  const ArrayXXd  data_;
+  const strvec    colnames_;
+  dblvec          parameters_;
+  dblvec          other_pars_;
+  // constructors
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames);
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames,const dblvec& parameters);
@@ -28,66 +30,69 @@ public:
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Covariance& cov);
-  virtual void update_parameters(const dblvec& parameters);
-  virtual void update_parameters_extern(const dblvec& parameters);
-  virtual void update_parameters(const ArrayXd& parameters);
-  virtual int parse();
-  double get_val(int b, int i, int j) const;
-  virtual MatrixXd Z();
-  virtual MatrixXd D(bool chol = false, bool upper = false);
-  virtual VectorXd sim_re();
-  virtual double log_likelihood(const VectorXd &u);
-  virtual double log_determinant();
-  virtual int npar() const;
-  virtual int B() const;
-  virtual int Q() const;
-  virtual int max_block_dim() const;
-  virtual int block_dim(int b) const;
-  virtual void make_sparse();
-  virtual MatrixXd ZL();
-  virtual MatrixXd LZWZL(const VectorXd& w);
-  virtual MatrixXd ZLu(const MatrixXd& u);
-  virtual MatrixXd Lu(const MatrixXd& u);
-  virtual void set_sparse(bool sparse, bool amd = true);
-  bool any_group_re() const;
-  intvec parameter_fn_index() const;
-  virtual intvec re_count() const;
-  virtual sparse ZL_sparse();
-  virtual sparse Z_sparse() const;
-  strvec parameter_names();
-  virtual void derivatives(std::vector<MatrixXd>& derivs,int order = 1);
+  // functions
+  virtual void      update_parameters(const dblvec& parameters);
+  virtual void      update_parameters_extern(const dblvec& parameters);
+  virtual void      update_parameters(const ArrayXd& parameters);
+  virtual int       parse();
+  double            get_val(int b, int i, int j) const;
+  virtual MatrixXd  Z();
+  virtual MatrixXd  D(bool chol = false, bool upper = false);
+  virtual VectorXd  sim_re();
+  virtual double    log_likelihood(const VectorXd &u);
+  virtual double    log_determinant();
+  virtual int       npar() const;
+  virtual int       B() const;
+  virtual int       Q() const;
+  virtual int       max_block_dim() const;
+  virtual int       block_dim(int b) const;
+  virtual void      make_sparse();
+  virtual MatrixXd  ZL();
+  virtual MatrixXd  LZWZL(const VectorXd& w);
+  virtual MatrixXd  ZLu(const MatrixXd& u);
+  virtual MatrixXd  Lu(const MatrixXd& u);
+  virtual void      set_sparse(bool sparse, bool amd = true);
+  bool              any_group_re() const;
+  intvec            parameter_fn_index() const;
+  virtual intvec    re_count() const;
+  virtual sparse    ZL_sparse();
+  virtual sparse    Z_sparse() const;
+  strvec            parameter_names();
+  virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
  
 protected:
-  std::vector<glmmr::calculator> calc_;
-  std::vector<std::vector<CovFunc> > fn_;
-  intvec re_fn_par_link_;
-  intvec re_count_;
-  intvec re_order_;
-  intvec block_size;
-  intvec block_nvar;
-  intvec3d re_cols_data_;
-  dblvec3d re_temp_data_;
-  intvec z_;
-  int Q_;
-  sparse matZ;
-  int n_;
-  int B_;
-  int npars_;
-  MatrixXd dmat_matrix;
-  VectorXd zquad;
-  bool isSparse = true;
-  sparse matL;
-  SparseChol spchol;
-  void update_parameters_in_calculators();
-  MatrixXd get_block(int b);
-  MatrixXd get_chol_block(int b,bool upper = false);
-  MatrixXd D_builder(int b,bool chol = false,bool upper = false);
-  void update_ax();
-  void L_constructor();
-  void Z_constructor();
-  MatrixXd D_sparse_builder(bool chol = false,bool upper = false);
-  bool sparse_initialised = false;
-  bool use_amd_permute = true;
+  // data
+  std::vector<glmmr::calculator>      calc_;
+  std::vector<std::vector<CovFunc> >  fn_;
+  intvec                              re_fn_par_link_;
+  intvec                              re_count_;
+  intvec                              re_order_;
+  intvec                              block_size;
+  intvec                              block_nvar;
+  intvec3d                            re_cols_data_;
+  dblvec3d                            re_temp_data_;
+  intvec                              z_;
+  int                                 Q_;
+  sparse                              matZ;
+  int                                 n_;
+  int                                 B_;
+  int                                 npars_;
+  MatrixXd                            dmat_matrix;
+  VectorXd                            zquad;
+  bool                                isSparse = true;
+  sparse                              matL;
+  SparseChol                          spchol;
+  // functions
+  void      update_parameters_in_calculators();
+  MatrixXd  get_block(int b);
+  MatrixXd  get_chol_block(int b,bool upper = false);
+  MatrixXd  D_builder(int b,bool chol = false,bool upper = false);
+  void      update_ax();
+  void      L_constructor();
+  void      Z_constructor();
+  MatrixXd  D_sparse_builder(bool chol = false,bool upper = false);
+  bool      sparse_initialised = false;
+  bool      use_amd_permute = true;
 };
 
 }
@@ -740,11 +745,14 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
 #ifdef R_BUILD
   if(parameters_.size()==0)Rcpp::stop("no covariance parameters, cannot calculate log likelihood");
 #endif
+  
   double logdet_val=0.0;
   double loglik_val=0.0;
   int obs_counter=0;
   ArrayXd size_B_array(B_);
-  if(!isSparse){
+  
+  if(!isSparse)
+  {
     int blocksize;
     size_B_array.setZero();
     for(int b=0;b<B_;b++){
@@ -766,9 +774,10 @@ inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
       obs_counter += blocksize;
     }
     loglik_val = size_B_array.sum();
+    
   } else {
+    dblvec v(u.data(),u.data()+u.size());
     for (auto k : spchol.D) logdet_val += log(k);
-    dblvec v(u.data(), u.data()+u.size());
     spchol.ldl_lsolve(&v[0]);
     spchol.ldl_d2solve(&v[0]);
     double quad = glmmr::algo::inner_sum(&v[0],&v[0],Q_);

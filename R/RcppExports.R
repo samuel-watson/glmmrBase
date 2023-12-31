@@ -201,6 +201,10 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
+Model__set_optim_control <- function(xp, direct = FALSE, max_iter = 100L, epsilon = 1e-4, select_one = TRUE, trisect_once = FALSE, bobyqa = FALSE, max_eval = 0L, mrdirect = FALSE, direct_first_iter_beta = TRUE, direct_first_iter_theta = TRUE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_optim_control`, xp, direct, max_iter, epsilon, select_one, trisect_once, bobyqa, max_eval, mrdirect, direct_first_iter_beta, direct_first_iter_theta, type))
+}
+
 Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_bound`, xp, bound_, beta, lower, type))
 }

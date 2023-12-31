@@ -639,6 +639,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__set_optim_control
+void Model__set_optim_control(SEXP xp, bool direct, int max_iter, double epsilon, bool select_one, bool trisect_once, bool bobyqa, int max_eval, bool mrdirect, bool direct_first_iter_beta, bool direct_first_iter_theta, int type);
+RcppExport SEXP _glmmrBase_Model__set_optim_control(SEXP xpSEXP, SEXP directSEXP, SEXP max_iterSEXP, SEXP epsilonSEXP, SEXP select_oneSEXP, SEXP trisect_onceSEXP, SEXP bobyqaSEXP, SEXP max_evalSEXP, SEXP mrdirectSEXP, SEXP direct_first_iter_betaSEXP, SEXP direct_first_iter_thetaSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type direct(directSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
+    Rcpp::traits::input_parameter< bool >::type select_one(select_oneSEXP);
+    Rcpp::traits::input_parameter< bool >::type trisect_once(trisect_onceSEXP);
+    Rcpp::traits::input_parameter< bool >::type bobyqa(bobyqaSEXP);
+    Rcpp::traits::input_parameter< int >::type max_eval(max_evalSEXP);
+    Rcpp::traits::input_parameter< bool >::type mrdirect(mrdirectSEXP);
+    Rcpp::traits::input_parameter< bool >::type direct_first_iter_beta(direct_first_iter_betaSEXP);
+    Rcpp::traits::input_parameter< bool >::type direct_first_iter_theta(direct_first_iter_thetaSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__set_optim_control(xp, direct, max_iter, epsilon, select_one, trisect_once, bobyqa, max_eval, mrdirect, direct_first_iter_beta, direct_first_iter_theta, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__set_bound
 void Model__set_bound(SEXP xp, SEXP bound_, bool beta, bool lower, int type);
 RcppExport SEXP _glmmrBase_Model__set_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP betaSEXP, SEXP lowerSEXP, SEXP typeSEXP) {
@@ -1591,6 +1612,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
+    {"_glmmrBase_Model__set_optim_control", (DL_FUNC) &_glmmrBase_Model__set_optim_control, 12},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},
