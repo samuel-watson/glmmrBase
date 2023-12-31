@@ -772,7 +772,7 @@ Model <- R6::R6Class("Model",
                        #'}
                        #'@md
                        MCML = function(y,
-                                       method = "mcnr",
+                                       method = "mcem",
                                        sim.lik.step = FALSE,
                                        tol = 1e-2,
                                        max.iter = 30,
@@ -1080,7 +1080,7 @@ Model <- R6::R6Class("Model",
                        #'@md
                        LA = function(y,
                                      start,
-                                     method = "nr",
+                                     method = "nloptim",
                                      se = "gls",
                                      max.iter = 40,
                                      tol = 1e-4,

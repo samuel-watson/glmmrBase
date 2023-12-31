@@ -15,11 +15,13 @@ SEXP Model__get_W(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 void Model__set_optim_control(SEXP xp, bool direct = false, int max_iter = 100, double epsilon = 1e-4, bool select_one = true, bool trisect_once = false, 
-                        bool bobyqa = false, int max_eval = 0, bool mrdirect = false, int type = 0){
+                        bool bobyqa = false, int max_eval = 0, bool mrdirect = false, bool direct_first_iter_beta = true, 
+                        bool direct_first_iter_theta = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->optim.set_optim_control(direct, max_iter, epsilon, select_one, trisect_once, bobyqa, max_eval, mrdirect);}
+    [&](auto ptr){ptr->optim.set_optim_control(direct, max_iter, epsilon, select_one, trisect_once, bobyqa, max_eval, mrdirect, 
+        direct_first_iter_beta, direct_first_iter_theta);}
   };
   std::visit(functor,model.ptr);
 }
