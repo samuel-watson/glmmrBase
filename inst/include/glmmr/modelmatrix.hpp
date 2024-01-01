@@ -663,130 +663,124 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   ZLt.transpose();
   size_n_array += SparseOperators::operator*(ZL,v).array();
   
-  if(betapars){
-    VectorXd zuOffset = SparseOperators::operator*(ZL,v);
-    zuOffset += model.data.offset;
-    MatrixXd J = model.calc.jacobian(zuOffset);
-    size_p_array = J.transpose().rowwise().sum().array();
-  } else {
-    switch(model.family.family){
+  switch(model.family.family){
     case Fam::poisson:
     {
       switch(model.family.link){
-    case Link::identity:
-    {
-      size_n_array = size_n_array.inverse();
-      size_n_array = model.data.y.array()*size_n_array;
-      size_n_array -= ArrayXd::Ones(model.n());
-      if(betapars){
-        size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      } else {
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        case Link::identity:
+        {
+          size_n_array = size_n_array.inverse();
+          size_n_array = model.data.y.array()*size_n_array;
+          size_n_array -= ArrayXd::Ones(model.n());
+          if(betapars){
+            size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+          } else {
+            size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          }
+          break;
+        }
+        default:
+        {
+          size_n_array = size_n_array.exp();
+          if(!betapars){
+            size_n_array = model.data.y.array() - size_n_array;
+            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
+          } else {
+            size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
+          }
+          break;
+        }
       }
-      break;
-    }
-    default:
-    {
-      size_n_array = size_n_array.exp();
-      if(!betapars){
-        size_n_array = model.data.y.array() - size_n_array;
-        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
-      } else {
-        size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
-      }
-      break;
-    }
-    }
       break;
     }
     case Fam::bernoulli: case Fam::binomial:
     {
       switch(model.family.link){
-    case Link::loglink:
-    {
-      ArrayXd logitxb = model.xb().array().exp();
-      logitxb += 1;
-      logitxb = logitxb.inverse();
-      logitxb *= model.xb().array().exp();
-      size_n_array = (model.data.variance - model.data.y.array())*logitxb;
-      size_n_array += model.data.y.array();
-      if(betapars){
-        size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      } else {
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        case Link::loglink:
+      {
+        ArrayXd logitxb = model.xb().array().exp();
+        logitxb += 1;
+        logitxb = logitxb.inverse();
+        logitxb *= model.xb().array().exp();
+        size_n_array = (model.data.variance - model.data.y.array())*logitxb;
+        size_n_array += model.data.y.array();
+        if(betapars){
+          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        } else {
+          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        }
+        break;
       }
-      break;
-    }
-    case Link::identity:
-    {
-      size_n_array = size_n_array.inverse();
-      size_n_array *= model.data.y.array();
-      ArrayXd n_array2 = ArrayXd::Constant(model.n(),1.0) - model.xb().array();
-      n_array2 =n_array2.inverse();
-      n_array2 *= (model.data.variance - model.data.y.array());
-      size_n_array -= n_array2;
-      if(betapars){
-        size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      } else {
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+      case Link::identity:
+      {
+        size_n_array = size_n_array.inverse();
+        size_n_array *= model.data.y.array();
+        ArrayXd n_array2 = ArrayXd::Constant(model.n(),1.0) - model.xb().array();
+        n_array2 =n_array2.inverse();
+        n_array2 *= (model.data.variance - model.data.y.array());
+        size_n_array -= n_array2;
+        if(betapars){
+          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        } else {
+          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        }
+        break;
       }
-      break;
-    }
-    case Link::probit:
-    {
-      ArrayXd n_array2(model.n());
-      boost::math::normal norm(0, 1);
-#pragma omp parallel for    
-      for (int i = 0; i < model.n(); i++) {
-        size_n_array(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
-        n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
+      case Link::probit:
+      {
+        ArrayXd n_array2(model.n());
+        boost::math::normal norm(0, 1);
+    #pragma omp parallel for    
+        for (int i = 0; i < model.n(); i++) {
+          size_n_array(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
+          n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
+        }
+        size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
+        if (betapars) {
+          size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
+        }
+        else {
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
+        }
+        break;
       }
-      size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
-      if (betapars) {
-        size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
+      default:
+        //logit
+      {
+        ArrayXd logitxb = model.xb().array().exp();
+        logitxb += 1;
+        logitxb = logitxb.inverse();
+        logitxb *= model.xb().array().exp();
+        size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
+        if(betapars){
+          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        } else {
+          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        }
+        break;
       }
-      else {
-        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
-      }
-      break;
-    }
-    default:
-      //logit
-    {
-      ArrayXd logitxb = model.xb().array().exp();
-      logitxb += 1;
-      logitxb = logitxb.inverse();
-      logitxb *= model.xb().array().exp();
-      size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
-      if(betapars){
-        size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      } else {
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-      }
-      break;
-    }
     }
       break;
     }
     case Fam::gaussian:
     {
       switch(model.family.link){
-    case Link::loglink:
-    {
-      if(betapars){
-      size_n_array -= model.data.y.array();
-      size_n_array *= -1;
-      size_n_array *= model.data.weights;
-      size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*(model.data.y - size_n_array.matrix()))).array();
-    } else {
-      size_n_array = model.data.y.array() - size_n_array;
-      size_n_array *= model.data.weights;
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-      size_q_array *= 1.0/(model.data.var_par);
-    }
-    break;
-    }
-    default:
+        case Link::loglink:
+        {
+          if(betapars){
+          size_n_array -= model.data.y.array();
+          size_n_array *= -1;
+          size_n_array *= model.data.weights;
+          size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*(model.data.y - size_n_array.matrix()))).array();
+        } else {
+          size_n_array = model.data.y.array() - size_n_array;
+          size_n_array *= model.data.weights;
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          size_q_array *= 1.0/(model.data.var_par);
+        }
+        break;
+        }
+        default:
         {
           if(betapars){
           size_n_array -= model.data.y.array();
@@ -807,50 +801,50 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     case Fam::gamma:
     {
       switch(model.family.link){
-    case Link::inverse:
-    {
-      size_n_array = size_n_array.inverse();
-      if(betapars){
-        size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
-      } else {
-        size_n_array -= model.data.y.array();
-        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        size_q_array *= model.data.var_par;
-      }
-      break;
-    }
-    case Link::identity:
-    {
-      size_n_array = size_n_array.inverse();
-      if(betapars){
-        size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
-      } else {
-        size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        size_q_array *= model.data.var_par;
-      }
-      break;
-    }
-    default:
-      //log
-      {
-        size_n_array *= -1.0;
-        size_n_array = size_n_array.exp();
-        if(betapars){
-          size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
-        } else {
-          size_n_array *= model.data.y.array();
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          size_q_array *= model.data.var_par;
+        case Link::inverse:
+        {
+          size_n_array = size_n_array.inverse();
+          if(betapars){
+            size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
+          } else {
+            size_n_array -= model.data.y.array();
+            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+            size_q_array *= model.data.var_par;
+          }
+          break;
         }
-        break;
-      }
+        case Link::identity:
+        {
+          size_n_array = size_n_array.inverse();
+          if(betapars){
+            size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
+          } else {
+            size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
+            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+            size_q_array *= model.data.var_par;
+          }
+          break;
+        }
+        default:
+          //log
+        {
+          size_n_array *= -1.0;
+          size_n_array = size_n_array.exp();
+          if(betapars){
+            size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
+          } else {
+            size_n_array *= model.data.y.array();
+            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+            size_q_array *= model.data.var_par;
+          }
+          break;
+        }
     }
       break;
     }
     case Fam::beta:
     {
-#pragma omp parallel for 
+  #pragma omp parallel for 
       for(int i = 0; i < model.n(); i++){
         size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
         size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
@@ -862,9 +856,17 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       }
       break;
     }
-    }
-    
   }
+  
+  // if(betapars){
+  //   VectorXd zuOffset = SparseOperators::operator*(ZL,v);
+  //   zuOffset += model.data.offset;
+  //   MatrixXd J = model.calc.jacobian(zuOffset);
+  //   size_p_array = J.transpose().rowwise().sum().array();
+  // } else {
+  //   
+  //   
+  // }
   // we can use autodiff here, but the above method is faster
   // this needs retesting after updates to calculator and derivatives.
   // else {

@@ -201,8 +201,12 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
-Model__set_optim_control <- function(xp, direct = FALSE, max_iter = 100L, epsilon = 1e-4, select_one = TRUE, trisect_once = FALSE, bobyqa = FALSE, max_eval = 0L, mrdirect = FALSE, direct_first_iter_beta = TRUE, direct_first_iter_theta = TRUE, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__set_optim_control`, xp, direct, max_iter, epsilon, select_one, trisect_once, bobyqa, max_eval, mrdirect, direct_first_iter_beta, direct_first_iter_theta, type))
+Model__set_direct_control <- function(xp, direct = FALSE, direct_range_beta = 3.0, max_iter = 100L, epsilon = 1e-4, select_one = TRUE, trisect_once = FALSE, max_eval = 0L, mrdirect = FALSE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_direct_control`, xp, direct, direct_range_beta, max_iter, epsilon, select_one, trisect_once, max_eval, mrdirect, type))
+}
+
+Model__set_lbfgs_control <- function(xp, g_epsilon = 1e-8, past = 3L, delta = 1e-8, max_linesearch = 64L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_lbfgs_control`, xp, g_epsilon, past, delta, max_linesearch, type))
 }
 
 Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
@@ -233,16 +237,24 @@ Model__log_likelihood <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__log_likelihood`, xp, type)
 }
 
-Model__ml_theta <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__ml_theta`, xp, type))
-}
-
 Model__cov_set_nn <- function(xp, nn) {
     invisible(.Call(`_glmmrBase_Model__cov_set_nn`, xp, nn))
 }
 
-Model__ml_beta <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__ml_beta`, xp, type))
+Model__test_lbfgs <- function(xp, x) {
+    invisible(.Call(`_glmmrBase_Model__test_lbfgs`, xp, x))
+}
+
+Model__test_lbfgs_theta <- function(xp, x) {
+    invisible(.Call(`_glmmrBase_Model__test_lbfgs_theta`, xp, x))
+}
+
+Model__ml_beta <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__ml_beta`, xp, algo, type))
+}
+
+Model__ml_theta <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__ml_theta`, xp, algo, type))
 }
 
 Model__ml_all <- function(xp, type = 0L) {
@@ -367,10 +379,6 @@ Model__L <- function(xp, type = 0L) {
 
 Model__ZL <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__ZL`, xp, type)
-}
-
-Model__hessian_numerical <- function(xp, tol = 1e-4, type = 0L) {
-    .Call(`_glmmrBase_Model__hessian_numerical`, xp, tol, type)
 }
 
 Model__xb <- function(xp, type = 0L) {

@@ -880,7 +880,7 @@ Model <- R6::R6Class("Model",
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
                            if(method=="mcem"){
-                             Model__ml_beta(private$ptr,private$model_type())
+                             Model__ml_beta(private$ptr,0,private$model_type())
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }

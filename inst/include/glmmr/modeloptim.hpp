@@ -16,7 +16,7 @@ namespace glmmr {
 using namespace Eigen;
 
 template<typename modeltype>
-class ModelOptim{
+class ModelOptim {
 public:
   // members 
   modeltype&                        model;
@@ -31,15 +31,17 @@ public:
     double  rhobeg = 0;
     double  rhoend = 0;
     bool    direct = false;
+    double  direct_range_beta = 3.0;
     int     max_iter_direct = 100; 
     double  epsilon = 1e-4; 
     bool    select_one = true; 
     bool    trisect_once = false; 
-    bool    bobyqa_w_direct = false; 
     int     max_eval = 0; 
     bool    mrdirect = false;
-    bool    direct_first_iter_beta = true;
-    bool    direct_first_iter_theta = true;
+    double  g_epsilon = 1e-8;
+    int     past = 3;
+    double  delta = 1e-8;
+    int     max_linesearch = 64;
   } control;
   
   // functions
@@ -54,8 +56,10 @@ public:
   virtual void    laplace_nr_beta_u();
   virtual void    update_var_par(const double& v);
   virtual void    update_var_par(const ArrayXd& v);
-  virtual void    ml_beta();
-  virtual void    ml_theta();
+  template<class algo, typename = std::enable_if_t<std::is_base_of<optim_algo, algo>::value> >
+  void            ml_beta();
+  template<class algo, typename = std::enable_if_t<std::is_base_of<optim_algo, algo>::value> >
+  void            ml_theta();
   virtual void    ml_all();
   virtual void    laplace_ml_beta_u();
   virtual void    laplace_ml_theta();
@@ -63,16 +67,18 @@ public:
   virtual double  aic();
   virtual ArrayXd optimum_weights(double N, VectorXd C, double tol = 1e-5, int max_iter = 501);
   void            set_bobyqa_control(int npt_, double rhobeg_, double rhoend_);
-  void            set_optim_control(bool direct = false, int max_iter = 100, double epsilon = 1e-4, bool select_one = true, bool trisect_once = false, 
-                                      bool bobyqa = false, int max_eval = 0, bool mrdirect = false, bool direct_first_iter_beta = true, bool direct_first_iter_theta = true);
-  virtual MatrixXd hessian_numerical(double tol = 1e-4);
+  void            set_direct_control(bool direct = false, double direct_range_beta = 3.0, int max_iter = 100, double epsilon = 1e-4, bool select_one = true, bool trisect_once = false, 
+                                      int max_eval = 0, bool mrdirect = false);
+  void            set_lbfgs_control(double g_epsilon = 1e-8, int past = 3, double delta = 1e-8, int max_linesearch = 64);
   void            set_bound(const dblvec& bound, bool lower = true);
   void            set_theta_bound(const dblvec& bound, bool lower = true);
   int             P() const;
   int             Q() const;
   // functions to optimise
   double          log_likelihood_beta(const dblvec &beta);
+  double          log_likelihood_beta_with_gradient(const VectorXd &beta, VectorXd& g);
   double          log_likelihood_theta(const dblvec &theta);
+  double          log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g);
   double          log_likelihood_theta_hsgp(const dblvec &theta);
   double          log_likelihood_all(const dblvec &par);
   double          log_likelihood_laplace_beta_u(const dblvec &par);
@@ -81,31 +87,32 @@ public:
   
 protected:
 // objects
-  dblvec  lower_bound;
-  dblvec  upper_bound; // bounds for beta
-  dblvec  lower_bound_theta;
-  dblvec  upper_bound_theta; // bounds for beta
+  dblvec          lower_bound;
+  dblvec          upper_bound; // bounds for beta
+  dblvec          lower_bound_theta;
+  dblvec          upper_bound_theta; // bounds for beta
   // functions
-  void    calculate_var_par();
-  dblvec  get_start_values(bool beta, bool theta, bool var = true);
-  dblvec  get_lower_values(bool beta, bool theta, bool var = true);
-  dblvec  get_upper_values(bool beta, bool theta, bool var = true);
-  void    set_direct_control(directd& op);
-  void    set_bobyqa_control(bobyqad& op);
-  
+  void            calculate_var_par();
+  dblvec          get_start_values(bool beta, bool theta, bool var = true);
+  dblvec          get_lower_values(bool beta, bool theta, bool var = true);
+  dblvec          get_upper_values(bool beta, bool theta, bool var = true);
+  void            set_direct_control(directd& op);
+  void            set_bobyqa_control(bobyqad& op);
+  void            set_newuoa_control(newuoad& op);
+  void            set_lbfgs_control(lbfgsd& op);
 };
 
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_direct_control(directd& op){
-op.control.max_iter = control.max_iter_direct;
+    op.control.max_iter = control.max_iter_direct;
     op.control.epsilon = control.epsilon;
     op.control.select_one = control.select_one;
     op.control.trisect_once = control.trisect_once;
     op.control.trace = trace;
     op.control.mrdirect = control.mrdirect;
-    if(control.bobyqa_w_direct) op.control.max_eval = control.max_eval;
+    op.control.max_eval = control.max_eval;
 }
 
 template<typename modeltype>
@@ -117,132 +124,109 @@ inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(bobyqad& op){
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::ml_beta(){
-  dblvec final(P());
-  if(control.direct)
-  {
-    dblvec start = get_start_values(true,false,false);
-    dblvec range(start.size());
-    double range_value = control.direct_first_iter_beta ? 3.0 : 0.5;
-    std::fill(range.begin(),range.end(),range_value);
-    directd op(start,range);
-    set_direct_control(op);
-    if constexpr (std::is_same_v<modeltype,bits>)
-    {
-      op.fn<&glmmr::ModelOptim<bits>::log_likelihood_beta, glmmr::ModelOptim<bits> >(this);
-    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-      op.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta, glmmr::ModelOptim<bits_nngp> >(this);
-    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta, glmmr::ModelOptim<bits_hsgp> >(this);
-    }
-    op.minimise();
-    final = op.values();
-    control.direct_first_iter_beta = false;
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
+inline void glmmr::ModelOptim<modeltype>::set_newuoa_control(newuoad& op){
+  op.control.trace = trace;
+  op.control.rhobeg = control.rhobeg;
+  op.control.rhoend = control.rhoend;
+  op.control.npt = control.npt;
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(lbfgsd& op){
+  op.control.trace = trace;
+  op.control.g_epsilon = control.g_epsilon;
+  op.control.past = control.past;
+  op.control.delta = control.delta;
+  op.control.max_linesearch = control.max_linesearch;
+}
+
+template<typename modeltype>
+template<class algo, typename>
+inline void glmmr::ModelOptim<modeltype>::ml_beta(){  
+  dblvec start = get_start_values(true,false,false);
+  if constexpr (std::is_same_v<algo,LBFGS>){
+    VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
+    optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
+    set_lbfgs_control(op);
       if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_beta, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
-    model.linear_predictor.update_parameters(final);
-  } else {
-    dblvec start = get_start_values(true,false,false);
-    bobyqad op(start);
-    set_bobyqa_control(op);
-    if constexpr (std::is_same_v<modeltype,bits>)
     {
-      op.fn<&glmmr::ModelOptim<bits>::log_likelihood_beta, glmmr::ModelOptim<bits> >(this);
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_beta_with_gradient, glmmr::ModelOptim<bits> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-      op.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta, glmmr::ModelOptim<bits_nngp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta_with_gradient, glmmr::ModelOptim<bits_nngp> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta, glmmr::ModelOptim<bits_hsgp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta_with_gradient, glmmr::ModelOptim<bits_hsgp> >(this);
     }
     op.minimise();
-    final = op.values();
+    VectorXd final = op.values();    
+    model.linear_predictor.update_parameters(final.array());
+  } else {
+    optim<double(const std::vector<double>&),algo> op(start);
+    if constexpr (std::is_same_v<algo,DIRECT>) {
+      op.set_bounds(start,dblvec(start.size(),control.direct_range_beta),true);
+      set_direct_control(op);
+    } else if constexpr (std::is_same_v<algo,BOBYQA>) {
+      set_bobyqa_control(op);
+    } else if constexpr (std::is_same_v<algo,NEWUOA>) {
+      set_newuoa_control(op);
+    }
+      if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_beta, glmmr::ModelOptim<bits> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta, glmmr::ModelOptim<bits_nngp> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta, glmmr::ModelOptim<bits_hsgp> >(this);
+    }
+    op.minimise();
+    dblvec final = op.values();    
+    model.linear_predictor.update_parameters(final);
   }
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::ml_theta(){
+template<class algo, typename>
+inline void glmmr::ModelOptim<modeltype>::ml_theta(){  
+  dblvec start = get_start_values(false,true,false);  
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.conservativeResize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);
-  if(control.direct)
-  {
-    dblvec lower = get_lower_values(false,true,false);
-    dblvec upper(lower.size());
-    
-    if(control.direct_first_iter_theta)
-    {
-      for(int i = 0; i < lower.size(); i++)
-      {
-        dblvec start = get_start_values(false,true,false);
-        lower[i] = std::max(start[i] - 0.2,0.0);
-        upper[i] = std::min(start[i] + 0.2,1.0);
-      }
-    } else {
-      std::fill(upper.begin(),upper.end(),1.0);
-    }
-    directd op(lower,upper,false);
-    set_direct_control(op);
-    if constexpr (std::is_same_v<modeltype,bits>)
-    {
-      op.fn<&glmmr::ModelOptim<bits>::log_likelihood_theta, glmmr::ModelOptim<bits> >(this);
-    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-      op.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
-    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_hsgp, glmmr::ModelOptim<bits_hsgp> >(this);
-    }
+  if constexpr (std::is_same_v<algo,LBFGS>){
+    VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
+    optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
+    set_lbfgs_control(op);
+    // L-BFGS only possible with non-approximate covariance here (currently)
+    if constexpr (std::is_same_v<modeltype,bits>) op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits> >(this);
     op.minimise();
-    dblvec final = op.values();
-    control.direct_first_iter_theta = false;
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
-      opb.set_bounds(lower);
-      if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_theta, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_hsgp, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
-    update_theta(final);
+    VectorXd final = op.values();    
+    model.covariance.update_parameters(final.array());
   } else {
-    dblvec start = get_start_values(false,true,false);
-    bobyqad op(start);
-    set_bobyqa_control(op);
+    optim<double(const std::vector<double>&),algo> op(start);
     dblvec lower = get_lower_values(false,true,false);
-    op.set_bounds(lower);
-    if constexpr (std::is_same_v<modeltype,bits>)
+    if constexpr (std::is_same_v<algo,DIRECT>) {      
+      dblvec upper(lower.size());
+      std::fill(upper.begin(),upper.end(),1.0);
+      op.set_bounds(lower,upper,false);
+      set_direct_control(op);
+    } else if constexpr (std::is_same_v<algo,BOBYQA>) {
+      set_bobyqa_control(op);
+      op.set_bounds(lower);
+    } else if constexpr (std::is_same_v<algo,NEWUOA>) {
+      set_newuoa_control(op);
+      op.set_bounds(lower);
+    }
+      if constexpr (std::is_same_v<modeltype,bits>)
     {
-      op.fn<&glmmr::ModelOptim<bits>::log_likelihood_theta, glmmr::ModelOptim<bits> >(this);
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_theta, glmmr::ModelOptim<bits> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-      op.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_hsgp, glmmr::ModelOptim<bits_hsgp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta, glmmr::ModelOptim<bits_hsgp> >(this);
     }
     op.minimise();
-    dblvec final = op.values();
+    dblvec final = op.values();    
+    model.linear_predictor.update_parameters(final);
   }
 }
+
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
@@ -269,24 +253,6 @@ inline void glmmr::ModelOptim<modeltype>::ml_all(){
     }
     op.minimise();
     dblvec final = op.values();
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
-      opb.set_bounds(lower);
-      if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_all, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_all, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_all, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
     dblvec beta(final.begin(),final.begin()+P());
     dblvec theta(final.begin()+P(),final.begin()+P()+model.covariance.npar());
     model.linear_predictor.update_parameters(beta);
@@ -331,23 +297,6 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
     }
     op.minimise();
     dblvec final = op.values();
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
-      if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_laplace_beta_u, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_laplace_beta_u, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_laplace_beta_u, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
     dblvec beta(final.begin(),final.begin()+P());
     model.linear_predictor.update_parameters(beta);
     for(int i = 0; i < Q(); i++) re.u_(i,0) = final[P()+i];
@@ -389,24 +338,6 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta(){
     }
     op.minimise();
     dblvec final = op.values();
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
-      opb.set_bounds(lower);
-      if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
     update_theta(final);
   } else {
     dblvec start = get_start_values(false,true,false);
@@ -452,24 +383,6 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
     }
     op.minimise();
     dblvec final = op.values();
-    if(control.bobyqa_w_direct){
-      bobyqad opb(final);
-      opb.control.trace = trace;
-      double max_val = *std::max_element(final.begin(),final.end());
-      opb.control.rhobeg = std::min(op.rect_size()*0.5,abs(1e-2*max_val));
-      opb.control.rhoend = std::max(opb.control.rhobeg * 1e-4, abs(1e-6*max_val));
-      opb.set_bounds(lower);
-      if constexpr (std::is_same_v<modeltype,bits>)
-      {
-        opb.fn<&glmmr::ModelOptim<bits>::log_likelihood_laplace_beta_theta, glmmr::ModelOptim<bits> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-        opb.fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_laplace_beta_theta, glmmr::ModelOptim<bits_nngp> >(this);
-      } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-        opb.fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_laplace_beta_theta, glmmr::ModelOptim<bits_hsgp> >(this);
-      }
-      opb.minimise();
-      final = opb.values();
-    }
     dblvec beta(final.begin(),final.begin()+P());
     dblvec theta(final.begin()+P(),final.begin()+P()+model.covariance.npar());
     model.linear_predictor.update_parameters(beta);
@@ -495,19 +408,25 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::set_optim_control(bool direct, int max_iter, double epsilon, bool select_one, bool trisect_once, 
-                                      bool bobyqa, int max_eval, bool mrdirect, bool direct_first_iter_beta, bool direct_first_iter_theta){
+inline void glmmr::ModelOptim<modeltype>::set_direct_control(bool direct, double direct_range_beta, int max_iter, double epsilon, bool select_one, bool trisect_once, 
+                                      int max_eval, bool mrdirect){
   control.direct = direct;
   control.max_iter_direct = max_iter;
   control.epsilon = epsilon;
   control.select_one = select_one;
   control.trisect_once = trisect_once;
-  control.bobyqa_w_direct = bobyqa;
   control.max_eval = max_eval;
   control.mrdirect = mrdirect;
-  control.direct_first_iter_beta = direct_first_iter_beta;
-  control.direct_first_iter_theta = direct_first_iter_theta;
+  control.direct_range_beta = direct_range_beta;
  }
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(double g_epsilon, int past, double delta, int max_linesearch){
+  control.g_epsilon = g_epsilon;
+  control.past = past;
+  control.delta = delta;
+  control.max_linesearch = max_linesearch;
+}
 
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par){
@@ -584,6 +503,18 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& be
 }
 
 template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(const VectorXd& beta, VectorXd& g){
+  model.linear_predictor.update_parameters(beta.array());
+  // MatrixXd J = model.calc.jacobian(re.zu_);
+  // g = J.rowwise().sum();
+  VectorXd v = re.u_.rowwise().mean();
+  g = matrix.log_gradient(v,true);
+  g.array() *= -1.0;
+  double ll = log_likelihood();
+  return -1*ll;
+}
+
+template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& theta){
     model.covariance.update_parameters(theta);
     double logl = 0;
@@ -592,6 +523,30 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
     {
       logl += model.covariance.log_likelihood(re.scaled_u_.col(i));
     }
+    return -1*logl/re.u_.cols();
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
+    // as this function is only used in L-BFGS optimisation, which doesn't accept bounds, we can apply an artifical
+    // bound here by adding a floor
+
+    ArrayXd theta_1(theta.size());
+    for(int i = 0; i < theta.size(); i++)
+    {
+      theta_1 = std::max(theta(i),1e-7);
+    }
+
+    model.covariance.update_parameters(theta_1);
+    double logl = 0;
+  #pragma omp parallel for reduction (+:logl)
+    for(int i = 0; i < re.scaled_u_.cols(); i++)
+    {
+      logl += model.covariance.log_likelihood(re.scaled_u_.col(i));
+    }
+    VectorXd v = re.u(true).rowwise().mean();
+    g = model.covariance.log_gradient(v);
+    g.array() *= -1.0;
     return -1*logl/re.u_.cols();
 }
 
@@ -948,11 +903,6 @@ inline double glmmr::ModelOptim<modeltype>::aic(){
   double ll = log_likelihood();
   
   return (-2*( ll + logl ) + 2*dof); 
-}
-
-template<typename modeltype>
-inline MatrixXd glmmr::ModelOptim<modeltype>::hessian_numerical(double tol){
-  
 }
 
 template<typename modeltype>
