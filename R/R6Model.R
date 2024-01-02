@@ -736,6 +736,7 @@ Model <- R6::R6Class("Model",
                        #'covariance functions.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
+                       #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta (default), 2 = BOBYQA for both, 3 = L-BFGS for both.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
@@ -779,6 +780,7 @@ Model <- R6::R6Class("Model",
                                        se = "gls",
                                        usestan = TRUE,
                                        se.theta = TRUE,
+                                       algo = 2,
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
@@ -807,6 +809,16 @@ Model <- R6::R6Class("Model",
                          }
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
+                         }
+                         if(algo == 1){
+                           balgo <- 2
+                           talgo <- 0
+                         } else if(algo == 2){
+                           balgo <- 0
+                           talgo <- 0
+                         } else if(algo == 3){
+                           balgo <- 2
+                           talgo <- 2
                          }
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
@@ -877,14 +889,13 @@ Model <- R6::R6Class("Model",
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
-                           ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
-                           
+                           ## Rstan functionality was introduced in one branch but is signficantly slower so is not included here
                            if(method=="mcem"){
-                             Model__ml_beta(private$ptr,2,private$model_type())
+                             Model__ml_beta(private$ptr,balgo,private$model_type())
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }
-                           Model__ml_theta(private$ptr,0,private$model_type())
+                           Model__ml_theta(private$ptr,talgo,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())

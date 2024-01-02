@@ -493,8 +493,15 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(co
   model.linear_predictor.update_parameters(beta.array());
   // MatrixXd J = model.calc.jacobian(re.zu_);
   // g = J.rowwise().sum();
-  VectorXd v = re.u_.rowwise().mean();
-  g = matrix.log_gradient(v,true);
+  // VectorXd v = re.u_.rowwise().mean();
+  // g.setZero();
+  MatrixXd grad(g.size(),re.u_.cols());
+#pragma omp parallel for
+  for(int i = 0; i < re.u_.cols(); i++)
+  {
+    grad.col(i) = matrix.log_gradient(re.u_.col(i),true);
+  }  
+  g = grad.rowwise().mean();
   g.array() *= -1.0;
   double ll = log_likelihood();
   return -1*ll;
@@ -530,23 +537,13 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
-    // as this function is only used in L-BFGS optimisation, which doesn't accept bounds, we can apply an artifical
-    // bound here by adding a floor
-
-    ArrayXd theta_1(theta.size());
-    for(int i = 0; i < theta.size(); i++)
-    {
-      theta_1 = std::max(theta(i),1e-7);
-    }
-
-    model.covariance.update_parameters(theta_1);
+    model.covariance.update_parameters(theta);
     double logl = 0;
   #pragma omp parallel for reduction (+:logl)
     for(int i = 0; i < re.scaled_u_.cols(); i++)
     {
       logl += model.covariance.log_likelihood(re.scaled_u_.col(i));
     }
-    // VectorXd v = re.u(true).rowwise().mean();
     g = model.covariance.log_gradient(re.scaled_u_);
     g.array() *= -1.0;
     return -1*logl/re.u_.cols();
