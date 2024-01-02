@@ -798,6 +798,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__test_lbfgs_laplace
+void Model__test_lbfgs_laplace(SEXP xp, SEXP x);
+RcppExport SEXP _glmmrBase_Model__test_lbfgs_laplace(SEXP xpSEXP, SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
+    Model__test_lbfgs_laplace(xp, x);
+    return R_NilValue;
+END_RCPP
+}
 // Model__ml_beta
 void Model__ml_beta(SEXP xp, int algo, int type);
 RcppExport SEXP _glmmrBase_Model__ml_beta(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
@@ -1652,6 +1663,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__cov_set_nn", (DL_FUNC) &_glmmrBase_Model__cov_set_nn, 2},
     {"_glmmrBase_Model__test_lbfgs", (DL_FUNC) &_glmmrBase_Model__test_lbfgs, 2},
     {"_glmmrBase_Model__test_lbfgs_theta", (DL_FUNC) &_glmmrBase_Model__test_lbfgs_theta, 2},
+    {"_glmmrBase_Model__test_lbfgs_laplace", (DL_FUNC) &_glmmrBase_Model__test_lbfgs_laplace, 2},
     {"_glmmrBase_Model__ml_beta", (DL_FUNC) &_glmmrBase_Model__ml_beta, 3},
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 3},
     {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 3},

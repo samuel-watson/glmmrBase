@@ -59,7 +59,7 @@ public:
   virtual sparse    Z_sparse() const;
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
-  virtual VectorXd  log_gradient(const MatrixXd &u);
+  virtual VectorXd  log_gradient(const MatrixXd &umat);
  
 protected:
   // data
@@ -976,23 +976,28 @@ inline strvec glmmr::Covariance::parameter_names(){
   return parnames;
 };
 
-inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &u){
+inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat){
   std::vector<MatrixXd> derivs;
   derivatives(derivs,1);
   VectorXd grad(derivs.size()-1);
   grad.setZero();
-  MatrixXd Sinv = D().llt().solve(MatrixXd::Identity(Q(),Q()));
+  MatrixXd Sinv = D();
+  Sinv = Sinv.llt().solve(MatrixXd::Identity(Sinv.rows(),Sinv.cols()));
+  int niter = umat.cols();
   for(int i = 1; i < derivs.size(); i++)
     {
-      double dlogdet = (Sinv * derivs[i]).trace();
+      MatrixXd Sdi = Sinv * derivs[i];
+      double dlogdet = Sdi.trace();
       grad(i-1) = -1.0*dlogdet;
-      MatrixXd dinv = Sinv * derivs[i] * Sinv;
+      MatrixXd dinv = Sdi * Sinv;
       double val = 0;
-      for(int j = 0; j < u.cols(); j++)
+      for(int j = 0; j < niter; j++)
         {
-           val += ((u.col(j).transpose()*dinv)*u.col(j))(0);
+           val += ((umat.col(j).transpose()*dinv)*umat.col(j))(0);
         }
-      grad(i-1) += val/(double)u.cols();
+      //Rcpp::Rcout << "\nLogdet = " << dlogdet << " val: " << val;
+      grad(i-1) += val/((double)niter);
+      //Rcpp::Rcout << " grad: " << grad(i-1);
       grad(i-1) *= 0.5;
     }
   return grad;

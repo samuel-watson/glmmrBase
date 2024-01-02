@@ -249,6 +249,10 @@ Model__test_lbfgs_theta <- function(xp, x) {
     invisible(.Call(`_glmmrBase_Model__test_lbfgs_theta`, xp, x))
 }
 
+Model__test_lbfgs_laplace <- function(xp, x) {
+    invisible(.Call(`_glmmrBase_Model__test_lbfgs_laplace`, xp, x))
+}
+
 Model__ml_beta <- function(xp, algo = 0L, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__ml_beta`, xp, algo, type))
 }
