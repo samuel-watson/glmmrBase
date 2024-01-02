@@ -59,7 +59,7 @@ public:
   virtual sparse    Z_sparse() const;
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
-  virtual VectorXd  log_gradient(const VectorXd &u);
+  virtual VectorXd  log_gradient(const MatrixXd &u);
  
 protected:
   // data
@@ -976,18 +976,27 @@ inline strvec glmmr::Covariance::parameter_names(){
   return parnames;
 };
 
-inline VectorXd glmmr::Covariance::log_gradient(const VectorXd &u){
+inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &u){
+  // this is not correct - will figure it out!
   std::vector<MatrixXd> derivs;
   derivatives(derivs,1);
   VectorXd grad(derivs.size()-1);
   grad.setZero();
   MatrixXd Sinv = derivs[0].llt().solve(MatrixXd::Identity(Q(),Q()));
-#pragma omp parallel for
+  double a = -0.5/u.cols();
   for(int i = 1; i < derivs.size(); i++)
     {
       double dlogdet = (Sinv * derivs[i]).trace();
+      //MatrixXd derivinv = derivs[i].llt().solve(MatrixXd::Identity(Q(),Q()));
+      grad(i-1) = -0.5*dlogdet;
       MatrixXd dinv = -1.0 * Sinv * derivs[i] * Sinv;
-      grad(i-1) = -0.5*dlogdet - 0.5*(u.transpose()*dinv*u)(0);
+      double val = 0;
+#pragma omp parallel for if(u.cols() > 50) reduction(+:val)
+      for(int j = 0; j < u.cols(); j++)
+        {
+          val += a*((u.col(j).transpose()*dinv)*u.col(j))(0);
+        }
+        grad(i-1) += val;
     }
   return grad;
 }

@@ -880,11 +880,11 @@ Model <- R6::R6Class("Model",
                            ## ADD IN RSTAN FUNCTIONALITY ONCE PARALLEL METHODS AVAILABLE IN RSTAN
                            
                            if(method=="mcem"){
-                             Model__ml_beta(private$ptr,0,private$model_type())
+                             Model__ml_beta(private$ptr,2,private$model_type())
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }
-                           Model__ml_theta(private$ptr,private$model_type())
+                           Model__ml_theta(private$ptr,0,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
@@ -905,7 +905,7 @@ Model <- R6::R6Class("Model",
                          if(sim.lik.step){
                            if(private$trace >= 1)cat("\n\n")
                            if(private$trace >= 1)message("Optimising simulated likelihood")
-                           Model__ml_all(private$ptr,private$model_type())
+                           Model__ml_all(private$ptr,0,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
@@ -1125,9 +1125,9 @@ Model <- R6::R6Class("Model",
                            if(method=="nr"){
                              Model__laplace_nr_beta_u(private$ptr,private$model_type())
                            } else {
-                             Model__laplace_ml_beta_u(private$ptr,private$model_type())
+                             Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
                            }
-                           Model__laplace_ml_theta(private$ptr,private$model_type())
+                           Model__laplace_ml_theta(private$ptr,0,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
@@ -1143,7 +1143,7 @@ Model <- R6::R6Class("Model",
                          }
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
                          if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         #Model__laplace_ml_beta_theta(private$ptr)
+                         #Model__laplace_ml_beta_theta(private$ptr,0,private$model_type())
                          beta_new <- Model__get_beta(private$ptr,private$model_type())
                          theta_new <- Model__get_theta(private$ptr,private$model_type())
                          var_par_new <- Model__get_var_par(private$ptr,private$model_type())

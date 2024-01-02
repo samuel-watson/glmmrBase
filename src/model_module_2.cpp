@@ -166,6 +166,18 @@ void Model__test_lbfgs_theta(SEXP xp, SEXP x){
 }
 
 // [[Rcpp::export]]
+void Model__test_lbfgs_laplace(SEXP xp, SEXP x){
+  XPtr<glmm> ptr(xp);
+  Eigen::VectorXd start = as<Eigen::VectorXd>(x);
+  Eigen::VectorXd grad(start.size());
+  grad.setZero();
+  double ll = ptr->optim.log_likelihood_laplace_beta_u_with_gradient(start,grad);
+  Rcpp::Rcout << "\nStart: " << start.transpose();
+  Rcpp::Rcout << "\nGradient: " << grad.transpose();
+  Rcpp::Rcout << "\nLog likelihood: " << ll;
+}
+
+// [[Rcpp::export]]
 void Model__ml_beta(SEXP xp, int algo = 0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
@@ -216,41 +228,101 @@ void Model__ml_theta(SEXP xp, int algo = 0, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__ml_all(SEXP xp, int type = 0){
+void Model__ml_all(SEXP xp, int algo = 0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->optim.ml_all();}
+    [&algo](auto ptr){
+      switch(algo){
+      case 1:
+        ptr->optim.template ml_all<NEWUOA>();
+        break;
+      case 2:
+        Rcpp::stop("L-BGFS not available for full likelihood beta-theta joint optimisation.");
+        break;
+      case 3:
+        ptr->optim.template ml_all<DIRECT>();
+        break;
+      default:
+        ptr->optim.template ml_all<BOBYQA>();
+      break;
+      }
+    }
   };
   std::visit(functor,model.ptr);
 }
 
 // [[Rcpp::export]]
-void Model__laplace_ml_beta_u(SEXP xp, int type = 0){
+void Model__laplace_ml_beta_u(SEXP xp, int algo = 0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->optim.laplace_ml_beta_u();}
+    [&algo](auto ptr){
+      switch(algo){
+      case 1:
+        ptr->optim.template laplace_ml_beta_u<NEWUOA>();
+        break;
+      case 2:
+        ptr->optim.template laplace_ml_beta_u<LBFGS>();
+        break;
+      case 3:
+        ptr->optim.template laplace_ml_beta_u<DIRECT>();
+        break;
+      default:
+        ptr->optim.template laplace_ml_beta_u<BOBYQA>();
+      break;
+      }
+    }
   };
   std::visit(functor,model.ptr);
 }
 
 // [[Rcpp::export]]
-void Model__laplace_ml_theta(SEXP xp, int type = 0){
+void Model__laplace_ml_theta(SEXP xp, int algo = 0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->optim.laplace_ml_theta();}
+    [&algo](auto ptr){
+      switch(algo){
+      case 1:
+        ptr->optim.template laplace_ml_theta<NEWUOA>();
+        break;
+      case 2:
+        Rcpp::stop("L-BGFS(-B) is not available for Laplace theta optimisation");
+        break;
+      case 3:
+        ptr->optim.template laplace_ml_theta<DIRECT>();
+        break;
+      default:
+        ptr->optim.template laplace_ml_theta<BOBYQA>();
+      break;
+      }
+    }
   };
   std::visit(functor,model.ptr);
 }
 
 // [[Rcpp::export]]
-void Model__laplace_ml_beta_theta(SEXP xp, int type = 0){
+void Model__laplace_ml_beta_theta(SEXP xp, int algo = 0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->optim.laplace_ml_beta_theta();}
+    [&algo](auto ptr){
+      switch(algo){
+      case 1:
+        ptr->optim.template laplace_ml_beta_theta<NEWUOA>();
+        break;
+      case 2:
+        Rcpp::stop("L-BGFS(-B) is not available for Laplace beta-theta optimisation");
+        break;
+      case 3:
+        ptr->optim.template laplace_ml_beta_theta<DIRECT>();
+        break;
+      default:
+        ptr->optim.template laplace_ml_beta_theta<BOBYQA>();
+      break;
+      }
+    }
   };
   std::visit(functor,model.ptr);
 }

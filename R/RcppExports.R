@@ -257,20 +257,20 @@ Model__ml_theta <- function(xp, algo = 0L, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__ml_theta`, xp, algo, type))
 }
 
-Model__ml_all <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__ml_all`, xp, type))
+Model__ml_all <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__ml_all`, xp, algo, type))
 }
 
-Model__laplace_ml_beta_u <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_u`, xp, type))
+Model__laplace_ml_beta_u <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_u`, xp, algo, type))
 }
 
-Model__laplace_ml_theta <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__laplace_ml_theta`, xp, type))
+Model__laplace_ml_theta <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_theta`, xp, algo, type))
 }
 
-Model__laplace_ml_beta_theta <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_theta`, xp, type))
+Model__laplace_ml_beta_theta <- function(xp, algo = 0L, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__laplace_ml_beta_theta`, xp, algo, type))
 }
 
 Model__nr_beta <- function(xp, type = 0L) {

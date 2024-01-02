@@ -823,46 +823,50 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__ml_all
-void Model__ml_all(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__ml_all(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__ml_all(SEXP xp, int algo, int type);
+RcppExport SEXP _glmmrBase_Model__ml_all(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type algo(algoSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__ml_all(xp, type);
+    Model__ml_all(xp, algo, type);
     return R_NilValue;
 END_RCPP
 }
 // Model__laplace_ml_beta_u
-void Model__laplace_ml_beta_u(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__laplace_ml_beta_u(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__laplace_ml_beta_u(SEXP xp, int algo, int type);
+RcppExport SEXP _glmmrBase_Model__laplace_ml_beta_u(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type algo(algoSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__laplace_ml_beta_u(xp, type);
+    Model__laplace_ml_beta_u(xp, algo, type);
     return R_NilValue;
 END_RCPP
 }
 // Model__laplace_ml_theta
-void Model__laplace_ml_theta(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__laplace_ml_theta(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__laplace_ml_theta(SEXP xp, int algo, int type);
+RcppExport SEXP _glmmrBase_Model__laplace_ml_theta(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type algo(algoSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__laplace_ml_theta(xp, type);
+    Model__laplace_ml_theta(xp, algo, type);
     return R_NilValue;
 END_RCPP
 }
 // Model__laplace_ml_beta_theta
-void Model__laplace_ml_beta_theta(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__laplace_ml_beta_theta(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__laplace_ml_beta_theta(SEXP xp, int algo, int type);
+RcppExport SEXP _glmmrBase_Model__laplace_ml_beta_theta(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type algo(algoSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__laplace_ml_beta_theta(xp, type);
+    Model__laplace_ml_beta_theta(xp, algo, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1650,10 +1654,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__test_lbfgs_theta", (DL_FUNC) &_glmmrBase_Model__test_lbfgs_theta, 2},
     {"_glmmrBase_Model__ml_beta", (DL_FUNC) &_glmmrBase_Model__ml_beta, 3},
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 3},
-    {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 2},
-    {"_glmmrBase_Model__laplace_ml_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_u, 2},
-    {"_glmmrBase_Model__laplace_ml_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_theta, 2},
-    {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 2},
+    {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 3},
+    {"_glmmrBase_Model__laplace_ml_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_u, 3},
+    {"_glmmrBase_Model__laplace_ml_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_theta, 3},
+    {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 3},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 2},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 2},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},

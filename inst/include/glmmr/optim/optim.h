@@ -14,7 +14,8 @@
 #include <tuple>
 #include "bobyqa_algo.h"
 #include "newuoa.h"
-#include "lbgfs.h"
+#include "lbfgs.h"
+#include "lbfgsb.h"
 #ifdef R_BUILD
 #include <Rcpp.h> // for printing to R
 #endif
@@ -941,9 +942,11 @@ public:
   template<auto Function, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<double, decltype(Function), Class*, const VectorXd&, VectorXd& > > >
   void                fn(Class* cls);
 
-  auto                operator()(const VectorXd& vec, VectorXd& g) const -> double;
+  auto                operator()(const VectorXd& vec, VectorXd& g) -> double;
   void                minimise(); // the optim algorithm
   VectorXd            values() const;
+  void                set_bounds(const VectorXd& lower, const VectorXd& upper);
+  void                set_bounds(const std::vector<double>& lower, const std::vector<double>& upper);
   
 private:
   [[noreturn]]
@@ -953,18 +956,46 @@ private:
   func             optim_fn = &null_fn;        // pointer to the function
   size_t           dim;                       // number of dimensions
   double           min_f = 0;                     // current best value
+  VectorXd         lower_bound;               // bounds
+  VectorXd         upper_bound;   
   int              fn_counter = 0;
   int              iter = 0;
   VectorXd         current_values;  
+  bool             bounded = false;
+
   //functions
-  static int       monitor_progress(void *instance, const Eigen::VectorXd &x, const Eigen::VectorXd &g, const double fx, const double step, const int k, const int ls);
+  double           eval(const VectorXd& vec, VectorXd& g);
+  // static int       monitor_progress(void *instance, const Eigen::VectorXd &x, const Eigen::VectorXd &g, const double fx, const double step, const int k, const int ls);
 };
 
 
-inline optim<double(const VectorXd&, VectorXd&),LBFGS>::optim(const VectorXd& start) : dim(start.size()), current_values(start) {};
+inline optim<double(const VectorXd&, VectorXd&),LBFGS>::optim(const VectorXd& start) : dim(start.size()), current_values(start), 
+  lower_bound(dim), upper_bound(dim) {};
 
-inline VectorXd optim<double(const VectorXd&, VectorXd&),LBFGS>::values() const {
+inline VectorXd optim<double(const VectorXd&, VectorXd&),LBFGS>::values() const 
+{
   return current_values;
+}
+
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::set_bounds(const VectorXd& lower, const VectorXd& upper)
+{
+  for(int i = 0; i < dim; i++)
+  {
+    lower_bound(i) = lower(i);
+    upper_bound(i) = upper(i);
+  }
+  bounded = true;
+}
+
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::set_bounds(const std::vector<double>& lower, const std::vector<double>& upper)
+{
+  
+  for(int i = 0; i < dim; i++)
+  {
+    lower_bound(i) = lower[i];
+    upper_bound(i) = upper[i];
+  }
+  bounded = true;
 }
 
 template <auto Function, typename>
@@ -986,54 +1017,85 @@ inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::fn(Class* cls)
   });
 }
 
-inline auto optim<double(const VectorXd&, VectorXd&),LBFGS>::operator()(const VectorXd& vec, VectorXd& g) const -> double
+inline auto optim<double(const VectorXd&, VectorXd&),LBFGS>::operator()(const VectorXd& vec, VectorXd& g) -> double
+{
+  fn_counter++;
+  return std::invoke(optim_fn,optim_instance,vec,g);
+}   
+
+inline double optim<double(const VectorXd&, VectorXd&),LBFGS>::eval(const VectorXd& vec, VectorXd& g) 
 {
   return std::invoke(optim_fn,optim_instance,vec,g);
-}    
+}   
 
-inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise(){
-        lbfgs::lbfgs_parameter_t lbfgs_params;
-        lbfgs_params.g_epsilon = control.g_epsilon;
-        lbfgs_params.past = control.past;
-        lbfgs_params.delta = control.delta;
-        lbfgs_params.max_linesearch = control.max_linesearch;
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
+{
+        // lbfgs::lbfgs_parameter_t lbfgs_params;
+        // lbfgs_params.g_epsilon = control.g_epsilon;
+        // lbfgs_params.past = control.past;
+        // lbfgs_params.delta = control.delta;
+        // lbfgs_params.max_linesearch = control.max_linesearch;
+        int niter;
+        fn_counter = 0;
+        if(!bounded){
+          LBFGSpp::LBFGSParam<double> param;
+          param.epsilon = control.g_epsilon;
+          param.max_linesearch = control.max_linesearch;
+          param.delta = control.delta;
+          param.past = control.past;
+          LBFGSpp::LBFGSSolver<double> solver(param);
+          niter = solver.minimize(*this, current_values, min_f);
+        } else {
+          LBFGSpp::LBFGSBParam<double> param;
+          param.epsilon = control.g_epsilon;
+          param.max_linesearch = control.max_linesearch;
+          param.delta = control.delta;
+          param.past = control.past;
+          LBFGSpp::LBFGSBSolver<double> solver(param);
+          niter = solver.minimize(*this, current_values, min_f, lower_bound, upper_bound);
+        }
 
+        VectorXd g(dim);
+        double a = eval(current_values, g);
         /* Start minimization */
-        int ret = lbfgs::lbfgs_optimize(current_values, min_f, optim_fn, nullptr, monitor_progress, optim_instance, lbfgs_params, &fn_counter);
+        //int ret = lbfgs::lbfgs_optimize(current_values, min_f, optim_fn, nullptr, monitor_progress, optim_instance, lbfgs_params, &fn_counter);
 
 #ifdef R_BUILD
     if(control.trace >= 1)
     {
-      Rcpp::Rcout << std::setprecision(4)
-                  << "================================" << std::endl
-                  << "L-BFGS Optimization Returned: " << ret << std::endl
-                  << "Minimized Cost: " << min_f << std::endl
-                  << "Optimal Variables: " << std::endl
-                  << current_values.transpose() << std::endl;
-      Rcpp::Rcout << "\nEND LBFGS | fn: " << fn_counter ;  
+      Rcpp::Rcout << niter << " iterations with " << fn_counter << " function evaluations" <<  std::endl;
+      Rcpp::Rcout << "x = \n" << current_values.transpose() << std::endl;
+      Rcpp::Rcout << "f(x) = " << min_f << std::endl;
+      // Rcpp::Rcout << std::setprecision(4)
+      //             << "================================" << std::endl
+      //             << "L-BFGS Optimization Returned: " << ret << std::endl
+      //             << "Minimized Cost: " << min_f << std::endl
+      //             << "Optimal Variables: " << std::endl
+      //             << current_values.transpose() << std::endl;
+      // Rcpp::Rcout << "\nEND LBFGS | fn: " << fn_counter ;  
     }
 #endif
 }
 
-inline int optim<double(const VectorXd&, VectorXd&),LBFGS>::monitor_progress(void *instance,
-                               const VectorXd &x,
-                               const VectorXd &g,
-                               const double fx,
-                               const double step,
-                               const int k,
-                               const int ls)
-    {
-      #ifdef R_BUILD
-        Rcpp::Rcout << std::setprecision(4)
-                      << "================================" << std::endl
-                      << "Iteration: " << k << std::endl
-                      << "Function Value: " << fx << std::endl
-                      << "Gradient Inf Norm: " << g.cwiseAbs().maxCoeff() << std::endl
-                      << "Variables: " << std::endl
-                      << x.transpose() << std::endl; 
-    #endif
-        return 0;
-    }
+// inline int optim<double(const VectorXd&, VectorXd&),LBFGS>::monitor_progress(void *instance,
+//                                const VectorXd &x,
+//                                const VectorXd &g,
+//                                const double fx,
+//                                const double step,
+//                                const int k,
+//                                const int ls)
+//     {
+//       #ifdef R_BUILD
+//         Rcpp::Rcout << std::setprecision(4)
+//                       << "================================" << std::endl
+//                       << "Iteration: " << k << std::endl
+//                       << "Function Value: " << fx << std::endl
+//                       << "Gradient Inf Norm: " << g.cwiseAbs().maxCoeff() << std::endl
+//                       << "Variables: " << std::endl
+//                       << x.transpose() << std::endl; 
+//     #endif
+//         return 0;
+//     }
 
 typedef optim<double(const std::vector<double>&),DIRECT> directd;
 typedef optim<float(const std::vector<float>&),DIRECT> directf;
