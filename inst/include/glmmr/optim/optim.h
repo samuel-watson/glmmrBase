@@ -13,6 +13,9 @@
 #include <memory>
 #include <tuple>
 #include "bobyqa_algo.h"
+#include "newuoa.h"
+#include "lbfgs.h"
+#include "lbfgsb.h"
 #ifdef R_BUILD
 #include <Rcpp.h> // for printing to R
 #endif
@@ -20,6 +23,8 @@
 class optim_algo {};
 class BOBYQA : public optim_algo {};
 class DIRECT : public optim_algo {};
+class NEWUOA : public optim_algo {};
+class LBFGS : public optim_algo {};
 
 enum class Position {
   Lower,
@@ -90,6 +95,7 @@ public:
   // if starting vals is true, it assumes x is a vector of starting values, and y sets the bounds by adding +/- either side of x
   // otherwise it assumes x is a lower bound, and y is an upper bound
   optim(const std::vector<T>& x, const std::vector<T>& y, bool starting_vals = true);
+  optim(const std::vector<T>& x);
   optim(const optim& x) = default;
   auto operator=(const optim& x) -> optim& = default;
   
@@ -214,6 +220,9 @@ inline optim<T(const std::vector<T>&),DIRECT>::optim(const std::vector<T>& x, co
 {
   set_bounds(x,y,starting_vals);
 };
+
+template <typename T>
+inline optim<T(const std::vector<T>&),DIRECT>::optim(const std::vector<T>& x) : dim(x.size()), current_values(x) {};
 
 template <typename T>
 inline std::vector<T> optim<T(const std::vector<T>&),DIRECT>::values() const 
@@ -759,7 +768,305 @@ inline void optim<T(const std::vector<T>&),BOBYQA>::update_msg(int res) {
     }
   }
 
+
+  // class for newuoa
+template <typename T>
+class optim<T(const std::vector<T>&),NEWUOA> {
+  using func = T(*)(void*, long, const T*); 
+public:
+  struct optimControl {
+    int npt = 0;
+    double rhobeg = 0.0;
+    double rhoend = 0.0;
+    int trace = 0;
+    int maxfun = 0;
+  } control;
+  
+  optim(){};
+  optim(const std::vector<T>& start);
+  optim(const optim& x) = default;
+  auto operator=(const optim& x) -> optim& = default;
+  
+  // functions
+  // the two functions fn() enable capturing of functions to use in the algorithm
+  template<auto Function, typename = std::enable_if_t<std::is_invocable_r_v<T, decltype(Function), const std::vector<T>& > > >
+  void    fn();
+  template<auto Function, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<T, decltype(Function), Class*, const std::vector<T>& > > >
+  void    fn(Class* cls);
+  
+  void    set_bounds(const std::vector<T>& lower, const std::vector<T>& upper);
+  void    set_bounds(const std::vector<T>& bound, bool lower = true);
+  auto    operator()(const std::vector<T>& vec) const -> T;
+  void    minimise(); // the optim algorithm
+  std::vector<T> values() const;
+  
+private:
+  [[noreturn]]
+  static auto null_fn(void* p, long n, const T* x) -> T {throw std::exception{};}
+  
+  void*                   optim_instance = nullptr;  // pointer to the class if a member function
+  func                    optim_fn = &null_fn;        // pointer to the function
+  size_t                  dim;                       // number of dimensions
+  std::vector<T>          lower_bound;               // bounds
+  std::vector<T>          upper_bound;   
+  T                       min_f;                     // current best value
+  int                     fn_counter = 0;
+  int                     iter = 0;
+  std::vector<T>          current_values;
+  
+  //functions
+  auto            eval(const std::vector<T>& vec) -> T;
+};
+
+
+template <typename T>
+inline optim<T(const std::vector<T>&),NEWUOA>::optim(const std::vector<T>& start) {
+  dim = start.size();
+  current_values.resize(dim);
+  current_values = start;
+}
+
+template <typename T>
+inline std::vector<T> optim<T(const std::vector<T>&),NEWUOA>::values() const {
+  return current_values;
+}
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),NEWUOA>::set_bounds(const std::vector<T>& lower, const std::vector<T>& upper) {
+  lower_bound.resize(dim);
+  upper_bound.resize(dim);
+  lower_bound = lower; 
+  upper_bound = upper;
+};
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),NEWUOA>::set_bounds(const std::vector<T>& bound, bool lower) {
+  if(lower){
+    lower_bound.resize(dim);
+    lower_bound = bound;
+  } else {
+    upper_bound.resize(dim);
+    upper_bound = bound;
+  }
+};
+
+template <typename T>
+template <auto Function, typename>
+inline void optim<T(const std::vector<T>&),NEWUOA>::fn() 
+{
+  optim_instance = nullptr;
+  optim_fn = static_cast<func>([](void*, long n, const T* x) -> T {
+    return std::invoke(Function, std::vector<T>(x,x+n));
+  });
+};
+
+template <typename T>
+template<auto Function, typename Class, typename>
+inline void optim<T(const std::vector<T>&),NEWUOA>::fn(Class* cls)
+{
+  optim_instance = cls;
+  optim_fn = static_cast<func>([](void* p, long n, const T* x) -> T {
+    auto* c = static_cast<Class*>(p);
+    return std::invoke(Function,c,std::vector<T>(x,x+n));
+  });
+}
+
+template <typename T>
+inline auto optim<T(const std::vector<T>&),NEWUOA>::operator()(const std::vector<T>& vec) const -> T
+{
+  return std::invoke(optim_fn,optim_instance,vec.size(),vec.data());
+}    
+
+template <typename T>
+inline void optim<T(const std::vector<T>&),NEWUOA>::minimise(){
+    fn_counter = 0;
+#ifndef R_BUILD
+    double R_NegInf = -1.0 * std::numeric_limits<double>::infinity();
+    double R_PosInf = std::numeric_limits<double>::infinity();
+#endif
+    if (!control.npt) control.npt = std::min(dim + 2, (dim+2)*(dim+1)/2);     
+    if(lower_bound.empty()){
+      lower_bound.resize(dim);
+      for(int i = 0; i< dim; i++) lower_bound[i] = R_NegInf;
+    }    
+    if(upper_bound.empty()){
+      upper_bound.resize(dim);
+      for(int i = 0; i< dim; i++)upper_bound[i] = R_PosInf;
+    }
+    double max_par = *std::max_element(current_values.begin(),current_values.end());
+    if (!control.rhobeg) control.rhobeg = std::min(0.95, 0.2*max_par);
+    if (!control.rhoend) control.rhoend = 1.0e-6 * control.rhobeg;    
+    if (!control.maxfun) control.maxfun = 10000;
+    std::vector<double> w;
+    w.resize((control.npt + 5) * (control.npt + dim) + (3 * dim * (dim + 5))/2);   
+    auto closure = NewuoaClosure{optim_instance, optim_fn};
+    fn_counter = 0;
+    double result = newuoa_closure( &closure, dim, control.npt, current_values.data(), control.rhobeg, control.rhoend, control.maxfun, w.data(), &fn_counter);
+    min_f = eval(current_values);
+#ifdef R_BUILD
+    if(control.trace >= 1)
+    {
+      Rcpp::Rcout << "\nEND NEWUOA | fn: " << fn_counter ;  
+    }
+#endif
+}
+
+template <typename T>
+inline auto optim<T(const std::vector<T>&),NEWUOA>::eval(const std::vector<T>& vec) -> T
+{   
+  fn_counter++;
+  return std::invoke(optim_fn, optim_instance, vec.size(), vec.data());
+}
+
+// class for L-BFGS
+template <>
+class optim<double(const VectorXd&, VectorXd&),LBFGS> {
+  using func = double(*)(void*, const VectorXd&, VectorXd&); 
+public:
+  struct optimControl {
+    double g_epsilon = 1.0e-8;
+    double past = 3;
+    double delta = 1.0e-8;
+    int max_linesearch = 64;
+    int trace = 0;
+  } control;
+  
+  optim(const VectorXd& start);
+  optim(const optim& x) = default;
+  auto operator=(const optim& x) -> optim& = default;
+  
+  // functions
+  // the two functions fn() enable capturing of functions to use in the algorithm
+  template<auto Function, typename = std::enable_if_t<std::is_invocable_r_v<double, decltype(Function), const VectorXd&, VectorXd& > > >
+  void                fn();
+  template<auto Function, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<double, decltype(Function), Class*, const VectorXd&, VectorXd& > > >
+  void                fn(Class* cls);
+
+  auto                operator()(const VectorXd& vec, VectorXd& g) -> double;
+  void                minimise(); // the optim algorithm
+  VectorXd            values() const;
+  void                set_bounds(const VectorXd& lower, const VectorXd& upper);
+  void                set_bounds(const std::vector<double>& lower, const std::vector<double>& upper);
+  
+private:
+  [[noreturn]]
+  static auto null_fn(void* p, const VectorXd& x, VectorXd& g) -> double {throw std::exception{};}
+  
+  void*            optim_instance = nullptr;  // pointer to the class if a member function
+  func             optim_fn = &null_fn;        // pointer to the function
+  size_t           dim;                       // number of dimensions
+  double           min_f = 0;                     // current best value
+  VectorXd         lower_bound;               // bounds
+  VectorXd         upper_bound;   
+  int              fn_counter = 0;
+  int              iter = 0;
+  VectorXd         current_values;  
+  bool             bounded = false;
+
+  //functions
+  double           eval(const VectorXd& vec, VectorXd& g);
+  // static int       monitor_progress(void *instance, const Eigen::VectorXd &x, const Eigen::VectorXd &g, const double fx, const double step, const int k, const int ls);
+};
+
+
+inline optim<double(const VectorXd&, VectorXd&),LBFGS>::optim(const VectorXd& start) : dim(start.size()), current_values(start), 
+  lower_bound(dim), upper_bound(dim) {};
+
+inline VectorXd optim<double(const VectorXd&, VectorXd&),LBFGS>::values() const 
+{
+  return current_values;
+}
+
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::set_bounds(const VectorXd& lower, const VectorXd& upper)
+{
+  for(int i = 0; i < dim; i++)
+  {
+    lower_bound(i) = lower(i);
+    upper_bound(i) = upper(i);
+  }
+  bounded = true;
+}
+
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::set_bounds(const std::vector<double>& lower, const std::vector<double>& upper)
+{
+  
+  for(int i = 0; i < dim; i++)
+  {
+    lower_bound(i) = lower[i];
+    upper_bound(i) = upper[i];
+  }
+  bounded = true;
+}
+
+template <auto Function, typename>
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::fn() 
+{
+  optim_instance = nullptr;
+  optim_fn = static_cast<func>([](void*, const VectorXd& x, VectorXd& g) -> double {
+    return std::invoke(Function, x, g);
+  });
+};
+
+template<auto Function, typename Class, typename>
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::fn(Class* cls)
+{
+  optim_instance = cls;
+  optim_fn = static_cast<func>([](void* p, const VectorXd& x, VectorXd& g) -> double {
+    auto* c = static_cast<Class*>(p);
+    return std::invoke(Function,c,x,g);
+  });
+}
+
+inline auto optim<double(const VectorXd&, VectorXd&),LBFGS>::operator()(const VectorXd& vec, VectorXd& g) -> double
+{
+  fn_counter++;
+  return std::invoke(optim_fn,optim_instance,vec,g);
+}   
+
+inline double optim<double(const VectorXd&, VectorXd&),LBFGS>::eval(const VectorXd& vec, VectorXd& g) 
+{
+  return std::invoke(optim_fn,optim_instance,vec,g);
+}   
+
+inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
+{
+        int niter;
+        fn_counter = 0;
+        if(!bounded){
+          LBFGSpp::LBFGSParam<double> param;
+          param.epsilon = control.g_epsilon;
+          param.max_linesearch = control.max_linesearch;
+          param.delta = control.delta;
+          param.past = control.past;
+          LBFGSpp::LBFGSSolver<double> solver(param);
+          niter = solver.minimize(*this, current_values, min_f);
+        } else {
+          LBFGSpp::LBFGSBParam<double> param;
+          param.epsilon = control.g_epsilon;
+          param.max_linesearch = control.max_linesearch;
+          param.delta = control.delta;
+          param.past = control.past;
+          LBFGSpp::LBFGSBSolver<double> solver(param);
+          niter = solver.minimize(*this, current_values, min_f, lower_bound, upper_bound);
+        }
+
+        VectorXd g(dim);
+        double a = eval(current_values, g);
+
+#ifdef R_BUILD
+    if(control.trace >= 1)
+    {
+      Rcpp::Rcout << "\nL-BFGS END: " << niter << " iterations with " << fn_counter-1 << " function evaluations";
+      Rcpp::Rcout << "\nx = " << current_values.transpose();
+      Rcpp::Rcout << "\nf(x) = " << min_f;
+    }
+#endif
+}
+
 typedef optim<double(const std::vector<double>&),DIRECT> directd;
 typedef optim<float(const std::vector<float>&),DIRECT> directf;
 typedef optim<double(const std::vector<double>&),BOBYQA> bobyqad;
 typedef optim<float(const std::vector<float>&),BOBYQA> bobyqaf;
+typedef optim<double(const std::vector<double>&),NEWUOA> newuoad;
+typedef optim<float(const std::vector<float>&),NEWUOA> newuoaf;
+typedef optim<double(const VectorXd&, VectorXd&),LBFGS> lbfgsd;
