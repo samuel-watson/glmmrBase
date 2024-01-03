@@ -520,6 +520,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u_with_g
   double LZWdet = glmmr::maths::logdet(LZWZL);
   g.head(P()) = matrix.log_gradient(v.col(0),true);
   g.tail(Q()) = matrix.log_gradient(v.col(0),false);
+  g.array() *= -1.0;
   return -1.0*(ll - 0.5*logl - 0.5*LZWdet);
 }
 

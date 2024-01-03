@@ -224,7 +224,7 @@ public:
             if (fx - fx_init > step * test_decr || fx >= fx_lo)
             {
                 if (step == step_hi)
-                    throw std::runtime_error("the line search routine failed, possibly due to insufficient numeric precision");
+                    throw std::runtime_error("the line search routine failed, possibly due to insufficient numeric precision (step == step hi)");
 
                 step_hi = step;
                 fx_hi = fx;
@@ -244,7 +244,7 @@ public:
                 }
 
                 if (step == step_lo)
-                    throw std::runtime_error("the line search routine failed, possibly due to insufficient numeric precision");
+                    throw std::runtime_error("the line search routine failed, possibly due to insufficient numeric precision (step == step lo)");
 
                 // If reaching here, then the current step satisfies sufficient decrease condition
                 step_lo = step;

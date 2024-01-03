@@ -736,10 +736,11 @@ Model <- R6::R6Class("Model",
                        #'covariance functions.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
-                       #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta (default), 2 = BOBYQA for both, 3 = L-BFGS for both.
+                       #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
+                       #'may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
-                       #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
+                       #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)
                        #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
@@ -780,7 +781,7 @@ Model <- R6::R6Class("Model",
                                        se = "gls",
                                        usestan = TRUE,
                                        se.theta = TRUE,
-                                       algo = 2,
+                                       algo = 3,
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
@@ -810,16 +811,7 @@ Model <- R6::R6Class("Model",
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
                          }
-                         if(algo == 1){
-                           balgo <- 2
-                           talgo <- 0
-                         } else if(algo == 2){
-                           balgo <- 0
-                           talgo <- 0
-                         } else if(algo == 3){
-                           balgo <- 2
-                           talgo <- 2
-                         }
+                         balgo <- ifelse(algo %in% c(1,3),2,0)
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
@@ -842,7 +834,7 @@ Model <- R6::R6Class("Model",
                              stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                            } else {
-                             if(private$trace >= 1)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                             if(private$trace >= 2)message("If this is the first time running this model, it will be compiled by cmdstan.")
                              model_file <- system.file("stan",
                                                        file_type$file,
                                                        package = "glmmrBase",
@@ -895,7 +887,15 @@ Model <- R6::R6Class("Model",
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }
-                           Model__ml_theta(private$ptr,talgo,private$model_type())
+                           if(algo == 3){
+                             tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
+                                      error = function(e) {
+                                        if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
+                                        Model__ml_theta(private$ptr,0,private$model_type());
+                                      })
+                           } else {
+                             Model__ml_theta(private$ptr,0,private$model_type())
+                           }
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
@@ -1063,6 +1063,7 @@ Model <- R6::R6Class("Model",
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
+                       #'@param algo Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
@@ -1096,6 +1097,7 @@ Model <- R6::R6Class("Model",
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
+                                     algo = 1,
                                      lower.bound = NULL,
                                      upper.bound = NULL,
                                      lower.bound.theta = NULL,
@@ -1136,7 +1138,16 @@ Model <- R6::R6Class("Model",
                            if(method=="nr"){
                              Model__laplace_nr_beta_u(private$ptr,private$model_type())
                            } else {
-                             Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
+                             balgo <- ifelse(algo == 1, 2, 0)
+                             if(algo == 1){
+                               tryCatch(Model__laplace_ml_beta_u(private$ptr,2,private$model_type()),
+                                         error = function(e) {
+                                           if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
+                                           Model__laplace_ml_beta_u(private$ptr,0,private$model_type());
+                                           })
+                             } else {
+                               Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
+                             }
                            }
                            Model__laplace_ml_theta(private$ptr,0,private$model_type())
                            beta_new <- Model__get_beta(private$ptr,private$model_type())

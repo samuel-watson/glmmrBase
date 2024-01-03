@@ -1030,11 +1030,6 @@ inline double optim<double(const VectorXd&, VectorXd&),LBFGS>::eval(const Vector
 
 inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
 {
-        // lbfgs::lbfgs_parameter_t lbfgs_params;
-        // lbfgs_params.g_epsilon = control.g_epsilon;
-        // lbfgs_params.past = control.past;
-        // lbfgs_params.delta = control.delta;
-        // lbfgs_params.max_linesearch = control.max_linesearch;
         int niter;
         fn_counter = 0;
         if(!bounded){
@@ -1057,45 +1052,16 @@ inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
 
         VectorXd g(dim);
         double a = eval(current_values, g);
-        /* Start minimization */
-        //int ret = lbfgs::lbfgs_optimize(current_values, min_f, optim_fn, nullptr, monitor_progress, optim_instance, lbfgs_params, &fn_counter);
 
 #ifdef R_BUILD
     if(control.trace >= 1)
     {
-      Rcpp::Rcout << niter << " iterations with " << fn_counter << " function evaluations" <<  std::endl;
-      Rcpp::Rcout << "x = \n" << current_values.transpose() << std::endl;
-      Rcpp::Rcout << "f(x) = " << min_f << std::endl;
-      // Rcpp::Rcout << std::setprecision(4)
-      //             << "================================" << std::endl
-      //             << "L-BFGS Optimization Returned: " << ret << std::endl
-      //             << "Minimized Cost: " << min_f << std::endl
-      //             << "Optimal Variables: " << std::endl
-      //             << current_values.transpose() << std::endl;
-      // Rcpp::Rcout << "\nEND LBFGS | fn: " << fn_counter ;  
+      Rcpp::Rcout << "\nL-BFGS END: " << niter << " iterations with " << fn_counter-1 << " function evaluations";
+      Rcpp::Rcout << "\nx = " << current_values.transpose();
+      Rcpp::Rcout << "\nf(x) = " << min_f;
     }
 #endif
 }
-
-// inline int optim<double(const VectorXd&, VectorXd&),LBFGS>::monitor_progress(void *instance,
-//                                const VectorXd &x,
-//                                const VectorXd &g,
-//                                const double fx,
-//                                const double step,
-//                                const int k,
-//                                const int ls)
-//     {
-//       #ifdef R_BUILD
-//         Rcpp::Rcout << std::setprecision(4)
-//                       << "================================" << std::endl
-//                       << "Iteration: " << k << std::endl
-//                       << "Function Value: " << fx << std::endl
-//                       << "Gradient Inf Norm: " << g.cwiseAbs().maxCoeff() << std::endl
-//                       << "Variables: " << std::endl
-//                       << x.transpose() << std::endl; 
-//     #endif
-//         return 0;
-//     }
 
 typedef optim<double(const std::vector<double>&),DIRECT> directd;
 typedef optim<float(const std::vector<float>&),DIRECT> directf;
