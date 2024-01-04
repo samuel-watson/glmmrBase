@@ -290,7 +290,7 @@ void Model__laplace_ml_theta(SEXP xp, int algo = 0, int type = 0){
         ptr->optim.template laplace_ml_theta<NEWUOA>();
         break;
       case 2:
-        Rcpp::stop("L-BGFS(-B) is not available for Laplace theta optimisation");
+        ptr->optim.template laplace_ml_theta<LBFGS>();
         break;
       case 3:
         ptr->optim.template laplace_ml_theta<DIRECT>();

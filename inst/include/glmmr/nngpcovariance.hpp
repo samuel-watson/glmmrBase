@@ -9,31 +9,33 @@ using namespace Eigen;
 
 class nngpCovariance : public Covariance {
 public:
-  glmmr::griddata grid;
-  MatrixXd A;
-  VectorXd Dvec;
-  int m = 10;
+  glmmr::griddata   grid;
+  MatrixXd          A;
+  VectorXd          Dvec;
+  int               m = 10;
+
   nngpCovariance(const glmmr::Formula& formula,const ArrayXXd &data,const strvec& colnames,const dblvec& parameters);
   nngpCovariance(const glmmr::Formula& formula,const ArrayXXd &data,const strvec& colnames);
   nngpCovariance(const glmmr::nngpCovariance& cov);
-  MatrixXd D(bool chol = true, bool upper = false) override;
-  MatrixXd ZL() override;
-  MatrixXd LZWZL(const VectorXd& w) override;
-  MatrixXd ZLu(const MatrixXd& u) override;
-  MatrixXd Lu(const MatrixXd& u) override;
-  VectorXd sim_re() override;
-  sparse ZL_sparse() override;
-  int Q() const override;
-  double log_likelihood(const VectorXd &u) override;
-  double log_determinant() override;
-  void gen_AD();
-  void gen_NN(int nn);
-  void update_parameters(const dblvec& parameters) override;
-  void update_parameters(const ArrayXd& parameters) override;
-  void update_parameters_extern(const dblvec& parameters) override;
-  VectorMatrix submatrix(int i);
-  MatrixXd inv_ldlt_AD(const MatrixXd &A,const VectorXd &D,const ArrayXXi &NN);
-  void parse_grid_data(const ArrayXXd &data);
+
+  MatrixXd      D(bool chol = true, bool upper = false) override;
+  MatrixXd      ZL() override;
+  MatrixXd      LZWZL(const VectorXd& w) override;
+  MatrixXd      ZLu(const MatrixXd& u) override;
+  MatrixXd      Lu(const MatrixXd& u) override;
+  VectorXd      sim_re() override;
+  sparse        ZL_sparse() override;
+  int           Q() const override;
+  double        log_likelihood(const VectorXd &u) override;
+  double        log_determinant() override;
+  void          gen_AD();
+  void          gen_NN(int nn);
+  void          update_parameters(const dblvec& parameters) override;
+  void          update_parameters(const ArrayXd& parameters) override;
+  void          update_parameters_extern(const dblvec& parameters) override;
+  VectorMatrix  submatrix(int i);
+  MatrixXd      inv_ldlt_AD(const MatrixXd &A,const VectorXd &D,const ArrayXXi &NN);
+  void          parse_grid_data(const ArrayXXd &data);
   
 };
 
@@ -64,7 +66,8 @@ grid(cov.grid), A(grid.m,grid.N), Dvec(grid.N), m(cov.m) {
   gen_AD();
 }
 
-inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data){
+inline void glmmr::nngpCovariance::parse_grid_data(const ArrayXXd &data)
+{
   int dim = this->block_nvar[0];
   ArrayXXd grid_data(data.rows(),dim);
   for(int i = 0; i < dim; i++){
@@ -162,7 +165,8 @@ inline double glmmr::nngpCovariance::log_determinant(){
   return Dvec.array().log().sum();
 }
 
-inline void glmmr::nngpCovariance::gen_AD(){
+inline void glmmr::nngpCovariance::gen_AD()
+{
   A.setZero();
   Dvec.setZero();
   double val = Covariance::get_val(0,0,0);
@@ -190,7 +194,8 @@ inline void glmmr::nngpCovariance::gen_AD(){
   }
 }
 
-inline VectorMatrix glmmr::nngpCovariance::submatrix(int i){
+inline VectorMatrix glmmr::nngpCovariance::submatrix(int i)
+{
   int idxlim = i <= m ? i : m;
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
@@ -216,19 +221,22 @@ inline VectorMatrix glmmr::nngpCovariance::submatrix(int i){
   return result;
 }
 
-inline void glmmr::nngpCovariance::update_parameters(const dblvec& parameters){
+inline void glmmr::nngpCovariance::update_parameters(const dblvec& parameters)
+{
   parameters_ = parameters;
   update_parameters_in_calculators();
   gen_AD();
 }
 
-inline void glmmr::nngpCovariance::update_parameters_extern(const dblvec& parameters){
+inline void glmmr::nngpCovariance::update_parameters_extern(const dblvec& parameters)
+{
   parameters_ = parameters;
   update_parameters_in_calculators();
   gen_AD();
 }
 
-inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters){
+inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters)
+{
   if(parameters_.size()==0){
     for(unsigned int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
@@ -245,7 +253,8 @@ inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters){
 
 inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A, 
                                                  const VectorXd &D,
-                                                 const ArrayXXi &NN){
+                                                 const ArrayXXi &NN)
+                                                 {
   int n = A.cols();
   int m = A.rows();
   MatrixXd y = MatrixXd::Zero(n,n);

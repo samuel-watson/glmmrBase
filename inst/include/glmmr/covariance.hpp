@@ -22,6 +22,7 @@ public:
   const strvec    colnames_;
   dblvec          parameters_;
   dblvec          other_pars_;
+
   // constructors
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames);
@@ -30,6 +31,7 @@ public:
   Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Formula& form,const ArrayXXd &data,const strvec& colnames,const ArrayXd& parameters);
   Covariance(const glmmr::Covariance& cov);
+
   // functions
   virtual void      update_parameters(const dblvec& parameters);
   virtual void      update_parameters_extern(const dblvec& parameters);
@@ -657,16 +659,15 @@ inline VectorXd glmmr::Covariance::sim_re(){
       MatrixXd L = get_chol_block(i);
       ndim = block_dim(i);//re_data_[i].rows();
       VectorXd zz(ndim);      
-      randomGaussian(generator, zz);
+      glmmr::randomGaussian(generator, zz);
       samps.segment(idx,ndim) = L*zz;
       idx += ndim;
     }
   } else {
     VectorXd zz(Q_);
-    randomGaussian(generator, zz);
+    glmmr::randomGaussian(generator, zz);
     samps = SparseOperators::operator*(matL, zz);
-  }
-  
+  }  
   return samps;
 }
 

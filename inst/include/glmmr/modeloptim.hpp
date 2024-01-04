@@ -232,7 +232,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
     } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
       op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta, glmmr::ModelOptim<bits_hsgp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_hsgp, glmmr::ModelOptim<bits_hsgp> >(this);
     }
     op.minimise();
   }
@@ -328,35 +328,54 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_u(){
 
 template<typename modeltype>
 template<class algo, typename>
-inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta(){
-  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.conservativeResize(NoChange,re.u_.cols());
-  re.scaled_u_ = model.covariance.Lu(re.u_);
+inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta()
+{
+  
   dblvec start = get_start_values(false,true,false);  
   dblvec lower = get_lower_values(false,true,false);
   dblvec upper = get_upper_values(false,true,false);
-  optim<double(const std::vector<double>&),algo> op(start);
-  if constexpr (std::is_same_v<algo,DIRECT>) {
-    op.set_bounds(start,dblvec(start.size(),1.0),true);
-    set_direct_control(op);
-  } else if constexpr (std::is_same_v<algo,BOBYQA>) {
-    set_bobyqa_control(op);
-  } else if constexpr (std::is_same_v<algo,NEWUOA>) {
-    set_newuoa_control(op);
-  } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    #ifdef R_BUILD
-      Rcpp::stop("L-BFGS not available for Laplace theta optimisation");
-    #endif
+
+  if constexpr (std::is_same_v<algo,LBFGS>){
+    if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.conservativeResize(NoChange,re.u_.cols());
+    re.scaled_u_ = model.covariance.Lu(re.u_);
+    VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
+    optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
+    op.set_bounds(lower,upper);
+    set_lbfgs_control(op);
+      if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits> >(this);
+    } else {
+      throw std::runtime_error("L-BFGS not available for approximate covariance");
+    }
+    op.minimise();
+  } else {
+     optim<double(const std::vector<double>&),algo> op(start);
+    if constexpr (std::is_same_v<algo,DIRECT>) {
+      op.set_bounds(start,dblvec(start.size(),1.0),true);
+      set_direct_control(op);
+    } else if constexpr (std::is_same_v<algo,BOBYQA>) {
+      set_bobyqa_control(op);
+    } else if constexpr (std::is_same_v<algo,NEWUOA>) {
+      set_newuoa_control(op);
+    } else if constexpr (std::is_same_v<algo,LBFGS>) {
+      #ifdef R_BUILD
+        Rcpp::stop("L-BFGS not available for Laplace theta optimisation");
+      #endif
+    }
+    op.set_bounds(lower,upper);
+    if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_nngp> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_hsgp> >(this);
+    }
+    op.minimise();
   }
-  op.set_bounds(lower,upper);
-  if constexpr (std::is_same_v<modeltype,bits>)
-  {
-    op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-    op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_nngp> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-    op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_laplace_theta, glmmr::ModelOptim<bits_hsgp> >(this);
-  }
-  op.minimise();
+
+ 
 }
 
 template<typename modeltype>
@@ -465,7 +484,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const d
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_theta(const dblvec &par){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_theta(const dblvec &par)
+{
   auto start = par.begin();
   auto end1 = par.begin() + P();
   auto end2 = par.begin() + P() + model.covariance.npar();
@@ -482,7 +502,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_theta(co
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& beta){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& beta)
+{
   model.linear_predictor.update_parameters(beta);
   double ll = log_likelihood();
   return -1*ll;
@@ -540,7 +561,7 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
     model.covariance.update_parameters(theta);
     double logl = 0;
-  #pragma omp parallel for reduction (+:logl)
+  #pragma omp parallel for reduction (+:logl) if(re.u_.cols() > 30)
     for(int i = 0; i < re.scaled_u_.cols(); i++)
     {
       logl += model.covariance.log_likelihood(re.scaled_u_.col(i));

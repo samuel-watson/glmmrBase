@@ -1063,7 +1063,7 @@ Model <- R6::R6Class("Model",
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
-                       #'@param algo Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both.
+                       #'@param algo Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both, 3 = L-BFGS for both. Note, L-BFGS will switch to BOBYQA if any derivatives fail.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
@@ -1138,8 +1138,7 @@ Model <- R6::R6Class("Model",
                            if(method=="nr"){
                              Model__laplace_nr_beta_u(private$ptr,private$model_type())
                            } else {
-                             balgo <- ifelse(algo == 1, 2, 0)
-                             if(algo == 1){
+                             if(algo %in% c(1,3)){
                                tryCatch(Model__laplace_ml_beta_u(private$ptr,2,private$model_type()),
                                          error = function(e) {
                                            if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
@@ -1149,7 +1148,15 @@ Model <- R6::R6Class("Model",
                                Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
                              }
                            }
-                           Model__laplace_ml_theta(private$ptr,0,private$model_type())
+                          if(algo == 3){
+                               tryCatch(Model__laplace_ml_theta(private$ptr,2,private$model_type()),
+                                         error = function(e) {
+                                           if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
+                                           Model__laplace_ml_theta(private$ptr,0,private$model_type());
+                                           })
+                             } else {
+                               Model__laplace_ml_theta(private$ptr,0,private$model_type())
+                             }
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
