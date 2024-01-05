@@ -194,6 +194,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     }
     op.minimise();
   }
+  calculate_var_par();
 }
 
 template<typename modeltype>
