@@ -9,7 +9,7 @@
 namespace glmmr {
 
 template<class T>
-T randomGaussian(T generator,
+inline T randomGaussian(T generator,
                  VectorXd& res)
 {
   for (size_t i = 0; i < res.size(); ++i)

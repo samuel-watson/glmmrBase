@@ -159,6 +159,8 @@ void Model__test_lbfgs_theta(SEXP xp, SEXP x){
   Eigen::VectorXd start = as<Eigen::VectorXd>(x);
   Eigen::VectorXd grad(start.size());
   grad.setZero();
+  if(ptr->re.scaled_u_.cols() != ptr->re.u_.cols())ptr->re.scaled_u_.conservativeResize(NoChange,ptr->re.u_.cols());
+  ptr->re.scaled_u_ = ptr->model.covariance.Lu(ptr->re.u_);  
   double ll = ptr->optim.log_likelihood_theta_with_gradient(start,grad);
   Rcpp::Rcout << "\nStart: " << start.transpose();
   Rcpp::Rcout << "\nGradient: " << grad.transpose();

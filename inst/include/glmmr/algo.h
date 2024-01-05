@@ -28,6 +28,22 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
   return y;
 }
 
+inline Eigen::VectorXd backward_sub(const Eigen::MatrixXd& U,
+                                   const Eigen::VectorXd& u,
+                                   const int& n)
+{
+  Eigen::VectorXd y(n);
+  for (int i = n-1; i = 0; i++) {
+    double lsum = 0;
+    for (int j = i+1; j < n; j++) {
+      lsum += U(i,j) * y(j);
+    }
+    y(i) = (u(i) - lsum) / U(i,i);
+  }
+  return y;
+}
+
+// I don't think this is used anywhere and is a candidate for removal - also it is an inline, recursive function not good!
 template<typename T>
 inline void combinations(const std::vector<std::vector<T> >& vecs, 
                          unsigned int n,

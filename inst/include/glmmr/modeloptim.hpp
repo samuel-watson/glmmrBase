@@ -561,14 +561,8 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
     model.covariance.update_parameters(theta);
     double logl = 0;
-  #pragma omp parallel for reduction (+:logl) if(re.u_.cols() > 30)
-    for(int i = 0; i < re.scaled_u_.cols(); i++)
-    {
-      logl += model.covariance.log_likelihood(re.scaled_u_.col(i));
-    }
-    g = model.covariance.log_gradient(re.scaled_u_);
-    g.array() *= -1.0;
-    return -1*logl/re.u_.cols();
+    g = model.covariance.log_gradient(re.scaled_u_, logl);
+    return -1*logl;
 }
 
 template<typename modeltype>
