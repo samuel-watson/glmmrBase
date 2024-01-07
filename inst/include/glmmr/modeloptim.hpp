@@ -83,7 +83,6 @@ public:
   double          log_likelihood_beta_with_gradient(const VectorXd &beta, VectorXd& g);
   double          log_likelihood_theta(const dblvec &theta);
   double          log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g);
-  double          log_likelihood_theta_hsgp(const dblvec &theta);
   double          log_likelihood_all(const dblvec &par);
   double          log_likelihood_laplace_beta_u(const dblvec &par);
   double          log_likelihood_laplace_beta_u_with_gradient(const VectorXd& theta, VectorXd& g);
@@ -210,8 +209,14 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec); 
     op.set_bounds(lower,upper);
     set_lbfgs_control(op);
-    // L-BFGS only possible with non-approximate covariance here (currently)
-    if constexpr (std::is_same_v<modeltype,bits>) op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits> >(this);
+    if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits_nngp> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_with_gradient, glmmr::ModelOptim<bits_hsgp> >(this);
+    }
     op.minimise();
   } else {
     optim<double(const std::vector<double>&),algo> op(start);
@@ -233,7 +238,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
     } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
       op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_theta, glmmr::ModelOptim<bits_nngp> >(this);
     } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_hsgp, glmmr::ModelOptim<bits_hsgp> >(this);
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta, glmmr::ModelOptim<bits_hsgp> >(this);
     }
     op.minimise();
   }
@@ -513,10 +518,6 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& be
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(const VectorXd& beta, VectorXd& g){
   model.linear_predictor.update_parameters(beta.array());
-  // MatrixXd J = model.calc.jacobian(re.zu_);
-  // g = J.rowwise().sum();
-  // VectorXd v = re.u_.rowwise().mean();
-  // g.setZero();
   MatrixXd grad(g.size(),re.u_.cols());
 #pragma omp parallel for
   for(int i = 0; i < re.u_.cols(); i++)
@@ -560,14 +561,47 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
-    model.covariance.update_parameters(theta);
+    model.covariance.update_parameters(theta.array());
     double logl = 0;
     g = model.covariance.log_gradient(re.scaled_u_, logl);
     return -1*logl;
 }
 
-template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_hsgp(const dblvec& theta){
+template<>
+inline double glmmr::ModelOptim<bits_nngp>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
+    model.covariance.update_parameters_d(theta.array());
+    double logl = 0;
+    g = model.covariance.log_gradient(re.scaled_u_, logl);
+    return -1*logl;
+}
+
+template<>
+inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g)
+{
+// THIS NEEDS REWORKING - L-BFGS-B THETA IS NOT INCLUDED IN v0.6.1
+throw std::runtime_error("No L-BFGS-B with HSGP");
+//   model.covariance.update_parameters(theta.array());
+//   double ll = log_likelihood();
+//   ArrayXd xb = model.xb();
+//   MatrixXd grad(2,re.u_.cols());
+//   MatrixXd ZLd0 = model.covariance.ZL_deriv(0);
+//   MatrixXd ZLd1 = model.covariance.ZL_deriv(1);
+//   int niter = re.u_.cols();
+// #pragma omp parallel for if(niter > 30)
+//   for(int i = 0; i < niter; i++)
+//   { 
+//     ArrayXd mu = xb + re.zu_.col(i).array();
+//     mu = mu.exp();    
+//     grad(0,i) = ( (model.data.y-mu.matrix()) * (re.u_.col(i).transpose()) * ZLd0.transpose()).trace();
+//     grad(1,i) = ( (model.data.y-mu.matrix()) * (re.u_.col(i).transpose()) * ZLd1.transpose()).trace();
+//   }  
+//   g = grad.rowwise().mean();
+//   g.array() *= -1.0;
+//   return -1.0*ll;
+}
+
+template<>
+inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& theta){
   model.covariance.update_parameters(theta);
   double ll = log_likelihood();
   return -1*ll;
@@ -714,8 +748,10 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
   if(bound.size()!=P())Rcpp::stop("Bound not equal to number of parameters");
 #endif
   if(lower){
+    if(lower_bound.size() != bound.size())lower_bound.resize(P());
     lower_bound = bound; 
   } else {
+    if(upper_bound.size() != bound.size())upper_bound.resize(P());
     upper_bound = bound;
   }
 }
