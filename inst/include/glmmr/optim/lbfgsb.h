@@ -117,7 +117,7 @@ public:
     /// \return Number of iterations used.
     ///
     template <typename Foo>
-    inline int minimize(Foo& f, Vector& x, Scalar& fx, const Vector& lb, const Vector& ub)
+    inline int minimize(Foo& f, Vector& x, Scalar& fx, const Vector& lb, const Vector& ub, int trace)
     {
         using std::abs;
 
@@ -259,6 +259,13 @@ public:
             std::cout << "f(xsm) = " << fsm << ", ||proj_grad|| = " << projgsmnorm << std::endl << std::endl;*/
 
             k++;
+
+            #ifdef R_BUILD
+            if(trace >= 2)
+            {
+                Rcpp::Rcout << "\nL-BFGS-B iteration " << k << " x = " << x.transpose() << " f(x) = " << fx;
+            }
+            #endif 
         }
 
         return k;

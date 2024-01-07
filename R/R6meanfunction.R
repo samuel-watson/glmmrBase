@@ -131,7 +131,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                           #' @description 
                           #' Returns or replaces the column names of the data in the object
                           #' 
-                          #' @param names If NULL then the function prints the column names, if a vector of names, then it attemps to 
+                          #' @param names If NULL then the function prints the column names, if a vector of names, then it attempts to 
                           #' replace the current column names of the data
                           #' @examples 
                           #' \dontshow{
@@ -190,6 +190,13 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             if(is(xb,"matrix"))xb <- drop(xb)
                             if(is(xb,"Matrix"))xb <- Matrix::drop(xb)
                             return(xb)
+                          },
+                          #' @description
+                          #' Returns a logical indicating whether the mean function contains non-linear functions of model parameters.
+                          #' Mainly used internally.
+                          #' @return None. Called for effects
+                          any_nonlinear = function(){
+                            return(Linpred__any_nonlinear(private$ptr))
                           }
                         ),
                         private = list(

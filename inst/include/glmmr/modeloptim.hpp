@@ -95,6 +95,7 @@ protected:
   dblvec          upper_bound; // bounds for beta
   dblvec          lower_bound_theta;
   dblvec          upper_bound_theta; // bounds for beta
+  bool            beta_bounded = false;
   // functions
   void            calculate_var_par();
   dblvec          get_start_values(bool beta, bool theta, bool var = true);
@@ -152,12 +153,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
     set_lbfgs_control(op);
-    if(lower_bound.size()==P())
-    {
-      dblvec lower = get_lower_values(true,false,false);
-      dblvec upper = get_upper_values(true,false,false);
-      op.set_bounds(lower,upper);
-    }
+    if(beta_bounded) op.set_bounds(lower_bound,upper_bound);
       if constexpr (std::is_same_v<modeltype,bits>)
     {
       op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_beta_with_gradient, glmmr::ModelOptim<bits> >(this);
@@ -177,12 +173,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     } else if constexpr (std::is_same_v<algo,NEWUOA>) {
       set_newuoa_control(op);
     }
-    if(lower_bound.size()==P())
-    {
-      dblvec lower = get_lower_values(true,false,false);
-      dblvec upper = get_upper_values(true,false,false);
-      op.set_bounds(lower,upper);
-    }
+    if(beta_bounded) op.set_bounds(lower_bound,upper_bound);
       if constexpr (std::is_same_v<modeltype,bits>)
     {
       op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_beta, glmmr::ModelOptim<bits> >(this);
@@ -420,7 +411,8 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_direct_control(bool direct, double direct_range_beta, int max_iter, double epsilon, bool select_one, bool trisect_once, 
-                                      int max_eval, bool mrdirect){
+                                      int max_eval, bool mrdirect)
+                                      {
   control.direct = direct;
   control.max_iter_direct = max_iter;
   control.epsilon = epsilon;
@@ -432,7 +424,8 @@ inline void glmmr::ModelOptim<modeltype>::set_direct_control(bool direct, double
  }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(double g_epsilon, int past, double delta, int max_linesearch){
+inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(double g_epsilon, int past, double delta, int max_linesearch)
+{
   control.g_epsilon = g_epsilon;
   control.past = past;
   control.delta = delta;
@@ -440,7 +433,8 @@ inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(double g_epsilon, in
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par)
+{
   int G = model.covariance.npar();
   auto first = par.begin();
   auto last1 = par.begin() + P();
@@ -462,7 +456,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par
 
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u(const dblvec &par){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u(const dblvec &par)
+{
   auto start = par.begin();
   auto end = par.begin() + P();
   dblvec beta(start,end);
@@ -479,7 +474,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u(const 
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const dblvec &par){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const dblvec &par)
+{
   update_theta(par);
   matrix.W.update();
   double logl = re.u_.col(0).transpose() * re.u_.col(0);
@@ -516,22 +512,19 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& be
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(const VectorXd& beta, VectorXd& g){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(const VectorXd& beta, VectorXd& g)
+{
   model.linear_predictor.update_parameters(beta.array());
-  MatrixXd grad(g.size(),re.u_.cols());
-#pragma omp parallel for
-  for(int i = 0; i < re.u_.cols(); i++)
-  {
-    grad.col(i) = matrix.log_gradient(re.u_.col(i),true);
-  }  
-  g = grad.rowwise().mean();
-  g.array() *= -1.0;
+  g.setZero();
+  for(int i = 0; i < re.u_.cols(); i++) g += matrix.log_gradient(re.u_.col(i),true);
+  g.array() *= -1.0 / (double) re.u_.cols();
   double ll = log_likelihood();
   return -1*ll;
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u_with_gradient(const VectorXd& x, VectorXd& g){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u_with_gradient(const VectorXd& x, VectorXd& g)
+{
   MatrixXd v(Q(),1);
   v.col(0) = x.tail(Q());
   model.linear_predictor.update_parameters(x.head(P()).array());
@@ -548,7 +541,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u_with_g
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& theta){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& theta)
+{
     model.covariance.update_parameters(theta);
     double logl = 0;
   #pragma omp parallel for reduction (+:logl)
@@ -560,7 +554,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
+inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g)
+{
     model.covariance.update_parameters(theta.array());
     double logl = 0;
     g = model.covariance.log_gradient(re.scaled_u_, logl);
@@ -568,7 +563,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(c
 }
 
 template<>
-inline double glmmr::ModelOptim<bits_nngp>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g){
+inline double glmmr::ModelOptim<bits_nngp>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g)
+{
     model.covariance.update_parameters_d(theta.array());
     double logl = 0;
     g = model.covariance.log_gradient(re.scaled_u_, logl);
@@ -633,12 +629,36 @@ inline int glmmr::ModelOptim<modeltype>::Q() const {
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_beta(const dblvec &beta){
-  model.linear_predictor.update_parameters(beta);
+  bool update = true;
+  if(beta_bounded)
+  {
+    for(int i = 0; i < beta.size(); i++)
+    {
+      if(beta[i] < lower_bound[i] || beta[i] > upper_bound[i]) 
+      {
+        update = false;
+        throw std::runtime_error("beta out of bounds");
+      }
+    }
+  }
+  if(update) model.linear_predictor.update_parameters(beta);
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_beta(const VectorXd &beta){
-  model.linear_predictor.update_parameters(beta.array());
+  bool update = true;
+  if(beta_bounded)
+  {
+    for(int i = 0; i < beta.size(); i++)
+    {
+      if(beta(i) < lower_bound[i] || beta(i) > upper_bound[i]) 
+      {
+        update = false;
+        throw std::runtime_error("beta out of bounds");
+      }
+    }
+  }
+  if(update)model.linear_predictor.update_parameters(beta.array());
 }
 
 template<typename modeltype>
@@ -754,6 +774,7 @@ inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lo
     if(upper_bound.size() != bound.size())upper_bound.resize(P());
     upper_bound = bound;
   }
+  beta_bounded = true;
 }
 
 template<typename modeltype>

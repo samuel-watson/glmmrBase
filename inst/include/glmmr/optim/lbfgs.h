@@ -79,7 +79,7 @@ public:
     /// \return Number of iterations used.
     ///
     template <typename Foo>
-    inline int minimize(Foo& f, Vector& x, Scalar& fx)
+    inline int minimize(Foo& f, Vector& x, Scalar& fx, int trace)
     {
         using std::abs;
 
@@ -170,6 +170,12 @@ public:
             // Reset step = 1.0 as initial guess for the next line search
             step = Scalar(1);
             k++;
+        #ifdef R_BUILD
+            if(trace >= 2)
+            {
+            Rcpp::Rcout << "\nL-BFGS iteration " << k << " x = " << x.transpose() << " f(x) = " << fx;
+            }
+        #endif 
         }
 
         return k;

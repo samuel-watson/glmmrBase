@@ -81,7 +81,7 @@ inline void glmmr::Model<modeltype>::set_y(const VectorXd& y_){
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
-  model.linear_predictor.update_parameters(beta_);
+  optim.update_beta(beta_);
 }
 
 template<typename modeltype>

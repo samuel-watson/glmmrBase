@@ -1039,7 +1039,7 @@ inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
           param.delta = control.delta;
           param.past = control.past;
           LBFGSpp::LBFGSSolver<double> solver(param);
-          niter = solver.minimize(*this, current_values, min_f);
+          niter = solver.minimize(*this, current_values, min_f, control.trace);
         } else {
           LBFGSpp::LBFGSBParam<double> param;
           param.epsilon = control.g_epsilon;
@@ -1047,7 +1047,7 @@ inline void optim<double(const VectorXd&, VectorXd&),LBFGS>::minimise()
           param.delta = control.delta;
           param.past = control.past;
           LBFGSpp::LBFGSBSolver<double> solver(param);
-          niter = solver.minimize(*this, current_values, min_f, lower_bound, upper_bound);
+          niter = solver.minimize(*this, current_values, min_f, lower_bound, upper_bound, control.trace);
         }
 
         VectorXd g(dim);

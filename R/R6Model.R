@@ -781,7 +781,7 @@ Model <- R6::R6Class("Model",
                                        se = "gls",
                                        usestan = TRUE,
                                        se.theta = TRUE,
-                                       algo = 3,
+                                       algo = ifelse(self$mean$any_nonlinear(),2,3),
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
@@ -811,7 +811,7 @@ Model <- R6::R6Class("Model",
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
                          }
-                         balgo <- ifelse(algo %in% c(1,3),2,0)
+                         balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
@@ -887,7 +887,7 @@ Model <- R6::R6Class("Model",
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }
-                           if(algo == 3){
+                           if(algo == 3){ #& !self$mean$any_nonlinear()
                              tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
                                       error = function(e) {
                                         if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
@@ -1097,7 +1097,7 @@ Model <- R6::R6Class("Model",
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
-                                     algo = 1,
+                                     algo = ifelse(self$mean$any_nonlinear(),2,1),
                                      lower.bound = NULL,
                                      upper.bound = NULL,
                                      lower.bound.theta = NULL,
@@ -1106,14 +1106,14 @@ Model <- R6::R6Class("Model",
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
-                         if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se=="kr2"||se=="sat"))stop("KR standard errors are not currently available with gamma or beta families")
+                         if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se == "kr2"||se == "sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!is.null(lower.bound)){
-                           Model__set_lower_bound(private$ptr,lower.bound,private$model_type())
+                           Model__set_bound(private$ptr,lower.bound,TRUE,TRUE,private$model_type())
                          }
                          if(!is.null(upper.bound)){
-                           Model__set_upper_bound(private$ptr,upper.bound,private$model_type())
+                           Model__set_bound(private$ptr,upper.bound,TRUE,FALSE,private$model_type())
                          }
                          if(!is.null(lower.bound.theta)){
                            if(any(lower.bound.theta < 0))stop("Theta lower bound cannot be negative")
