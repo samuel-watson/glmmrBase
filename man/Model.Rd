@@ -70,7 +70,8 @@ parameter estimates.
 The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
 tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
 
-Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}.
+Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}. The information printed to the console
+during model fitting can be controlled with the \code{self$set_trace()} function.
 
 To provide weights for the model fitting, store them in self$weights. To set the number of
 trials for binomial models, set self$trials.
@@ -81,7 +82,8 @@ the covariance matrix is approximated using the first order approximation based 
 quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
 can be further adjusted following the proposal of Zeger et al (1988), use the member function \code{use_attenuated()} in this
 class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To
-set the number of trials for binomial models, set self$trials.
+set the number of trials for binomial models, set self$trials. To control the information printed to the console
+during model fitting use the \code{self$set_trace()} function.
 }
 \examples{
 
@@ -339,6 +341,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-calculator_instructions}{\code{Model$calculator_instructions()}}
 \item \href{#method-Model-marginal}{\code{Model$marginal()}}
 \item \href{#method-Model-update_y}{\code{Model$update_y()}}
+\item \href{#method-Model-set_trace}{\code{Model$set_trace()}}
 \item \href{#method-Model-clone}{\code{Model$clone()}}
 }
 }
@@ -441,8 +444,7 @@ Create a new Model object
   var_par = NULL,
   offset = NULL,
   weights = NULL,
-  trials = NULL,
-  verbose = TRUE
+  trials = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -477,8 +479,6 @@ objects, or as members of the list of arguments to \code{mean}. Current accepts 
 
 \item{\code{trials}}{(Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
 default to 1 (a bernoulli model).}
-
-\item{\code{verbose}}{Logical indicating whether to provide detailed output}
 }
 \if{html}{\out{</div>}}
 }
@@ -660,8 +660,6 @@ Updates the parameters of the mean function and/or the covariance function
 \item{\code{cov.pars}}{(Optional) Vector of new covariance function(s) parameters}
 
 \item{\code{var.par}}{(Optional) A scalar value for var_par}
-
-\item{\code{verbose}}{Logical indicating whether to provide more detailed feedback}
 }
 \if{html}{\out{</div>}}
 }
@@ -884,16 +882,18 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
   y,
-  method = "mcnr",
+  method = "mcem",
   sim.lik.step = FALSE,
-  verbose = TRUE,
   tol = 0.01,
   max.iter = 30,
   se = "gls",
   usestan = TRUE,
   se.theta = TRUE,
+  algo = ifelse(self$mean$any_nonlinear(), 2, 3),
   lower.bound = NULL,
-  upper.bound = NULL
+  upper.bound = NULL,
+  lower.bound.theta = NULL,
+  upper.bound.theta = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -906,8 +906,6 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
 
 \item{\code{sim.lik.step}}{Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
 not do this step), defaults to FALSE.}
-
-\item{\code{verbose}}{Logical indicating whether to provide detailed output, defaults to TRUE.}
 
 \item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
 between iterations at which to stop the algorithm.}
@@ -929,9 +927,16 @@ covariance functions.}
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
 
+\item{\code{algo}}{Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm
+may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.}
+
 \item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.}
 
 \item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.}
+
+\item{\code{lower.bound.theta}}{Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)}
+
+\item{\code{upper.bound.theta}}{Optional. Vector of upper bounds for the covariance parameters.}
 }
 \if{html}{\out{</div>}}
 }
@@ -982,14 +987,16 @@ Maximum Likelihood model fitting with Laplace Approximation
 \if{html}{\out{<div class="r">}}\preformatted{Model$LA(
   y,
   start,
-  method = "nr",
-  verbose = FALSE,
+  method = "nloptim",
   se = "gls",
   max.iter = 40,
   tol = 1e-04,
   se.theta = TRUE,
+  algo = ifelse(self$mean$any_nonlinear(), 2, 1),
   lower.bound = NULL,
-  upper.bound = NULL
+  upper.bound = NULL,
+  lower.bound.theta = NULL,
+  upper.bound.theta = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -1001,8 +1008,6 @@ Maximum Likelihood model fitting with Laplace Approximation
 \item{\code{start}}{Optional. A numeric vector indicating starting values for the model parameters.}
 
 \item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
-
-\item{\code{verbose}}{logical indicating whether to provide detailed algorithm feedback (default is TRUE).}
 
 \item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
 "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
@@ -1019,9 +1024,15 @@ Note that Kenward-Roger assumes REML estimates, which are not currently provided
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
 
+\item{\code{algo}}{Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both.}
+
 \item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.}
 
 \item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.}
+
+\item{\code{lower.bound.theta}}{Optional. Vector of lower bounds for the covariance parameters.}
+
+\item{\code{upper.bound.theta}}{Optional. Vector of upper bounds for the covariance parameters.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1084,20 +1095,16 @@ None, called for effects
 \subsection{Method \code{mcmc_sample()}}{
 Generate an MCMC sample of the random effects
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(y, usestan = TRUE, verbose = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(usestan = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{y}}{Numeric vector of outcome data}
-
 \item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
 the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
 it generally produces a larger number of effective samplers per unit time, especially for more complex
 covariance functions.}
-
-\item{\code{verbose}}{Logical indicating whether to provide detailed output to the console}
 }
 \if{html}{\out{</div>}}
 }
@@ -1313,6 +1320,26 @@ has been run. This function can update the interval y data.
 }
 \subsection{Returns}{
 None. Called for effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-set_trace"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-set_trace}{}}}
+\subsection{Method \code{set_trace()}}{
+Controls the information printed to the console for other functions.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$set_trace(trace)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{trace}}{Integer, either 0 = no information, 1 = some information, 2 = all information}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+None. Called for effects.
 }
 }
 \if{html}{\out{<hr>}}

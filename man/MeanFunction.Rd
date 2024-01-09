@@ -130,6 +130,7 @@ covariance matrix of observations for non-linear models.}
 \item \href{#method-MeanFunction-colnames}{\code{MeanFunction$colnames()}}
 \item \href{#method-MeanFunction-subset_rows}{\code{MeanFunction$subset_rows()}}
 \item \href{#method-MeanFunction-linear_predictor}{\code{MeanFunction$linear_predictor()}}
+\item \href{#method-MeanFunction-any_nonlinear}{\code{MeanFunction$any_nonlinear()}}
 \item \href{#method-MeanFunction-clone}{\code{MeanFunction$clone()}}
 }
 }
@@ -271,7 +272,7 @@ Returns or replaces the column names of the data in the object
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{names}}{If NULL then the function prints the column names, if a vector of names, then it attemps to 
+\item{\code{names}}{If NULL then the function prints the column names, if a vector of names, then it attempts to 
 replace the current column names of the data}
 }
 \if{html}{\out{</div>}}
@@ -350,6 +351,20 @@ Returns the linear predictor, X * beta
 
 \subsection{Returns}{
 A vector
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-MeanFunction-any_nonlinear"></a>}}
+\if{latex}{\out{\hypertarget{method-MeanFunction-any_nonlinear}{}}}
+\subsection{Method \code{any_nonlinear()}}{
+Returns a logical indicating whether the mean function contains non-linear functions of model parameters.
+Mainly used internally.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{MeanFunction$any_nonlinear()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+None. Called for effects
 }
 }
 \if{html}{\out{<hr>}}
