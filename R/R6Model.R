@@ -206,10 +206,9 @@ Model <- R6::R6Class("Model",
                        #'
                        #' #an example of a spatial grid with two time points
                        #' df <- nelder(~ (x(10)*y(10))*t(2))
-                       #' spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
-                       #'                          mean = list(formula = ~ 1),
-                       #'                          data = df,
-                       #'                          family = stats::gaussian())
+                       #' spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
+                       #'                         data = df,
+                       #'                         family = stats::gaussian())
                        initialize = function(formula,
                                              covariance,
                                              mean,
@@ -427,7 +426,6 @@ Model <- R6::R6Class("Model",
                          re <- self$covariance$simulate_re()
                          xb <- self$mean$linear_predictor()
                          mu <- xb + drop(as.matrix(self$covariance$Z)%*%re)
-
                          f <- self$family
                          if(f[1]=="poisson"){
                            if(f[2]=="log"){
@@ -437,7 +435,6 @@ Model <- R6::R6Class("Model",
                              y <- rpois(self$n(),mu)
                            }
                          }
-
                          if(f[1]%in%c("binomial","bernoulli")){
                            if(f[2]=="logit"){
                              y <- rbinom(self$n(),self$trials,exp(mu)/(1+exp(mu)))
@@ -452,7 +449,6 @@ Model <- R6::R6Class("Model",
                              y <- rbinom(self$n(),self$trials,pnorm(mu))
                            }
                          }
-
                          if(f[1]=="gaussian"){
                            if(f[2]=="identity"){
                              if(is.null(self$var_par))stop("For gaussian(link='identity') provide var_par")
@@ -464,8 +460,6 @@ Model <- R6::R6Class("Model",
                              y <- rnorm(self$n(),exp(mu),self$var_par/self$weights)
                            }
                          }
-
-
                          if(f[1]=="Gamma"){
                            if(f[2]=="inverse"){
                              if(is.null(self$var_par))stop("For gamma(link='inverse') provide var_par")
@@ -480,7 +474,6 @@ Model <- R6::R6Class("Model",
                              y <- rgamma(self$n(),shape = self$var_par,rate = self$var_par/mu)
                            }
                          }
-
                          if(f[1]=="beta"){
                            if(f[2]=="logit"){
                              if(is.null(self$var_par))stop("For beta(link='logit') provide var_par")
@@ -488,12 +481,10 @@ Model <- R6::R6Class("Model",
                              y <- rbeta(self$n(),logitxb*self$var_par,(1-logitxb)*self$var_par)
                            }
                          }
-
                          if(type=="data.frame"|type=="data")y <- cbind(y,self$mean$data)
                          if(type=="all")y <- list(y = y, X = self$mean$X, beta = self$mean$parameters,
                                                   Z = self$covariance$Z, u = re)
                          return(y)
-
                        },
                        #' @description
                        #' Updates the parameters of the mean function and/or the covariance function
@@ -514,10 +505,7 @@ Model <- R6::R6Class("Model",
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
                        #' des <- Model$new(
-                       #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar0(t))),
-                       #'   mean = list(
-                       #'     formula = ~ factor(t) + int - 1),
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
@@ -566,7 +554,7 @@ Model <- R6::R6Class("Model",
                        #' @description 
                        #' Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
                        #' @return A PxP matrix
-                       sandwich = function(type){
+                       sandwich = function(){
                          if(is.null(private$ptr))private$update_ptr()
                          return(Model__sandwich(private$ptr,private$model_type()))
                        },
@@ -631,12 +619,9 @@ Model <- R6::R6Class("Model",
                        #' df$int <- 0
                        #' df[df$cl > 5, 'int'] <- 1
                        #' des <- Model$new(
-                       #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-                       #'     parameters = c(0.05,0.1)),
-                       #'   mean = list(
-                       #'     formula = ~ factor(t) + int - 1,
-                       #'     parameters = c(rep(0,5),0.6)),
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+                       #'   covariance = c(0.05,0.1),
+                       #'   mean = c(rep(0,5),0.6),
                        #'   data = df,
                        #'   family = stats::gaussian(),
                        #'   var_par = 1
@@ -754,8 +739,8 @@ Model <- R6::R6Class("Model",
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
                        #'   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-                       #'   covariance = list(parameters = c(0.05,0.7)),
-                       #'   mean = list(parameters = c(rep(0,5),0.2)),
+                       #'   covariance = c(0.05,0.7),
+                       #'   mean = c(rep(0,5),0.2),
                        #'   data = df,
                        #'   family = gaussian(),
                        #'   var_par = 1
@@ -1082,8 +1067,8 @@ Model <- R6::R6Class("Model",
                        #' # specify parameter values in the call for the data simulation below
                        #' des <- Model$new(
                        #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-                       #'   covariance = list( parameters = c(0.05,0.7)),
-                       #'   mean = list(parameters = c(rep(0,5),-0.2)),
+                       #'   covariance = c(0.05,0.7),
+                       #'   mean = c(rep(0,5),-0.2),
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
@@ -1482,7 +1467,7 @@ Model <- R6::R6Class("Model",
                        #' @param at Optional. A vector of strings naming the fixed effects for which a specified value is given.
                        #' @param atmeans Optional. A vector of strings naming the fixed effects that will be set at their mean value.
                        #' @param average Optional. A vector of strings naming the fixed effects which will be averaged over.
-                       #' @param xvals. Optional. A vector specifying the values of `a` and `b` for `diff` and `ratio`. The default is (1,0).
+                       #' @param xvals Optional. A vector specifying the values of `a` and `b` for `diff` and `ratio`. The default is (1,0).
                        #' @param atvals Optional. A vector specifying the values of fixed effects specified in `at` (in the same order).
                        #' @param revals Optional. If `re="at"` then this argument provides a vector of values for the random effects.
                        #' @return A named vector with elements `margin` specifying the point estimate and `se` giving the standard error.

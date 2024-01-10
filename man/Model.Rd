@@ -130,10 +130,9 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
-                         mean = list(formula = ~ 1),
-                         data = df,
-                         family = stats::gaussian())
+spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
+                        data = df,
+                        family = stats::gaussian())
 
 ## ------------------------------------------------
 ## Method `Model$sim_data`
@@ -168,10 +167,7 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)*ar0(t))),
-  mean = list(
-    formula = ~ factor(t) + int - 1),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   data = df,
   family = stats::binomial()
 )
@@ -188,12 +184,9 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-    parameters = c(0.05,0.1)),
-  mean = list(
-    formula = ~ factor(t) + int - 1,
-    parameters = c(rep(0,5),0.6)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  covariance = c(0.05,0.1),
+  mean = c(rep(0,5),0.6),
   data = df,
   family = stats::gaussian(),
   var_par = 1
@@ -213,8 +206,8 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = list(parameters = c(0.05,0.7)),
-  mean = list(parameters = c(rep(0,5),0.2)),
+  covariance = c(0.05,0.7),
+  mean = c(rep(0,5),0.2),
   data = df,
   family = gaussian(),
   var_par = 1
@@ -247,8 +240,8 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = list( parameters = c(0.05,0.7)),
-  mean = list(parameters = c(rep(0,5),-0.2)),
+  covariance = c(0.05,0.7),
+  mean = c(rep(0,5),-0.2),
   data = df,
   family = stats::binomial()
 )
@@ -526,10 +519,9 @@ des <- Model$new(
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
-spt_design <- Model$new(covariance = list( formula = ~(1|ar0(t)*fexp(x,y))),
-                         mean = list(formula = ~ 1),
-                         data = df,
-                         family = stats::gaussian())
+spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
+                        data = df,
+                        family = stats::gaussian())
 }
 \if{html}{\out{</div>}}
 
@@ -672,10 +664,7 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)*ar0(t))),
-  mean = list(
-    formula = ~ factor(t) + int - 1),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
   data = df,
   family = stats::binomial()
 )
@@ -713,7 +702,7 @@ A PxP matrix
 \subsection{Method \code{sandwich()}}{
 Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich(type)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$sandwich()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -809,12 +798,9 @@ df <- nelder(~(cl(10)*t(5)) > ind(10))
 df$int <- 0
 df[df$cl > 5, 'int'] <- 1
 des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(cl)) + (1|gr(cl,t)),
-    parameters = c(0.05,0.1)),
-  mean = list(
-    formula = ~ factor(t) + int - 1,
-    parameters = c(rep(0,5),0.6)),
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  covariance = c(0.05,0.1),
+  mean = c(rep(0,5),0.6),
   data = df,
   family = stats::gaussian(),
   var_par = 1
@@ -954,8 +940,8 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = list(parameters = c(0.05,0.7)),
-  mean = list(parameters = c(rep(0,5),0.2)),
+  covariance = c(0.05,0.7),
+  mean = c(rep(0,5),0.2),
   data = df,
   family = gaussian(),
   var_par = 1
@@ -1052,8 +1038,8 @@ df[df$cl > 3, 'int'] <- 1
 # specify parameter values in the call for the data simulation below
 des <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = list( parameters = c(0.05,0.7)),
-  mean = list(parameters = c(rep(0,5),-0.2)),
+  covariance = c(0.05,0.7),
+  mean = c(rep(0,5),-0.2),
   data = df,
   family = stats::binomial()
 )
@@ -1287,11 +1273,11 @@ or \code{robust} to use a robust sandwich estimator.}
 
 \item{\code{average}}{Optional. A vector of strings naming the fixed effects which will be averaged over.}
 
+\item{\code{xvals}}{Optional. A vector specifying the values of \code{a} and \code{b} for \code{diff} and \code{ratio}. The default is (1,0).}
+
 \item{\code{atvals}}{Optional. A vector specifying the values of fixed effects specified in \code{at} (in the same order).}
 
 \item{\code{revals}}{Optional. If \code{re="at"} then this argument provides a vector of values for the random effects.}
-
-\item{\code{xvals.}}{Optional. A vector specifying the values of \code{a} and \code{b} for \code{diff} and \code{ratio}. The default is (1,0).}
 }
 \if{html}{\out{</div>}}
 }
