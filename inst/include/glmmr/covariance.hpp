@@ -1080,7 +1080,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
         grad(i) += detmat2.trace();
       }
     logl += -0.5*Q_ * log(2*M_PI) - 0.5*logdet_val;
-    double qf;
+    double qf = 0;
 #pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
     for(int i = 0; i < niter; i++)
     {
