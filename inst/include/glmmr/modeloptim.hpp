@@ -461,7 +461,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_u(const 
   auto start = par.begin();
   auto end = par.begin() + P();
   dblvec beta(start,end);
-  MatrixXd v(model.n(),1);
+  MatrixXd v(Q(),1);
   for(int i = 0; i < Q(); i++)v(i,0) = par[P() + i];
   model.linear_predictor.update_parameters(beta);
   update_u(v);
