@@ -715,10 +715,10 @@ Model <- R6::R6Class("Model",
                        #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom.
-                       #'@param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
-                       #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
-                       #'it generally produces a larger number of effective samplers per unit time, especially for more complex
-                       #'covariance functions.
+                       #'@param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
+                       #'`hmc` to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number 
+                       #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
+                       #' so may not currently be an option for some users.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
@@ -764,7 +764,7 @@ Model <- R6::R6Class("Model",
                                        tol = 1e-2,
                                        max.iter = 30,
                                        se = "gls",
-                                       usestan = TRUE,
+                                       mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
                                        lower.bound = NULL,
@@ -778,7 +778,8 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
-                         if(!usestan){
+                         if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(!mcmc.pkg == "hmc"){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
                            Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,private$model_type())
@@ -812,9 +813,9 @@ Model <- R6::R6Class("Model",
                          invfunc <- self$family$linkinv
                          L <- Matrix::Matrix(Model__L(private$ptr,private$model_type()))
                          #parse family
-                         file_type <- mcnr_family(self$family)
+                         file_type <- mcnr_family(self$family,mcmc.pkg == "cmdstan")                         
                          ## set up sampler
-                         if(usestan){
+                         if(mcmc.pkg == "cmdstan"){
                            if(!requireNamespace("cmdstanr")){
                              stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
@@ -842,31 +843,62 @@ Model <- R6::R6Class("Model",
                          while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
-                           if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
+                           if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)),"\n")
                            if(private$trace == 2)t1 <- Sys.time()
-                           if(usestan){
+                           if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                              data$Xb <-  Model__xb(private$ptr,private$model_type())
                              data$Z <- Model__ZL(private$ptr,private$model_type())
                              if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
                              if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
-                              capture.output(fit <- mod$sample(data = data,
-                                                    chains = 1,
-                                                    iter_warmup = self$mcmc_options$warmup,
-                                                    iter_sampling = self$mcmc_options$samps,
-                                                    refresh = 0),
-                                  file=tempfile())
-                             dsamps <- fit$draws("gamma",format = "matrix")
-                             class(dsamps) <- "matrix"
+                             if(private$trace <= 1){
+                               if(mcmc.pkg == "cmdstan"){
+                                 capture.output(fit <- mod$sample(data = data,
+                                                                  chains = 1,
+                                                                  iter_warmup = self$mcmc_options$warmup,
+                                                                  iter_sampling = self$mcmc_options$samps,
+                                                                  refresh = 0),
+                                                file=tempfile())
+                               } else {
+                                 capture.output(fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                                                       data=data,
+                                                                       chains=1,
+                                                                       iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                                       warmup = self$mcmc_options$warmup,
+                                                                       refresh = 0),
+                                                file=tempfile())
+                               }
+                             } else {
+                               if(mcmc.pkg == "cmdstan"){
+                                 fit <- mod$sample(data = data,
+                                                   chains = 1,
+                                                   iter_warmup = self$mcmc_options$warmup,
+                                                   iter_sampling = self$mcmc_options$samps,
+                                                   refresh = 50)
+                               } else {
+                                 fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                                        data=data,
+                                                        chains=1,
+                                                        iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                        warmup = self$mcmc_options$warmup,
+                                                        refresh = 50)
+                               }
+                             }
+                             if(mcmc.pkg == "cmdstan"){
+                               dsamps <- fit$draws("gamma",format = "matrix")
+                               class(dsamps) <- "matrix"
+                             } else {
+                               dsamps <- rstan::extract(fit,pars = "gamma",permuted = FALSE)
+                               dsamps <- as.matrix(dsamps[,1,])
+                             }
                              Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            } else {
                              Model__mcmc_sample(private$ptr,
-                                                 self$mcmc_options$warmup,
-                                                 self$mcmc_options$samps,
-                                                 self$mcmc_options$adapt,private$model_type())
+                                                self$mcmc_options$warmup,
+                                                self$mcmc_options$samps,
+                                                self$mcmc_options$adapt,private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
-                           ## Rstan functionality was introduced in one branch but is signficantly slower so is not included here
                            if(method=="mcem"){
                              Model__ml_beta(private$ptr,balgo,private$model_type())
                            } else {
@@ -1294,52 +1326,81 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
-                       #' @param usestan Logical whether to use Stan (through the package `cmdstanr`) for the MCMC sampling. If FALSE then
-                       #'the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
-                       #'it generally produces a larger number of effective samplers per unit time, especially for more complex
-                       #'covariance functions.
+                       #' @param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
+                       #'`hmc` to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number 
+                       #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
+                       #' so may not currently be an option for some users.
                        #' @return A matrix of samples of the random effects
                        mcmc_sample = function(usestan = TRUE){
-                         if(usestan){
-                           file_type <- mcnr_family(self$family)
-                           if(!requireNamespace("cmdstanr")){
-                             stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
+                         if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         private$verify_data(y)
+                         private$set_y(y)
+                         if(mcmc.pkg == "cmdstan"){
+                           file_type <- mcnr_family(self$family,self$mcmc_options$use_cmdstan)
+                           if(self$mcmc_options$use_cmdstan){
+                             if(!requireNamespace("cmdstanr")){
+                               stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
-                           } else {
-                             if(private$trace >= 1)message("If this is the first time running this model, it will be compiled by cmdstan.")
-                             model_file <- system.file("stan",
-                                                       file_type$file,
-                                                       package = "glmmrBase",
-                                                       mustWork = TRUE)
-                             mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
+                             } else {
+                               if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                               model_file <- system.file("stan",
+                                                         file_type$file,
+                                                         package = "glmmrBase",
+                                                         mustWork = TRUE)
+                               mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
+                             }
                            }
                            data <- list(
                              N = self$n(),
                              Q = Model__Q(private$ptr,private$model_type()),
                              Xb = Model__xb(private$ptr,private$model_type()),
                              Z = Model__ZL(private$ptr,private$model_type()),
-                             y = Model__y(private$ptr,private$model_type()),
+                             y = y,
                              type=as.numeric(file_type$type)
                            )
                            if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
                            if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                            if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
-                           if(private$trace >= 1){
-                             fit <- mod$sample(data = data,
-                                               chains = 1,
-                                               iter_warmup = self$mcmc_options$warmup,
-                                               iter_sampling = self$mcmc_options$samps,
-                                               refresh = self$mcmc_options$refresh)
+                           if(private$trace <= 1){
+                             if(self$mcmc_options$use_cmdstan){
+                               capture.output(fit <- mod$sample(data = data,
+                                                                chains = 1,
+                                                                iter_warmup = self$mcmc_options$warmup,
+                                                                iter_sampling = self$mcmc_options$samps,
+                                                                refresh = 0),
+                                              file=tempfile())
+                             } else {
+                               capture.output(fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                                                     data=data,
+                                                                     chains=1,
+                                                                     iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                                     warmup = self$mcmc_options$warmup,
+                                                                     refresh = 0),
+                                              file=tempfile())
+                             }
                            } else {
-                             capture.output(fit <- mod$sample(data = data,
-                                                              chains = 1,
-                                                              iter_warmup = self$mcmc_options$warmup,
-                                                              iter_sampling = self$mcmc_options$samps,
-                                                              refresh = 0),
-                                            file=tempfile())
+                             if(self$mcmc_options$use_cmdstan){
+                               fit <- mod$sample(data = data,
+                                                 chains = 1,
+                                                 iter_warmup = self$mcmc_options$warmup,
+                                                 iter_sampling = self$mcmc_options$samps,
+                                                 refresh = 0)
+                             } else {
+                               fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                                      data=data,
+                                                      chains=1,
+                                                      iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                      warmup = self$mcmc_options$warmup,
+                                                      refresh = 0)
+                             }
                            }
-                           dsamps <- fit$draws("gamma",format = "matrix")
-                           class(dsamps) <- "matrix"
+                           if(mcmc.pkg == "cmdstan"){
+                             dsamps <- fit$draws("gamma",format = "matrix")
+                             class(dsamps) <- "matrix"
+                           } else {
+                             dsamps <- rstan::extract(fit,"gamma",FALSE)
+                             dsamps <- as.matrix(dsamps[,1,])
+                           }
                            Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {

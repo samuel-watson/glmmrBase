@@ -1,9 +1,9 @@
 functions {
   real partial_sum1_lpdf(array[] real y, int start, int end){
-    return std_normal_lpdf(y[start:end]);
+    return std_normal_lpdf(y[1:(1+end-start)]);
   }
   real partial_sum2_lpdf(array[] real y,int start, int end, vector mu,vector sigma){
-    return normal_lpdf(y[start:end]|mu[start:end],sigma[start:end]);
+    return normal_lpdf(y[1:(1+end-start)]|mu[1:(1+end-start)],sigma[1:(1+end-start)]);
   }
 }
 data {

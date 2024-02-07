@@ -1,13 +1,13 @@
 functions {
   real partial_sum1_lpdf(array[] real y, int start, int end){
-    return std_normal_lpdf(y[start:end]);
+    return std_normal_lpdf(y[1:(1+end-start)]);
   }
   real partial_sum2_lpmf(array[] int y,int start, int end, vector mu,int type){
     real out;
-    if(type==1) out = bernoulli_logit_lpmf(y[start:end]|mu[start:end]);
-    if(type==2) out = bernoulli_lpmf(y[start:end]|exp(mu[start:end]));
-    if(type==3) out = bernoulli_lpmf(y[start:end]|mu[start:end]);
-    if(type==4) out = bernoulli_lpmf(y[start:end]|Phi_approx(mu[start:end]));
+    if(type==1) out = bernoulli_logit_lpmf(y[1:(1+end-start)]|mu[1:(1+end-start)]);
+    if(type==2) out = bernoulli_lpmf(y[1:(1+end-start)]|exp(mu[1:(1+end-start)]));
+    if(type==3) out = bernoulli_lpmf(y[1:(1+end-start)]|mu[1:(1+end-start)]);
+    if(type==4) out = bernoulli_lpmf(y[1:(1+end-start)]|Phi_approx(mu[1:(1+end-start)]));
     return out;
   }
 }

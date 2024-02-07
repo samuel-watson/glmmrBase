@@ -1,12 +1,12 @@
 functions {
   real partial_sum1_lpdf(array[] real y, int start, int end){
-    return std_normal_lpdf(y[start:end]);
+    return std_normal_lpdf(y[1:(1+end-start)]);
   }
-  real partial_sum2_lpmf(array[] int y,int start, int end,vector mu,real phi, int type){
+  real partial_sum2_lpdf(array[] real y,int start, int end,vector mu,real phi, int type){
     real out;
-    if(type==1) out = gamma_lpdf(y[start:end]|1/phi, 1/(phi*mu[start:end]));
-    if(type==2) out = gamma_lpdf(y[start:end]|1/phi, mu[start:end]/phi);
-    if(type==3) out = gamma_lpdf(y[start:end]|1/phi, 1/(phi*log(mu[start:end])));
+    if(type==1) out = gamma_lpdf(y[1:(1+end-start)]|1/phi, 1/(phi*mu[1:(1+end-start)]));
+    if(type==2) out = gamma_lpdf(y[1:(1+end-start)]|1/phi, mu[1:(1+end-start)]/phi);
+    if(type==3) out = gamma_lpdf(y[1:(1+end-start)]|1/phi, 1/(phi*log(mu[1:(1+end-start)])));
     return out;
   }
 }
@@ -25,6 +25,6 @@ parameters {
 model {
   int grainsize = 1;
   target += reduce_sum(partial_sum1_lpdf,gamma,grainsize);
-  target += reduce_sum(partial_sum2_lpmf,y,grainsize,Xb + Z*to_vector(gamma),var_par,type);
+  target += reduce_sum(partial_sum2_lpdf,y,grainsize,Xb + Z*to_vector(gamma),var_par,type);
 }
 

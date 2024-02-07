@@ -1600,6 +1600,13 @@ BEGIN_RCPP
 END_RCPP
 }
 
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_bernoulli_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_beta_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_binomial_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_gamma_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_gaussian_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_poisson_mod();
+
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
     {"_glmmrBase_Covariance_nngp__new", (DL_FUNC) &_glmmrBase_Covariance_nngp__new, 3},
@@ -1728,6 +1735,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
     {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
     {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 4},
+    {"_rcpp_module_boot_stan_fit4mcml_bernoulli_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_bernoulli_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_beta_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_beta_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_binomial_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_binomial_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_gamma_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_gamma_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_gaussian_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_gaussian_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_poisson_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_poisson_mod, 0},
     {NULL, NULL, 0}
 };
 

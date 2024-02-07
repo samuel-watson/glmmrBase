@@ -59,8 +59,9 @@ progress_bar <- function(i,n,len=30){
 #' Returns the file name and type for MCNR function
 #' 
 #' @param family family object
+#' @param cmdstan Logical indicating whether cmdstan is being used and the function will return the filename
 #' @return list with filename and type
-mcnr_family <- function(family){
+mcnr_family <- function(family, cmdstan){
   f1 <- tolower(family[[1]])
   link <- family[[2]]
   gaussian_list <- c("identity")
@@ -71,7 +72,11 @@ mcnr_family <- function(family){
   beta_list <- c("logit")
   type <- which(get(paste0(f1,"_list"))==link)
   if(length(type)==0)stop("link not supported for this family")
-  return(list(file = paste0("mcml_",f1,".stan"),type=type))
+  if(cmdstan){
+    return(list(file = paste0("mcml_",f1,".stan"),type=type))
+  } else {
+    return(list(file = paste0("mcml_",f1),type=type))#,".stan"
+  }
 }
 
 #' Data for model tests
