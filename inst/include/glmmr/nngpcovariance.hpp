@@ -146,12 +146,11 @@ inline int glmmr::nngpCovariance::Q() const {
 }
 
 inline double glmmr::nngpCovariance::log_likelihood(const VectorXd &u){
-  double ll1 = 0.0;
   double logdet = log_determinant();
   int idxlim;
   double qf = u(0)*u(0)/Dvec(0);
 
-#pragma omp parallel for reduction (+:qf)
+//#pragma omp parallel for reduction(+:qf) private(idxlim) 
   for(int i = 1; i < grid.N; i++){
     idxlim = i <= m ? i : m;
     VectorXd usec(idxlim);
@@ -159,9 +158,8 @@ inline double glmmr::nngpCovariance::log_likelihood(const VectorXd &u){
     double au = u(i) - (A.col(i).segment(0,idxlim).transpose() * usec)(0);
     qf += au*au/Dvec(i);
   }
-  ll1 -= 0.5*qf + 0.5*grid.N*log(2*M_PI);
-  ll1 -= 0.5*logdet;
-  return ll1;
+  double ll1 = 0.5*qf + 0.5*grid.N*log(2*M_PI) + 0.5*logdet;
+  return -1.0 * ll1;
 }
 
 inline double glmmr::nngpCovariance::log_determinant(){
@@ -180,18 +178,22 @@ inline void glmmr::nngpCovariance::gen_AD()
     int idxlim = i <= m ? i : m;
     MatrixXd S(idxlim,idxlim);
     VectorXd Sv(idxlim);
-    for(int j = 0; j<idxlim; j++){
+    for(int j = 0; j<idxlim; j++)
+    {
       S(j,j) = val;
     }
-    if(idxlim > 1){
-      for(int j = 0; j<(idxlim-1); j++){
-        for(int k = j+1; k<idxlim; k++){
+    if(idxlim > 1)
+    {
+      for(int j = 0; j<(idxlim-1); j++)
+      {
+        for(int k = j+1; k<idxlim; k++)
+        {
           S(j,k) = Covariance::get_val(0,grid.NN(j,i),grid.NN(k,i));
           S(k,j) = S(j,k);
         }
       }
     }
-    for(int j = 0; j<idxlim; j++)Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
+    for(int j = 0; j<idxlim; j++) Sv(j) = Covariance::get_val(0,i,grid.NN(j,i));
     A.col(i).head(idxlim) = S.ldlt().solve(Sv);
     Dvec(i) = val - (A.col(i).head(idxlim).transpose() * Sv)(0);
   }

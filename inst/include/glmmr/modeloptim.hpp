@@ -599,6 +599,7 @@ throw std::runtime_error("No L-BFGS-B with HSGP");
 template<>
 inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& theta){
   model.covariance.update_parameters(theta);
+  re.zu_ = model.covariance.ZLu(re.u_);
   double ll = log_likelihood();
   return -1*ll;
 }

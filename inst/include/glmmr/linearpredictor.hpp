@@ -63,6 +63,9 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   if(!calc.any_nonlinear){
     X_ = calc.jacobian();
+  #ifdef R_BUILD
+    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+  #endif 
   } else {
     X_.setZero();
   }
@@ -84,6 +87,9 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
@@ -102,6 +108,9 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
@@ -117,6 +126,9 @@ inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& lin
   X_.conservativeResize(n_,P_);
   X_ = calc.jacobian();
   x_set = true;
+#ifdef R_BUILD
+  if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
@@ -142,6 +154,9 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
   if(!x_set){
     X_ = calc.jacobian();
     x_set = true;
+#ifdef R_BUILD
+    if(X_.array().isNaN().any())Rcpp::stop("NaN in data");
+#endif 
   }
 };
 

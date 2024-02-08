@@ -31,6 +31,7 @@ public:
   MatrixXd              data = MatrixXd::Zero(1,1); // the data for the calculation
   dblvec                parameters;
   intvec                parameter_indexes;
+  bool                  warn_name_in_data = false;
   calculator() {};
   
   template<CalcDyDx dydx>
@@ -85,6 +86,7 @@ inline glmmr::calculator& glmmr::calculator::operator= (const glmmr::calculator&
   data = calc.data;
   parameters.resize(calc.parameters.size());
   parameters = calc.parameters;
+  warn_name_in_data = calc.warn_name_in_data;
   return *this;
 };
 
@@ -1263,7 +1265,7 @@ inline void glmmr::calculator::print_names(bool data, bool parameters) const{
     Rcpp::Rcout << "\nData names: \n";
     glmmr::print_vec_1d<strvec>(data_names);
   }
-  if(data){
+  if(parameters){
     Rcpp::Rcout << "\nParameter names: \n";
     glmmr::print_vec_1d<strvec>(parameter_names);
   }

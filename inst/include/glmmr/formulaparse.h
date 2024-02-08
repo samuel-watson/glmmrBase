@@ -300,6 +300,10 @@ inline bool parse_formula(std::vector<char>& formula,
             Rcpp::Rcout << " parameter name: " << token_as_str;
             #endif
             // interpret any other string as the name of a parameter
+          #ifdef R_BUILD
+            if(token_as_str != "b_intercept" & !calc.warn_name_in_data) Rcpp::message(Rcpp::wrap("Assuming "+token_as_str+" is the name of a parameter as not present in data"));
+            calc.warn_name_in_data = true;
+          #endif
             // check if the parameter already exists
             calc.instructions.push_back(Do::PushParameter);
             auto find_parameter = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),token_as_str);
