@@ -821,7 +821,7 @@ Model <- R6::R6Class("Model",
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                            } else {
                              if(private$trace >= 2)message("If this is the first time running this model, it will be compiled by cmdstan.")
-                             model_file <- system.file("stan",
+                             model_file <- system.file("cmdstan",
                                                        file_type$file,
                                                        package = "glmmrBase",
                                                        mustWork = TRUE)
@@ -1344,7 +1344,7 @@ Model <- R6::R6Class("Model",
                                     Set option usestan=FALSE to use the in-built MCMC sampler.")
                              } else {
                                if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
-                               model_file <- system.file("stan",
+                               model_file <- system.file("cmdstan",
                                                          file_type$file,
                                                          package = "glmmrBase",
                                                          mustWork = TRUE)
