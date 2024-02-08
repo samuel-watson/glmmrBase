@@ -873,7 +873,7 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   tol = 0.01,
   max.iter = 30,
   se = "gls",
-  usestan = TRUE,
+  mcmc.pkg = "cmdstan",
   se.theta = TRUE,
   algo = ifelse(self$mean$any_nonlinear(), 2, 3),
   lower.bound = NULL,
@@ -905,10 +905,10 @@ degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.}
 
-\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
-the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
-it generally produces a larger number of effective samplers per unit time, especially for more complex
-covariance functions.}
+\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
+\code{hmc} to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number
+of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
+so may not currently be an option for some users.}
 
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
@@ -1081,16 +1081,16 @@ None, called for effects
 \subsection{Method \code{mcmc_sample()}}{
 Generate an MCMC sample of the random effects
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(usestan = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "cmdstan")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{usestan}}{Logical whether to use Stan (through the package \code{cmdstanr}) for the MCMC sampling. If FALSE then
-the internal Hamiltonian Monte Carlo sampler will be used instead. We recommend Stan over the internal sampler as
-it generally produces a larger number of effective samplers per unit time, especially for more complex
-covariance functions.}
+\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
+\code{hmc} to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number
+of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
+so may not currently be an option for some users.}
 }
 \if{html}{\out{</div>}}
 }

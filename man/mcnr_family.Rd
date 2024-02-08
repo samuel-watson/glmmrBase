@@ -4,10 +4,12 @@
 \alias{mcnr_family}
 \title{Returns the file name and type for MCNR function}
 \usage{
-mcnr_family(family)
+mcnr_family(family, cmdstan)
 }
 \arguments{
 \item{family}{family object}
+
+\item{cmdstan}{Logical indicating whether cmdstan is being used and the function will return the filename}
 }
 \value{
 list with filename and type

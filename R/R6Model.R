@@ -764,7 +764,7 @@ Model <- R6::R6Class("Model",
                                        tol = 1e-2,
                                        max.iter = 30,
                                        se = "gls",
-                                       mcmc.pkg = "rstan",
+                                       mcmc.pkg = "cmdstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
                                        lower.bound = NULL,
@@ -1331,7 +1331,7 @@ Model <- R6::R6Class("Model",
                        #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
                        #' so may not currently be an option for some users.
                        #' @return A matrix of samples of the random effects
-                       mcmc_sample = function(usestan = TRUE){
+                       mcmc_sample = function(mcmc.pkg = "cmdstan"){
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          private$verify_data(y)
                          private$set_y(y)
