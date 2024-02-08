@@ -27,13 +27,13 @@ namespace model_mcml_beta_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 26> locations_array__ =
+static constexpr std::array<const char*, 19> locations_array__ =
   {" (found before start of program)",
   " (in 'string', line 21, column 2 to column 22)",
   " (in 'string', line 24, column 2 to column 60)",
-  " (in 'string', line 27, column 2 to column 20)",
-  " (in 'string', line 28, column 2 to column 58)",
-  " (in 'string', line 29, column 2 to column 75)",
+  " (in 'string', line 27, column 2 to column 34)",
+  " (in 'string', line 28, column 14 to column 72)",
+  " (in 'string', line 28, column 2 to column 72)",
   " (in 'string', line 12, column 2 to column 8)",
   " (in 'string', line 13, column 2 to column 8)",
   " (in 'string', line 14, column 9 to column 10)",
@@ -46,105 +46,7 @@ static constexpr std::array<const char*, 26> locations_array__ =
   " (in 'string', line 17, column 2 to column 15)",
   " (in 'string', line 18, column 2 to column 11)",
   " (in 'string', line 21, column 8 to column 9)",
-  " (in 'string', line 24, column 9 to column 10)",
-  " (in 'string', line 3, column 4 to column 47)",
-  " (in 'string', line 2, column 60 to line 4, column 3)",
-  " (in 'string', line 6, column 4 to column 13)",
-  " (in 'string', line 7, column 16 to column 71)",
-  " (in 'string', line 7, column 4 to column 71)",
-  " (in 'string', line 8, column 4 to column 15)",
-  " (in 'string', line 5, column 88 to line 9, column 3)"};
-template <bool propto__, typename T0__,
-          stan::require_all_t<stan::is_stan_scalar<T0__>>* = nullptr>
-stan::promote_args_t<T0__>
-partial_sum1_lpdf(const std::vector<T0__>& y, const int& start, const int&
-                  end, std::ostream* pstream__);
-template <bool propto__, typename T0__, typename T3__, typename T4__,
-          stan::require_all_t<stan::is_stan_scalar<T0__>,
-                              stan::is_col_vector<T3__>,
-                              stan::is_vt_not_complex<T3__>,
-                              stan::is_stan_scalar<T4__>>* = nullptr>
-stan::promote_args_t<T0__, stan::base_type_t<T3__>, T4__>
-partial_sum2_lpdf(const std::vector<T0__>& y, const int& start, const int&
-                  end, const T3__& mu_arg__, const T4__& phi, const int&
-                  type, std::ostream* pstream__);
-template <bool propto__>
-struct partial_sum1_lpdf_rsfunctor__ {
-  template <typename T0__,
-            stan::require_all_t<stan::is_stan_scalar<T0__>>* = nullptr>
-  stan::promote_args_t<T0__>
-  operator()(const std::vector<T0__>& y, const int& start, const int& end,
-             std::ostream* pstream__) const {
-    return partial_sum1_lpdf<propto__>(y, (start + 1), (end + 1), pstream__);
-  }
-};
-template <bool propto__>
-struct partial_sum2_lpdf_rsfunctor__ {
-  template <typename T0__, typename T3__, typename T4__,
-            stan::require_all_t<stan::is_stan_scalar<T0__>,
-                                stan::is_col_vector<T3__>,
-                                stan::is_vt_not_complex<T3__>,
-                                stan::is_stan_scalar<T4__>>* = nullptr>
-  stan::promote_args_t<T0__, stan::base_type_t<T3__>, T4__>
-  operator()(const std::vector<T0__>& y, const int& start, const int& end,
-             std::ostream* pstream__, const T3__& mu, const T4__& phi,
-             const int& type) const {
-    return partial_sum2_lpdf<propto__>(y, (start + 1), (end + 1), mu, phi,
-             type, pstream__);
-  }
-};
-template <bool propto__, typename T0__,
-          stan::require_all_t<stan::is_stan_scalar<T0__>>*>
-stan::promote_args_t<T0__>
-partial_sum1_lpdf(const std::vector<T0__>& y, const int& start, const int&
-                  end, std::ostream* pstream__) {
-  using local_scalar_t__ = stan::promote_args_t<T0__>;
-  int current_statement__ = 0;
-  local_scalar_t__ DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
-  // suppress unused var warning
-  (void) DUMMY_VAR__;
-  try {
-    current_statement__ = 19;
-    return stan::math::std_normal_lpdf<false>(
-             stan::model::rvalue(y, "y",
-               stan::model::index_min_max(1, ((1 + end) - start))));
-  } catch (const std::exception& e) {
-    stan::lang::rethrow_located(e, locations_array__[current_statement__]);
-  }
-}
-template <bool propto__, typename T0__, typename T3__, typename T4__,
-          stan::require_all_t<stan::is_stan_scalar<T0__>,
-                              stan::is_col_vector<T3__>,
-                              stan::is_vt_not_complex<T3__>,
-                              stan::is_stan_scalar<T4__>>*>
-stan::promote_args_t<T0__, stan::base_type_t<T3__>, T4__>
-partial_sum2_lpdf(const std::vector<T0__>& y, const int& start, const int&
-                  end, const T3__& mu_arg__, const T4__& phi, const int&
-                  type, std::ostream* pstream__) {
-  using local_scalar_t__ = stan::promote_args_t<T0__,
-                             stan::base_type_t<T3__>, T4__>;
-  int current_statement__ = 0;
-  const auto& mu = stan::math::to_ref(mu_arg__);
-  local_scalar_t__ DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
-  // suppress unused var warning
-  (void) DUMMY_VAR__;
-  try {
-    local_scalar_t__ out = DUMMY_VAR__;
-    current_statement__ = 23;
-    if (stan::math::logical_eq(type, 1)) {
-      current_statement__ = 22;
-      out = stan::math::beta_lpdf<false>(
-              stan::model::rvalue(y, "y",
-                stan::model::index_min_max(1, ((1 + end) - start))),
-              stan::math::multiply(mu, phi),
-              stan::math::multiply(stan::math::subtract(1, mu), phi));
-    }
-    current_statement__ = 24;
-    return out;
-  } catch (const std::exception& e) {
-    stan::lang::rethrow_located(e, locations_array__[current_statement__]);
-  }
-}
+  " (in 'string', line 24, column 9 to column 10)"};
 #include <stan_meta_header.hpp>
 class model_mcml_beta final : public model_base_crtp<model_mcml_beta> {
 private:
@@ -313,15 +215,18 @@ public:
                 stan::math::multiply(Z, stan::math::to_vector(gamma)))))),
         "assigning variable logitmu");
       {
-        int grainsize = std::numeric_limits<int>::min();
         current_statement__ = 3;
-        grainsize = 1;
-        current_statement__ = 4;
-        lp_accum__.add(stan::math::reduce_sum<partial_sum1_lpdf_rsfunctor__<false>>(
-                         gamma, grainsize, pstream__));
+        lp_accum__.add(stan::math::std_normal_lpdf<propto__>(
+                         stan::math::to_vector(gamma)));
         current_statement__ = 5;
-        lp_accum__.add(stan::math::reduce_sum<partial_sum2_lpdf_rsfunctor__<false>>(
-                         y, grainsize, pstream__, logitmu, var_par, type));
+        if (stan::math::logical_eq(type, 1)) {
+          current_statement__ = 4;
+          lp_accum__.add(stan::math::beta_lpdf<propto__>(
+                           stan::math::to_vector(y),
+                           stan::math::multiply(logitmu, var_par),
+                           stan::math::multiply(
+                             stan::math::subtract(1, logitmu), var_par)));
+        }
       }
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);

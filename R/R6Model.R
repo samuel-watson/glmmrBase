@@ -890,6 +890,7 @@ Model <- R6::R6Class("Model",
                                dsamps <- rstan::extract(fit,pars = "gamma",permuted = FALSE)
                                dsamps <- as.matrix(dsamps[,1,])
                              }
+                             dsamps <<- dsamps
                              Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            } else {
                              Model__mcmc_sample(private$ptr,
