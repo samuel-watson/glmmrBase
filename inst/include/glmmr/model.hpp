@@ -230,10 +230,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   mcalc.instructions.push_back(Do::PushExtraData);
   mcalc.instructions.push_back(Do::Add);
   glmmr::linear_predictor_to_link(mcalc,model.family.link);
-  mcalc.data.conservativeResize(newXdata.rows(),newXdata.cols());
+  mcalc.data.conservativeResize(newXdata.rows(),NoChange);
   mcalc.data = newXdata;
-  mcalc.parameters.resize(model.linear_predictor.P());
-  mcalc.parameters = model.linear_predictor.parameters;
+  
   dblpair result;
   VectorXd delta = VectorXd::Zero(P);
   MatrixXd M(P,P);
@@ -316,11 +315,18 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       dblvec m_result(1+P);
       for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) private(m_result)
-      for(int i = 0; i < N; i++){
+      for(int i = 0; i < N; i++)
+      {
         m_result = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,zu(i));
         d_result += m_result[0];
         for(int p = 0; p < P; p++)delta_vec[p] += m_result[p+1];
-        for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
+      }
+      
+      for(int j = 0; j < newXdata.rows(); j++)mcalc.data(j,xcol) = xvals.second;
+      
+#pragma omp parallel for reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) private(m_result)      
+      for(int i = 0; i < N; i++)
+      {
         m_result = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,zu(i));
         d_result += -1.0*m_result[0];
         for(int p = 0; p < P; p++)delta_vec[p] += -1.0*m_result[p+1];
@@ -339,19 +345,23 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       dblvec m_result0(P+1);
       dblvec m_result1(P+1);
       for(int i = 0; i < newXdata.rows(); i++) newXdata(i,xcol) = xvals.first;
-#pragma omp parallel for private(m_result0,m_result1) reduction(+:d_result0) reduction(+:d_result1) \
-      reduction(vec_dbl_plus:delta0) reduction(vec_dbl_plus:delta1) 
-      for(int i = 0; i < N; i++){
+#pragma omp parallel for private(m_result0) reduction(+:d_result0) reduction(vec_dbl_plus:delta0)  
+      for(int i = 0; i < N; i++)
+      {
         m_result0 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,zu(i));
-        for(int i = 0; i < newXdata.rows(); i++) mcalc.data(i,xcol) = xvals.second;
-        m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,zu(i));
         d_result0 += m_result0[0];
-        d_result1 += m_result1[0];
-        for(int p = 0; p < P; p++){
-          delta0[p] += m_result0[p+1];
-          delta1[p] += m_result1[p+1];
-        }
+        for(int p = 0; p < P; p++) delta0[p] += m_result0[p+1];
       }
+      
+      for(int i = 0; i < newXdata.rows(); i++) mcalc.data(i,xcol) = xvals.second;
+#pragma omp parallel for private(m_result1) reduction(+:d_result1) reduction(vec_dbl_plus:delta1) 
+      for(int i = 0; i < N; i++)
+      {
+        m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,zu(i));
+        d_result1 += m_result1[0];
+        for(int p = 0; p < P; p++) delta1[p] += m_result1[p+1];
+      }
+      
       result.first = log(d_result0/N) - log(d_result1/N);
       for(int p = 0; p < P; p++)delta(p) = delta0[p]/d_result0 - delta1[p]/d_result1;
       result.second = sqrt((delta.transpose()*M*delta)(0));
@@ -370,7 +380,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         double d_result = 0;
         dblvec m_result(2+2*P);
         dblvec delta_vec(P,0.0);
-        for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
+        for(int i = 0; i < newXdata.rows(); i++) newXdata(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
         for(int i = 0; i < model.n(); i++){
           for(int j = 0; j < iter; j++){
@@ -396,8 +406,10 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         dblvec delta_vec(P,0.0);
         for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
-        for(int i = 0; i < model.n(); i++){
-          for(int j = 0; j < iter; j++){
+        for(int i = 0; i < model.n(); i++)
+        {
+          for(int j = 0; j < iter; j++)
+          {
             if(N==1){
               m_result = mcalc.calculate<CalcDyDx::BetaFirst>(0,0,0,re.zu_(i,j));
             } else {
@@ -405,7 +417,15 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
             }
             d_result += m_result[0];
             for(int p = 0; p < P; p++)delta_vec[p] += m_result[p+1];
-            for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
+           }
+        }
+        
+        for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
+#pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
+        for(int i = 0; i < model.n(); i++)
+        {
+          for(int j = 0; j < iter; j++)
+          {
             if(N==1){
               m_result = mcalc.calculate<CalcDyDx::BetaFirst>(0,0,0,re.zu_(i,j));
             } else {
@@ -413,7 +433,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
             }
             d_result += -1.0*m_result[0];
             for(int p = 0; p < P; p++)delta_vec[p] += -1.0*m_result[p+1];
-           }
+          }
         }
         result.first = d_result/(N*iter);
         for(int p = 0; p < P; p++)delta(p) = delta_vec[p];
@@ -430,25 +450,34 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         dblvec m_result0(1+P);
         dblvec m_result1(1+P);
         for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
-#pragma omp parallel for private(m_result0,m_result1) reduction(+:d_result0) reduction(+:d_result1) \
-        reduction(vec_dbl_plus:delta0) reduction(vec_dbl_plus:delta1) collapse(2)
-        for(int i = 0; i < model.n(); i++){
-          for(int j = 0; j < iter; j++){
+#pragma omp parallel for private(m_result0) reduction(+:d_result0) reduction(vec_dbl_plus:delta0) collapse(2)
+        for(int i = 0; i < model.n(); i++)
+        {
+          for(int j = 0; j < iter; j++)
+          {
             if(N==1){
               m_result0 = mcalc.calculate<CalcDyDx::BetaFirst>(1,0,0,re.zu_(i,j));
-              for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
-              m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(1,0,0,re.zu_(i,j));
             } else {
               m_result0 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,re.zu_(i,j));
-              for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
-              m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,re.zu_(i,j));
             }
             d_result0 += m_result0[0];
-            d_result1 += m_result1[0];
-            for(int p = 0; p < P; p++){
-              delta0[p] += m_result0[p+1];
-              delta1[p] += m_result1[p+1];
+            for(int p = 0; p < P; p++) delta0[p] += m_result0[p+1];
+          }
+        }
+        
+        for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.second;
+#pragma omp parallel for private(m_result1) reduction(+:d_result1) reduction(vec_dbl_plus:delta1) collapse(2)
+        for(int i = 0; i < model.n(); i++)
+        {
+          for(int j = 0; j < iter; j++)
+          {
+            if(N==1){
+              m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(1,0,0,re.zu_(i,j));
+            } else {
+              m_result1 = mcalc.calculate<CalcDyDx::BetaFirst>(i,0,0,re.zu_(i,j));
             }
+            d_result1 += m_result1[0];
+            for(int p = 0; p < P; p++) delta1[p] += m_result1[p+1];
           }
         }
         
