@@ -707,7 +707,8 @@ Model <- R6::R6Class("Model",
                        #'@param sim.lik.step Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
                        #'not do this step), defaults to FALSE.
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
-                       #'between iterations at which to stop the algorithm.
+                       #'between iterations at which to stop the algorithm. If two values are provided then different tolerances will be 
+                       #'applied to the fixed effect and covariance parameters.
                        #'@param max.iter Integer. The maximum number of iterations of the MCML algorithm.
                        #'@param se String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
                        #' "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors, 
@@ -723,6 +724,8 @@ Model <- R6::R6Class("Model",
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
                        #'may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.
+                       #'@param adaptive Logical indicating whether to use adaptive MCMC sample sizes for faster convergence. In this case the specified value of the number of
+                       #'MCMC iterations is taken as the maximum.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)
@@ -767,6 +770,7 @@ Model <- R6::R6Class("Model",
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
+                                       adaptive = TRUE,
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
@@ -796,6 +800,11 @@ Model <- R6::R6Class("Model",
                          }
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
+                         }
+                         if(length(tol) == 1){
+                           algo_tol <- rep(tol,2)
+                         } else {
+                           algo_tol <- tol[1:2]
                          }
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
                          beta <- self$mean$parameters
@@ -840,7 +849,10 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                          if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
                          iter <- 0
-                         while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
+                         n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
+                         beta_diff <- 1
+                         theta_diff <- 1
+                         while(beta_diff > algo_tol[1] & theta_diff > algo_tol[2] & iter < max.iter){
                            all_pars <- all_pars_new
                            iter <- iter + 1
                            if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)),"\n")
@@ -855,14 +867,14 @@ Model <- R6::R6Class("Model",
                                  capture.output(fit <- mod$sample(data = data,
                                                                   chains = 1,
                                                                   iter_warmup = self$mcmc_options$warmup,
-                                                                  iter_sampling = self$mcmc_options$samps,
+                                                                  iter_sampling = n_mcmc_sampling,
                                                                   refresh = 0),
                                                 file=tempfile())
                                } else {
                                  capture.output(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                                        data=data,
                                                                        chains=1,
-                                                                       iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                                       iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                                        warmup = self$mcmc_options$warmup,
                                                                        refresh = 0),
                                                 file=tempfile())
@@ -872,13 +884,13 @@ Model <- R6::R6Class("Model",
                                  fit <- mod$sample(data = data,
                                                    chains = 1,
                                                    iter_warmup = self$mcmc_options$warmup,
-                                                   iter_sampling = self$mcmc_options$samps,
+                                                   iter_sampling = n_mcmc_sampling,
                                                    refresh = 50)
                                } else {
                                  fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                         data=data,
                                                         chains=1,
-                                                        iter = self$mcmc_options$warmup+self$mcmc_options$samps,
+                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                         warmup = self$mcmc_options$warmup,
                                                         refresh = 50)
                                }
@@ -890,13 +902,9 @@ Model <- R6::R6Class("Model",
                                dsamps <- rstan::extract(fit,pars = "gamma",permuted = FALSE)
                                dsamps <- as.matrix(dsamps[,1,])
                              }
-                             dsamps <<- dsamps
                              Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            } else {
-                             Model__mcmc_sample(private$ptr,
-                                                self$mcmc_options$warmup,
-                                                self$mcmc_options$samps,
-                                                self$mcmc_options$adapt,private$model_type())
+                             Model__mcmc_sample(private$ptr, self$mcmc_options$warmup, n_mcmc_sampling, self$mcmc_options$adapt,private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
@@ -918,19 +926,53 @@ Model <- R6::R6Class("Model",
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
+                           llvals <- Model__get_log_likelihood_values(private$ptr,private$model_type())
+                           if(adaptive){
+                             if(exists("llhist")){
+                               llhist[[1]] <- c(llhist[[1]], llvals$first)
+                               llhist[[2]] <- c(llhist[[2]], llvals$second)
+                               llhistlen <- 5 # let this value be user-specified - determines history length
+                               epsilon <- 0.2 # and this - the threshold for convergence
+                               if(llhistlen < 5){
+                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][1:iter]))/(max(llhist[[1]][1:iter]) - min(llhist[[1]][1:iter]))
+                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][1:i]))/(max(llhist[[2]][1:i]) - min(llhist[[2]][1:i]))
+                               } else {
+                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][(iter-llhistlen+1):iter]))/(max(llhist[[1]][(iter-llhistlen+1):iter]) - min(llhist[[1]][(iter-llhistlen+1):iter]))
+                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][(iter-llhistlen+1):iter]))/(max(llhist[[2]][(iter-llhistlen+1):iter]) - min(llhist[[2]][(iter-llhistlen+1):iter]))
+                               }
+                               logl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                               ulogl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                               if(abs(logl_ind - 0.5) < epsilon & abs(ulogl_ind - 0.5) < epsilon & abs(logl_rm) < epsilon & abs(ulogl_rm) < epsilon ){
+                                 n_mcmc_sampling <- min(n_mcmc_sampling * 2, self$mcmc_options$samps)
+                                 if(private$trace >= 1) cat("\nLog-likelhood converged, increasing MCMC samples to ", n_mcmc_sampling)
+                               }
+                             } else {
+                               llhist <- list(beta = c(llvals[1]), theta = c(llvals[2]))
+                             }
+                           }
+                           beta_diff <- max(abs(beta-beta_new))
+                           theta_diff <- max(abs(theta-theta_new))
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            if(private$trace==2)t3 <- Sys.time()
                            if(private$trace==2)cat("\nModel fitting took: ",t3-t2,"s")
                            if(private$trace >= 1){
                              cat("\nBeta: ", beta_new)
+                             cat("\nMax beta difference: ", round(beta_diff,3))
                              cat("\nTheta: ", theta_new)
+                             cat("\nMax theta difference: ", round(theta_diff,3))
                              if(var_par_family)cat("\nSigma: ",var_par_new)
-                             cat("\nMax. diff: ", round(max(abs(all_pars-all_pars_new)),5))
-                             cat("\n",Reduce(paste0,rep("-",40)))
+                             cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),3))
+                             cat("\nBeta log-likelihood: ", llvals$first)
+                             cat("\nTheta log-likelihood: ", llvals$second)
+                             if(adaptive & exists("llhist")){
+                               cat("\nStochastic oscillation indexes: ",logl_ind, ", ",ulogl_ind)
+                               cat("\nRunning means: ",logl_rm,", ",ulogl_rm)
+                             }
+                             cat("\n",Reduce(paste0,rep("-",40)),"\n")
                            }
                          }
                          not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
-                         if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
+                         if(not_conv)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          if(sim.lik.step){
                            if(private$trace >= 1)cat("\n\n")
                            if(private$trace >= 1)message("Optimising simulated likelihood")

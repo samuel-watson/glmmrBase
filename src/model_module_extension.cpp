@@ -101,6 +101,17 @@ SEXP Model__aic(SEXP xp, int type = 0){
   return wrap(std::get<double>(S));
 }
 
+// [[Rcpp::export]]
+SEXP Model__get_log_likelihood_values(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.log_likelihood_value);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::pair<double,double> >(S));
+}
+
 // MarginType type, dydx, diff, ratio
 // [[Rcpp::export]]
 SEXP Model__marginal(SEXP xp, 

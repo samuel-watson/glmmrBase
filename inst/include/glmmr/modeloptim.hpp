@@ -23,6 +23,7 @@ public:
   glmmr::ModelMatrix<modeltype>&    matrix;
   glmmr::RandomEffects<modeltype>&  re;
   int                               trace = 0;
+  std::pair<double, double>         log_likelihood_value = {0,0};; // to store the last estimated log likelihood
   // constructor
   ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
 
@@ -185,6 +186,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     op.minimise();
   }
   calculate_var_par();
+  log_likelihood_value.first = log_likelihood();
 }
 
 template<typename modeltype>
@@ -233,6 +235,9 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
     }
     op.minimise();
   }
+  // can this be wrapped in the theta function?
+  dblvec theta_now = model.covariance.parameters_;
+  log_likelihood_value.second = log_likelihood_theta(theta_now);
 }
 
 
@@ -923,6 +928,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   VectorXd bincr = XtWXm * X.transpose() * Wum;
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   calculate_var_par();
+  log_likelihood_value.first = log_likelihood();
 }
 
 template<typename modeltype>

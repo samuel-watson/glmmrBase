@@ -409,6 +409,10 @@ Model__aic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__aic`, xp, type)
 }
 
+Model__get_log_likelihood_values <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_log_likelihood_values`, xp, type)
+}
+
 Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
     .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
 }
