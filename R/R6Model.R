@@ -680,18 +680,15 @@ Model <- R6::R6Class("Model",
                        #'
                        #'@details
                        #'**MCMCML**
-                       #'Fits generalised linear mixed models using one of three algorithms: Markov Chain Newton
-                       #'Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or Maximum simulated
-                       #'likelihood (MSL). All the algorithms are described by McCullagh (1997). For each iteration
-                       #'of the algorithm the unobserved random effect terms (\eqn{\gamma}) are simulated
-                       #'using Markov Chain Monte Carlo (MCMC) methods (we use Hamiltonian Monte Carlo through Stan),
+                       #'Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
+                       #'Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation 
+                       #'maximisation (SAEM). MCNR and MCEM are described by McCullagh (1997). For each iteration
+                       #'of the algorithms the unobserved random effect terms (\eqn{\gamma}) are simulated
+                       #'using Markov Chain Monte Carlo (MCMC) methods,
                        #'and then these values are conditioned on in the subsequent steps to estimate the covariance
-                       #'parameters and the mean function parameters (\eqn{\beta}). For all the algorithms,
-                       #'the covariance parameter estimates are updated using an expectation maximisation step.
-                       #'For the mean function parameters you can either use a Newton Raphson step (MCNR) or
-                       #'an expectation maximisation step (MCEM). A simulated likelihood step can be added at the
-                       #'end of either MCNR or MCEM, which uses an importance sampling technique to refine the
-                       #'parameter estimates.
+                       #'parameters and the mean function parameters (\eqn{\beta}). SAEM uses a Robbins-Munroe approach to approximating 
+                       #'the likelihood and requires fewer MCMC samples and may have lower Monte Carlo error. The options `mcem.adapt` and 
+                       #'`mcnr.adapt` will modify the number of MCMC samples during each step of model fitting as the estimates converge. 
                        #'
                        #'The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
                        #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
@@ -703,7 +700,9 @@ Model <- R6::R6Class("Model",
                        #' trials for binomial models, set self$trials.
                        #' 
                        #'@param y A numeric vector of outcome data
-                       #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, see Details. Default is `mcem`.
+                       #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, or `saem` see Details. Default is `saem`. `mcem.adapt` and `mcnr.adapt` will use adaptive 
+                       #'MCMC sample sizes starting small and increasing to the the maximum value specified in `mcmc_options$sampling`, which results in faster convergence. `saem` uses a
+                       #'stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. 
                        #'@param sim.lik.step Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
                        #'not do this step), defaults to FALSE.
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
@@ -724,12 +723,17 @@ Model <- R6::R6Class("Model",
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
                        #'may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.
-                       #'@param adaptive Logical indicating whether to use adaptive MCMC sample sizes for faster convergence. In this case the specified value of the number of
-                       #'MCMC iterations is taken as the maximum.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)
                        #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
+                       #'@param alpha If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5 
+                       #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
+                       #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
+                       #'2 = There is no improvement in the log-likelihood for both beta and theta between iterations. 
+                       #'3 = there is no improvement in the running mean difference in the log-likelihood for both beta and theta over five iterations.
+                       #'4 = There is no improvement in the log-likelihood overall between iterations.
+                       #'5 = There is no improvement in the running mean differenece of the overall log likelihood over five iterations.
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -770,11 +774,12 @@ Model <- R6::R6Class("Model",
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
-                                       adaptive = TRUE,
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
-                                       upper.bound.theta = NULL){
+                                       upper.bound.theta = NULL,
+                                       alpha = 0.8,
+                                       conv.criterion = 4){
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -783,6 +788,11 @@ Model <- R6::R6Class("Model",
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(!method %in% c("mcem", "mcnr", "saem", "mcem.adapt", "mcnr.adapt"))stop("method must be either mcem, mcnr, saem, mcem.adapt, mcnr.adapt")
+                         append_u <- FALSE
+                         Model__saem(private$ptr, method == "saem", self$mcmc_options$samps, alpha, private$model_type())
+                         if(mcmc.pkg == "hmc" & method == "saem")stop("saem and hmc options not currently compatible")
+                         adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
                          if(!mcmc.pkg == "hmc"){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
@@ -820,6 +830,9 @@ Model <- R6::R6Class("Model",
                          if(private$trace >= 1)cat("\nStart: ",all_pars,"\n")
                          niter <- self$mcmc_options$samps
                          invfunc <- self$family$linkinv
+                         uvec_beta <- c()
+                         uvec_theta <- c() # for storing the history of the convergence statistics
+                         uvec_all <- c()
                          L <- Matrix::Matrix(Model__L(private$ptr,private$model_type()))
                          #parse family
                          file_type <- mcnr_family(self$family,mcmc.pkg == "cmdstan")                         
@@ -852,9 +865,15 @@ Model <- R6::R6Class("Model",
                          n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
                          beta_diff <- 1
                          theta_diff <- 1
-                         while(beta_diff > algo_tol[1] & theta_diff > algo_tol[2] & iter < max.iter){
+                         converged <- FALSE
+                         while(!converged & iter < max.iter){
                            all_pars <- all_pars_new
+                           if(iter > 0){
+                             beta <- beta_new
+                             theta <- theta_new
+                           }
                            iter <- iter + 1
+                           append_u <- I(method=="saem" & iter > 1)
                            if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)),"\n")
                            if(private$trace == 2)t1 <- Sys.time()
                            if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
@@ -871,28 +890,29 @@ Model <- R6::R6Class("Model",
                                                                   refresh = 0),
                                                 file=tempfile())
                                } else {
-                                 capture.output(fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                 capture.output(supressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                                        data=data,
                                                                        chains=1,
                                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                                        warmup = self$mcmc_options$warmup,
-                                                                       refresh = 0),
+                                                                       refresh = 0)),
                                                 file=tempfile())
                                }
                              } else {
+                               # warnings have been suppressed below as it warns about R-hat etc, which is not reliable with a single chain.
                                if(mcmc.pkg == "cmdstan"){
-                                 fit <- mod$sample(data = data,
+                                 suppressWarnings(fit <- mod$sample(data = data,
                                                    chains = 1,
                                                    iter_warmup = self$mcmc_options$warmup,
                                                    iter_sampling = n_mcmc_sampling,
-                                                   refresh = 50)
+                                                   refresh = 50))
                                } else {
-                                 fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                 suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                         data=data,
                                                         chains=1,
                                                         iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                         warmup = self$mcmc_options$warmup,
-                                                        refresh = 50)
+                                                        refresh = 50))
                                }
                              }
                              if(mcmc.pkg == "cmdstan"){
@@ -902,7 +922,7 @@ Model <- R6::R6Class("Model",
                                dsamps <- rstan::extract(fit,pars = "gamma",permuted = FALSE)
                                dsamps <- as.matrix(dsamps[,1,])
                              }
-                             Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
+                             Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
                              Model__mcmc_sample(private$ptr, self$mcmc_options$warmup, n_mcmc_sampling, self$mcmc_options$adapt,private$model_type())
                            }
@@ -922,57 +942,82 @@ Model <- R6::R6Class("Model",
                            } else {
                              Model__ml_theta(private$ptr,0,private$model_type())
                            }
+                           # set up the vectors needed 
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
                            all_pars_new <- c(beta_new,theta_new)
                            llvals <- Model__get_log_likelihood_values(private$ptr,private$model_type())
+                           if(exists("llhist")){
+                             llhist[[1]] <- c(llhist[[1]], llvals$first)
+                             llhist[[2]] <- c(llhist[[2]], llvals$second)
+                           } else {
+                             llhist <- list(beta = c(llvals$first), theta = c(llvals$second))
+                           }
+                           udiagnostic <- Model__u_diagnostic(private$ptr,private$model_type())
+                           uvec_beta <- c(uvec_beta, udiagnostic$first)
+                           uvec_theta <- c(uvec_theta, udiagnostic$second)
+                           if(iter>1)uvec_all <- c(uvec_all, (llhist[[1]][iter] + llhist[[2]][iter]) - (llhist[[1]][iter-1] + llhist[[2]][iter-1]))
                            if(adaptive){
-                             if(exists("llhist")){
-                               llhist[[1]] <- c(llhist[[1]], llvals$first)
-                               llhist[[2]] <- c(llhist[[2]], llvals$second)
-                               llhistlen <- 5 # let this value be user-specified - determines history length
-                               epsilon <- 0.2 # and this - the threshold for convergence
-                               if(llhistlen < 5){
-                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][1:iter]))/(max(llhist[[1]][1:iter]) - min(llhist[[1]][1:iter]))
-                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][1:i]))/(max(llhist[[2]][1:i]) - min(llhist[[2]][1:i]))
-                               } else {
-                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][(iter-llhistlen+1):iter]))/(max(llhist[[1]][(iter-llhistlen+1):iter]) - min(llhist[[1]][(iter-llhistlen+1):iter]))
-                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][(iter-llhistlen+1):iter]))/(max(llhist[[2]][(iter-llhistlen+1):iter]) - min(llhist[[2]][(iter-llhistlen+1):iter]))
-                               }
-                               logl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
-                               ulogl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
-                               if(abs(logl_ind - 0.5) < epsilon & abs(ulogl_ind - 0.5) < epsilon & abs(logl_rm) < epsilon & abs(ulogl_rm) < epsilon ){
-                                 n_mcmc_sampling <- min(n_mcmc_sampling * 2, self$mcmc_options$samps)
-                                 if(private$trace >= 1) cat("\nLog-likelhood converged, increasing MCMC samples to ", n_mcmc_sampling)
-                               }
+                             llhistlen <- 5 # let this value be user-specified - determines history length
+                             epsilon <- 0.2 # and this - the threshold for convergence
+                             if(llhistlen < 5){
+                               logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][1:iter]))/(max(llhist[[1]][1:iter]) - min(llhist[[1]][1:iter]))
+                               ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][1:i]))/(max(llhist[[2]][1:i]) - min(llhist[[2]][1:i]))
                              } else {
-                               llhist <- list(beta = c(llvals[1]), theta = c(llvals[2]))
+                               logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][(iter-llhistlen+1):iter]))/(max(llhist[[1]][(iter-llhistlen+1):iter]) - min(llhist[[1]][(iter-llhistlen+1):iter]))
+                               ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][(iter-llhistlen+1):iter]))/(max(llhist[[2]][(iter-llhistlen+1):iter]) - min(llhist[[2]][(iter-llhistlen+1):iter]))
+                             }
+                             logl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                             ulogl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                             if(abs(logl_ind - 0.5) < epsilon & abs(ulogl_ind - 0.5) < epsilon & abs(logl_rm) < epsilon & abs(ulogl_rm) < epsilon ){
+                               n_mcmc_sampling <- min(n_mcmc_sampling * 2, self$mcmc_options$samps)
+                               if(private$trace >= 1) cat("\nLog-likelhood converged, increasing MCMC samples to ", n_mcmc_sampling)
                              }
                            }
                            beta_diff <- max(abs(beta-beta_new))
                            theta_diff <- max(abs(theta-theta_new))
+                           if(conv.criterion == 1){
+                             converged <- !(beta_diff > algo_tol[1] & theta_diff > algo_tol[2])
+                           } else if(conv.criterion == 2){
+                             if(iter > 1){
+                               converged <- udiagnostic$first > 0 & udiagnostic$second > 0
+                             }
+                           } else if(conv.criterion == 3){
+                             if(iter > 1){
+                               converged <- mean(uvec_beta[max(1,iter - 4): iter]) > 0 & mean(uvec_theta[max(1,iter - 4): iter]) > 0
+                             }
+                           } else if(conv.criterion == 4){
+                             if(iter > 1){
+                               converged <- uvec_all[iter - 1] > 0
+                             }
+                           } else if(conv.criterion == 5){
+                             if(iter > 1){
+                               converged <- mean(uvec_all[max(1,iter - 5): (iter-1)]) > 0 
+                             }
+                           }
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            if(private$trace==2)t3 <- Sys.time()
                            if(private$trace==2)cat("\nModel fitting took: ",t3-t2,"s")
                            if(private$trace >= 1){
-                             cat("\nBeta: ", beta_new)
-                             cat("\nMax beta difference: ", round(beta_diff,3))
-                             cat("\nTheta: ", theta_new)
-                             cat("\nMax theta difference: ", round(theta_diff,3))
-                             if(var_par_family)cat("\nSigma: ",var_par_new)
-                             cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),3))
-                             cat("\nBeta log-likelihood: ", llvals$first)
-                             cat("\nTheta log-likelihood: ", llvals$second)
+                             cat("\nBeta: ", round(beta_new,5))
+                             cat("\nMax beta difference: ", round(beta_diff,5))
+                             cat("\nTheta: ", round(theta_new,5))
+                             cat("\nMax theta difference: ", round(theta_diff,5))
+                             if(var_par_family)cat("\nSigma: ",round(var_par_new,5))
+                             cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),5))
+                             cat("\nBeta log-likelihood: ", round(llvals$first,5))
+                             cat("\nTheta log-likelihood: ", round(llvals$second,5))
                              if(adaptive & exists("llhist")){
                                cat("\nStochastic oscillation indexes: ",logl_ind, ", ",ulogl_ind)
                                cat("\nRunning means: ",logl_rm,", ",ulogl_rm)
                              }
+                             cat("\nU values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," running means: ", round(mean(uvec_beta[max(1,iter - 4): iter]),5),", ", round(mean(uvec_theta[max(1,iter - 4): iter]),5) )
+                             if(iter>1)cat(" overall: ", uvec_all[iter - 1], "running mean: ", mean(uvec_all[max(1,iter - 5): (iter-1)]))
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")
                            }
                          }
-                         not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
-                         if(not_conv)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
+                         if(!converged)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
                          if(sim.lik.step){
                            if(private$trace >= 1)cat("\n\n")
                            if(private$trace >= 1)message("Optimising simulated likelihood")
@@ -1073,7 +1118,7 @@ Model <- R6::R6Class("Model",
                          condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
                          margR2 <- var(Matrix::drop(xb))/total_var
                          out <- list(coefficients = res,
-                                     converged = !not_conv,
+                                     converged = converged,
                                      method = method,
                                      m = dim(u)[2],
                                      tol = tol,
@@ -1513,18 +1558,19 @@ Model <- R6::R6Class("Model",
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
                        #' values from the previous iteration are carried over.
-                       #' * `samps` The number of MCMC samples drawn in the MCML algorithm. For
+                       #' * `samps` The number of MCMC samples drawn in the MCML algorithms. For
                        #' smaller tolerance values larger numbers of samples are required. For the internal
                        #' HMC sampler, larger numbers of samples are generally required than if using Stan since
                        #' the samples generally exhibit higher autocorrealtion, especially for more complex
-                       #' covariance structures.
+                       #' covariance structures. For SAEM a small number is recommended as all samples are stored and used 
+                       #' from every iteration.
                        #' * `lambda` (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
                        #'  (equal to number of steps times the step length). Larger values result in lower correlation in samples, but
                        #'  require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
                        #'  * `refresh` How frequently to print to console MCMC progress if displaying verbose output.
                        #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
-                       mcmc_options = list(warmup = 500,
-                                           samps = 250,
+                       mcmc_options = list(warmup = 100,
+                                           samps = 25,
                                            lambda = 1,
                                            refresh = 500,
                                            maxsteps = 100,

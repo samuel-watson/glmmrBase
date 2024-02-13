@@ -185,8 +185,8 @@ Model__update_theta <- function(xp, theta_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__update_theta`, xp, theta_, type))
 }
 
-Model__update_u <- function(xp, u_, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_, type))
+Model__update_u <- function(xp, u_, append = FALSE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_, append, type))
 }
 
 Model__use_attenuation <- function(xp, use_, type = 0L) {
@@ -413,6 +413,10 @@ Model__get_log_likelihood_values <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_log_likelihood_values`, xp, type)
 }
 
+Model__u_diagnostic <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__u_diagnostic`, xp, type)
+}
+
 Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
     .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
 }
@@ -427,6 +431,10 @@ Model__print_names <- function(xp, data, parameters, type = 0L) {
 
 Model__mcmc_set_max_steps <- function(xp, max_steps_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_max_steps`, xp, max_steps_, type))
+}
+
+Model__saem <- function(xp, saem_, block_size = 20L, alpha = 0.8, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__saem`, xp, saem_, block_size, alpha, type))
 }
 
 Model__mcmc_set_refresh <- function(xp, refresh_, type = 0L) {

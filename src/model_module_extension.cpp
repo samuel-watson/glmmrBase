@@ -112,6 +112,17 @@ SEXP Model__get_log_likelihood_values(SEXP xp, int type = 0){
   return wrap(std::get<std::pair<double,double> >(S));
 }
 
+// [[Rcpp::export]]
+SEXP Model__u_diagnostic(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.u_diagnostic);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::pair<double,double> >(S));
+}
+
 // MarginType type, dydx, diff, ratio
 // [[Rcpp::export]]
 SEXP Model__marginal(SEXP xp, 
@@ -184,6 +195,20 @@ void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
   auto functor = overloaded {
     [](int) {}, 
     [&max_steps](auto ptr){ptr->mcmc.mcmc_set_max_steps(max_steps);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&](auto ptr){
+      ptr->optim.control.saem = saem_;
+      ptr->optim.control.alpha = alpha;
+      ptr->re.mcmc_block_size = block_size;
+    }
   };
   std::visit(functor,model.ptr);
 }

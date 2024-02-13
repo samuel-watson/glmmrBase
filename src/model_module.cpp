@@ -221,12 +221,12 @@ void Model__update_theta(SEXP xp, SEXP theta_, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__update_u(SEXP xp, SEXP u_, int type = 0){
+void Model__update_u(SEXP xp, SEXP u_, bool append = false, int type = 0){
   Eigen::MatrixXd u = as<Eigen::MatrixXd>(u_);
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&u](auto ptr){ptr->update_u(u);}
+    [&](auto ptr){ptr->update_u(u, append);}
   };
   std::visit(functor,model.ptr);
 }

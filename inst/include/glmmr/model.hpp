@@ -34,7 +34,7 @@ public:
   virtual void    set_y(const VectorXd& y_);
   virtual void    update_beta(const dblvec &beta_);
   virtual void    update_theta(const dblvec &theta_);
-  virtual void    update_u(const MatrixXd &u_);
+  virtual void    update_u(const MatrixXd &u_, bool append = false);
   virtual void    set_trace(int trace_);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
@@ -92,20 +92,27 @@ inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
 }
 
 template<typename modeltype>
-inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_){
+inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
 #ifdef R_BUILD
   if(u_.rows()!=model.covariance.Q())Rcpp::stop(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
 #endif
   
-  if(u_.cols()!=re.u_.cols()){
+  int newcolsize = u_.cols();
+  int currcolsize = re.u_.cols();
+  if(append){
+    re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.u_.rightCols(newcolsize) = u_;
+  } else {
+    if(u_.cols()!=re.u_.cols()){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-    Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
+      Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
 #endif
-    int newcolsize = u_.cols();
-    re.u_.resize(NoChange,newcolsize);
-    re.zu_.resize(NoChange,newcolsize);
+      re.u_.resize(NoChange,newcolsize);
+      re.zu_.resize(NoChange,newcolsize);
+      re.u_ = u_;
+    }
   }
-  re.u_ = u_;
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
