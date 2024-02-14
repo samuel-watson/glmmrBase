@@ -46,8 +46,8 @@ public:
     double  delta = 1e-8;
     int     max_linesearch = 64;
     double  alpha = 0.8;
-    bool    saem = true;
-    std::pair<int, int> mcmc_limits = {0,0};
+    bool    saem = false;
+    std::pair<int, int> mcmc_limits = {0,1};
   } control;
   
   // functions

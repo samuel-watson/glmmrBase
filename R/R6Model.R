@@ -790,7 +790,6 @@ Model <- R6::R6Class("Model",
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          if(!method %in% c("mcem", "mcnr", "saem", "mcem.adapt", "mcnr.adapt"))stop("method must be either mcem, mcnr, saem, mcem.adapt, mcnr.adapt")
                          append_u <- FALSE
-                         Model__saem(private$ptr, method == "saem", self$mcmc_options$samps, alpha, private$model_type())
                          if(mcmc.pkg == "hmc" & method == "saem")stop("saem and hmc options not currently compatible")
                          adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
                          if(!mcmc.pkg == "hmc"){
@@ -850,6 +849,7 @@ Model <- R6::R6Class("Model",
                              mod <- suppressMessages(cmdstanr::cmdstan_model(model_file))
                            }
                          }
+                         # SET UP MCMC DATA STRUCTURE
                          data <- list(
                            N = self$n(),
                            Q = Model__Q(private$ptr,private$model_type()),
@@ -866,9 +866,23 @@ Model <- R6::R6Class("Model",
                          beta_diff <- 1
                          theta_diff <- 1
                          converged <- FALSE
+                         # run one iteration of fitting beta without re (i.e. glm) to get reasonable starting values
+                         # otherwise the algorithm can struggle to converge
+                         if(private$trace >= 1)cat("\nIter: 0\n")
+                         Model__ml_beta(private$ptr,0,private$model_type())
+                         beta <- Model__get_beta(private$ptr,private$model_type())
+                         var_par <- Model__get_var_par(private$ptr,private$model_type())
+                         all_pars <- c(beta,theta)
+                         if(var_par_family) all_pars <- c(all_pars,var_par)
+                         if(private$trace >= 1){
+                           cat("\nStarting Beta (GLM): ", round(beta,5))
+                           cat("\n",Reduce(paste0,rep("-",40)),"\n")
+                         }
+                         Model__saem(private$ptr, method == "saem", self$mcmc_options$samps, alpha, private$model_type())
+                         # START THE MAIN ALGORITHM
                          while(!converged & iter < max.iter){
-                           all_pars <- all_pars_new
                            if(iter > 0){
+                             all_pars <- all_pars_new
                              beta <- beta_new
                              theta <- theta_new
                            }
@@ -890,7 +904,7 @@ Model <- R6::R6Class("Model",
                                                                   refresh = 0),
                                                 file=tempfile())
                                } else {
-                                 capture.output(supressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
+                                 capture.output(suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                                        data=data,
                                                                        chains=1,
                                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
@@ -928,7 +942,7 @@ Model <- R6::R6Class("Model",
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
-                           if(method=="mcem"){
+                           if(method=="mcem" | method=="saem"){
                              Model__ml_beta(private$ptr,balgo,private$model_type())
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
@@ -954,48 +968,46 @@ Model <- R6::R6Class("Model",
                            } else {
                              llhist <- list(beta = c(llvals$first), theta = c(llvals$second))
                            }
-                           udiagnostic <- Model__u_diagnostic(private$ptr,private$model_type())
-                           uvec_beta <- c(uvec_beta, udiagnostic$first)
-                           uvec_theta <- c(uvec_theta, udiagnostic$second)
-                           if(iter>1)uvec_all <- c(uvec_all, (llhist[[1]][iter] + llhist[[2]][iter]) - (llhist[[1]][iter-1] + llhist[[2]][iter-1]))
-                           if(adaptive){
-                             llhistlen <- 5 # let this value be user-specified - determines history length
-                             epsilon <- 0.2 # and this - the threshold for convergence
-                             if(llhistlen < 5){
-                               logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][1:iter]))/(max(llhist[[1]][1:iter]) - min(llhist[[1]][1:iter]))
-                               ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][1:i]))/(max(llhist[[2]][1:i]) - min(llhist[[2]][1:i]))
-                             } else {
-                               logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][(iter-llhistlen+1):iter]))/(max(llhist[[1]][(iter-llhistlen+1):iter]) - min(llhist[[1]][(iter-llhistlen+1):iter]))
-                               ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][(iter-llhistlen+1):iter]))/(max(llhist[[2]][(iter-llhistlen+1):iter]) - min(llhist[[2]][(iter-llhistlen+1):iter]))
-                             }
-                             logl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
-                             ulogl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
-                             if(abs(logl_ind - 0.5) < epsilon & abs(ulogl_ind - 0.5) < epsilon & abs(logl_rm) < epsilon & abs(ulogl_rm) < epsilon ){
-                               n_mcmc_sampling <- min(n_mcmc_sampling * 2, self$mcmc_options$samps)
-                               if(private$trace >= 1) cat("\nLog-likelhood converged, increasing MCMC samples to ", n_mcmc_sampling)
+                           if(iter > 1){
+                             udiagnostic <- Model__u_diagnostic(private$ptr,private$model_type())
+                             uvec_beta <- c(uvec_beta, udiagnostic$first)
+                             uvec_theta <- c(uvec_theta, udiagnostic$second)
+                             uvec_all <- c(uvec_all, (llhist[[1]][iter] + llhist[[2]][iter]) - (llhist[[1]][iter-1] + llhist[[2]][iter-1]))
+                             if(adaptive){
+                               llhistlen <- 5 # let this value be user-specified - determines history length
+                               epsilon <- 0.2 # and this - the threshold for convergence
+                               if(llhistlen < 5){
+                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][1:iter]))/(max(llhist[[1]][1:iter]) - min(llhist[[1]][1:iter]))
+                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][1:i]))/(max(llhist[[2]][1:i]) - min(llhist[[2]][1:i]))
+                               } else {
+                                 logl_ind <- (llhist[[1]][iter] - min(llhist[[1]][(iter-llhistlen+1):iter]))/(max(llhist[[1]][(iter-llhistlen+1):iter]) - min(llhist[[1]][(iter-llhistlen+1):iter]))
+                                 ulogl_ind <- (llhist[[2]][iter] - min(llhist[[2]][(iter-llhistlen+1):iter]))/(max(llhist[[2]][(iter-llhistlen+1):iter]) - min(llhist[[2]][(iter-llhistlen+1):iter]))
+                               }
+                               logl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                               ulogl_rm <- mean(logl_ind[1:(iter-1)] - 0.5, na.rm=TRUE)
+                               if(abs(logl_ind - 0.5) < epsilon & abs(ulogl_ind - 0.5) < epsilon & abs(logl_rm) < epsilon & abs(ulogl_rm) < epsilon ){
+                                 n_mcmc_sampling <- min(n_mcmc_sampling * 2, self$mcmc_options$samps)
+                                 if(private$trace >= 1) cat("\nLog-likelhood converged, increasing MCMC samples to ", n_mcmc_sampling)
+                               }
                              }
                            }
                            beta_diff <- max(abs(beta-beta_new))
                            theta_diff <- max(abs(theta-theta_new))
                            if(conv.criterion == 1){
                              converged <- !(beta_diff > algo_tol[1] & theta_diff > algo_tol[2])
-                           } else if(conv.criterion == 2){
-                             if(iter > 1){
+                           } 
+                           if(iter > 1){
+                             if(conv.criterion == 2){
                                converged <- udiagnostic$first > 0 & udiagnostic$second > 0
-                             }
-                           } else if(conv.criterion == 3){
-                             if(iter > 1){
-                               converged <- mean(uvec_beta[max(1,iter - 4): iter]) > 0 & mean(uvec_theta[max(1,iter - 4): iter]) > 0
-                             }
-                           } else if(conv.criterion == 4){
-                             if(iter > 1){
+                             } else if(conv.criterion == 3){
+                               converged <- mean(uvec_beta[max(1,iter - 4): iter], na.rm=TRUE) > 0 & mean(uvec_theta[max(1,iter - 4): iter], na.rm=TRUE) > 0
+                             } else if(conv.criterion == 4){
                                converged <- uvec_all[iter - 1] > 0
-                             }
-                           } else if(conv.criterion == 5){
-                             if(iter > 1){
-                               converged <- mean(uvec_all[max(1,iter - 5): (iter-1)]) > 0 
+                             } else if(conv.criterion == 5){
+                               converged <- mean(uvec_all[max(1,iter - 5): (iter-1)], na.rm=TRUE) > 0 
                              }
                            }
+                           
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            if(private$trace==2)t3 <- Sys.time()
                            if(private$trace==2)cat("\nModel fitting took: ",t3-t2,"s")
@@ -1008,12 +1020,12 @@ Model <- R6::R6Class("Model",
                              cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),5))
                              cat("\nBeta log-likelihood: ", round(llvals$first,5))
                              cat("\nTheta log-likelihood: ", round(llvals$second,5))
-                             if(adaptive & exists("llhist")){
+                             if(adaptive & exists("llhist") & iter > 1){
                                cat("\nStochastic oscillation indexes: ",logl_ind, ", ",ulogl_ind)
                                cat("\nRunning means: ",logl_rm,", ",ulogl_rm)
                              }
-                             cat("\nU values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," running means: ", round(mean(uvec_beta[max(1,iter - 4): iter]),5),", ", round(mean(uvec_theta[max(1,iter - 4): iter]),5) )
-                             if(iter>1)cat(" overall: ", uvec_all[iter - 1], "running mean: ", mean(uvec_all[max(1,iter - 5): (iter-1)]))
+                             if(iter>1)cat("\nU values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," running means: ", round(mean(uvec_beta[max(1,iter - 4): iter], na.rm=TRUE),5),", ", round(mean(uvec_theta[max(1,iter - 4): iter], na.rm=TRUE),5) )
+                             if(iter>1)cat(" overall: ", uvec_all[iter - 1], "running mean: ", mean(uvec_all[max(1,iter - 5): (iter-1)]), na.rm=TRUE)
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")
                            }
                          }
