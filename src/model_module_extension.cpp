@@ -106,7 +106,7 @@ SEXP Model__get_log_likelihood_values(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->optim.log_likelihood_value);}
+    [](auto ptr){return returnType(ptr->optim.current_likelihood_values());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<std::pair<double,double> >(S));
@@ -117,7 +117,7 @@ SEXP Model__u_diagnostic(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->optim.u_diagnostic);}
+    [](auto ptr){return returnType(ptr->optim.u_diagnostic());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<std::pair<double,double> >(S));
@@ -200,7 +200,7 @@ void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, int type = 0){
+void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, bool pr_average = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
@@ -208,9 +208,23 @@ void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, i
       ptr->optim.control.saem = saem_;
       ptr->optim.control.alpha = alpha;
       ptr->re.mcmc_block_size = block_size;
+      ptr->optim.control.pr_average = pr_average;
     }
   };
   std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+SEXP Model__ll_diff_variance(SEXP xp, bool beta, bool theta, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {return returnType(0);}, 
+    [&](auto ptr){
+      return returnType(ptr->optim.ll_diff_variance(beta,theta));
+    }
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<double>(S));
 }
 
 // [[Rcpp::export]]

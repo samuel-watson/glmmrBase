@@ -99,10 +99,12 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   
   int newcolsize = u_.cols();
   int currcolsize = re.u_.cols();
+  
   if(append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;
+    optim.ll_current.resize(currcolsize + newcolsize,NoChange);
   } else {
     if(u_.cols()!=re.u_.cols()){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
@@ -111,6 +113,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
       re.u_ = u_;
+      if(newcolsize != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
     }
   }
   re.zu_ = model.covariance.ZLu(re.u_);

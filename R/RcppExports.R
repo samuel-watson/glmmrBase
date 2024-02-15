@@ -433,8 +433,12 @@ Model__mcmc_set_max_steps <- function(xp, max_steps_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_max_steps`, xp, max_steps_, type))
 }
 
-Model__saem <- function(xp, saem_, block_size = 20L, alpha = 0.8, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__saem`, xp, saem_, block_size, alpha, type))
+Model__saem <- function(xp, saem_, block_size = 20L, alpha = 0.8, pr_average = TRUE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__saem`, xp, saem_, block_size, alpha, pr_average, type))
+}
+
+Model__ll_diff_variance <- function(xp, beta, theta, type = 0L) {
+    .Call(`_glmmrBase_Model__ll_diff_variance`, xp, beta, theta, type)
 }
 
 Model__mcmc_set_refresh <- function(xp, refresh_, type = 0L) {
