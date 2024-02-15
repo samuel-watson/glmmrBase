@@ -207,11 +207,11 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   dblvec start = get_start_values(false,true,false);  
   dblvec lower = get_lower_values(false,true,false);
   dblvec upper = get_upper_values(false,true,false);
-  if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  double old_ll = log_likelihood_theta(start);
   ll_previous.col(1) = ll_current.col(1);
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);  
+  if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
+  double old_ll = log_likelihood_theta(start);
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec); 
@@ -447,24 +447,28 @@ inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool the
 #ifdef R_BUILD
   if(ll_current.rows() != ll_previous.rows())Rcpp::stop("Not evaluating variance on equivalent MCMC samples");
 #endif
-  double sum_ll = 0;
-  double sum_ll_sq = 0;
+  // double sum_ll = 0;
+  // double sum_ll_sq = 0;
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
-  if(beta) {
-    sum_ll += (ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size)).sum();
-    if(theta){
-      sum_ll += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).sum();
-      sum_ll_sq += (ll_current.col(0).tail(eval_size) + ll_current.col(1).tail(eval_size) - ll_previous.col(0).tail(eval_size) - ll_previous.col(1).tail(eval_size)).square().sum();
-    } else {
-      sum_ll_sq += (ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size)).square().sum();
-    }
-  }
-  if(theta & !beta){
-    sum_ll += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).sum();
-    sum_ll_sq += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).square().sum();
-  }
-  double sum_sq_ll = sum_ll * sum_ll;
-  return (1.0/eval_size) * sum_ll * sum_ll * (sum_ll_sq/sum_sq_ll - 2 / eval_size + 1);
+  // if(beta) {
+  //   sum_ll += (ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size)).sum();
+  //   if(theta){
+  //     sum_ll += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).sum();
+  //     sum_ll_sq += (ll_current.col(0).tail(eval_size) + ll_current.col(1).tail(eval_size) - ll_previous.col(0).tail(eval_size) - ll_previous.col(1).tail(eval_size)).square().sum();
+  //   } else {
+  //     sum_ll_sq += (ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size)).square().sum();
+  //   }
+  // }
+  // if(theta & !beta){
+  //   sum_ll += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).sum();
+  //   sum_ll_sq += (ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size)).square().sum();
+  // }
+  // double sum_sq_ll = sum_ll * sum_ll;
+  // return (1.0/eval_size) * sum_ll * sum_ll * (sum_ll_sq/sum_sq_ll - 2 / eval_size + 1);
+  ArrayXd diff = ArrayXd::Zero(ll_current.rows()); 
+  if(beta) diff += ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size);
+  if(theta) diff += ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size);
+  return (diff - diff.mean()).square().sum() / (diff.size() - 1);
 }
 
 template<typename modeltype>
