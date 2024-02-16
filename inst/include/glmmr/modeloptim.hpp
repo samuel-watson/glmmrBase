@@ -24,8 +24,10 @@ public:
   glmmr::ModelMatrix<modeltype>&    matrix;
   glmmr::RandomEffects<modeltype>&  re;
   int                               trace = 0;
-  ArrayXXd                          ll_previous;
+  ArrayXXd                          ll_previous; // log likelihood values for all u samples
   ArrayXXd                          ll_current;
+  std::pair<double,double>          current_ll_values = {0.0,0.0};
+  std::pair<double,double>          previous_ll_values = {0.0,0.0};
   std::pair<int,int>                fn_counter = {0,0};
   
   // constructor
@@ -162,9 +164,12 @@ template<typename modeltype>
 template<class algo, typename>
 inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   dblvec start = get_start_values(true,false,false);
+  // store previous log likelihood values for convergence calculations
+  previous_ll_values.first = current_ll_values.first;
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
   double old_ll = log_likelihood_beta(start);
   ll_previous.col(0) = ll_current.col(0);
+  // optimisations
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
@@ -201,6 +206,8 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     op.minimise();
   }
   calculate_var_par();
+  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
+  current_ll_values.first = ll_current.col(0).tail(eval_size).mean();
 }
 
 template<typename modeltype>
@@ -209,11 +216,14 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   dblvec start = get_start_values(false,true,false);  
   dblvec lower = get_lower_values(false,true,false);
   dblvec upper = get_upper_values(false,true,false);
+  // store previous log likelihood values for convergence calculations
+  previous_ll_values.second = current_ll_values.second;
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);  
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
   double old_ll = log_likelihood_theta(start);
   ll_previous.col(1) = ll_current.col(1);
+  // optimisation
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec); 
@@ -252,6 +262,8 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
     }
     op.minimise();
   }
+  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
+  current_ll_values.second = ll_current.col(1).tail(eval_size).mean();
 }
 
 // THIS FUNCTION BELOW NEEDS UPDATING - IT IS NOT CURRENTLY USED AND LACKS FUNCTIONALITY
@@ -483,20 +495,15 @@ inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool the
 template<typename modeltype>
 inline std::pair<double,double> glmmr::ModelOptim<modeltype>::current_likelihood_values()
 {
-  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
-  std::pair<double, double> ll;
-  ll.first = ll_current.col(0).tail(eval_size).mean();
-  ll.second = ll_current.col(1).tail(eval_size).mean();
-  return ll;
+  return current_ll_values;
 }
 
 template<typename modeltype>
 inline std::pair<double,double> glmmr::ModelOptim<modeltype>::u_diagnostic()
 {
-  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   std::pair<double, double> ll;
-  ll.first = ll_current.col(0).tail(eval_size).mean() - ll_previous.col(0).tail(eval_size).mean();
-  ll.second = ll_current.col(1).tail(eval_size).mean() - ll_previous.col(1).tail(eval_size).mean();
+  ll.first = current_ll_values.first - previous_ll_values.first;
+  ll.second = current_ll_values.second - previous_ll_values.second;
   return ll;
 }
 
@@ -1011,6 +1018,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_upper_values(bool beta, bool the
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   // save the old likelihood values
+  previous_ll_values.first = current_ll_values.first;
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
   ll_previous.col(0) = ll_current.col(0);
   
@@ -1078,7 +1086,8 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   VectorXd bincr = XtWXm * X.transpose() * Wum;
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   calculate_var_par();
-  double new_ll = log_likelihood(); // repopulate loglikelihood history
+  current_ll_values.first = log_likelihood(); // repopulate loglikelihood history - assumes NR can 
+  // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
 }
 
 template<typename modeltype>

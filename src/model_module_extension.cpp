@@ -180,7 +180,6 @@ void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
 
 // [[Rcpp::export]]
 void Model__reset_fn_counter(SEXP xp, int type = 0){
-  double lambda = as<double>(lambda_);
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 

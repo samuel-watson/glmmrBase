@@ -731,10 +731,9 @@ Model <- R6::R6Class("Model",
                        #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
                        #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)
                        #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
-                       #'2 = There is no improvement in the log-likelihood for both beta and theta between iterations. 
-                       #'3 = there is no improvement in the running mean difference in the log-likelihood for both beta and theta over five iterations.
-                       #'4 = There is no improvement in the log-likelihood overall between iterations.
-                       #'5 = There is no improvement in the running mean differenece of the overall log likelihood over five iterations.
+                       #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
+                       #'3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - `convergence.prob`
+                       #'4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - `convergence.prob`
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -795,7 +794,7 @@ Model <- R6::R6Class("Model",
                          append_u <- FALSE
                          if(mcmc.pkg == "hmc" & method == "saem")stop("saem and hmc options not currently compatible")
                          adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
-                         if(!conv.criterion %in% 1:3)stop("Convergence criterion must be 1, 2, or 3")
+                         if(!conv.criterion %in% 1:4)stop("Convergence criterion must be 1, 2, or 3")
                          if(alpha < 0.5 | alpha >= 1)stop("alpha must be in [0.5, 1)")
                          if(convergence.prob <= 0 | convergence.prob >= 1)stop("Convergence probability must be in (0, 1)")
                          if(!mcmc.pkg == "hmc"){
@@ -978,11 +977,19 @@ Model <- R6::R6Class("Model",
                              uval <- ifelse(conv.criterion == 2, Reduce(sum,udiagnostic), udiagnostic$first)
                              llvar <- Model__ll_diff_variance(private$ptr, TRUE, conv.criterion==2, private$model_type())
                              if(adaptive) n_mcmc_sampling <- max(n_mcmc_sampling, min(self$mcmc_options$samps, ceiling(llvar * (qnorm(convergence.prob) + qnorm(0.8))^2)/uval^2))
-                             if(conv.criterion >= 2){
+                             if(conv.criterion %in% c(2,3)){
                                conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
                                prob.converged <- pnorm(-uval/sqrt(llvar/n_mcmc_sampling))
                                converged <- conv.criterion.value < 0
                              } 
+                             if(conv.criterion == 4){
+                               llvart <- Model__ll_diff_variance(private$ptr, FALSE, TRUE, private$model_type())
+                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
+                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar/n_mcmc_sampling))
+                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart/n_mcmc_sampling)
+                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/n_mcmc_sampling))
+                               converged <- conv.criterion.value < 0 & conv.criterion.valuet < 0
+                             }
                            }
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            if(private$trace==2)t3 <- Sys.time()
@@ -1000,7 +1007,8 @@ Model <- R6::R6Class("Model",
                                if(adaptive)cat("\nMCMC sample size (adaptive): ",n_mcmc_sampling)
                                cat("\nLog-lik diff values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," overall: ", round(Reduce(sum,udiagnostic), 5))
                                cat("\nLog-lik variance: ", llvar)
-                               if(conv.criterion >= 2)cat(" convergence criterion value: ", round(conv.criterion.value,5)," Probability converged: ",round(prob.converged,3))
+                               if(conv.criterion >= 2)cat(" convergence criterion value:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob. converged: ",round(prob.converged,3))
+                               if(conv.criterion == 4)cat(" (theta) ", round(conv.criterion.valuet,5)," Prob. converged: ",round(prob.convergedt,3))
                              }
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")
                            }
@@ -1114,7 +1122,8 @@ Model <- R6::R6Class("Model",
                                      aic = aic,
                                      se=se,
                                      Rsq = c(cond = condR2,marg=margR2),
-                                     logl = Model__log_likelihood(private$ptr,private$model_type()),
+                                     logl = llvals$first,
+                                     logl_theta = llvals$second,
                                      mean_form = self$mean$formula,
                                      cov_form = self$covariance$formula,
                                      family = self$family[[1]],
@@ -1125,7 +1134,8 @@ Model <- R6::R6Class("Model",
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family,
-                                     y=y)
+                                     y=y,
+                                     fn_count = fn_counter)
                          class(out) <- "mcml"
                          return(out)
                        },

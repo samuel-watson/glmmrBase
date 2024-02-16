@@ -40,7 +40,7 @@ inline size_t random_index(size_t max_index) {
   return distr(generator);
 }
 
-// class for bobyqa
+// class for bobyqa - I am working on a new version of BOBYQA 
 template <typename T>
 class optim<T(const std::vector<T>&),BOBYQA> {
   using func = T(*)(long, const T*, void*); 
