@@ -679,19 +679,31 @@ Model <- R6::R6Class("Model",
                        #'Markov Chain Monte Carlo Maximum Likelihood  model fitting
                        #'
                        #'@details
-                       #'**MCMCML**
+                       #'**Stochastic maximum likelihood**
                        #'Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
                        #'Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation 
-                       #'maximisation (SAEM). MCNR and MCEM are described by McCullagh (1997). For each iteration
+                       #'maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
+                       #'<doi:10.1080/01621459.1997.10473613>. For each iteration
                        #'of the algorithms the unobserved random effect terms (\eqn{\gamma}) are simulated
                        #'using Markov Chain Monte Carlo (MCMC) methods,
                        #'and then these values are conditioned on in the subsequent steps to estimate the covariance
                        #'parameters and the mean function parameters (\eqn{\beta}). SAEM uses a Robbins-Munroe approach to approximating 
-                       #'the likelihood and requires fewer MCMC samples and may have lower Monte Carlo error. The options `mcem.adapt` and 
-                       #'`mcnr.adapt` will modify the number of MCMC samples during each step of model fitting as the estimates converge. 
+                       #'the likelihood and requires fewer MCMC samples and may have lower Monte Carlo error, see Jank (2006)<doi:10.1198/106186006X157469>. 
+                       #'The option `alpha` determines the rate at which succesive iterations "forget" the past and must be between 0.5 and 1. Higher values
+                       #'will result in lower Monte Carlo error but slower convergence. The options `mcem.adapt` and `mcnr.adapt` will modify the number of MCMC samples during each step of model fitting 
+                       #'using the suggested values in Caffo, Jank, and Jones (2006)<doi:10.1111/j.1467-9868.2005.00499.x> 
+                       #'as the estimates converge. 
                        #'
                        #'The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
-                       #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
+                       #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error. However,
+                       #'the SAEM approach does overcome reduce the required samples, especially with R-P averaging. As such a lower number (20-50)
+                       #'samples per iteration is normally sufficient to get convergence. 
+                       #'
+                       #'There are several stopping rules for the algorithm. Either the algorithm will terminate when succesive parameter estimates are
+                       #'all within a specified tolerance of each other (`conv.criterion = 1`), or when there is a high probability that the estimated 
+                       #'log-likelihood has not been improved. This latter criterion can be applied to either the overall log-likelihood (`conv.criterion = 2`),
+                       #'the likelihood just for the fixed effects (`conv.criterion = 3`), or both the likelihoods for the fixed effects and covariance parameters 
+                       #'(`conv.criterion = 4`; default).
                        #'
                        #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`. The information printed to the console
                        #' during model fitting can be controlled with the `self$set_trace()` function.
@@ -703,8 +715,6 @@ Model <- R6::R6Class("Model",
                        #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, or `saem` see Details. Default is `saem`. `mcem.adapt` and `mcnr.adapt` will use adaptive 
                        #'MCMC sample sizes starting small and increasing to the the maximum value specified in `mcmc_options$sampling`, which results in faster convergence. `saem` uses a
                        #'stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. 
-                       #'@param sim.lik.step Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
-                       #'not do this step), defaults to FALSE.
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm. If two values are provided then different tolerances will be 
                        #'applied to the fixed effect and covariance parameters.
@@ -749,27 +759,18 @@ Model <- R6::R6Class("Model",
                        #'   covariance = c(0.05,0.7),
                        #'   mean = c(rep(0,5),0.2),
                        #'   data = df,
-                       #'   family = gaussian(),
-                       #'   var_par = 1
+                       #'   family = gaussian()
                        #' )
                        #' ysim <- des$sim_data() # simulate some data from the model
-                       #' fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
-                       #' #fits the models using Stan
-                       #' fit2 <- des$MCML(y = ysim, method="mcnr")
-                       #'  #adds a simulated likelihood step after the MCEM algorithm
-                       #' fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
-                       #'
-                       #'  # we could use LA to find better starting values
-                       #' fit4 <- des$LA(y=ysim)
-                       #' # the fit parameter values are stored in the internal model class object
-                       #' fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
+                       #' fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
+                       #' # use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
+                       #' fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
                        #'}
                        #'@md
                        MCML = function(y,
                                        method = "saem",
-                                       sim.lik.step = FALSE,
                                        tol = 1e-2,
-                                       max.iter = 30,
+                                       max.iter = 50,
                                        se = "gls",
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
@@ -781,7 +782,8 @@ Model <- R6::R6Class("Model",
                                        alpha = 0.8,
                                        convergence.prob = 0.8,
                                        pr.average = TRUE,
-                                       conv.criterion = 2){
+                                       conv.criterion = 4){
+                         # Checks on options and data
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -821,6 +823,7 @@ Model <- R6::R6Class("Model",
                            algo_tol <- tol[1:2]
                          }
                          Model__reset_fn_counter(private$ptr,private$model_type())
+                         # set up all the required vectors and data to monitor the algorithm
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
@@ -1014,14 +1017,14 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          if(!converged)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         if(sim.lik.step){
-                           if(private$trace >= 1)cat("\n\n")
-                           if(private$trace >= 1)message("Optimising simulated likelihood")
-                           Model__ml_all(private$ptr,0,private$model_type())
-                           beta_new <- Model__get_beta(private$ptr,private$model_type())
-                           theta_new <- Model__get_theta(private$ptr,private$model_type())
-                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
-                         }
+                         # if(sim.lik.step){
+                         #   if(private$trace >= 1)cat("\n\n")
+                         #   if(private$trace >= 1)message("Optimising simulated likelihood")
+                         #   Model__ml_all(private$ptr,0,private$model_type())
+                         #   beta_new <- Model__get_beta(private$ptr,private$model_type())
+                         #   theta_new <- Model__get_theta(private$ptr,private$model_type())
+                         #   var_par_new <- Model__get_var_par(private$ptr,private$model_type())
+                         # }
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
                          if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
@@ -1118,7 +1121,7 @@ Model <- R6::R6Class("Model",
                                      method = method,
                                      m = dim(u)[2],
                                      tol = tol,
-                                     sim_lik = sim.lik.step,
+                                     sim_lik = FALSE, #sim.lik.step,
                                      aic = aic,
                                      se=se,
                                      Rsq = c(cond = condR2,marg=margR2),
