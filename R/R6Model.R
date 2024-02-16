@@ -1006,9 +1006,9 @@ Model <- R6::R6Class("Model",
                              if(iter>1){
                                if(adaptive)cat("\nMCMC sample size (adaptive): ",n_mcmc_sampling)
                                cat("\nLog-lik diff values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," overall: ", round(Reduce(sum,udiagnostic), 5))
-                               cat("\nLog-lik variance: ", llvar)
-                               if(conv.criterion >= 2)cat(" convergence criterion value:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob. converged: ",round(prob.converged,3))
-                               if(conv.criterion == 4)cat(" (theta) ", round(conv.criterion.valuet,5)," Prob. converged: ",round(prob.convergedt,3))
+                               cat("\nLog-lik variance: ", round(llvar,5))
+                               if(conv.criterion >= 2)cat(" convergence criterion:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob.: ",round(prob.converged,3))
+                               if(conv.criterion == 4)cat(" (theta) ", round(conv.criterion.valuet,5)," Prob.: ",round(prob.convergedt,3))
                              }
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")
                            }

@@ -486,7 +486,7 @@ inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool the
   // }
   // double sum_sq_ll = sum_ll * sum_ll;
   // return (1.0/eval_size) * sum_ll * sum_ll * (sum_ll_sq/sum_sq_ll - 2 / eval_size + 1);
-  ArrayXd diff = ArrayXd::Zero(ll_current.rows()); 
+  ArrayXd diff = ArrayXd::Zero(eval_size); 
   if(beta) diff += ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size);
   if(theta) diff += ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size);
   return (diff - diff.mean()).square().sum() / (diff.size() - 1);
@@ -1025,18 +1025,6 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
-//   if(model.linear_predictor.any_nonlinear()){
-// #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-//     Rcpp::Rcout << "\nNR Beta: using non-linear";
-// #endif
-//     VectorMatrix score = matrix.b_score();
-//     MatrixXd infomat = score.mat.llt().solve(MatrixXd::Identity(P(),P()));
-//     VectorXd bplus = infomat*score.vec;
-//     for(int i = 0; i < bplus.size(); i++)model.linear_predictor.parameters[i] += bplus(i);
-//   } else {
-// 
-//   }
-  
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
   Rcpp::Rcout << "\nNR Beta: XtWX";
 #endif
