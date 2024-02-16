@@ -821,6 +821,7 @@ Model <- R6::R6Class("Model",
                          } else {
                            algo_tol <- tol[1:2]
                          }
+                         Model__reset_fn_counter(private$ptr,private$model_type())
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
@@ -968,6 +969,7 @@ Model <- R6::R6Class("Model",
                            llvals <- Model__get_log_likelihood_values(private$ptr,private$model_type())
                            beta_diff <- max(abs(beta-beta_new))
                            theta_diff <- max(abs(theta-theta_new))
+                           fn_counter <- Model__get_fn_counter(private$ptr,private$model_type())
                            if(conv.criterion == 1){
                              converged <- !(beta_diff > algo_tol[1] & theta_diff > algo_tol[2])
                            } 
@@ -993,6 +995,7 @@ Model <- R6::R6Class("Model",
                              if(var_par_family)cat("\nSigma: ",round(var_par_new,5))
                              cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),5))
                              cat("\nLog-likelihoods: beta ", round(llvals$first,5)," theta ",round(llvals$second,5))
+                             cat("\nFn evaluations: beta ",fn_counter$first," theta ",fn_counter$second)
                              if(iter>1){
                                if(adaptive)cat("\nMCMC sample size (adaptive): ",n_mcmc_sampling)
                                cat("\nLog-lik diff values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," overall: ", round(Reduce(sum,udiagnostic), 5))

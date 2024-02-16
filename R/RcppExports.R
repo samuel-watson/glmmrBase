@@ -425,6 +425,14 @@ Model__mcmc_set_lambda <- function(xp, lambda_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__mcmc_set_lambda`, xp, lambda_, type))
 }
 
+Model__reset_fn_counter <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__reset_fn_counter`, xp, type))
+}
+
+Model__get_fn_counter <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_fn_counter`, xp, type)
+}
+
 Model__print_names <- function(xp, data, parameters, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__print_names`, xp, data, parameters, type))
 }

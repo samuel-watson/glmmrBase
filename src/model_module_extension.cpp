@@ -179,6 +179,28 @@ void Model__mcmc_set_lambda(SEXP xp, SEXP lambda_, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__reset_fn_counter(SEXP xp, int type = 0){
+  double lambda = as<double>(lambda_);
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [](auto ptr){ptr->optim.reset_fn_counter();}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+SEXP Model__get_fn_counter(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.fn_counter);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::pair<int,int> >(S));
+}
+
+// [[Rcpp::export]]
 void Model__print_names(SEXP xp, bool data, bool parameters, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

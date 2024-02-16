@@ -46,7 +46,8 @@ struct glmmrType
 using returnType = std::variant<int, double, Eigen::VectorXd, Eigen::ArrayXd, Eigen::MatrixXd, 
                                 dblvec, strvec, intvec, VectorMatrix, MatrixMatrix, CorrectionData<glmmr::SE::KR>,
                                 CorrectionData<glmmr::SE::KR2>, CorrectionData<glmmr::SE::KRBoth>,
-                                CorrectionData<glmmr::SE::Sat>, std::vector<Eigen::MatrixXd>, std::pair<double,double>, BoxResults >;
+                                CorrectionData<glmmr::SE::Sat>, std::vector<Eigen::MatrixXd>, std::pair<double,double>, BoxResults,
+                                std::pair<int,int> >;
 
 // WORKING ON A SOLUTION TO REDUCE SIZE OF CPP CODE WITH FUNCTION 
 // TEMPLATE - HAVEN'T WORKED OUT HOW TO PASS FUNCTION ARGUMENTS AND ALSO ONLY REMOVES ONE LINE PER FUNCTION

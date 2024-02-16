@@ -1339,6 +1339,29 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__reset_fn_counter
+void Model__reset_fn_counter(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__reset_fn_counter(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__reset_fn_counter(xp, type);
+    return R_NilValue;
+END_RCPP
+}
+// Model__get_fn_counter
+SEXP Model__get_fn_counter(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_fn_counter(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_fn_counter(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__print_names
 void Model__print_names(SEXP xp, bool data, bool parameters, int type);
 RcppExport SEXP _glmmrBase_Model__print_names(SEXP xpSEXP, SEXP dataSEXP, SEXP parametersSEXP, SEXP typeSEXP) {
@@ -1768,6 +1791,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
     {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 13},
     {"_glmmrBase_Model__mcmc_set_lambda", (DL_FUNC) &_glmmrBase_Model__mcmc_set_lambda, 3},
+    {"_glmmrBase_Model__reset_fn_counter", (DL_FUNC) &_glmmrBase_Model__reset_fn_counter, 2},
+    {"_glmmrBase_Model__get_fn_counter", (DL_FUNC) &_glmmrBase_Model__get_fn_counter, 2},
     {"_glmmrBase_Model__print_names", (DL_FUNC) &_glmmrBase_Model__print_names, 4},
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 3},
     {"_glmmrBase_Model__saem", (DL_FUNC) &_glmmrBase_Model__saem, 6},
