@@ -59,8 +59,8 @@ public:
   virtual void    update_beta(const VectorXd &beta);
   virtual void    update_theta(const dblvec &theta);
   virtual void    update_theta(const VectorXd &theta);
-  virtual void    update_u(const MatrixXd& u_);
-  virtual double  log_likelihood();
+  virtual void    update_u(const MatrixXd& u_, bool append = false);
+  virtual double  log_likelihood(bool beta = true);
   virtual double  full_log_likelihood();
   virtual void    nr_beta();
   virtual void    laplace_nr_beta_u();
@@ -769,7 +769,40 @@ template<>
 inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& theta){
   model.covariance.update_parameters(theta);
   re.zu_ = model.covariance.ZLu(re.u_);
-  double ll = log_likelihood();
+  double ll = log_likelihood(false);
+  fn_counter.first += model.n() * re.scaled_u_.cols();
+  if(control.saem)
+  {
+    int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
+    double  gamma = pow(1.0/iteration,control.alpha);
+    double  ll_t = 0;
+    double  ll_pr = 0;
+    for(int i = 0; i < iteration; i++){
+      int lower_range = i * re.mcmc_block_size;
+      int upper_range = (i + 1) * re.mcmc_block_size;
+      if(i == (iteration - 1) && iteration > 1){
+        double ll_t_c = ll_t;
+        double ll_pr_c = ll_pr;
+        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+        if(control.pr_average) ll_pr += ll_t;
+        for(int j = lower_range; j < upper_range; j++)
+        {
+          ll_current(j,0) = ll_t_c + gamma*(ll_current(j,0) - ll_t_c);
+          if(control.pr_average) ll_current(j,0) = (ll_current(j,0) + ll_pr_c)/((double)iteration);
+        }
+      } else {
+        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+        if(control.pr_average) ll_pr += ll_t;
+      }
+    }
+    if(control.pr_average){
+      ll = ll_pr / (double)iteration;
+    } else {
+      ll = ll_t;
+    }
+  } else {
+    ll = log_likelihood(false);
+  }
   return -1*ll;
 }
 
@@ -844,26 +877,38 @@ inline void glmmr::ModelOptim<modeltype>::update_theta(const VectorXd &theta){
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
-  if(u_.cols()!=re.u(false).cols()){
-    re.u_.conservativeResize(Q(),u_.cols());
-    re.zu_.resize(Q(),u_.cols());
+inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_, bool append){
+  int newcolsize = u_.cols();
+  int currcolsize = re.u_.cols();
+  
+  if(append){
+    re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.u_.rightCols(newcolsize) = u_;
+    optim.ll_current.resize(currcolsize + newcolsize,NoChange);
+  } else {
+    if(u_.cols()!=re.u_.cols()){
+      re.u_.resize(NoChange,newcolsize);
+      re.zu_.resize(NoChange,newcolsize);
+      re.u_ = u_;
+      if(newcolsize != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
+    }
   }
-  re.u_ = u_;
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
+inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   ArrayXd xb(model.xb());
-  ll_current.setZero();
+  int llcol = beta ? 0 : 1;
+  ll_current.col(llcol).setZero();
   
   if(model.weighted){
     if(model.family.family==Fam::gaussian){
       for(int j= 0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
         for(int i = 0; i<model.n(); i++){
-          ll_current(j,0) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+          ll_current(j,llcol ) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                              model.data.variance(i)/model.data.weights(i),
                                              model.family.family,model.family.link);
         }
@@ -872,23 +917,23 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood() {
       for(int j=0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
         for(int i = 0; i<model.n(); i++){
-          ll_current(j,0) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+          ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                    model.data.variance(i),model.family.family,model.family.link);
         }
       }
-      ll_current.col(0) *= model.data.weights.sum()/model.n();
+      ll_current.col(llcol) *= model.data.weights.sum()/model.n();
     }
   } else {
     for(int j= 0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
       for(int i = 0; i<model.n(); i++){
-        ll_current(j,0) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
+        ll_current(j,llcol) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                            model.data.variance(i),model.family.family,
                                            model.family.link);
       }
     }
   }
-  return ll_current.col(0).mean();
+  return ll_current.col(llcol).mean();
 }
 
 template<typename modeltype>
