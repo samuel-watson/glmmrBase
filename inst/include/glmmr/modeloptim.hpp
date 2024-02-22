@@ -33,6 +33,7 @@ public:
   // constructor
   ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
 
+  // control parameters for the optimisers - direct will be removed as its useless.
   struct OptimControl {
     int     npt = 0;
     double  rhobeg = 0;
@@ -59,8 +60,10 @@ public:
   virtual void    update_beta(const VectorXd &beta);
   virtual void    update_theta(const dblvec &theta);
   virtual void    update_theta(const VectorXd &theta);
-  virtual void    update_u(const MatrixXd& u_, bool append = false);
-  virtual double  log_likelihood(bool beta = true);
+  virtual void    update_u(const MatrixXd& u_, bool append); // two versions needed so CRAN won't complain with linked package
+  virtual void    update_u(const MatrixXd& u_); 
+  virtual double  log_likelihood(bool beta);
+  virtual double  log_likelihood();
   virtual double  full_log_likelihood();
   virtual void    nr_beta();
   virtual void    laplace_nr_beta_u();
@@ -898,6 +901,18 @@ inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_, bool appe
 }
 
 template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
+  int newcolsize = u_.cols();  
+  if(u_.cols()!=re.u_.cols()){
+      re.u_.resize(NoChange,newcolsize);
+      re.zu_.resize(NoChange,newcolsize);
+      re.u_ = u_;
+      if(newcolsize != ll_current.rows()) ll_current.resize(newcolsize,NoChange);
+    }
+  re.zu_ = model.covariance.ZLu(re.u_);
+}
+
+template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   ArrayXd xb(model.xb());
   int llcol = beta ? 0 : 1;
@@ -934,6 +949,12 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
     }
   }
   return ll_current.col(llcol).mean();
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::log_likelihood(){
+  double ll = log_likelihood(true);
+  return ll;
 }
 
 template<typename modeltype>
