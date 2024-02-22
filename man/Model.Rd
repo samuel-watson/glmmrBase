@@ -53,22 +53,31 @@ Using \code{update_parameters()} is the preferred way of updating the parameters
 mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
 
-\strong{MCMCML}
-Fits generalised linear mixed models using one of three algorithms: Markov Chain Newton
-Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or Maximum simulated
-likelihood (MSL). All the algorithms are described by McCullagh (1997). For each iteration
-of the algorithm the unobserved random effect terms (\eqn{\gamma}) are simulated
-using Markov Chain Monte Carlo (MCMC) methods (we use Hamiltonian Monte Carlo through Stan),
+\strong{Stochastic maximum likelihood}
+Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
+Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation
+maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
+\url{doi:10.1080/01621459.1997.10473613}. For each iteration
+of the algorithms the unobserved random effect terms (\eqn{\gamma}) are simulated
+using Markov Chain Monte Carlo (MCMC) methods,
 and then these values are conditioned on in the subsequent steps to estimate the covariance
-parameters and the mean function parameters (\eqn{\beta}). For all the algorithms,
-the covariance parameter estimates are updated using an expectation maximisation step.
-For the mean function parameters you can either use a Newton Raphson step (MCNR) or
-an expectation maximisation step (MCEM). A simulated likelihood step can be added at the
-end of either MCNR or MCEM, which uses an importance sampling technique to refine the
-parameter estimates.
+parameters and the mean function parameters (\eqn{\beta}). SAEM uses a Robbins-Munroe approach to approximating
+the likelihood and requires fewer MCMC samples and may have lower Monte Carlo error, see Jank (2006)\url{doi:10.1198/106186006X157469}.
+The option \code{alpha} determines the rate at which succesive iterations "forget" the past and must be between 0.5 and 1. Higher values
+will result in lower Monte Carlo error but slower convergence. The options \code{mcem.adapt} and \code{mcnr.adapt} will modify the number of MCMC samples during each step of model fitting
+using the suggested values in Caffo, Jank, and Jones (2006)\url{doi:10.1111/j.1467-9868.2005.00499.x}
+as the estimates converge.
 
 The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
-tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error.
+tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error. However,
+the SAEM approach does overcome reduce the required samples, especially with R-P averaging. As such a lower number (20-50)
+samples per iteration is normally sufficient to get convergence.
+
+There are several stopping rules for the algorithm. Either the algorithm will terminate when succesive parameter estimates are
+all within a specified tolerance of each other (\code{conv.criterion = 1}), or when there is a high probability that the estimated
+log-likelihood has not been improved. This latter criterion can be applied to either the overall log-likelihood (\code{conv.criterion = 2}),
+the likelihood just for the fixed effects (\code{conv.criterion = 3}), or both the likelihoods for the fixed effects and covariance parameters
+(\code{conv.criterion = 4}; default).
 
 Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}. The information printed to the console
 during model fitting can be controlled with the \code{self$set_trace()} function.
@@ -209,20 +218,12 @@ des <- Model$new(
   covariance = c(0.05,0.7),
   mean = c(rep(0,5),0.2),
   data = df,
-  family = gaussian(),
-  var_par = 1
+  family = gaussian()
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
-#fits the models using Stan
-fit2 <- des$MCML(y = ysim, method="mcnr")
- #adds a simulated likelihood step after the MCEM algorithm
-fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
-
- # we could use LA to find better starting values
-fit4 <- des$LA(y=ysim)
-# the fit parameter values are stored in the internal model class object
-fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
+fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
+# use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
+fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
 }
 
 ## ------------------------------------------------
@@ -289,11 +290,12 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 \item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
 sampler, this only applies to the first iteration of the MCML algorithm, as the
 values from the previous iteration are carried over.
-\item \code{samps} The number of MCMC samples drawn in the MCML algorithm. For
+\item \code{samps} The number of MCMC samples drawn in the MCML algorithms. For
 smaller tolerance values larger numbers of samples are required. For the internal
 HMC sampler, larger numbers of samples are generally required than if using Stan since
 the samples generally exhibit higher autocorrealtion, especially for more complex
-covariance structures.
+covariance structures. For SAEM a small number is recommended as all samples are stored and used
+from every iteration.
 \item \code{lambda} (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
 (equal to number of steps times the step length). Larger values result in lower correlation in samples, but
 require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
@@ -868,18 +870,21 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
   y,
-  method = "mcem",
-  sim.lik.step = FALSE,
+  method = "saem",
   tol = 0.01,
-  max.iter = 30,
+  max.iter = 50,
   se = "gls",
-  mcmc.pkg = "cmdstan",
+  mcmc.pkg = "rstan",
   se.theta = TRUE,
   algo = ifelse(self$mean$any_nonlinear(), 2, 3),
   lower.bound = NULL,
   upper.bound = NULL,
   lower.bound.theta = NULL,
-  upper.bound.theta = NULL
+  upper.bound.theta = NULL,
+  alpha = 0.8,
+  convergence.prob = 0.8,
+  pr.average = TRUE,
+  conv.criterion = 4
 )}\if{html}{\out{</div>}}
 }
 
@@ -888,13 +893,13 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
 \describe{
 \item{\code{y}}{A numeric vector of outcome data}
 
-\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, see Details. Default is \code{mcem}.}
-
-\item{\code{sim.lik.step}}{Logical. Either TRUE (conduct a simulated likelihood step at the end of the algorithm), or FALSE (does
-not do this step), defaults to FALSE.}
+\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt} and \code{mcnr.adapt} will use adaptive
+MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which results in faster convergence. \code{saem} uses a
+stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration.}
 
 \item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
-between iterations at which to stop the algorithm.}
+between iterations at which to stop the algorithm. If two values are provided then different tolerances will be
+applied to the fixed effect and covariance parameters.}
 
 \item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
 
@@ -923,6 +928,16 @@ may perform poorly with some covariance structures, in this case select 1 or 2, 
 \item{\code{lower.bound.theta}}{Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)}
 
 \item{\code{upper.bound.theta}}{Optional. Vector of upper bounds for the covariance parameters.}
+
+\item{\code{alpha}}{If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5
+will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.}
+
+\item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)}
+
+\item{\code{conv.criterion}}{Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by \code{tol},
+2 = The probability of improvement in the overall log-likelihood is less than 1 - \code{convergence.prob}
+3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - \code{convergence.prob}
+4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - \code{convergence.prob}}
 }
 \if{html}{\out{</div>}}
 }
@@ -943,20 +958,12 @@ des <- Model$new(
   covariance = c(0.05,0.7),
   mean = c(rep(0,5),0.2),
   data = df,
-  family = gaussian(),
-  var_par = 1
+  family = gaussian()
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim,method="mcnr",usestan=FALSE) # don't use Stan
-#fits the models using Stan
-fit2 <- des$MCML(y = ysim, method="mcnr")
- #adds a simulated likelihood step after the MCEM algorithm
-fit3 <- des$MCML(y = ysim, sim.lik.step = TRUE)
-
- # we could use LA to find better starting values
-fit4 <- des$LA(y=ysim)
-# the fit parameter values are stored in the internal model class object
-fit5 <- des$MCML(y = ysim, method="mcnr") # it should converge much more quickly
+fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
+# use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
+fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
 }
 }
 \if{html}{\out{</div>}}
