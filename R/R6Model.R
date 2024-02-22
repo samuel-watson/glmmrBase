@@ -780,9 +780,9 @@ Model <- R6::R6Class("Model",
                                        lower.bound.theta = NULL,
                                        upper.bound.theta = NULL,
                                        alpha = 0.8,
-                                       convergence.prob = 0.8,
-                                       pr.average = TRUE,
-                                       conv.criterion = 4){
+                                       convergence.prob = 0.95,
+                                       pr.average = FALSE,
+                                       conv.criterion = 2){
                          # Checks on options and data
                          private$verify_data(y)
                          private$set_y(y)
@@ -825,6 +825,7 @@ Model <- R6::R6Class("Model",
                          Model__reset_fn_counter(private$ptr,private$model_type())
                          # set up all the required vectors and data to monitor the algorithm
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
+                         if(method == "saem") balgo <- 0
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
