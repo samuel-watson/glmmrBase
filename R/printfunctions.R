@@ -183,6 +183,6 @@ fixef.mcml <- function(object,...){
 #' @return A matrix of dimension (number of fixed effects ) x (number of MCMC samples). For Laplace approximation, the number of "samples" equals one.
 #' @method ranef mcml
 #' @export
-fixef.mcml <- function(object,...){
+ranef.mcml <- function(object,...){
   return(object$re.samps)
 }
