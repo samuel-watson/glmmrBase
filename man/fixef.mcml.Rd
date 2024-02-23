@@ -5,8 +5,6 @@
 \title{Extracts the fixed effect estimates}
 \usage{
 \method{ranef}{mcml}(object, ...)
-
-\method{ranef}{mcml}(object, ...)
 }
 \arguments{
 \item{object}{An `mcml` model fit.}
@@ -15,11 +13,7 @@
 }
 \value{
 A named, numeric vector of fixed-effects estimates.
-
-A matrix of dimension (number of fixed effects ) x (number of MCMC samples). For Laplace approximation, the number of "samples" equals one.
 }
 \description{
 Extracts the fixed effect estimates from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
-
-Extracts the random effect estimates or samples from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
 }
