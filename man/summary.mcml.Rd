@@ -23,7 +23,6 @@ as `lm` and `lmer` reporting parameters, standard errors, and z- and p- statisti
 The z- and p- statistics should be interpreted cautiously however, as generalised
 linear miobjected models can suffer from severe small sample biases where the effective
 sample size relates more to the higher levels of clustering than individual observations.
-TBC!!
 
 Parameters `b` are the mean function beta parameters, parameters `cov` are the
 covariance function parameters in the same order as `$covariance$parameters`, and

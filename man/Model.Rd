@@ -882,9 +882,9 @@ Markov Chain Monte Carlo Maximum Likelihood  model fitting
   lower.bound.theta = NULL,
   upper.bound.theta = NULL,
   alpha = 0.8,
-  convergence.prob = 0.8,
-  pr.average = TRUE,
-  conv.criterion = 4
+  convergence.prob = 0.95,
+  pr.average = FALSE,
+  conv.criterion = 2
 )}\if{html}{\out{</div>}}
 }
 
@@ -931,6 +931,8 @@ may perform poorly with some covariance structures, in this case select 1 or 2, 
 
 \item{\code{alpha}}{If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5
 will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.}
+
+\item{\code{convergence.prob}}{Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.}
 
 \item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)}
 

@@ -95,7 +95,6 @@ print.mcml <- function(x, ...){
 #' The z- and p- statistics should be interpreted cautiously however, as generalised
 #' linear miobjected models can suffer from severe small sample biases where the effective
 #' sample size relates more to the higher levels of clustering than individual observations.
-#' TBC!!
 #' 
 #' Parameters `b` are the mean function beta parameters, parameters `cov` are the
 #' covariance function parameters in the same order as `$covariance$parameters`, and
@@ -118,4 +117,72 @@ summary.mcml <- function(object,...){
 }
 
 
+#' Extracts coefficients from a mcml object
+#' 
+#' Extracts the coefficients from an `mcml` object returned from a call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+#' @param object An `mcml` model fit.
+#' @param ... Further arguments passed from other methods
+#' @return A data frame summarising the parameters including the random effects.
+#' @method coef mcml
+#' @export
+coef.mcml <- function(object,...){
+  return(object$coefficients)
+}
 
+#' Extracts the computed AIC from an mcml object
+#' 
+#' Extracts the conditional Akaike Information Criterion from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+#' @param object An `mcml` model fit.
+#' @param ... Further arguments passed from other methods
+#' @return A numeric value.
+#' @method extractAIC mcml
+#' @export
+extractAIC.mcml <- function(object,...){
+  return(object$aic)
+}
+
+#' Extracts the log-likelihood from an mcml object
+#' 
+#' Extracts the final log-likelihood value from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class. The fitting algorithm estimates
+#' the fixed effects, random effects, and covariance parameters all separately. The log-likelihood is separable in the fixed and covariance parameters, so one can return 
+#' the log-likelihood for either component, or the overall log-likelihood.
+#' @param object An `mcml` model fit.
+#' @param fixed Logical whether to include the log-likelihood value from the fixed effects.
+#' @param covaraince Logical whether to include the log-likelihood value from the covariance parameters.
+#' @param ... Further arguments passed from other methods
+#' @return A numeric value. If both `fixed` and `covariance` are FALSE then it returns NA.
+#' @method logLik mcml
+#' @export
+logLik.mcml <- function(object, fixed = TRUE, covariance = TRUE, ...){
+  ll <- 0
+  if(fixed) ll <- ll + object$logl
+  if(covariance) ll <- ll + object$logl_theta
+  if(!fixed & !covariance) ll <- NA
+  return(NA)
+}
+
+#' Extracts the fixed effect estimates
+#' 
+#' Extracts the fixed effect estimates from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+#' @param object An `mcml` model fit.
+#' @param ... Further arguments passed from other methods
+#' @return A named, numeric vector of fixed-effects estimates.
+#' @method ranef mcml
+#' @export
+fixef.mcml <- function(object,...){
+  fixed <- object$coefficients$est[1:object$P]
+  names(fixed) <- object$coefficients$par[1:object$P]
+  return(fixed)
+}
+
+#' Extracts the random effect estimates
+#' 
+#' Extracts the random effect estimates or samples from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+#' @param object An `mcml` model fit.
+#' @param ... Further arguments passed from other methods
+#' @return A matrix of dimension (number of fixed effects ) x (number of MCMC samples). For Laplace approximation, the number of "samples" equals one.
+#' @method ranef mcml
+#' @export
+fixef.mcml <- function(object,...){
+  return(object$re.samps)
+}

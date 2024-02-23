@@ -739,6 +739,7 @@ Model <- R6::R6Class("Model",
                        #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
                        #'@param alpha If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5 
                        #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
+                       #'@param convergence.prob Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.
                        #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)
                        #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
                        #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
