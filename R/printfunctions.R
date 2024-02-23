@@ -165,11 +165,10 @@ logLik.mcml <- function(object, fixed = TRUE, covariance = TRUE, ...){
 #' 
 #' Extracts the fixed effect estimates from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
 #' @param object An `mcml` model fit.
-#' @param ... Further arguments passed from other methods
 #' @return A named, numeric vector of fixed-effects estimates.
-#' @method ranef mcml
 #' @export
-fixef.mcml <- function(object,...){
+fixed.effects <- function(object,...){
+  if(!is(object,"mcml"))stop("Requires mcml model fit")
   fixed <- object$coefficients$est[1:object$P]
   names(fixed) <- object$coefficients$par[1:object$P]
   return(fixed)
@@ -179,10 +178,9 @@ fixef.mcml <- function(object,...){
 #' 
 #' Extracts the random effect estimates or samples from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
 #' @param object An `mcml` model fit.
-#' @param ... Further arguments passed from other methods
 #' @return A matrix of dimension (number of fixed effects ) x (number of MCMC samples). For Laplace approximation, the number of "samples" equals one.
-#' @method ranef mcml
 #' @export
-ranef.mcml <- function(object,...){
+random.effects <- function(object,...){
+  if(!is(object,"mcml"))stop("Requires mcml model fit")
   return(object$re.samps)
 }
