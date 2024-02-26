@@ -129,18 +129,6 @@ coef.mcml <- function(object,...){
   return(object$coefficients)
 }
 
-#' Extracts the computed AIC from an mcml object
-#' 
-#' Extracts the conditional Akaike Information Criterion from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
-#' @param object An `mcml` model fit.
-#' @param ... Further arguments passed from other methods
-#' @return A numeric value.
-#' @method extractAIC mcml
-#' @export
-extractAIC.mcml <- function(object,...){
-  return(object$aic)
-}
-
 #' Extracts the log-likelihood from an mcml object
 #' 
 #' Extracts the final log-likelihood value from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class. The fitting algorithm estimates
@@ -148,7 +136,7 @@ extractAIC.mcml <- function(object,...){
 #' the log-likelihood for either component, or the overall log-likelihood.
 #' @param object An `mcml` model fit.
 #' @param fixed Logical whether to include the log-likelihood value from the fixed effects.
-#' @param covaraince Logical whether to include the log-likelihood value from the covariance parameters.
+#' @param covariance Logical whether to include the log-likelihood value from the covariance parameters.
 #' @param ... Further arguments passed from other methods
 #' @return A numeric value. If both `fixed` and `covariance` are FALSE then it returns NA.
 #' @method logLik mcml
@@ -167,7 +155,7 @@ logLik.mcml <- function(object, fixed = TRUE, covariance = TRUE, ...){
 #' @param object An `mcml` model fit.
 #' @return A named, numeric vector of fixed-effects estimates.
 #' @export
-fixed.effects <- function(object,...){
+fixed.effects <- function(object){
   if(!is(object,"mcml"))stop("Requires mcml model fit")
   fixed <- object$coefficients$est[1:object$P]
   names(fixed) <- object$coefficients$par[1:object$P]
@@ -180,7 +168,7 @@ fixed.effects <- function(object,...){
 #' @param object An `mcml` model fit.
 #' @return A matrix of dimension (number of fixed effects ) x (number of MCMC samples). For Laplace approximation, the number of "samples" equals one.
 #' @export
-random.effects <- function(object,...){
+random.effects <- function(object){
   if(!is(object,"mcml"))stop("Requires mcml model fit")
   return(object$re.samps)
 }

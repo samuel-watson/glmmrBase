@@ -11,9 +11,9 @@
 
 \item{fixed}{Logical whether to include the log-likelihood value from the fixed effects.}
 
-\item{...}{Further arguments passed from other methods}
+\item{covariance}{Logical whether to include the log-likelihood value from the covariance parameters.}
 
-\item{covaraince}{Logical whether to include the log-likelihood value from the covariance parameters.}
+\item{...}{Further arguments passed from other methods}
 }
 \value{
 A numeric value. If both `fixed` and `covariance` are FALSE then it returns NA.

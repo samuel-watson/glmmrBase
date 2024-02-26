@@ -4,7 +4,7 @@
 \alias{fixed.effects}
 \title{Extracts the fixed effect estimates}
 \usage{
-fixed.effects(object, ...)
+fixed.effects(object)
 }
 \arguments{
 \item{object}{An `mcml` model fit.}

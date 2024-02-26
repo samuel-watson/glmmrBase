@@ -4,7 +4,7 @@
 \alias{random.effects}
 \title{Extracts the random effect estimates}
 \usage{
-random.effects(object, ...)
+random.effects(object)
 }
 \arguments{
 \item{object}{An `mcml` model fit.}
