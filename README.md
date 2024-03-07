@@ -4,13 +4,13 @@
 (Version 0.6.1)
 R package for the specification, analysis, and fitting of generalised linear mixed models. Includes model fitting using full maximum likelihood with Markov Chain Monte Carlo Maximum Likelihood (MCML) and Laplacian approximation and provides robust and bias-corrected standard error options. Allows for non-linear functions of data and parameters in the fixed effects, and includes a wide range of covariance functions, including autoregressive, exponential, and Matern, which can be arbitrarily combined. The R model classes provide a wide array of functionality including power analysis, data simulation, and generation of a wide range of relevant matrices and products.
 
-The full details and tutorials have moved to the [project home page](https://samuel-watson.github.io/glmmr-web/).
+The [project home page](https://samuel-watson.github.io/glmmr-web/) is currently being built - the tutorials are out of data with the most recent version of glmmrBase.
 
 ## Installation
 The package is available on CRAN, or the most up-to-date version can be installed from this repository in R using `devtools::install_github("samuel-watson/glmmrBase")`. A pre-compiled binary is also available with each release on this page. 
 
 ### Building from source
-It is strongly recommended to build from source with the flags `-fno-math-errno -O3` or `-Ofast` for gcc, this will cut the time to run many functions by as much as 90%. One way to do this is to set CPP_FLAGS in `~/.R/Makevars`. Another alternative is to download the package source `.tar.gz` file and run from the command line 
+It is recommended to build from source with the flags `-fno-math-errno -O3` or `-Ofast` for gcc, this will cut the time to run many functions. One way to do this is to set CPP_FLAGS in `~/.R/Makevars`. Another alternative is to download the package source `.tar.gz` file and run from the command line 
 ```
 R CMD INSTALL --configure-args="CPPFLAGS=-fno-math-errno -O3" glmmrBase_0.5.4.tar.gz
 ```
@@ -73,11 +73,12 @@ mod <- Model$new(
 y <- mod$sim_data() # simulates data from the model using model 1 - useful for simulation projects requiring GLMMs easy to specify complex models!
 
 # fit the model
-fit <- mod$MCML(y=y,method = "mcem",verbose = TRUE)
+mod$set_trace(1) # for more detailed output
+fit <- mod$MCML(y=y) # default fitting algorithm is SAEM
 fit
 
 # the above uses the GLS SEs, we can retrieve Kenward Roger for example if we wanted using:
-kr <- mod$kenward_roger()
+kr <- mod$small_sample_correction(type="KR")
 sqrt(diag(kr$vcov_beta))
 kr$dof #degrees of freedom
 
