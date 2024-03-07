@@ -662,8 +662,13 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   sparse ZL = ZLt;
   ZLt.transpose();
   size_n_array += SparseOperators::operator*(ZL,v).array();
-  
-  switch(model.family.family){
+
+  if(betapars)
+  {
+    MatrixXd J = model.calc.jacobian(v);
+    size_p_array = J.transpose().rowwise().sum().array();
+  } else {
+    switch(model.family.family){
     case Fam::poisson:
     {
       switch(model.family.link){
@@ -672,22 +677,25 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
           size_n_array = size_n_array.inverse();
           size_n_array = model.data.y.array()*size_n_array;
           size_n_array -= ArrayXd::Ones(model.n());
-          if(betapars){
-            size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-          } else {
-            size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          }
+          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          // if(betapars){
+          //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+          // } else {
+          //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          // }
           break;
         }
         default:
         {
           size_n_array = size_n_array.exp();
-          if(!betapars){
-            size_n_array = model.data.y.array() - size_n_array;
-            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
-          } else {
-            size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
-          }
+          size_n_array = model.data.y.array() - size_n_array;
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
+          // if(!betapars){
+          //   size_n_array = model.data.y.array() - size_n_array;
+          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
+          // } else {
+          //   size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
+          // }
           break;
         }
       }
@@ -704,11 +712,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         logitxb *= model.xb().array().exp();
         size_n_array = (model.data.variance - model.data.y.array())*logitxb;
         size_n_array += model.data.y.array();
-        if(betapars){
-          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        } else {
-          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        }
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // if(betapars){
+        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        // } else {
+        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // }
         break;
       }
       case Link::identity:
@@ -719,11 +728,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         n_array2 =n_array2.inverse();
         n_array2 *= (model.data.variance - model.data.y.array());
         size_n_array -= n_array2;
-        if(betapars){
-          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        } else {
-          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        }
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // if(betapars){
+        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        // } else {
+        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // }
         break;
       }
       case Link::probit:
@@ -736,12 +746,13 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
           n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
         }
         size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
-        if (betapars) {
-          size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
-        }
-        else {
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
-        }
+         size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
+        // if (betapars) {
+        //   size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
+        // }
+        // else {
+        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
+        // }
         break;
       }
       default:
@@ -752,11 +763,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         logitxb = logitxb.inverse();
         logitxb *= model.xb().array().exp();
         size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
-        if(betapars){
-          size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        } else {
-          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        }
+        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // if(betapars){
+        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+        // } else {
+        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        // }
         break;
       }
     }
@@ -767,32 +779,40 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       switch(model.family.link){
         case Link::loglink:
         {
-          if(betapars){
-          size_n_array -= model.data.y.array();
-          size_n_array *= -1;
-          size_n_array *= model.data.weights;
-          size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*(model.data.y - size_n_array.matrix()))).array();
-        } else {
           size_n_array = model.data.y.array() - size_n_array;
           size_n_array *= model.data.weights;
           size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
           size_q_array *= 1.0/(model.data.var_par);
-        }
+        //   if(betapars){
+        //   size_n_array -= model.data.y.array();
+        //   size_n_array *= -1;
+        //   size_n_array *= model.data.weights;
+        //   size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*(model.data.y - size_n_array.matrix()))).array();
+        // } else {
+        //   size_n_array = model.data.y.array() - size_n_array;
+        //   size_n_array *= model.data.weights;
+        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        //   size_q_array *= 1.0/(model.data.var_par);
+        // }
         break;
         }
         default:
         {
-          if(betapars){
-          size_n_array -= model.data.y.array();
-          size_n_array *= -1;
-          size_n_array *= model.data.weights;
-          size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
-        } else {
           size_n_array = model.data.y.array() - size_n_array;
           size_n_array *= model.data.weights;
           size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
           size_q_array *= 1.0/(model.data.var_par);
-        }
+        //   if(betapars){
+        //   size_n_array -= model.data.y.array();
+        //   size_n_array *= -1;
+        //   size_n_array *= model.data.weights;
+        //   size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
+        // } else {
+        //   size_n_array = model.data.y.array() - size_n_array;
+        //   size_n_array *= model.data.weights;
+        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+        //   size_q_array *= 1.0/(model.data.var_par);
+        // }
         break;
         }
     }
@@ -804,25 +824,31 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         case Link::inverse:
         {
           size_n_array = size_n_array.inverse();
-          if(betapars){
-            size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
-          } else {
-            size_n_array -= model.data.y.array();
+          size_n_array -= model.data.y.array();
             size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
             size_q_array *= model.data.var_par;
-          }
+          // if(betapars){
+          //   size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
+          // } else {
+          //   size_n_array -= model.data.y.array();
+          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          //   size_q_array *= model.data.var_par;
+          // }
           break;
         }
         case Link::identity:
         {
           size_n_array = size_n_array.inverse();
-          if(betapars){
-            size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
-          } else {
-            size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-            size_q_array *= model.data.var_par;
-          }
+          size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
+          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          size_q_array *= model.data.var_par;
+          // if(betapars){
+          //   size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
+          // } else {
+          //   size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
+          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          //   size_q_array *= model.data.var_par;
+          // }
           break;
         }
         default:
@@ -830,13 +856,16 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         {
           size_n_array *= -1.0;
           size_n_array = size_n_array.exp();
-          if(betapars){
-            size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
-          } else {
-            size_n_array *= model.data.y.array();
+          size_n_array *= model.data.y.array();
             size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
             size_q_array *= model.data.var_par;
-          }
+          // if(betapars){
+          //   size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
+          // } else {
+          //   size_n_array *= model.data.y.array();
+          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+          //   size_q_array *= model.data.var_par;
+          // }
           break;
         }
     }
@@ -849,14 +878,18 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
         size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
         size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
       }
-      if(betapars){
-        size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      } else {
-        size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-      }
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+      // if(betapars){
+      //   size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+      // } else {
+      //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+      // }
       break;
     }
   }
+  }
+  
+  
   
   // if(betapars){
   //   VectorXd zuOffset = SparseOperators::operator*(ZL,v);

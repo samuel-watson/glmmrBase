@@ -40,6 +40,7 @@
 #include <boost/math/distributions/fisher_f.hpp>
 #include <random>
 #include <boost/math/special_functions/digamma.hpp>
+#include <boost/math/special_functions/erf.hpp>
 #include <boost/random.hpp>
 
 using namespace Eigen;

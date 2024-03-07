@@ -248,6 +248,10 @@ inline bool parse_formula(std::vector<char>& formula,
                 calc.instructions.push_back(Do::Sin);
               } else if(token_as_str == "cos"){
                 calc.instructions.push_back(Do::Cos);
+              } else if(token_as_str == "erf"){
+                calc.instructions.push_back(Do::ErrorFunc);
+              } else if(token_as_str == "sign"){
+                calc.instructions.push_back(Do::Sign);
               } else {
                 #ifdef R_BUILD
                 Rcpp::stop("String " + token_as_str + " is not a recognised function");

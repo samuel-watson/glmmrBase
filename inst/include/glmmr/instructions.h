@@ -62,7 +62,13 @@ enum class Do{
   Constant5,
   Constant6,
   LogFactorialApprox,
-  PushVariance
+  PushVariance,
+  ErrorFunc,
+  SqrtTwo,
+  Half,
+  Pi2,
+  HalfLog2Pi,
+  Sign
 };
 
 const static std::vector<Do> xvar_rpn = {Do::PushData,Do::PushCovData,Do::Subtract,Do::Square};
@@ -116,5 +122,21 @@ const std::map<Do,std::string> instruction_str{{Do::Add, "Add"},
 {Do::PushUserNumber6, "Push user number 6"},
 {Do::PushUserNumber7, "Push user number 7"},
 {Do::PushUserNumber8, "Push user number 8"},
-{Do::PushUserNumber9, "Push user number 9"}
+{Do::PushUserNumber9, "Push user number 9"},
+{Do::PushUserNumber10, "Push user number 10"},
+{Do::PushUserNumber11, "Push user number 11"},
+{Do::PushUserNumber12, "Push user number 12"},
+{Do::PushUserNumber13, "Push user number 13"},
+{Do::PushUserNumber14, "Push user number 14"},
+{Do::PushUserNumber15, "Push user number 15"},
+{Do::PushUserNumber16, "Push user number 16"},
+{Do::PushUserNumber17, "Push user number 17"},
+{Do::PushUserNumber18, "Push user number 18"},
+{Do::PushUserNumber19, "Push user number 19"},
+{Do::ErrorFunc, "Error function"},
+{Do::SqrtTwo, "Square root 2"},
+{Do::Half, "Push 0.5"},
+{Do::Pi2, "Push 2*pi"},
+{Do::HalfLog2Pi, "Push 0.5*log(2*pi)"},
+{Do::Sign, "Sign"}
 };

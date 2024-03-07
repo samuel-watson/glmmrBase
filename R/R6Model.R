@@ -1031,7 +1031,7 @@ Model <- R6::R6Class("Model",
                                                 cov.pars = theta_new)
                          if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
                          self$var_par <- var_par_new
-                         u <- Model__u(private$ptr, TRUE,private$model_type())
+                         u <- Model__u(private$ptr,TRUE,private$model_type())
                          if(private$model_type()==0){
                            if(se == "gls" || se == "bw" || se == "box"){
                              M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
@@ -1110,7 +1110,11 @@ Model <- R6::R6Class("Model",
                            res$upper <- res$est + qnorm(1-0.05/2)*res$SE
                          }
                          repar_table <- repar_table[!duplicated(repar_table$id),]
-                         rownames(u) <- rep(repar_table$term,repar_table$count)
+                         if(private$model_type()!=2){
+                           rownames(u) <- rep(repar_table$term,repar_table$count)
+                         } else {
+                           if(nrow(repar_table)==1) rownames(u) <-  rep(repar_table$term,nrow(u))
+                         }
                          aic <- ifelse(private$model_type()==0 , Model__aic(private$ptr,private$model_type()),NA)
                          xb <- Model__xb(private$ptr,private$model_type())
                          zd <- self$covariance$Z %*% rowMeans(u)
