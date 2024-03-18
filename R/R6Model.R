@@ -396,9 +396,9 @@ Model <- R6::R6Class("Model",
                              }
                            }
                          }
-                         
-                         private$update_ptr()
                          private$session_id <- Sys.getpid()
+                         private$update_ptr()
+                         
                        },
                        #' @description
                        #' Print method for `Model` class
@@ -1166,7 +1166,7 @@ Model <- R6::R6Class("Model",
                                      tol = tol,
                                      sim_lik = FALSE, #sim.lik.step,
                                      aic = aic,
-                                     se=SE,
+                                     se=se,
                                      vcov = M,
                                      Rsq = c(cond = condR2,marg=margR2),
                                      logl = llvals$first,
@@ -1424,7 +1424,7 @@ Model <- R6::R6Class("Model",
                                      tol = tol,
                                      sim_lik = FALSE,
                                      aic = aic,
-                                     se =SE ,
+                                     se =se ,
                                      vcov = M,
                                      Rsq = c(cond = condR2,marg=margR2),
                                      mean_form = self$mean$formula,

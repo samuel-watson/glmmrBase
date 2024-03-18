@@ -10,7 +10,7 @@
 summary.Model <- function(object, max_n = 10, ...){
   cat("\nA GLMM Model")
   print(object$family)
-  cat("\nFormula: ",object$formula)
+  cat("Formula: ",object$formula)
   
   if(object$family[[1]] %in% c("binomial","bernoulli"))
     cat("\nTrials: ",object$trials[1:max_n])
@@ -28,14 +28,14 @@ summary.Model <- function(object, max_n = 10, ...){
   print(M)
   
   cat("\n\nRANDOM EFFECTS")
-  cat("\nFormula: ",self$covariance$formula)
-  cat("\nParameters: ")
-  print(mod$covariance$parameter_table())
+  cat("\nFormula: ",object$covariance$formula)
+  cat("\nParameters: \n")
+  print(object$covariance$parameter_table())
   cat("\nCurrent values:\n")
   u <- object$u()
   print(summary(u[,1:(min(max_n,ncol(u)))]))
   
-  cat("\n\nSee help(Model) for a detailed list of available methods")
+  cat("\nSee help(Model) for a detailed list of available methods")
   
   cat("\n")
 }
@@ -50,12 +50,17 @@ summary.Model <- function(object, max_n = 10, ...){
 #' @export
 logLik.Model <- function(object, ...){
   ll <- tryCatch(object$log_likelihood(),
-                 error = function(e)message("No data has been set in the Model. See Model$update_y()"))
-  class(ll) <- "logLik"
-  attr(ll,"df") <- length(object$mean$parameters) + length(object$covariance$parameters) + I(object$family[[1]] %in% c("gaussian","Beta"))*1
-  attr(ll,"nobs") <- object$n()
-  attr(ll,"nall") <- object$n()
-  return(ll)
+                 error = function(e){
+                   message("No data has been set in the Model. See Model$update_y()")
+                   return(NA)
+                   })
+  if(!is.na(ll)){
+    class(ll) <- "logLik"
+    attr(ll,"df") <- length(object$mean$parameters) + length(object$covariance$parameters) + I(object$family[[1]] %in% c("gaussian","Beta"))*1
+    attr(ll,"nobs") <- object$n()
+    attr(ll,"nall") <- object$n()
+    return(ll)
+  }
 }
 
 #' Extracts coefficients from a Model object
@@ -67,7 +72,9 @@ logLik.Model <- function(object, ...){
 #' @method coef Model
 #' @export
 coef.Model <- function(object,...){
-  return(c(object$mean$parameters, object$covariance$parameters))
+  pars <- c(object$mean$parameters, object$covariance$parameters)
+  names(pars) <- c(names(object$mean$parameters), object$covariance$parameter_table()$term)
+  return(pars)
 }
 
 #' Extracts the family from a `Model` object. This information can also be

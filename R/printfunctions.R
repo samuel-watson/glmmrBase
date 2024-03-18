@@ -117,16 +117,18 @@ summary.mcml <- function(object,...){
 }
 
 
-#' Extracts coefficients from a mcml object
+#' Extracts fixed effect coefficients from a mcml object
 #' 
-#' Extracts the coefficients from an `mcml` object returned from a call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+#' Extracts the fitted fixed effect coefficients from an `mcml` object returned from a call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
 #' @param object An `mcml` model fit.
 #' @param ... Further arguments passed from other methods
-#' @return A data frame summarising the parameters including the random effects.
+#' @return A named vector.
 #' @method coef mcml
 #' @export
 coef.mcml <- function(object,...){
-  return(object$coefficients)
+  pars <- object$coefficients$est[1:object$P]
+  names(pars) <- object$coefficients$par[1:object$P]
+  return(pars)
 }
 
 #' Extracts the log-likelihood from an mcml object
@@ -180,9 +182,9 @@ family.mcml <- function(object,...){
 #' @export
 formula.mcml <- function(object,fixed = TRUE,...){
   if(fixed){
-    return(object$mean_form)
+    return(as.formula(paste0("~",object$mean_form)))
   } else {
-    return(object$cov_form)
+    return(as.formula(paste0("~",object$cov_form)))
   }
 }
 
@@ -199,6 +201,8 @@ formula.mcml <- function(object,fixed = TRUE,...){
 #' @method vcov mcml
 #' @export
 vcov.mcml <- function(object,...){
+  M <- object$vcov
+  rownames(M) <- colnames(M)  <- object$coefficients$par[1:object$P]
   return(object$vcov)
 }
 
@@ -241,9 +245,10 @@ fitted.mcml <- function(object,...){
 #' to the number of MCMC samples.
 #' @method residuals mcml
 #' @export
-residuals.mcml <- function(object, type, conditional, ...){
+residuals.mcml <- function(object, type, ...){
   message("Calling this function on an mcml object is not recommended as it will copy all the data including MCMC samples. Using the original Model object or its method Model$residuals() is recommended instead.")
   mod <- Model$new(model_fit = object)
+  mod$update_y(object$model_data$y)
   return(mod$residuals(type,conditional = FALSE))
 }
 
