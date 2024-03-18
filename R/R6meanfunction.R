@@ -111,6 +111,7 @@ MeanFunction <- R6::R6Class("MeanFunction",
                             cat("\U2BC8 Linear Predictor")
                             cat("\n     \U2BA1 Formula: ~",self$formula)
                             cat("\n     \U2BA1 Parameters: ",self$parameters)
+                            cat("\n")
                           },
                           #' @description 
                           #' Updates the model parameters

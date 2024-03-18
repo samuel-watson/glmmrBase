@@ -16,7 +16,7 @@
 \item{...}{Further arguments passed from other methods}
 }
 \value{
-A numeric value. If both `fixed` and `covariance` are FALSE then it returns NA.
+An object of class `logLik`. If both `fixed` and `covariance` are FALSE then it returns NA.
 }
 \description{
 Extracts the final log-likelihood value from an mcml object returned from call of `MCML` or `LA` in the \link[glmmrBase]{Model} class. The fitting algorithm estimates

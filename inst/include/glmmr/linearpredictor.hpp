@@ -140,8 +140,8 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
 #endif
   
   #ifdef R_BUILD
-  if(parameters_.size()!=(unsigned)P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
-  if(parameters_.size()!=(unsigned)calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
+  if(parameters_.size()!=P())Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(parameters_.size()!=calc.parameter_count)Rcpp::stop(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   #endif
   
   if(parameters.size()==0){

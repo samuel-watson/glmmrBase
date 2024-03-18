@@ -46,15 +46,15 @@ inline Eigen::VectorXd forward_sub(const Eigen::MatrixXd& U,
 // I don't think this is used anywhere and is a candidate for removal - also it is an inline, recursive function not good!
 template<typename T>
 inline void combinations(const std::vector<std::vector<T> >& vecs, 
-                         unsigned int n,
-                         unsigned int m,
+                         int n,
+                         int m,
                          std::vector<T>& buffer,
                          std::vector<std::vector<T> >& result){
   buffer[n] = vecs[n][m];
   if(n == vecs.size()-1){
     result.push_back(buffer);
   } else {
-    for(unsigned int i = 0; i < vecs[n+1].size(); i++){
+    for(int i = 0; i < vecs[n+1].size(); i++){
       combinations(vecs,n+1,i,buffer,result);
     }
   }
@@ -103,10 +103,10 @@ submat(const Eigen::MatrixBase<ArgType>& arg, const RowIndexType& row_indices, c
 }
 
 inline void removeRow(Eigen::MatrixXd& matrix, 
-               unsigned int rowToRemove)
+               int rowToRemove)
 {
-  unsigned int numRows = matrix.rows()-1;
-  unsigned int numCols = matrix.cols();
+  int numRows = matrix.rows()-1;
+  int numCols = matrix.cols();
   
   if(rowToRemove < numRows)
     matrix.block(rowToRemove,0,numRows-rowToRemove,numCols) = 
@@ -116,10 +116,10 @@ inline void removeRow(Eigen::MatrixXd& matrix,
 }
 
 inline void removeColumn(Eigen::MatrixXd& matrix, 
-                  unsigned int colToRemove)
+                  int colToRemove)
 {
-  unsigned int numRows = matrix.rows();
-  unsigned int numCols = matrix.cols()-1;
+  int numRows = matrix.rows();
+  int numCols = matrix.cols()-1;
   
   if( colToRemove < numCols )
     matrix.block(0,colToRemove,numRows,numCols-colToRemove) = 
@@ -129,9 +129,9 @@ inline void removeColumn(Eigen::MatrixXd& matrix,
 }
 
 inline void removeElement(Eigen::VectorXd& matrix, 
-                  unsigned int elemToRemove)
+                  int elemToRemove)
 {
-  unsigned int nSize = matrix.size()-1;
+  int nSize = matrix.size()-1;
   
   if( elemToRemove < nSize )
     matrix.segment(elemToRemove,nSize-elemToRemove) = 

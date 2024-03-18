@@ -259,7 +259,6 @@ inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
   return xbnew.matrix();
 }
 
-// is this function used anywhere? mark for deletion?
 inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
                                     const Fam family,
                                     double var_par = 1.0){
@@ -451,7 +450,7 @@ inline double logdet(const Eigen::MatrixXd& M) {
   double ld = 0;
   Eigen::LLT<Eigen::MatrixXd> chol(M);
   auto& U = chol.matrixL();
-  for (unsigned i = 0; i < M.rows(); ++i)
+  for (int i = 0; i < M.rows(); ++i)
     ld += log(U(i,i));
   ld *= 2;
   return ld;

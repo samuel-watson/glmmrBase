@@ -310,6 +310,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \itemize{
 \item \href{#method-Model-use_attenuation}{\code{Model$use_attenuation()}}
 \item \href{#method-Model-fitted}{\code{Model$fitted()}}
+\item \href{#method-Model-residuals}{\code{Model$residuals()}}
 \item \href{#method-Model-predict}{\code{Model$predict()}}
 \item \href{#method-Model-new}{\code{Model$new()}}
 \item \href{#method-Model-print}{\code{Model$print()}}
@@ -390,7 +391,35 @@ with existing X matrix and not user supplied matrix X and this will also ignore 
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A \link[Matrix]{Matrix} class object containing the predicted values
+Fitted values as either a vector or matrix depending on the number of samples
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-residuals"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-residuals}{}}}
+\subsection{Method \code{residuals()}}{
+Generates the residuals for the model
+
+Generates one of several types of residual for the model. If conditional = TRUE then
+the residuals include the random effects, otherwise only the fixed effects are included. For type,
+there are raw, pearson, and standardized residuals. For conditional residuals a matrix is returned
+with each column corresponding to a sample of the random effects.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$residuals(type = "standardized", conditional = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{type}}{Either "standardized", "raw" or "pearson"}
+
+\item{\code{conditional}}{Logical indicating whether to condition on the random effects (TRUE) or not (FALSE)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A matrix with either one column is conditional is false, or with number of columns corresponding
+to the number of MCMC samples.
 }
 }
 \if{html}{\out{<hr>}}
@@ -428,7 +457,8 @@ the conditional distribution of the random effects, and any random effect sample
 \if{html}{\out{<a id="method-Model-new"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-new}{}}}
 \subsection{Method \code{new()}}{
-Create a new Model object
+Create a new Model object. Typically, a model is generated from a formula and data. However, it can also be
+generated from a previous model fit.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$new(
   formula,
@@ -439,7 +469,8 @@ Create a new Model object
   var_par = NULL,
   offset = NULL,
   weights = NULL,
-  trials = NULL
+  trials = NULL,
+  model_fit = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -474,6 +505,8 @@ objects, or as members of the list of arguments to \code{mean}. Current accepts 
 
 \item{\code{trials}}{(Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
 default to 1 (a bernoulli model).}
+
+\item{\code{model_fit}}{(optional) A \code{mcml} model fit resulting from a call to \code{MCML} or \code{LA}}
 }
 \if{html}{\out{</div>}}
 }
@@ -866,7 +899,7 @@ A matrix.
 \if{html}{\out{<a id="method-Model-MCML"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-MCML}{}}}
 \subsection{Method \code{MCML()}}{
-Markov Chain Monte Carlo Maximum Likelihood  model fitting
+Stochastic Maximum Likelihood model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
   y,
@@ -1157,16 +1190,18 @@ A list of matrices, see description for contents of the list.
 \if{html}{\out{<a id="method-Model-u"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-u}{}}}
 \subsection{Method \code{u()}}{
-Returns the sample of random effects from the last model fit
+Returns the sample of random effects from the last model fit, or updates the samples for the model.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$u(scaled = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$u(scaled = TRUE, u)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{scaled}}{Logical indicating whether to return samples on the N(0,I) scale (\code{scaled=FALSE}) or
+\item{\code{scaled}}{Logical indicating whether the samples are on the N(0,I) scale (\code{scaled=FALSE}) or
 N(0,D) scale (\code{scaled=TRUE})}
+
+\item{\code{u}}{(optional) Matrix of random effect samples. If provided then the internal samples are replaced with these values. These samples should be N(0,I).}
 }
 \if{html}{\out{</div>}}
 }

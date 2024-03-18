@@ -40,6 +40,7 @@ class ModelMatrix{
     BoxResults              box();
     int                     P() const;
     int                     Q() const;
+    MatrixXd                residuals(const int type, bool conditional = true);
     
   private:
     std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -84,7 +85,7 @@ template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
   W.update();
   MatrixXd M = MatrixXd::Zero(P(),P());
-  for(unsigned int i = 0; i< sigma_blocks.size(); i++){
+  for(int i = 0; i< sigma_blocks.size(); i++){
     M += information_matrix_by_block(i);
   }
   return M;
@@ -176,7 +177,7 @@ template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
                                                 bool inverse){
   #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if((unsigned)b >= sigma_blocks.size())Rcpp::stop("Index out of range");
+  if(b >= sigma_blocks.size())Rcpp::stop("Index out of range");
   #endif
   // UPDATE THIS TO NOT USE SPARSE IF DESIRED
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
@@ -596,6 +597,38 @@ inline MatrixMatrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
   MatrixMatrix hess = model.calc.jacobian_and_hessian(zuOffset);
   return hess;
 }
+
+// type = 0 - raw
+// type = 1 - pearson
+// type = 2 - standardised
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrix<modeltype>::residuals(const int type, bool conditional)
+{
+  int ncol_r = conditional ? re.u_.cols() : 1;
+  MatrixXd resids(model.n(), ncol_r);
+  VectorXd mu = glmmr::maths::mod_inv_func(model.linear_predictor.xb(), model.family.link);
+  VectorXd yxb = model.data.y - mu;
+  if(conditional){
+    MatrixXd zuOffset = re.Zu();
+    zuOffset.colwise() += model.data.offset;
+    for(int i = 0; i < ncol_r; i++) resids.col(i) = yxb - zuOffset.col(i);
+  } else {
+    resids.col(0) = yxb;
+  }
+  if(type == 1){
+    VectorXd var = glmmr::maths::marginal_var(mu, model.family.family, model.data.var_par);
+    for(int i = 0; i < ncol_r; i++) resids.col(i).array() *= 1.0/sqrt(var(i));
+  } else if(type == 2){
+    VectorXd colmeans = resids.colwise().mean().transpose();
+    double std_dev;
+    for(int i = 0; i < ncol_r; i++){
+      std_dev = sqrt((resids.col(i).array() - colmeans(i)).square().sum()/(resids.rows() - 1));
+      resids.col(i).array() *= 1.0/std_dev; 
+    }
+  }
+  return resids;
+}
+
 
 template<typename modeltype>
 inline VectorMatrix glmmr::ModelMatrix<modeltype>::re_score(){

@@ -132,6 +132,7 @@ Covariance <- R6::R6Class("Covariance",
                           if(private$type == 1)cat(" (NNGP)")
                           if(private$type == 2)cat(" (HSGP)")
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
+                          cat("\n")
                         },
                         #' @description
                         #' Keep specified indices and removes the rest

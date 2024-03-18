@@ -180,7 +180,7 @@ inline int glmmr::Covariance::parse(){
   intvec3d re_pars_;
   // now process each step of the random effect terms
   #ifdef R_BUILD
-  if(colnames_.size()!= (unsigned int)data_.cols())Rcpp::stop("colnames length != data columns");
+  if(colnames_.size()!= data_.cols())Rcpp::stop("colnames length != data columns");
   #endif 
   
   int nre = form_.re_.size();
@@ -233,7 +233,7 @@ inline int glmmr::Covariance::parse(){
     dblvec2d groups;
     dblvec vals;
     bool isgr;
-    unsigned int j,k,idx,zcol;
+    int j,k,idx,zcol;
     if(form_.z_[i].compare("1")==0){
       zcol = -1;
     } else {
@@ -286,9 +286,9 @@ inline int glmmr::Covariance::parse(){
     re_cols_data_.resize(currresize+groups.size());
     
     int fn_var_counter = 0;
-    for(unsigned int m = 0; m < fnvars.size(); m++){
+    for(int m = 0; m < fnvars.size(); m++){
       intvec iter_fn_var_index;
-      for(unsigned int p = 0; p < fnvars[m].size(); p++){
+      for(int p = 0; p < fnvars[m].size(); p++){
         iter_fn_var_index.push_back(p + fn_var_counter);
       }
       fn_var_counter += fnvars[m].size();
@@ -310,7 +310,7 @@ inline int glmmr::Covariance::parse(){
     
     for(k = 0; k < data_.rows(); k++){
       if(isgr){
-        for(unsigned int m = 0; m < vals.size(); m++) vals[m] = data_(k,fnvars[idx][m]);
+        for(int m = 0; m < vals.size(); m++) vals[m] = data_(k,fnvars[idx][m]);
         auto gridx2 = std::find(groups.begin(),groups.end(),vals);
         gridx = gridx2 - groups.begin();
       } else {
@@ -336,7 +336,7 @@ inline int glmmr::Covariance::parse(){
   int remidx;
   for(int i = 0; i < nre; i++){
     firsti = true;
-    for(unsigned int j = 0; j < fn_.size(); j++){
+    for(int j = 0; j < fn_.size(); j++){
       if(re_order_[j]==i){
         if(firsti){
           intvec2d parcount1;
@@ -367,9 +367,9 @@ inline int glmmr::Covariance::parse(){
     }
   }
   
-  for(unsigned int i =0; i<fn_.size();i++){
-    for(unsigned int j = 0; j < re_pars_[i].size(); j++){
-      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
+  for(int i =0; i<fn_.size();i++){
+    for(int j = 0; j < re_pars_[i].size(); j++){
+      for(int k = 0; k < re_pars_[i][j].size(); k++){
         calc_[i].parameter_indexes.push_back(re_pars_[i][j][k]);
       }
     }
@@ -377,18 +377,18 @@ inline int glmmr::Covariance::parse(){
   
   //now build the reverse polish notation and add distances
   int nvarfn;
-  for(unsigned int i =0; i<fn_.size();i++){
+  for(int i =0; i<fn_.size();i++){
     std::vector<Do> fn_instruct;
     intvec fn_par;
     int minvalue = 100;
     int ndata = re_temp_data_[i].size();
     calc_[i].data.conservativeResize(ndata*(ndata-1)/2,fn_[i].size());
     calc_[i].data_size = ndata;
-    for(unsigned int j = 0; j<fn_[i].size();j++){
+    for(int j = 0; j<fn_[i].size();j++){
       auto min_value_iterator = std::min_element(re_pars_[i][j].begin(),re_pars_[i][j].end());
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
     }
-    for(unsigned int j = 0; j<fn_[i].size();j++){
+    for(int j = 0; j<fn_[i].size();j++){
       if(fn_[i][j]!=CovFunc::gr){
         nvarfn = re_cols_[i][j].size();
         double dist_val;
@@ -411,13 +411,13 @@ inline int glmmr::Covariance::parse(){
       }
       std::vector<Do> B = glmmr::interpret_re(fn_[i][j]);
       intvec re_par_less_min_ = re_pars_[i][j];
-      for(unsigned int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
+      for(int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       intvec Bpar = glmmr::interpret_re_par(fn_[i][j],j,re_par_less_min_);
       fn_instruct.insert(fn_instruct.end(),B.begin(),B.end());
       fn_par.insert(fn_par.end(),Bpar.begin(),Bpar.end());
     }
     if(fn_[i].size() > 1){
-      for(unsigned int j = 0; j < (fn_[i].size()-1); j++){
+      for(int j = 0; j < (fn_[i].size()-1); j++){
         fn_instruct.push_back(Do::Multiply);
       }
     }
@@ -431,14 +431,14 @@ inline int glmmr::Covariance::parse(){
   int Qn = 0;
   block_size.resize(calc_.size());
   block_nvar.resize(calc_.size());
-  for(unsigned int i = 0; i < calc_.size(); i++){
+  for(int i = 0; i < calc_.size(); i++){
     Qn += re_temp_data_[i].size();
     block_size[i] = re_temp_data_[i].size();
     block_nvar[i] = re_temp_data_[i][0].size();
   }
   re_count_.resize(form_.re_terms().size());
   std::fill(re_count_.begin(), re_count_.end(), 0);
-  for(unsigned int i = 0; i < calc_.size(); i++) re_count_[re_order_[i]] += re_temp_data_[i].size();
+  for(int i = 0; i < calc_.size(); i++) re_count_[re_order_[i]] += re_temp_data_[i].size();
   B_ = calc_.size();
   n_ = data_.rows();
   return Qn;
@@ -564,7 +564,7 @@ inline void glmmr::Covariance::update_parameters(const dblvec& parameters)
 inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters)
 {
   #ifdef R_BUILD
-  if(parameters.size()!=(unsigned)npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
+  if(parameters.size()!=npar())Rcpp::stop(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
   #endif
   if(parameters_.size()==0){
     parameters_.resize(npar());
@@ -583,12 +583,12 @@ inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters
 inline void glmmr::Covariance::update_parameters(const ArrayXd& parameters)
 {
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
     update_parameters_in_calculators();
   } else if(parameters_.size() == parameters.size()){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
     update_parameters_in_calculators();
@@ -970,8 +970,8 @@ inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
 
 inline bool glmmr::Covariance::any_group_re() const{
   bool gr = false;
-  for(unsigned int i = 0; i < fn_.size(); i++){
-    for(unsigned int j = 0; j < fn_[i].size(); j++){
+  for(int i = 0; i < fn_.size(); i++){
+    for(int j = 0; j < fn_[i].size(); j++){
       if(fn_[i][j]==CovFunc::gr){
         gr = true;
         break;
@@ -984,7 +984,7 @@ inline bool glmmr::Covariance::any_group_re() const{
 
 inline strvec glmmr::Covariance::parameter_names(){
   strvec parnames;
-  for(unsigned int i = 0; i < form_.re_.size(); i++){
+  for(int i = 0; i < form_.re_.size(); i++){
     for(int j = 0; j < B_; j++){
       if(re_order_[j]==i){
         parnames.insert(parnames.end(),calc_[j].parameter_names.begin(),calc_[j].parameter_names.end());

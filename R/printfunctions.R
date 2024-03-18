@@ -79,7 +79,7 @@ print.mcml <- function(x, ...){
   cat("\nApproximate R-squared: Conditional: ",round(x$Rsq[1],digits)," Marginal: ",round(x$Rsq[2],digits))
   cat("\nLog-likelihood: ",round(x$logl,digits))
   if(!x$converged)cat("\nMCML ALGORITHM DID NOT CONVERGE!")
-
+  cat("\n")
   return(invisible(pars))
 }
 
@@ -138,7 +138,7 @@ coef.mcml <- function(object,...){
 #' @param fixed Logical whether to include the log-likelihood value from the fixed effects.
 #' @param covariance Logical whether to include the log-likelihood value from the covariance parameters.
 #' @param ... Further arguments passed from other methods
-#' @return A numeric value. If both `fixed` and `covariance` are FALSE then it returns NA.
+#' @return An object of class `logLik`. If both `fixed` and `covariance` are FALSE then it returns NA.
 #' @method logLik mcml
 #' @export
 logLik.mcml <- function(object, fixed = TRUE, covariance = TRUE, ...){
@@ -146,7 +146,120 @@ logLik.mcml <- function(object, fixed = TRUE, covariance = TRUE, ...){
   if(fixed) ll <- ll + object$logl
   if(covariance) ll <- ll + object$logl_theta
   if(!fixed & !covariance) ll <- NA
-  return(NA)
+  class(ll) <- "logLik"
+  attr(ll,"df") <- I(object$var_par_family)*1 + ifelse(fixed,object$P,0) + ifelse(covariance,object$Q,0)
+  attr(ll,"nobs") <- ifelse(fixed,length(object$model_data$y),ifelse(covariance,nrow(object$re.samps),0))
+  attr(ll,"nall") <- ifelse(fixed,length(object$model_data$y),ifelse(covariance,nrow(object$re.samps),0))
+  return(ll)
+}
+
+#' Extracts the family from a `mcml` object. 
+#' 
+#' Extracts the \link[stats]{family} from a `mcml` object.
+#' @param object A `mcml` object.
+#' @param ... Further arguments passed from other methods
+#' @return A \link[stats]{family} object.
+#' @method family mcml
+#' @export
+family.mcml <- function(object,...){
+  return(do.call(object$family, list(link = object$link)))
+}
+
+#' Extracts the formula from a `mcml` object. 
+#' 
+#' Extracts the \link[stats]{formula} from a `mcml` object. Separate formulae are 
+#' specified for the fixed and random effects in the model, either of which can be
+#' returned. The complete formula is available from the generating `Model` object as 
+#' `Model$formula` or `formula(Model)`
+#' @param object A `mcml` object.
+#' @param fixed Logical. If TRUE the formula for the fixed effects is returned, otherwise the formula
+#' for the random effects is returned.
+#' @param ... Further arguments passed from other methods
+#' @return A \link[stats]{formula} object.
+#' @method formula mcml
+#' @export
+formula.mcml <- function(object,fixed = TRUE,...){
+  if(fixed){
+    return(object$mean_form)
+  } else {
+    return(object$cov_form)
+  }
+}
+
+#' Extract the Variance-Covariance matrix for a `mcml` object
+#' 
+#' Returns the calculated variance-covariance matrix for a `mcml` object. The generating Model object 
+#' has several methods to calculate the variance-convaariance matrix. For the standard GLS information matrix see
+#' `Model$information_matrix()`. Small sample corrections 
+#' can be accessed directly from the generating Model using `Model$small_sample_correction()`. The varaince-covariance 
+#' matrix including the random effects can be accessed using `Model$information_matrix(include.re = TRUE)`.
+#' @param object A `mcml` object.
+#' @param ... Further arguments passed from other methods
+#' @return A variance-covariance matrix.
+#' @method vcov mcml
+#' @export
+vcov.mcml <- function(object,...){
+  return(object$vcov)
+}
+
+#' Predict from a `mcml` object
+#' 
+#' Predictions cannot be generated directly from an `mcml` object, rather new predictions should be
+#' generated using the original `Model`. A message is printed to the user.
+#' @param object A `mcml` object.
+#' @param ... Further arguments passed from other methods
+#' @return Nothing. Called for effects.
+#' @method predict mcml
+#' @export
+predict.mcml <- function(object,...){
+  message("Predictions cannot be generated directly from a fitted mcml object. See Model$predict() to generate new predictions, or predict().")
+}
+
+#' Fitted values from a `mcml` object
+#' 
+#' Fitted values should not be generated directly from an `mcml` object, rather fitted values should be
+#' generated using the original `Model`. A message is printed to the user. 
+#' @param object A `mcml` object.
+#' @param ... Further arguments passed from other methods
+#' @return Nothing, called for effects, unless `override` is TRUE, when it will return a vector of fitted values.
+#' @method fitted mcml
+#' @export
+fitted.mcml <- function(object,...){
+  message("Fitted values cannot be generated directly from a fitted mcml object. See Model$fitted() to generate fitted values, or fitted()")
+}
+
+#' Residuals method for a `mcml` object
+#' 
+#' Calling residuals on an `mcml` object directly is not recommended. This function will currently only generate marginal residuals.
+#' It will generate a new `Model` object internally, thus copying 
+#' all the data, which is not ideal for larger models. The preferred method is to call residuals on either the `Model` 
+#' object or using `Model$residuals()`, both of which will also generate conditional residuals.
+#' @param object A `mcml` object.
+#' @param type Either "standardized", "raw" or "pearson"
+#' @param ... Further arguments passed from other methods
+#' @return A matrix with either one column is conditional is false, or with number of columns corresponding 
+#' to the number of MCMC samples.
+#' @method residuals mcml
+#' @export
+residuals.mcml <- function(object, type, conditional, ...){
+  message("Calling this function on an mcml object is not recommended as it will copy all the data including MCMC samples. Using the original Model object or its method Model$residuals() is recommended instead.")
+  mod <- Model$new(model_fit = object)
+  return(mod$residuals(type,conditional = FALSE))
+}
+
+#' Fixed effect confidence intervals for a `mcml` object
+#' 
+#' Returns the computed confidence intervals for a `mcml` object.  
+#' @param object A `mcml` object.
+#' @param ... Further arguments passed from other methods
+#' @return A matrix (or vector) with columns giving lower and upper confidence limits for each parameter. 
+#' @method confint mcml
+#' @export
+confint.mcml <- function(object, ...){
+  out <- object$coefficients[1:object$P,c("lower","upper")]
+  out <- as.matrix(out)
+  colnames(out) <- c("2.5%","97.5%")
+  return(out)
 }
 
 #' Extracts the fixed effect estimates

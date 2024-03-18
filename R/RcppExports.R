@@ -409,6 +409,10 @@ Model__aic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__aic`, xp, type)
 }
 
+Model__residuals <- function(xp, rtype = 2L, conditional = TRUE, type = 0L) {
+    .Call(`_glmmrBase_Model__residuals`, xp, rtype, conditional, type)
+}
+
 Model__get_log_likelihood_values <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_log_likelihood_values`, xp, type)
 }

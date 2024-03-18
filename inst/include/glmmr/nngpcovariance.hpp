@@ -243,12 +243,12 @@ inline void glmmr::nngpCovariance::update_parameters_extern(const dblvec& parame
 inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters)
 {
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
     update_parameters_in_calculators();
   } else if(parameters_.size() == parameters.size()){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
     update_parameters_in_calculators();
@@ -259,12 +259,12 @@ inline void glmmr::nngpCovariance::update_parameters(const ArrayXd& parameters)
 inline void glmmr::nngpCovariance::update_parameters_d(const ArrayXd& parameters)
 {
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
     update_parameters_in_calculators();
   } else if(parameters_.size() == parameters.size()){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
     update_parameters_in_calculators();

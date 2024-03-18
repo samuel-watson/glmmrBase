@@ -102,6 +102,17 @@ SEXP Model__aic(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__residuals(SEXP xp, int rtype = 2, bool conditional = true, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->matrix.residuals(rtype,conditional));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
 SEXP Model__get_log_likelihood_values(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

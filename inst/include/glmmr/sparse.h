@@ -21,7 +21,7 @@ inline sparse submat_sparse(const sparse& A, intvec rows){
   sparse B;
   B.n = rows.size();
   B.m = A.m;
-  for(unsigned int i = 0; i < rows.size(); i++){
+  for(int i = 0; i < rows.size(); i++){
     B.Ap.push_back(B.Ai.size());
     for(int j = A.Ap[rows[i]]; j < A.Ap[rows[i]+1]; j++){
       B.Ai.push_back(A.Ai[j]);

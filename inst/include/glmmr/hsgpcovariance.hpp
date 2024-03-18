@@ -296,11 +296,11 @@ inline void glmmr::hsgpCovariance::update_parameters(const dblvec& parameters){
 
 inline void glmmr::hsgpCovariance::update_parameters(const ArrayXd& parameters){
   if(parameters_.size()==0){
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_.push_back(parameters(i));
     }
   } else {
-    for(unsigned int i = 0; i < parameters.size(); i++){
+    for(int i = 0; i < parameters.size(); i++){
       parameters_[i] = parameters(i);
     }
   }
@@ -381,7 +381,7 @@ inline void glmmr::hsgpCovariance::gen_indices(){
     for(int k = 1; k <= m[i]; k++)linspaced[k-1] = k;
     linspace_vec.push_back(linspaced);
   }
-  for(unsigned int i = 0; i < linspace_vec[0].size(); i++){
+  for(int i = 0; i < linspace_vec[0].size(); i++){
     glmmr::algo::combinations(linspace_vec,0,i,ind_buffer,indices_vec);
   }
   // copy into array

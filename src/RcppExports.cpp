@@ -1280,6 +1280,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__residuals
+SEXP Model__residuals(SEXP xp, int rtype, bool conditional, int type);
+RcppExport SEXP _glmmrBase_Model__residuals(SEXP xpSEXP, SEXP rtypeSEXP, SEXP conditionalSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type rtype(rtypeSEXP);
+    Rcpp::traits::input_parameter< bool >::type conditional(conditionalSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__residuals(xp, rtype, conditional, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__get_log_likelihood_values
 SEXP Model__get_log_likelihood_values(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__get_log_likelihood_values(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1787,6 +1801,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Covariance_hsgp__set_approx_pars, 3},
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
+    {"_glmmrBase_Model__residuals", (DL_FUNC) &_glmmrBase_Model__residuals, 4},
     {"_glmmrBase_Model__get_log_likelihood_values", (DL_FUNC) &_glmmrBase_Model__get_log_likelihood_values, 2},
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
     {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 13},

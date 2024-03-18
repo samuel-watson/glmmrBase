@@ -1266,7 +1266,7 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
 #endif
     //add check to remove weights that are below a certain threshold
     if((weights < 1e-8).any()){
-      for(unsigned int i = 0 ; i < SB.size(); i++){
+      for(int i = 0 ; i < SB.size(); i++){
         auto it = SB[i].RowIndexes.begin();
         while(it != SB[i].RowIndexes.end()){
           if(weights(*it) < 1e-8){
@@ -1288,7 +1288,7 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
     }
     
     M.setZero();
-    for(unsigned int i = 0 ; i < SB.size(); i++){
+    for(int i = 0 ; i < SB.size(); i++){
       Sigmas[i] = ZDZ[i];
       for(int j = 0; j < Sigmas[i].rows(); j++){
         // sigma_sq
@@ -1312,7 +1312,7 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
 #ifdef R_BUILD
           Rcpp::Rcout << "\n   Removing column " << fake_it;
 #endif
-          for(unsigned int k = 0; k < Xs.size(); k++){
+          for(int k = 0; k < Xs.size(); k++){
             glmmr::Eigen_ext::removeColumn(Xs[k],fake_it);
           }
           glmmr::Eigen_ext::removeElement(Cvec,fake_it);
@@ -1323,14 +1323,14 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
       }
       M.conservativeResize(M.rows()-countZero,M.cols()-countZero);
       M.setZero();
-      for(unsigned int k = 0; k < SB.size(); k++){
+      for(int k = 0; k < SB.size(); k++){
         M += Xs[k].transpose() * Sigmas[k] * Xs[k];
       }
     }
     M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
     VectorXd Mc = M*Cvec;
     weightsnew.setZero();
-    for(unsigned int i = 0 ; i < SB.size(); i++){
+    for(int i = 0 ; i < SB.size(); i++){
       block_size = SB[i].RowIndexes.size();
       holder.segment(0,block_size) = Sigmas[i] * Xs[i] * Mc;
       for(int j = 0; j < block_size; j++){
