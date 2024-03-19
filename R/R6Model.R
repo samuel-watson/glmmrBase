@@ -136,7 +136,7 @@ Model <- R6::R6Class("Model",
                                             conditional = TRUE){
                          if(!private$y_has_been_updated)stop("No data y has been provided")
                          if(!type%in%c("standardized","raw","pearson"))stop("type must be one of standardized, raw, or pearson")
-                         rtype_int <- match(rtype, c("raw","pearson","standardized")) - 1
+                         rtype_int <- match(type, c("raw","pearson","standardized")) - 1
                          R <- Model__residuals(private$ptr,rtype_int,conditional,private$model_type())
                          return(R)
                        },
