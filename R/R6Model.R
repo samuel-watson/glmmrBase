@@ -582,9 +582,11 @@ Model <- R6::R6Class("Model",
                        #' @description
                        #' Generates the information matrix of the GLS estimator
                        #' @param include.re logical indicating whether to return the information matrix including the random effects components (TRUE), 
-                       #' or the GLS information matrix for beta only.
+                       #' or the GLS information matrix for beta only (FALSE).
+                       #' @param theta Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
+                       #' parameter information matrix is returned.
                        #' @return A PxP matrix
-                       information_matrix = function(include.re = FALSE){
+                       information_matrix = function(include.re = FALSE, theta = FALSE){
                          private$update_ptr()
                          if(include.re & !private$model_type()>0){
                            return(Model__obs_information_matrix(private$ptr,private$model_type()))
@@ -1073,14 +1075,14 @@ Model <- R6::R6Class("Model",
                            if(se == "gls" || se == "bw" || se == "box"){
                              M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                              if(se.theta){
-                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                               SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
                              } else {
                                SE_theta <- rep(NA, ncovpar)
                              }
                            } else if(se == "robust" || se == "bwrobust"){
                              M <- Model__sandwich(private$ptr,private$model_type())
                              if(se.theta){
-                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                               SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
                              } else {
                                SE_theta <- rep(NA, ncovpar)
                              }
@@ -1342,14 +1344,14 @@ Model <- R6::R6Class("Model",
                          if(se == "gls" || se =="bw" || se == "box"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
                          } else if(se == "robust" || se == "bwrobust" ){
                            M <- Model__sandwich(private$ptr,private$model_type())
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
