@@ -1022,6 +1022,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     case Do::Sign:
     {
       a = stack.top();
+      stack.pop();
       if(a > 0){
         stack.push(1.0);
       } else if(a< 0){
