@@ -198,22 +198,32 @@ inline void two_way_fn(std::vector<char>& formula,
   calc.instructions.push_back(Do::Exp);
   calc.instructions.push_back(Do::Multiply);
   calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  calc.numbers[calc.user_number_count] = -1.0 * l;
-  calc.user_number_count++;
-  calc.instructions.push_back(Do::Multiply);
-  calc.instructions.push_back(Do::Sign);
-  variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
   if(type == 0){
+    calc.numbers[calc.user_number_count] = -1.0 * l;
+    calc.user_number_count++;
+    calc.instructions.push_back(Do::Multiply);
+    calc.instructions.push_back(Do::Sign);
+    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     calc.instructions.push_back(Do::Divide);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     add_check = check_parameter(par3,calc,true);
   } else if(type == 1) {
+    calc.numbers[calc.user_number_count] = -0.5 * l;
+    calc.user_number_count++;
+    calc.instructions.push_back(Do::Multiply);
+    calc.instructions.push_back(Do::Sign);
+    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     calc.instructions.push_back(Do::Add);
     calc.instructions.push_back(Do::Divide);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     add_check = check_parameter(par3,calc,true);
     calc.instructions.push_back(Do::Int1);
   } else if(type == 2) {
+    calc.numbers[calc.user_number_count] = -1.0 * l;
+    calc.user_number_count++;
+    calc.instructions.push_back(Do::Multiply);
+    calc.instructions.push_back(Do::Sign);
+    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     calc.instructions.push_back(Do::Divide);
     calc.instructions.push_back(Do::Add);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
@@ -225,7 +235,7 @@ inline void two_way_fn(std::vector<char>& formula,
   calc.instructions.push_back(Do::Exp);
   calc.instructions.push_back(Do::Multiply);
   calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  calc.numbers[calc.user_number_count] = -1.0 * l / 2.0;
+  calc.numbers[calc.user_number_count] = -0.5 * l;
   calc.user_number_count++;
   calc.instructions.push_back(Do::Add);
   calc.instructions.push_back(Do::Sign);
