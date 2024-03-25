@@ -130,6 +130,27 @@ inline void add_factor(std::vector<char>& s2,
   }
 }
 
+inline void sign_fn(std::vector<char>& formula,
+                    glmmr::calculator& calc,
+                    const ArrayXXd& data,
+                    const strvec& colnames,
+                    MatrixXd& Xdata,
+                    int type){
+  
+  str token_as_str(formula.begin(),formula.end());
+  if(type == 0){
+    calc.instructions.push_back(Do::SignNoZero);
+  } else {
+    calc.instructions.push_back(Do::Sign);
+  }
+  bool variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+  if(!variable_in_data){
+#ifdef R_BUILD
+    Rcpp::stop("Syntax error in sign: "+token_as_str+" not in data");
+#endif
+  }
+}
+
 inline void two_way_fn(std::vector<char>& formula,
                        glmmr::calculator& calc,
                        const ArrayXXd& data,
@@ -191,8 +212,7 @@ inline void two_way_fn(std::vector<char>& formula,
   calc.numbers[calc.user_number_count] = -1.0 / l;
   calc.user_number_count++;
   calc.instructions.push_back(Do::Multiply);
-  calc.instructions.push_back(Do::Sign);
-  variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+  sign_fn(f_s2,calc,data,colnames,Xdata,0);
   calc.instructions.push_back(Do::Log);
   calc.instructions.push_back(Do::Add);
   calc.instructions.push_back(Do::Exp);
@@ -202,8 +222,7 @@ inline void two_way_fn(std::vector<char>& formula,
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Multiply);
-    calc.instructions.push_back(Do::Sign);
-    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+    sign_fn(f_s2,calc,data,colnames,Xdata,0);
     calc.instructions.push_back(Do::Divide);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     add_check = check_parameter(par3,calc,true);
@@ -211,8 +230,7 @@ inline void two_way_fn(std::vector<char>& formula,
     calc.numbers[calc.user_number_count] = -0.5 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Multiply);
-    calc.instructions.push_back(Do::Sign);
-    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+    sign_fn(f_s2,calc,data,colnames,Xdata,0);
     calc.instructions.push_back(Do::Add);
     calc.instructions.push_back(Do::Divide);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
@@ -222,8 +240,7 @@ inline void two_way_fn(std::vector<char>& formula,
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Multiply);
-    calc.instructions.push_back(Do::Sign);
-    variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+    sign_fn(f_s2,calc,data,colnames,Xdata,0);
     calc.instructions.push_back(Do::Divide);
     calc.instructions.push_back(Do::Add);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
@@ -238,8 +255,7 @@ inline void two_way_fn(std::vector<char>& formula,
   calc.numbers[calc.user_number_count] = -0.5 * l;
   calc.user_number_count++;
   calc.instructions.push_back(Do::Add);
-  calc.instructions.push_back(Do::Sign);
-  variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+  sign_fn(f_s2,calc,data,colnames,Xdata,0);
   if(!variable_in_data){
     #ifdef R_BUILD
     Rcpp::stop("Syntax error in twoway: "+token_as_str+" not in data");
@@ -253,79 +269,9 @@ inline void two_way_fn(std::vector<char>& formula,
     Rcpp::stop("Syntax error in twoway: nu is not a number");
     #endif
   }
-  
-  // // add the instructions
-  // bool add_check = check_number(nu_as_str, calc);
-  // if(!add_check){
-  //   #ifdef R_BUILD
-  //   Rcpp::stop("Syntax error in twoway: nu is not a number");
-  //   #endif
-  // }
-  // add_check = check_parameter(par1,calc,true);
-  // calc.instructions.push_back(Do::Int1);
-  // // data
-  // bool variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  // if(!variable_in_data){
-  //   #ifdef R_BUILD
-  //   Rcpp::stop("Syntax error in twoway: "+token_as_str+" not in data");
-  //   #endif
-  // } 
-  // calc.instructions.push_back(Do::Sign);
-  // calc.instructions.push_back(Do::Add);
-  // calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  // calc.numbers[calc.user_number_count] = -1.0 * l / 2.0;
-  // calc.user_number_count++;
-  // calc.instructions.push_back(Do::Multiply);
-  // calc.instructions.push_back(Do::Exp);
-  // if(type == 0){
-  //   add_check = check_parameter(par3,calc,true);
-  //   variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  //   calc.instructions.push_back(Do::Divide);
-  // } else if(type == 1) {
-  //   calc.instructions.push_back(Do::Int1);
-  //   add_check = check_parameter(par3,calc,true);
-  //   variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  //   calc.instructions.push_back(Do::Divide);
-  //   calc.instructions.push_back(Do::Add);
-  // } else if(type == 2) {
-  //   add_check = check_parameter(par2,calc,true);
-  //   add_check = check_parameter(par3,calc,true);
-  //   calc.instructions.push_back(Do::Add);
-  //   add_check = check_parameter(par2,calc,true);
-  //   variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  //   calc.instructions.push_back(Do::Add);
-  //   calc.instructions.push_back(Do::Divide);
-  // }
-  // variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  // calc.instructions.push_back(Do::Sign);
-  // calc.instructions.push_back(Do::Multiply);
-  // 
-  // calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  // calc.numbers[calc.user_number_count] = -1.0 * l;
-  // calc.user_number_count++;
-  // 
-  // calc.instructions.push_back(Do::Multiply);
-  // calc.instructions.push_back(Do::Exp);
-  // calc.instructions.push_back(Do::Add);
-  // calc.instructions.push_back(Do::Log);
-  // 
-  // variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
-  // calc.instructions.push_back(Do::Sign);
-  // calc.instructions.push_back(Do::Multiply);
-  // 
-  // calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  // calc.numbers[calc.user_number_count] = -1.0 / l;
-  // calc.user_number_count++;
-  // calc.instructions.push_back(Do::Multiply);
-  // calc.instructions.push_back(Do::Power);
-  // calc.instructions.push_back(Do::Int1);
-  // calc.instructions.push_back(Do::Subtract);
-  // calc.instructions.push_back(Do::Power);
-  // 
-  // add_check = check_parameter(par4,calc,true);
-  // calc.instructions.push_back(Do::Multiply);
-  // 
 }
+
+
 
 
 // this is the main function to parse the formulae
@@ -540,7 +486,11 @@ inline bool parse_formula(std::vector<char>& formula,
               } else if(token_as_str == "erf"){
                 calc.instructions.push_back(Do::ErrorFunc);
               } else if(token_as_str == "sign"){
-                calc.instructions.push_back(Do::Sign);
+                sign_fn(s2,calc,data,colnames,Xdata,1);
+                check_fn_arg = false;
+              } else if(token_as_str == "sign0"){
+                sign_fn(s2,calc,data,colnames,Xdata,0);
+                check_fn_arg = false;
               } else if(token_as_str == "twoway0"){
                 two_way_fn(s2,calc,data,colnames,Xdata,0);
                 check_fn_arg = false;

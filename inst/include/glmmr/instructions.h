@@ -68,7 +68,8 @@ enum class Do{
   Half,
   Pi2,
   HalfLog2Pi,
-  Sign
+  Sign,
+  SignNoZero
 };
 
 const static std::vector<Do> xvar_rpn = {Do::PushData,Do::PushCovData,Do::Subtract,Do::Square};
@@ -138,5 +139,6 @@ const std::map<Do,std::string> instruction_str{{Do::Add, "Add"},
 {Do::Half, "Push 0.5"},
 {Do::Pi2, "Push 2*pi"},
 {Do::HalfLog2Pi, "Push 0.5*log(2*pi)"},
-{Do::Sign, "Sign"}
+{Do::Sign, "Sign"},
+{Do::SignNoZero, "Sign (no zero)"},
 };

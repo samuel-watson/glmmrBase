@@ -1021,8 +1021,7 @@ inline dblvec glmmr::calculator::calculate(const int i,
     }
     case Do::Sign:
     {
-      a = stack.top();
-      stack.pop();
+      a = data(i,indexes[idx_iter]);
       if(a > 0){
         stack.push(1.0);
       } else if(a< 0){
@@ -1031,8 +1030,21 @@ inline dblvec glmmr::calculator::calculate(const int i,
         stack.push(0.0);
       }     
       allDyDxZero();
+      idx_iter++;
       break;
     }
+    case Do::SignNoZero:
+    {
+      a = data(i,indexes[idx_iter]);
+      if(a >= 0){
+        stack.push(1.0);
+      } else {
+        stack.push(-1.0);
+      }    
+      allDyDxZero();
+      idx_iter++;
+      break;
+    }  
     case Do::PushY:
     {
       stack.push(y[i]);
