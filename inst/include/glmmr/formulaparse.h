@@ -9,13 +9,14 @@ inline bool check_data(str& formula,
                        glmmr::calculator& calc,
                        const ArrayXXd& data,
                        const strvec& colnames,
-                       MatrixXd& Xdata){
+                       MatrixXd& Xdata,
+                       bool push = true){
   bool variable_in_data = false;
   auto colidx = std::find(colnames.begin(),colnames.end(),formula);
   if(colidx != colnames.end()){
     variable_in_data = true;
     // token is the name of a variable
-    calc.instructions.push_back(Do::PushData);
+    if(push) calc.instructions.push_back(Do::PushData);
     auto dataidx = std::find(calc.data_names.begin(),calc.data_names.end(),formula);
     // check if the data has already been added to Xdata
     if(dataidx != calc.data_names.end()){
@@ -81,7 +82,6 @@ inline bool check_number(str& token_as_str,
     calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
     calc.numbers[calc.user_number_count] = a;
     calc.user_number_count++;
-    
   }
   return added_a_number;
 }
@@ -143,7 +143,7 @@ inline void sign_fn(std::vector<char>& formula,
   } else {
     calc.instructions.push_back(Do::Sign);
   }
-  bool variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
+  bool variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata,false);
   if(!variable_in_data){
 #ifdef R_BUILD
     Rcpp::stop("Syntax error in sign: "+token_as_str+" not in data");
