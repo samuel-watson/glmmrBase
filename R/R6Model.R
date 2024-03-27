@@ -580,23 +580,48 @@ Model <- R6::R6Class("Model",
                          }
                        },
                        #' @description
-                       #' Generates the information matrix of the GLS estimator
+                       #' Generates the information matrix of the mixed model GLS estimator (X'S^-1X). The inverse of this matrix is an 
+                       #' estimator for the variance-covariance matrix of the fixed effect parameters. For various small sample corrections
+                       #' see `small_sample_correction()` and `box()`. For models with non-linear functions of fixed effect parameters,
+                       #' a correction to the Hessian matrix is required, which is automatically calculated or optionally returned or disabled. 
                        #' @param include.re logical indicating whether to return the information matrix including the random effects components (TRUE), 
-                       #' or the GLS information matrix for beta only (FALSE).
+                       #' or the mixed model information matrix for beta only (FALSE).
                        #' @param theta Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
                        #' parameter information matrix is returned.
-                       #' @return A PxP matrix
-                       information_matrix = function(include.re = FALSE, theta = FALSE){
+                       #' @param hessian.corr String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its 
+                       #' own ("return"), or ignored ("none")
+                        #' @return A matrix
+                       information_matrix = function(include.re = FALSE, theta = FALSE, hessian.corr = "add"){
                          private$update_ptr()
-                         if(include.re & !private$model_type()>0){
-                           return(Model__obs_information_matrix(private$ptr,private$model_type()))
+                         nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
+                         if(nonlin){
+                           if(!private$y_has_been_updated) stop("No y data has been added")
+                           if(!hessian.corr %in% c("add","return","none"))stop("hessian.corr must be add, return, or none")
+                         }
+                         if(theta){
+                           M <- Model__infomat_theta(private$ptr,private$model_type())
                          } else {
-                           if(private$model_type()==0){
-                             return(Model__information_matrix(private$ptr,private$model_type()))
-                           } else {
-                             return(Model__information_matrix_crude(private$ptr,private$model_type()))
+                           if((nonlin & hessian.corr=="add") | !nonlin){
+                             if(include.re & !private$model_type()>0){
+                               M <- Model__obs_information_matrix(private$ptr,private$model_type())
+                             } else {
+                               if(private$model_type()==0){
+                                 M <- Model__information_matrix(private$ptr,private$model_type())
+                               } else {
+                                 M <- Model__information_matrix_crude(private$ptr,private$model_type())
+                               }
+                             }
+                           }
+                           if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
+                             A <- Model__hessian_correction(private$ptr,private$model_type())
+                             if(hessian.corr == "add"){
+                               M <- M + A
+                             } else {
+                               M <- A
+                             }
                            }
                          }
+                         return(M)
                        },
                        #' @description 
                        #' Returns the robust sandwich variance-covariance matrix for the fixed effect parameters
@@ -1075,7 +1100,7 @@ Model <- R6::R6Class("Model",
                            if(se == "gls" || se == "bw" || se == "box"){
                              M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                              if(se.theta){
-                               SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
+                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                              } else {
                                SE_theta <- rep(NA, ncovpar)
                              }
@@ -1250,16 +1275,17 @@ Model <- R6::R6Class("Model",
                        #'@md
                        LA = function(y,
                                      start,
-                                     method = "nloptim",
+                                     method = "nr",
                                      se = "gls",
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
-                                     algo = ifelse(self$mean$any_nonlinear(),2,1),
+                                     algo = 2,
                                      lower.bound = NULL,
                                      upper.bound = NULL,
                                      lower.bound.theta = NULL,
                                      upper.bound.theta = NULL){
+                         
                          private$verify_data(y)
                          private$set_y(y)
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
@@ -1344,7 +1370,7 @@ Model <- R6::R6Class("Model",
                          if(se == "gls" || se =="bw" || se == "box"){
                            M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
                            if(se.theta){
-                             SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
+                             SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {
                              SE_theta <- rep(NA, ncovpar)
                            }
@@ -1479,10 +1505,9 @@ Model <- R6::R6Class("Model",
                        #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
                        #' so may not currently be an option for some users.
                        #' @return A matrix of samples of the random effects
-                       mcmc_sample = function(mcmc.pkg = "cmdstan"){
+                       mcmc_sample = function(mcmc.pkg = "rstan"){
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
-                         private$verify_data(y)
-                         private$set_y(y)
+                         if(!private$y_has_been_updated) stop("No y data has been added")
                          if(mcmc.pkg == "cmdstan"){
                            file_type <- mcnr_family(self$family,self$mcmc_options$use_cmdstan)
                            if(self$mcmc_options$use_cmdstan){
@@ -1567,14 +1592,26 @@ Model <- R6::R6Class("Model",
                        #' the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
                        #' Cholesky decomposition of the matrix D. To obtain the random effects from the last 
                        #' model fit, see member function `$u`
-                       #' @param y Vector of outcome data
-                       #' @param u Vector of random effects scaled by the Cholesky decomposition of D
+                       #' @param y (optional) Vector of outcome data, if not specified then data must have been set in another function.
+                       #' @param u (optional) Vector of random effects scaled by the Cholesky decomposition of D
                        #' @param beta Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)
                        #' @return A vector of the gradient
                        gradient = function(y,u,beta=FALSE){
-                         private$verify_data(y)
-                         private$set_y(y)
-                         grad <- Model__log_gradient(private$ptr,u,beta, private$model_type())
+                         if(!missing(y)){
+                           private$verify_data(y)
+                           private$set_y(y)
+                         } else {
+                           if(!private$y_has_been_updated) stop("No y data has been added")
+                         }
+                         if(missing(u)){
+                           u_in <- Model__u(private$ptr, TRUE, private$model_type())
+                         } else {
+                           u_in <- u
+                         }
+                         grad <- matrix(NA,ifelse(beta,self$mean$P(),nrow(u)),ncol(u))
+                         for(i in 1:ncol(u)){
+                           grad[,i] <- Model__log_gradient(private$ptr,u,beta, private$model_type())
+                         }
                          return(grad)
                        },
                        #' @description 
@@ -1602,7 +1639,7 @@ Model <- R6::R6Class("Model",
                          if(missing(u)){
                            return(Model__u(private$ptr,scaled, private$model_type()))
                          } else {
-                           Model__update_u(private$pt,u,FALSE,private$model_type()) 
+                           Model__update_u(private$ptr,u,FALSE,private$model_type()) 
                          }
                        },
                        #' @description 
@@ -1646,16 +1683,15 @@ Model <- R6::R6Class("Model",
                                            target_accept = 0.95,
                                            adapt = 50),
                        #' @description
-                       #' Prints the internal instructions used to calculate the linear predictor and/or
-                       #' the log likelihood. Internally the class uses a reverse polish notation to store and 
+                       #' Prints the internal instructions and data used to calculate the linear predictor. 
+                       #' Internally the class uses a reverse polish notation to store and 
                        #' calculate different functions, including user-specified non-linear mean functions. This 
                        #' function will print all the steps. Mainly used for debugging and determining how the 
                        #' class has interpreted non-linear model specifications. 
-                       #' @param linpred Logical. Whether to print the linear predictor instructions.
-                       #' @param loglik Logical. Whether to print the log-likelihood instructions.
                        #' @return None. Called for effects.
-                       calculator_instructions = function(linpred = TRUE, loglik = FALSE){
-                         Model__print_instructions(private$ptr,linpred,loglik,private$model_type())
+                       calculator_instructions = function(){
+                         Model__print_names(private$ptr,TRUE, TRUE, private$model_type())
+                         Model__print_instructions(private$ptr,private$model_type())
                        },
                        #' @description
                        #' Calculates the marginal effect of variable x. There are several options for 

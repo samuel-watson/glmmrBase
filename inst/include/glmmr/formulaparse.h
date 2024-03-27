@@ -331,22 +331,21 @@ inline bool parse_formula(std::vector<char>& formula,
       cursor++;
     }
     // check first whether s1 or s2 is the name of a data column
-    
     str s1_as_str(s1.begin(),s1.end());
     auto col_idx = std::find(colnames.begin(),colnames.end(),s1_as_str);
     if(col_idx != colnames.end()){
       str s1_parname = "b_" + s1_as_str + "*";
       s1.insert(s1.begin(),s1_parname.begin(),s1_parname.end());
     }
-    
     str s2_as_str(s2.begin(),s2.end());
     col_idx = std::find(colnames.begin(),colnames.end(),s2_as_str);
     if(col_idx != colnames.end()){
       str s2_parname = "b_" + s2_as_str + "*";
       s2.insert(s2.begin(),s2_parname.begin(),s2_parname.end());
     }
-    parse_formula(s1,calc,data,colnames,Xdata,bracket_flag);
-    parse_formula(s2,calc,data,colnames,Xdata,bracket_flag);
+    s1_check = parse_formula(s1,calc,data,colnames,Xdata,bracket_flag);
+    s2_check = parse_formula(s2,calc,data,colnames,Xdata,bracket_flag);
+    added_a_parameter = s1_check || s2_check;
   } else {
     // no +/- to split at, try *//
     s1.clear();
@@ -382,7 +381,6 @@ inline bool parse_formula(std::vector<char>& formula,
         Rcpp::stop("Oops, something has gone wrong (f2)");
         #endif
       }
-      
       cursor++;
       while(cursor < nchar){
         s2.push_back(formula[cursor]);
@@ -393,6 +391,7 @@ inline bool parse_formula(std::vector<char>& formula,
       s1_check = parse_formula(s1,calc,data,colnames,Xdata,bracket_flag);
       s2_check = parse_formula(s2,calc,data,colnames,Xdata,bracket_flag);
       if((s1_check && s2_check) || (s2_check && calc.instructions.back() == Do::Divide)) calc.any_nonlinear = true;
+      added_a_parameter = s1_check || s2_check;
     } else {
       // no * to split at, try pow
       s1.clear();
@@ -434,6 +433,7 @@ inline bool parse_formula(std::vector<char>& formula,
         s1_check = parse_formula(s1,calc,data,colnames,Xdata,bracket_flag);
         s2_check = parse_formula(s2,calc,data,colnames,Xdata,bracket_flag);
         if(s1_check || s2_check)calc.any_nonlinear = true;
+        added_a_parameter = s1_check || s2_check;
       } else {
         // no pow, try brackets
         s1.clear();
@@ -548,6 +548,7 @@ inline bool parse_formula(std::vector<char>& formula,
   
   return added_a_parameter;
 }
+
 
 }
 

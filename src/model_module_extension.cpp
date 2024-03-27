@@ -220,6 +220,19 @@ void Model__print_names(SEXP xp, bool data, bool parameters, int type = 0){
   std::visit(functor,model.ptr);
 }
 
+// // [[Rcpp::export]]
+// void Model__vcalc_print(SEXP xp, int type = 0){
+//   glmmrType model(xp,static_cast<Type>(type));
+//   auto functor = overloaded {
+//     [](int) {}, 
+//     [&](auto ptr){
+//       ptr->model.vcalc.print_names(true,true);
+//       ptr->model.vcalc.print_instructions();
+//     }
+//   };
+//   std::visit(functor,model.ptr);
+// }
+
 // [[Rcpp::export]]
 void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
   int max_steps = as<int>(max_steps_);
@@ -324,14 +337,25 @@ SEXP Model__theta_parameter_names(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-SEXP Model__hess_and_grad(SEXP xp, int type = 0){
+SEXP Model__hessian_correction(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.hess_and_grad());}
+    [](auto ptr){return returnType(ptr->matrix.hessian_nonlinear_correction());}
   };
   auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<MatrixMatrix>(S));
+  return wrap(std::get<MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__any_nonlinear(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.linear_predictor.calc.any_nonlinear);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<bool>(S));
 }
 
 // [[Rcpp::export]]
@@ -443,16 +467,16 @@ SEXP Model__cov_deriv(SEXP xp, int type = 0){
   return wrap(std::get<std::vector<Eigen::MatrixXd> >(S));
 }
 
-// [[Rcpp::export]]
-SEXP Model__hessian(SEXP xp, int type = 0){
-  glmmrType model(xp,static_cast<Type>(type));
-  auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.re_score());}
-  };
-  auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<VectorMatrix>(S));
-}
+// // [[Rcpp::export]]
+// SEXP Model__hessian(SEXP xp, int type = 0){
+//   glmmrType model(xp,static_cast<Type>(type));
+//   auto functor = overloaded {
+//     [](int) {  return returnType(0);}, 
+//     [](auto ptr){return returnType(ptr->matrix.re_score());}
+//   };
+//   auto S = std::visit(functor,model.ptr);
+//   return wrap(std::get<VectorMatrix>(S));
+// }
 
 // [[Rcpp::export]]
 SEXP Model__predict(SEXP xp, SEXP newdata_,

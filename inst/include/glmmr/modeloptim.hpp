@@ -1176,13 +1176,13 @@ template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_var_par(const double& v){
   model.data.var_par = v;
   model.data.variance.setConstant(v);
-  model.calc.variance = model.data.variance;
+  // model.calc.variance = model.data.variance;
 }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
   model.data.variance = v;
-  model.calc.variance = model.data.variance;
+  // model.calc.variance = model.data.variance;
 }
 
 template<typename modeltype>

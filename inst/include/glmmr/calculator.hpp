@@ -49,7 +49,7 @@ public:
   void          update_parameters(const dblvec& parameters_in);
   double        get_covariance_data(const int i, const int j, const int fn);
   void          print_instructions() const;
-  void          print_names(bool data = true, bool parameters = false) const;
+  void          print_names(bool print_data = true, bool print_parameters = false) const;
 };
 
 }
@@ -594,7 +594,13 @@ inline dblvec glmmr::calculator::calculate(const int i,
               double result1 = first_dx[jdx].top()*b_top_dx[idx]*log(a) + stack.top()*(bdx2*log(a) + b_top_dx[idx]*(1/a)*a_top_dx[jdx]);
               double result2 = pow(a,b-1)*b_top_dx[jdx]*log(a) + pow(a,b-2)*(b-1)*a_top_dx[jdx];
               double result3 = result2*b*a_top_dx[idx] + pow(a,b-1)*(b*adx2+b_top_dx[jdx]*a_top_dx[idx]);
-              second_dx[index_count].push(result1 + result3);
+              double result4 = 0;
+              if(a > 0) result4 = result1 + result3;
+              #ifdef R_BUILD
+              // this can sometimes result in a crash if the values of the parameters aren't right
+              if(result4 != result4)Rcpp::stop("Exponent d2ydx2 fail: "+std::to_string(a)+"^"+std::to_string(b-2)+" (i,j) = ("+std::to_string(idx)+","+std::to_string(jdx)+")");
+              #endif
+              second_dx[index_count].push(result4);
               index_count++;
             }
           }
@@ -1323,15 +1329,38 @@ inline void glmmr::calculator::print_instructions() const {
       Rcpp::Rcout << " = " << numbers[9] << "\n";
       break;
     case Do::PushParameter:
-      Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "\n";
-      idx_iter++;
-      break;
-    case Do::PushData:
-      Rcpp::Rcout << "(column " << data_names[indexes[idx_iter]] << ")\n";
-      idx_iter++;
-      break;
+      {
+        if(indexes[idx_iter] >= parameter_names.size()){
+          Rcpp::Rcout << "\nError in instruction set";
+          Rcpp::Rcout << "\nIndex " << indexes[idx_iter] << " requested for parameter size " << parameter_names.size();
+          Rcpp::Rcout << "\nIndexes: ";
+          glmmr::print_vec_1d(indexes);
+          Rcpp::Rcout << "\nParameter names: ";
+          glmmr::print_vec_1d(parameter_names);
+          Rcpp::stop("Execution halted");
+        }
+        Rcpp::Rcout << ": " << parameter_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<"\n";
+        idx_iter++;
+        break;
+      }
+    case Do::PushData: case Do::Sign: case Do::SignNoZero:
+      {
+        if(indexes[idx_iter] >= data_names.size()){
+          Rcpp::Rcout << "\nError in instruction set";
+          Rcpp::Rcout << "\nIndex " << indexes[idx_iter] << " requested for data size " << data_names.size();
+          Rcpp::Rcout << "\nIndexes: ";
+          glmmr::print_vec_1d(indexes);
+          Rcpp::Rcout << "\nData names: ";
+          glmmr::print_vec_1d(data_names);
+          Rcpp::stop("Execution halted");
+        }
+        Rcpp::Rcout << " (column " << data_names[indexes[idx_iter]] << "; index " << indexes[idx_iter] <<")\n";
+        idx_iter++;
+        break;
+      }
+      
     case Do::PushCovData:
-      Rcpp::Rcout << "(column " << indexes[idx_iter] << ")\n";
+      Rcpp::Rcout << " (column " << indexes[idx_iter] << ")\n";
       idx_iter++;
       break;
     default:
@@ -1339,18 +1368,30 @@ inline void glmmr::calculator::print_instructions() const {
     }
     counter++;
   }
+  Rcpp::Rcout << "\n";
 #endif
 }
 
-inline void glmmr::calculator::print_names(bool data, bool parameters) const{
+inline void glmmr::calculator::print_names(bool print_data, bool print_parameters) const {
 #ifdef R_BUILD
-  if(data){
-    Rcpp::Rcout << "\nData names: \n";
+  Rcpp::Rcout << "\nParameter count " << parameter_count << " vec size: " << parameters.size();
+  Rcpp::Rcout << "\nData count " << data_count << " mat size: " << data.rows() << " x " << data.cols();
+  Rcpp::Rcout << "\nIndexes: ";
+  glmmr::print_vec_1d(indexes);
+  Rcpp::Rcout << "\nAny nonlinear? " << any_nonlinear;
+  if(print_data)
+  {
+    Rcpp::Rcout << "\nData names: ";
     glmmr::print_vec_1d<strvec>(data_names);
   }
-  if(parameters){
-    Rcpp::Rcout << "\nParameter names: \n";
+  if(print_parameters)
+  {
+    Rcpp::Rcout << "\nParameter names: ";
     glmmr::print_vec_1d<strvec>(parameter_names);
   }
+  VectorXd x(10);
+  for(int i = 0; i < 10; i++) x(i) = calculate<CalcDyDx::None>(i)[0];
+  Rcpp::Rcout << "\nExample data: " << x.transpose() << "\n";
+  
 #endif
 }

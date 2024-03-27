@@ -213,8 +213,8 @@ Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_bound`, xp, bound_, beta, lower, type))
 }
 
-Model__print_instructions <- function(xp, linpred, loglik, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__print_instructions`, xp, linpred, loglik, type))
+Model__print_instructions <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__print_instructions`, xp, type))
 }
 
 Model__log_prob <- function(xp, v_, type = 0L) {
@@ -477,8 +477,12 @@ Model__theta_parameter_names <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__theta_parameter_names`, xp, type)
 }
 
-Model__hess_and_grad <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Model__hess_and_grad`, xp, type)
+Model__hessian_correction <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__hessian_correction`, xp, type)
+}
+
+Model__any_nonlinear <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__any_nonlinear`, xp, type)
 }
 
 Model__sandwich <- function(xp, type = 0L) {
@@ -503,10 +507,6 @@ Model__box <- function(xp, type = 0L) {
 
 Model__cov_deriv <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__cov_deriv`, xp, type)
-}
-
-Model__hessian <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Model__hessian`, xp, type)
 }
 
 Model__predict <- function(xp, newdata_, newoffset_, m, type = 0L) {

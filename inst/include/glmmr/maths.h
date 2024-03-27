@@ -217,9 +217,112 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
     break;
     
   }
-  
   return wdiag;
 }
+
+// inline double log_likelihood_derivative(const double mu, 
+//                                         const double y,
+//                                         int order, 
+//                                         const Fam family,
+//                                         double var_par = 1.0)
+// {
+//   if(order < 1 || order > 2)throw std::runtime_error("Only orders 1 and 2 supported for derivatives");
+//   double result;
+//   
+//   if(order == 1){
+//     switch (family) {
+//     case Fam::gaussian:
+//       result = (y - mu)/var_par;
+//       break;
+//     case Fam::bernoulli: 
+//       result = y/mu - (1-y)/(1-mu);
+//       break;
+//     case Fam::binomial:
+//       result = y/mu - (var_par-y)/(1-mu);
+//       break;
+//     case Fam::poisson:
+//       result = y/mu - 1;
+//       break;
+//     case Fam::gamma:
+//       result = 0;
+//       break;
+//     case Fam::beta:
+//       result = 0;
+//       break;
+//     }
+//   } else {
+//     switch (family) {
+//     case Fam::gaussian:
+//       result = -1.0/var_par;
+//       break;
+//     case Fam::bernoulli: 
+//       result = -1.0*y/(mu*mu) - (1-y)/((1-mu)*(1-mu));
+//       break;
+//     case Fam::binomial:
+//       result = -1.0*y/(mu*mu) - (var_par-y)/((1-mu)*(1-mu));
+//       break;
+//     case Fam::poisson:
+//       result = -1.0*y/(mu*mu);
+//       break;
+//     case Fam::gamma:
+//       result = 0;
+//       break;
+//     case Fam::beta:
+//       result = 0;
+//       break;
+//     }
+//   }
+//   return result;
+// }
+// 
+// inline double link_derivative(const double eta, 
+//                               int order, 
+//                               const Link link)
+// {
+//   if(order < 1 || order > 2)throw std::runtime_error("Only orders 1 and 2 supported for derivatives");
+//   double result;
+//   
+//   if(order == 1){
+//     switch (link) {
+//     case Link::identity:
+//       result = 1.0;
+//       break;
+//     case Link::loglink:
+//       result = exp(eta);
+//       break;
+//     case Link::logit:
+//       {
+//         double exp_eta = exp(eta);
+//         result = exp_eta/((1+exp_eta)*(1+exp_eta));
+//         break;
+//       }
+//     default:
+//       result = 0;
+//       break;
+//     }
+//   } else {
+//     switch (link) {
+//     case Link::identity:
+//       result = 0.0;
+//       break;
+//     case Link::loglink:
+//       result = exp(eta);
+//       break;
+//     case Link::logit:
+//     {
+//       double exp_eta = exp(eta);
+//       result = exp_eta*(1+exp_eta)/((1+exp_eta)*(1+exp_eta)*(1+exp_eta));
+//       break;
+//     }
+//     default:
+//       result = 0;
+//       break;
+//     }
+//   }
+//   return result;
+// }
+
+
 
 inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
                                     const Eigen::MatrixXd& Z,

@@ -331,6 +331,7 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
 \item \href{#method-Model-gradient}{\code{Model$gradient()}}
+\item \href{#method-Model-hessian}{\code{Model$hessian()}}
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
@@ -716,14 +717,17 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \subsection{Method \code{information_matrix()}}{
 Generates the information matrix of the GLS estimator
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE, theta = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{include.re}}{logical indicating whether to return the information matrix including the random effects components (TRUE),
-or the GLS information matrix for beta only.}
+or the GLS information matrix for beta only (FALSE).}
+
+\item{\code{theta}}{Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
+parameter information matrix is returned.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1015,12 +1019,12 @@ Maximum Likelihood model fitting with Laplace Approximation
 \if{html}{\out{<div class="r">}}\preformatted{Model$LA(
   y,
   start,
-  method = "nloptim",
+  method = "nr",
   se = "gls",
   max.iter = 40,
   tol = 1e-04,
   se.theta = TRUE,
-  algo = ifelse(self$mean$any_nonlinear(), 2, 1),
+  algo = 2,
   lower.bound = NULL,
   upper.bound = NULL,
   lower.bound.theta = NULL,
@@ -1123,7 +1127,7 @@ None, called for effects
 \subsection{Method \code{mcmc_sample()}}{
 Generate an MCMC sample of the random effects
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "cmdstan")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "rstan")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1155,9 +1159,9 @@ model fit, see member function \verb{$u}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{y}}{Vector of outcome data}
+\item{\code{y}}{(optional) Vector of outcome data, if not specified then data must have been set in another function.}
 
-\item{\code{u}}{Vector of random effects scaled by the Cholesky decomposition of D}
+\item{\code{u}}{(optional) Vector of random effects scaled by the Cholesky decomposition of D}
 
 \item{\code{beta}}{Logical. Whether the log gradient for the random effects (FALSE) or for the linear predictor parameters (TRUE)}
 }
@@ -1165,6 +1169,22 @@ model fit, see member function \verb{$u}
 }
 \subsection{Returns}{
 A vector of the gradient
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-hessian"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-hessian}{}}}
+\subsection{Method \code{hessian()}}{
+Calculates the Hessian of the model fixed and random effect parameters. Uses an autodifferentiation
+method to handle non-linear fixed effect specifications. The upper left PxP submatrix of the inverse
+of the negative Hessian provides an estimator of the variance-covariance matrix of the fixed
+effect parameters.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$hessian()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A matrix
 }
 }
 \if{html}{\out{<hr>}}

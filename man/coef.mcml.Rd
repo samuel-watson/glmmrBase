@@ -2,7 +2,7 @@
 % Please edit documentation in R/printfunctions.R
 \name{coef.mcml}
 \alias{coef.mcml}
-\title{Extracts coefficients from a mcml object}
+\title{Extracts fixed effect coefficients from a mcml object}
 \usage{
 \method{coef}{mcml}(object, ...)
 }
@@ -12,8 +12,8 @@
 \item{...}{Further arguments passed from other methods}
 }
 \value{
-A data frame summarising the parameters including the random effects.
+A named vector.
 }
 \description{
-Extracts the coefficients from an `mcml` object returned from a call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
+Extracts the fitted fixed effect coefficients from an `mcml` object returned from a call of `MCML` or `LA` in the \link[glmmrBase]{Model} class.
 }

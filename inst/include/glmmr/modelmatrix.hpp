@@ -34,7 +34,7 @@ class ModelMatrix{
     MatrixXd                linpred();
     VectorMatrix            b_score();
     VectorMatrix            re_score();
-    MatrixMatrix            hess_and_grad();
+    MatrixXd                hessian_nonlinear_correction();
     VectorXd                log_gradient(const VectorXd &v,bool beta = false);
     std::vector<glmmr::SigmaBlock> get_sigma_blocks();
     BoxResults              box();
@@ -322,31 +322,33 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
 }
 
 template<typename modeltype>
-inline std::vector<MatrixXd> glmmr::ModelMatrix<modeltype>::sigma_derivatives(){
+inline std::vector<MatrixXd> glmmr::ModelMatrix<modeltype>::sigma_derivatives()
+{
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,2);
   return derivs;
 }
 
 template<typename modeltype>
-inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
+inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
+{
   int n = model.n();
   std::vector<MatrixXd> derivs;
   model.covariance.derivatives(derivs,1);
   int R = model.covariance.npar();
   int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
-  MatrixXd M = information_matrix();
-  M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
+  // MatrixXd M = information_matrix();
+  // M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
   MatrixXd SigmaInv = Sigma(true);
   MatrixXd Z = model.covariance.Z();
-  MatrixXd X = model.linear_predictor.X();
-  MatrixXd SigX = SigmaInv*X;
+  // MatrixXd X = model.linear_predictor.X();
+  // MatrixXd SigX = SigmaInv*X;
   MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
   MatrixXd partial1(model.n(),model.n());
   MatrixXd partial2(model.n(),model.n());
   glmmr::MatrixField<MatrixXd> S;
-  glmmr::MatrixField<MatrixXd> P;
-  glmmr::MatrixField<MatrixXd> Q;
+  // glmmr::MatrixField<MatrixXd> P;
+  // glmmr::MatrixField<MatrixXd> Q;
   int counter = 0;
   for(int i = 0; i < Rmod; i++){
     if(i < R){
@@ -355,7 +357,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
       partial1 = MatrixXd::Identity(n,n);
       if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
     }
-    P.add(-1*SigX.transpose()*partial1*SigX);
+    // P.add(-1*SigX.transpose()*partial1*SigX);
     for(int j = i; j < Rmod; j++){
       if(j < R){
         partial2 = Z*derivs[1+j]*Z.transpose();
@@ -363,25 +365,26 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta(){
         partial2 = MatrixXd::Identity(n,n);
         if((model.data.weights != 1).any())partial2 = model.data.weights.inverse().matrix().asDiagonal();
       }
-      Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
+      // Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
       S.add(SigmaInv*partial1*SigmaInv*partial2);
     }
   }
   counter = 0;
   for(int i = 0; i < Rmod; i++){
     for(int j = i; j < Rmod; j++){
-      M_theta(i,j) = 0.5*(S(counter).trace())- (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
+      M_theta(i,j) = 0.5*(S(counter).trace()); //- (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
       if(i!=j)M_theta(j,i)=M_theta(i,j);
       counter++;
     }
   }
-  M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
+  // M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
   return M_theta;
 }
 
 template<typename modeltype>
 template<glmmr::SE corr>
-inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correction(){
+inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correction()
+{
   using namespace glmmr;
   static_assert(corr == SE::KR || corr == SE::KR2 || corr == SE::Sat || corr == SE::KRBoth,"Only Kenward-Roger or Satterthwaite allowed for small sample correction");
   
@@ -574,12 +577,14 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
 }
 
 template<typename modeltype>
-inline MatrixXd glmmr::ModelMatrix<modeltype>::linpred(){
+inline MatrixXd glmmr::ModelMatrix<modeltype>::linpred()
+{
   return (re.zu_.colwise()+(model.linear_predictor.xb()+model.data.offset));
 }
 
 template<typename modeltype>
-inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score(){
+inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score()
+{
   MatrixXd zuOffset = re.Zu();
   zuOffset.colwise() += model.data.offset;
   MatrixMatrix hess = model.calc.jacobian_and_hessian(zuOffset);
@@ -590,13 +595,54 @@ inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score(){
   return out;
 }
 
-template<typename modeltype>
-inline MatrixMatrix glmmr::ModelMatrix<modeltype>::hess_and_grad(){
-  MatrixXd zuOffset = re.Zu();
-  zuOffset.colwise() += model.data.offset;
-  MatrixMatrix hess = model.calc.jacobian_and_hessian(zuOffset);
-  return hess;
-}
+// template<typename modeltype>
+// inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian()
+// {
+//   // update the relevant calculator
+//   int Q = model.covariance.Q();
+//   int P = model.linear_predictor.P();
+//   
+//   if(model.vcalc.data.cols() != model.vcalc.data_count){
+//     model.vcalc.data.conservativeResize(model.n(),model.vcalc.data_count);
+//     model.vcalc.data.leftCols(model.linear_predictor.calc.data_count) = model.linear_predictor.calc.data;
+//   } 
+//   if(model.vcalc.parameters.size()!= P+Q) model.vcalc.parameters.resize(P+Q);
+//   model.vcalc.data.rightCols(model.covariance.Q()) = model.covariance.ZL();
+//   for(int i = 0; i < model.n(); i++) model.vcalc.y[i] = model.data.y(i);
+//   for(int i = 0; i < P; i++) model.vcalc.parameters[i] = model.linear_predictor.parameters[i];
+//   MatrixXd offsetmat(model.n(),1);
+//   offsetmat.col(0) = model.data.offset;
+//   MatrixXd hess(P + Q,P + Q);
+//   hess.setZero();
+//   
+// #ifdef R_BUILD
+//   if(model.vcalc.parameter_count != P+Q) Rcpp::stop("Calculator parameter count not equal to number of parameters");
+// #endif
+//   
+//   for(int i = 0; i < re.zu_.cols(); i++)
+//   {
+//     for(int j = 0; j < Q; j ++) model.vcalc.parameters[P + j] = re.u_(j,i);
+//     MatrixMatrix j_hess = model.vcalc.jacobian_and_hessian(offsetmat);
+//     hess += j_hess.mat1;
+//     if(model.trace > 0){
+//       #ifdef R_BUILD
+//       if(i % 50 == 0 || i == (re.zu_.cols()-1)){
+//         Rcpp::Rcout << "\nHessian calculation: iteration " << i+1 << " of " << re.zu_.cols();
+//         if(model.trace == 2){
+//           Rcpp::Rcout << "\nLast Hessian: \n" << j_hess.mat1;
+//         }
+//       }
+//       #endif
+//     }
+//   }
+//   if(model.trace > 0){
+// #ifdef R_BUILD
+//     Rcpp::Rcout << "\nHessian calculation completed\n";
+// #endif
+//   }
+//   hess.array() *= 1.0/re.zu_.cols();
+//   return hess;
+// }
 
 // type = 0 - raw
 // type = 1 - pearson
@@ -695,254 +741,364 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   sparse ZL = ZLt;
   ZLt.transpose();
   size_n_array += SparseOperators::operator*(ZL,v).array();
-
-  if(betapars)
+  
+  switch(model.family.family){
+  case Fam::poisson:
   {
-    MatrixXd J = model.calc.jacobian(v);
-    size_p_array = J.transpose().rowwise().sum().array();
-  } else {
+    switch(model.family.link){
+  case Link::identity:
+  {
+    size_n_array = size_n_array.inverse();
+    size_n_array = model.data.y.array()*size_n_array;
+    size_n_array -= ArrayXd::Ones(model.n());
+    if(betapars){
+      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    } else {
+      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    }
+    break;
+  }
+  default:
+  {
+    size_n_array = size_n_array.exp();
+    size_n_array = model.data.y.array() - size_n_array;
+    if(!betapars){
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
+    } else {
+      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    }
+    break;
+  }
+  }
+    break;
+  }
+  case Fam::bernoulli: case Fam::binomial:
+  {
+    switch(model.family.link){
+  case Link::loglink:
+  {
+    ArrayXd logitxb = 1.0 - size_n_array.exp();
+    logitxb = logitxb.inverse();
+    logitxb *= size_n_array.exp();
+    size_n_array = (model.data.y.array() - model.data.variance)*logitxb;
+    size_n_array += model.data.y.array();
+    if(betapars){
+      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    } else {
+      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    }
+    break;
+  }
+  case Link::identity:
+  {
+    ArrayXd n_array2 = 1.0 - size_n_array;
+    n_array2 = n_array2.inverse();
+    n_array2 *= (model.data.variance - model.data.y.array());
+    size_n_array = size_n_array.inverse();
+    size_n_array *= model.data.y.array();
+    size_n_array -= n_array2;
+    if(betapars){
+      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    } else {
+      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    }
+    break;
+  }
+  case Link::probit:
+  {
+    ArrayXd n_array2(model.n());
+    boost::math::normal norm(0, 1);
+#pragma omp parallel for    
+    for (int i = 0; i < model.n(); i++) {
+      size_n_array(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
+      n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
+    }
+    size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
+    if (betapars) {
+      size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
+    }
+    else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
+    }
+    break;
+  }
+  default:
+    //logit
+  {
+    ArrayXd logitxb = size_n_array.exp();
+    logitxb += 1.0;
+    logitxb = logitxb.inverse();
+    logitxb *= size_n_array.exp();
+    size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
+    if(betapars){
+      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    } else {
+      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    }
+    break;
+  }
+  }
+    break;
+  }
+  case Fam::gaussian:
+  {
+    switch(model.family.link){
+  case Link::loglink:
+  {
+    size_n_array = (model.data.y.array() - size_n_array)*model.data.weights*size_n_array.exp();
+    if(betapars){
+      size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+      size_q_array *= 1.0/(model.data.var_par);
+      size_q_array -= v.array();
+    }
+    break;
+  }
+  default:
+  {
+    size_n_array = model.data.y.array() - size_n_array;
+    size_n_array *= model.data.weights;
+      if(betapars){
+      size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+      size_q_array *= 1.0/(model.data.var_par);
+      size_q_array -= v.array();
+    }
+    break;
+  }
+  }
+    break;
+  }
+  case Fam::gamma:
+  {
+    switch(model.family.link){
+  case Link::inverse:
+  {
+    size_n_array = size_n_array.inverse();
+    size_n_array -= model.data.y.array();
+    if(betapars){
+      size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+      size_q_array *= model.data.var_par;
+      size_q_array -= v.array();
+    }
+    break;
+  }
+  case Link::identity:
+  {
+    size_n_array = size_n_array.inverse();
+    size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
+    if(betapars){
+      size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+      size_q_array *= model.data.var_par;
+      size_q_array -= v.array();
+    }
+    break;
+  }
+  default:
+    //log
+  {
+    size_n_array *= -1.0;
+    size_n_array = size_n_array.exp();
+    size_n_array *= model.data.y.array();
+    if(betapars){
+      size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+      size_q_array *= model.data.var_par;
+      size_q_array -= v.array();
+    }
+    break;
+  }
+  }
+    break;
+  }
+  case Fam::beta:
+  {
+#pragma omp parallel for 
+    for(int i = 0; i < model.n(); i++){
+      size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
+      size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
+    }
+    if(betapars){
+      size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+    } else {
+      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    }
+    break;
+  }
+  }
+  
+  return betapars ? size_p_array.matrix() : size_q_array.matrix();
+}
+
+// when there are non-linear functions of parameters, we need a correction to the Hessian matrix
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
+  int iter = re.zu_.cols();
+  int n2d = model.linear_predictor.calc.parameter_count*(model.linear_predictor.calc.parameter_count + 1)/2;
+  int n = model.n();
+  MatrixXd H = MatrixXd::Zero(n2d,n);
+  ArrayXXd linpred = re.zu_.array();
+  ArrayXd xb = model.xb();
+  linpred.colwise() += xb;
+#pragma omp parallel for 
+  for(int i = 0; i<n ; i++){
+    double dfdmu;
+    ArrayXd xb_ind = linpred.row(i).transpose();
     switch(model.family.family){
     case Fam::poisson:
     {
       switch(model.family.link){
-        case Link::identity:
-        {
-          size_n_array = size_n_array.inverse();
-          size_n_array = model.data.y.array()*size_n_array;
-          size_n_array -= ArrayXd::Ones(model.n());
-          size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          // if(betapars){
-          //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-          // } else {
-          //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          // }
-          break;
-        }
-        default:
-        {
-          size_n_array = size_n_array.exp();
-          size_n_array = model.data.y.array() - size_n_array;
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
-          // if(!betapars){
-          //   size_n_array = model.data.y.array() - size_n_array;
-          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
-          // } else {
-          //   size_p_array += (model.linear_predictor.X().transpose()*(model.data.y-size_n_array.matrix())).array();
-          // }
-          break;
-        }
-      }
+    case Link::identity:
+    {
+      xb_ind = xb_ind.inverse();
+      xb_ind = model.data.y(i)*xb_ind;
+      xb_ind -= 1.0;
+      break;
+    }
+    default:
+    {
+      xb_ind = xb_ind.exp();
+      xb_ind = model.data.y(i) - xb_ind;
+      break;
+    }
+    }
       break;
     }
     case Fam::bernoulli: case Fam::binomial:
     {
       switch(model.family.link){
-        case Link::loglink:
-      {
-        ArrayXd logitxb = model.xb().array().exp();
-        logitxb += 1;
-        logitxb = logitxb.inverse();
-        logitxb *= model.xb().array().exp();
-        size_n_array = (model.data.variance - model.data.y.array())*logitxb;
-        size_n_array += model.data.y.array();
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // if(betapars){
-        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        // } else {
-        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // }
-        break;
+    case Link::loglink:
+    {
+      ArrayXd logitxb = 1.0 - xb_ind.exp();
+      logitxb = logitxb.inverse();
+      logitxb *= xb_ind.exp();
+      xb_ind = (model.data.y(i) - model.data.variance(i))*logitxb;
+      xb_ind += model.data.y(i);
+      break;
+    }
+    case Link::identity:
+    {
+      ArrayXd n_array2 = 1.0 - xb_ind;
+      n_array2 = n_array2.inverse();
+      n_array2 *= (model.data.variance(i) - model.data.y(i));
+      xb_ind = xb_ind.inverse();
+      xb_ind *= model.data.y(i);
+      xb_ind -= n_array2;
+      break;
+    }
+    case Link::probit:
+    {
+      ArrayXd n_array2(xb_ind.size());
+      boost::math::normal norm(0, 1);
+      for (int i = 0; i < xb_ind.size(); i++) {
+        xb_ind(i) = (double)pdf(norm, xb_ind(i)) / ((double)cdf(norm, xb_ind(i)));
+        n_array2(i) = -1.0 * (double)pdf(norm, xb_ind(i)) / (1 - (double)cdf(norm, xb_ind(i)));
       }
-      case Link::identity:
-      {
-        size_n_array = size_n_array.inverse();
-        size_n_array *= model.data.y.array();
-        ArrayXd n_array2 = ArrayXd::Constant(model.n(),1.0) - model.xb().array();
-        n_array2 =n_array2.inverse();
-        n_array2 *= (model.data.variance - model.data.y.array());
-        size_n_array -= n_array2;
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // if(betapars){
-        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        // } else {
-        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // }
-        break;
-      }
-      case Link::probit:
-      {
-        ArrayXd n_array2(model.n());
-        boost::math::normal norm(0, 1);
-    #pragma omp parallel for    
-        for (int i = 0; i < model.n(); i++) {
-          size_n_array(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
-          n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
-        }
-        size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
-         size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
-        // if (betapars) {
-        //   size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
-        // }
-        // else {
-        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
-        // }
-        break;
-      }
-      default:
-        //logit
-      {
-        ArrayXd logitxb = model.xb().array().exp();
-        logitxb += 1;
-        logitxb = logitxb.inverse();
-        logitxb *= model.xb().array().exp();
-        size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
-        size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // if(betapars){
-        //   size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-        // } else {
-        //   size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        // }
-        break;
-      }
+      xb_ind = model.data.y(i) * xb_ind + (model.data.variance(i) - model.data.y(i)) * n_array2;
+      break;
+    }
+    default:
+      //logit
+    {
+      ArrayXd logitxb = xb_ind.exp();
+      logitxb += 1.0;
+      logitxb = logitxb.inverse();
+      logitxb *= xb_ind.exp();
+      xb_ind = model.data.y(i)*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance(i) - model.data.y(i))*logitxb;
+      break;
+    }
     }
       break;
     }
     case Fam::gaussian:
     {
       switch(model.family.link){
-        case Link::loglink:
-        {
-          size_n_array = model.data.y.array() - size_n_array;
-          size_n_array *= model.data.weights;
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          size_q_array *= 1.0/(model.data.var_par);
-        //   if(betapars){
-        //   size_n_array -= model.data.y.array();
-        //   size_n_array *= -1;
-        //   size_n_array *= model.data.weights;
-        //   size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*(model.data.y - size_n_array.matrix()))).array();
-        // } else {
-        //   size_n_array = model.data.y.array() - size_n_array;
-        //   size_n_array *= model.data.weights;
-        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        //   size_q_array *= 1.0/(model.data.var_par);
-        // }
-        break;
-        }
-        default:
-        {
-          size_n_array = model.data.y.array() - size_n_array;
-          size_n_array *= model.data.weights;
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          size_q_array *= 1.0/(model.data.var_par);
-        //   if(betapars){
-        //   size_n_array -= model.data.y.array();
-        //   size_n_array *= -1;
-        //   size_n_array *= model.data.weights;
-        //   size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
-        // } else {
-        //   size_n_array = model.data.y.array() - size_n_array;
-        //   size_n_array *= model.data.weights;
-        //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-        //   size_q_array *= 1.0/(model.data.var_par);
-        // }
-        break;
-        }
+    case Link::loglink:
+    {
+      xb_ind = (model.data.y(i) - xb_ind)*model.data.weights(i)*xb_ind.exp();
+      xb_ind *= 1.0/(model.data.var_par);
+      break;
+    }
+    default:
+    {
+      xb_ind = model.data.y(i) - xb_ind;
+      xb_ind *= model.data.weights(i)/(model.data.var_par);
+      break;
+    }
     }
       break;
     }
     case Fam::gamma:
     {
       switch(model.family.link){
-        case Link::inverse:
-        {
-          size_n_array = size_n_array.inverse();
-          size_n_array -= model.data.y.array();
-            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-            size_q_array *= model.data.var_par;
-          // if(betapars){
-          //   size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
-          // } else {
-          //   size_n_array -= model.data.y.array();
-          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          //   size_q_array *= model.data.var_par;
-          // }
-          break;
-        }
-        case Link::identity:
-        {
-          size_n_array = size_n_array.inverse();
-          size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-          size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          size_q_array *= model.data.var_par;
-          // if(betapars){
-          //   size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
-          // } else {
-          //   size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          //   size_q_array *= model.data.var_par;
-          // }
-          break;
-        }
-        default:
-          //log
-        {
-          size_n_array *= -1.0;
-          size_n_array = size_n_array.exp();
-          size_n_array *= model.data.y.array();
-            size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-            size_q_array *= model.data.var_par;
-          // if(betapars){
-          //   size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
-          // } else {
-          //   size_n_array *= model.data.y.array();
-          //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-          //   size_q_array *= model.data.var_par;
-          // }
-          break;
-        }
+    case Link::inverse:
+    {
+      xb_ind = xb_ind.inverse();
+      xb_ind -= model.data.y(i);
+      xb_ind = xb_ind - model.data.y(i);
+      xb_ind *= 1.0/(model.data.var_par);
+      xb_ind -= model.data.y(i);
+      xb_ind *= model.data.var_par;
+      break;
+    }
+    case Link::identity:
+    {
+      xb_ind = xb_ind.inverse();
+      xb_ind *= (model.data.y.array()*xb_ind - ArrayXd::Ones(model.n()));
+      xb_ind = xb_ind*xb_ind*model.data.y(i) - xb_ind;
+      xb_ind *= model.data.var_par;
+      break;
+    }
+    default:
+      //log
+    {
+      xb_ind *= -1.0;
+      xb_ind = xb_ind.exp();
+      xb_ind *= model.data.y(i)*model.data.y(i);
+      xb_ind -= 1.0;
+      xb_ind *= model.data.var_par;
+      break;
+    }
     }
       break;
     }
     case Fam::beta:
     {
-  #pragma omp parallel for 
-      for(int i = 0; i < model.n(); i++){
-        size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
-        size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
+      for(int i = 0; i < xb_ind.size(); i++){
+        xb_ind(i) = exp(xb_ind(i))/(exp(xb_ind(i))+1);
+        xb_ind(i) = (xb_ind(i)/(1+exp(xb_ind(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(xb_ind(i)*model.data.var_par) + boost::math::digamma((1-xb_ind(i))*model.data.var_par));
       }
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-      // if(betapars){
-      //   size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-      // } else {
-      //   size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-      // }
       break;
     }
+    }
+    
+    dfdmu = xb_ind.mean();
+    
+    for(int k = 0; k < iter; k++){
+      dblvec out = model.linear_predictor.calc.template calculate<CalcDyDx::BetaSecond>(i,0,0,re.zu_(i,k));
+      for(int j = 0; j < n2d; j++){
+        H(j,i) += dfdmu*out[model.linear_predictor.calc.parameter_count + 1 + j]/iter;
+      }
+    }
   }
+  
+  VectorXd Hmean = H.rowwise().sum();
+  MatrixXd H0 = MatrixXd::Zero(model.linear_predictor.calc.parameter_count, model.linear_predictor.calc.parameter_count);
+  int index_count = 0;
+  for(int j = 0; j < model.linear_predictor.calc.parameter_count; j++){
+    for(int k = j; k < model.linear_predictor.calc.parameter_count; k++){
+      H0(k,j) = Hmean[index_count];
+      if(j != k) H0(j,k) = H0(k,j);
+      index_count++;
+    }
   }
   
-  
-  
-  // if(betapars){
-  //   VectorXd zuOffset = SparseOperators::operator*(ZL,v);
-  //   zuOffset += model.data.offset;
-  //   MatrixXd J = model.calc.jacobian(zuOffset);
-  //   size_p_array = J.transpose().rowwise().sum().array();
-  // } else {
-  //   
-  //   
-  // }
-  // we can use autodiff here, but the above method is faster
-  // this needs retesting after updates to calculator and derivatives.
-  // else {
-  //   VectorXd xbOffset_ = linp_.xb() + offset_;
-  //   MatrixXd J = vcalc_.jacobian(dblvec(v.data(),v.data()+v.size()),
-  //                                               sparse_to_dense(ZL_,false),
-  //                                               xbOffset_);
-  //   size_q_array = (J.transpose().rowwise().sum() - v).array();
-  // }
-  return betapars ? size_p_array.matrix() : size_q_array.matrix();
+  return H0;
 }
-
-

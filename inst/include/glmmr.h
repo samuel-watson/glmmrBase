@@ -43,7 +43,7 @@ struct glmmrType
   }
 };
 
-using returnType = std::variant<int, double, Eigen::VectorXd, Eigen::ArrayXd, Eigen::MatrixXd, 
+using returnType = std::variant<int, double, bool, Eigen::VectorXd, Eigen::ArrayXd, Eigen::MatrixXd, 
                                 dblvec, strvec, intvec, VectorMatrix, MatrixMatrix, CorrectionData<glmmr::SE::KR>,
                                 CorrectionData<glmmr::SE::KR2>, CorrectionData<glmmr::SE::KRBoth>,
                                 CorrectionData<glmmr::SE::Sat>, std::vector<Eigen::MatrixXd>, std::pair<double,double>, BoxResults,

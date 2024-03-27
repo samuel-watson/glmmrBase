@@ -4,7 +4,7 @@
 \alias{residuals.mcml}
 \title{Residuals method for a `mcml` object}
 \usage{
-\method{residuals}{mcml}(object, type, conditional, ...)
+\method{residuals}{mcml}(object, type, ...)
 }
 \arguments{
 \item{object}{A `mcml` object.}

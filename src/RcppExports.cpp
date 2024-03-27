@@ -689,15 +689,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__print_instructions
-void Model__print_instructions(SEXP xp, bool linpred, bool loglik, int type);
-RcppExport SEXP _glmmrBase_Model__print_instructions(SEXP xpSEXP, SEXP linpredSEXP, SEXP loglikSEXP, SEXP typeSEXP) {
+void Model__print_instructions(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__print_instructions(SEXP xpSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type linpred(linpredSEXP);
-    Rcpp::traits::input_parameter< bool >::type loglik(loglikSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__print_instructions(xp, linpred, loglik, type);
+    Model__print_instructions(xp, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1501,15 +1499,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__hess_and_grad
-SEXP Model__hess_and_grad(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__hess_and_grad(SEXP xpSEXP, SEXP typeSEXP) {
+// Model__hessian_correction
+SEXP Model__hessian_correction(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__hessian_correction(SEXP xpSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__hess_and_grad(xp, type));
+    rcpp_result_gen = Rcpp::wrap(Model__hessian_correction(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__any_nonlinear
+SEXP Model__any_nonlinear(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__any_nonlinear(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__any_nonlinear(xp, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1583,18 +1593,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__cov_deriv(xp, type));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Model__hessian
-SEXP Model__hessian(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__hessian(SEXP xpSEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__hessian(xp, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1752,7 +1750,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__set_direct_control", (DL_FUNC) &_glmmrBase_Model__set_direct_control, 10},
     {"_glmmrBase_Model__set_lbfgs_control", (DL_FUNC) &_glmmrBase_Model__set_lbfgs_control, 6},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
-    {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 4},
+    {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 2},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},
     {"_glmmrBase_Model__set_bobyqa_control", (DL_FUNC) &_glmmrBase_Model__set_bobyqa_control, 5},
     {"_glmmrBase_Model__log_gradient", (DL_FUNC) &_glmmrBase_Model__log_gradient, 4},
@@ -1818,14 +1816,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 2},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 2},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 2},
-    {"_glmmrBase_Model__hess_and_grad", (DL_FUNC) &_glmmrBase_Model__hess_and_grad, 2},
+    {"_glmmrBase_Model__hessian_correction", (DL_FUNC) &_glmmrBase_Model__hessian_correction, 2},
+    {"_glmmrBase_Model__any_nonlinear", (DL_FUNC) &_glmmrBase_Model__any_nonlinear, 2},
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 2},
     {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 2},
     {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 2},
     {"_glmmrBase_Model__small_sample_correction", (DL_FUNC) &_glmmrBase_Model__small_sample_correction, 3},
     {"_glmmrBase_Model__box", (DL_FUNC) &_glmmrBase_Model__box, 2},
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 2},
-    {"_glmmrBase_Model__hessian", (DL_FUNC) &_glmmrBase_Model__hessian, 2},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 5},
     {"_glmmrBase_Model__predict_re", (DL_FUNC) &_glmmrBase_Model__predict_re, 5},
     {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 2},

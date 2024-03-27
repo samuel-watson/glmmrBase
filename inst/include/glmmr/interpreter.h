@@ -253,6 +253,24 @@ inline void re_linear_predictor(glmmr::calculator& calc,
   }
 }
 
+inline void re_log_likelihood(glmmr::calculator& calc,
+                                const int Q){
+  using instructs = std::vector<Do>;
+  instructs re_seq = {Do::PushParameter,Do::Square,Do::Add};
+  for(int i = 0; i < Q; i++){
+    calc.instructions.insert(calc.instructions.end(),re_seq.begin(),re_seq.end());
+    auto uidx = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"v_"+std::to_string(i));
+    if(uidx == calc.parameter_names.end()){
+      #ifdef R_BUILD
+      Rcpp::stop("Error finding name of random effect in calculator");
+      #endif
+    } else {
+      int idx_to_add = uidx - calc.parameter_names.begin();
+      calc.indexes.push_back(idx_to_add);
+    }
+  }
+}
+
 inline void linear_predictor_to_link(glmmr::calculator& calc,
                                      const Link link){
   using instructs = std::vector<Do>;
@@ -334,14 +352,17 @@ inline void link_to_likelihood(glmmr::calculator& calc,
       }
     case Fam::poisson:
       {
-        instructs poisson_instruct = {Do::PushY,Do::LogFactorialApprox,Do::Add,Do::PushY};
-        instructs poisson_instruct2 = {Do::Log,Do::Multiply,Do::Subtract};
+        out.push_back(Do::PushY);
+        out.push_back(Do::LogFactorialApprox);
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),poisson_instruct.begin(),poisson_instruct.end());
         out.insert(out.end(),calc.instructions.begin(),calc.instructions.end());
         idx.insert(idx.end(),calc.indexes.begin(),calc.indexes.end());
-        out.insert(out.end(),poisson_instruct2.begin(),poisson_instruct2.end());
+        out.push_back(Do::Log);
+        out.push_back(Do::PushY);
+        out.push_back(Do::Multiply);
+        out.push_back(Do::Subtract);
+        out.push_back(Do::Subtract);
         break;
       }
     case Fam::gamma:
