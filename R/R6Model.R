@@ -1509,7 +1509,7 @@ Model <- R6::R6Class("Model",
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          if(!private$y_has_been_updated) stop("No y data has been added")
                          if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
-                           file_type <- mcnr_family(self$family,self$mcmc_options$use_cmdstan)
+                           file_type <- mcnr_family(self$family,mcmc.pkg == "cmdstan")
                            if(mcmc.pkg == "cmdstan"){
                              if(!requireNamespace("cmdstanr")){
                                stop("cmdstanr is required to use cmdstan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.")
