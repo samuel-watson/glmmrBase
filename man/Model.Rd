@@ -331,7 +331,6 @@ require larger numbers of steps and so is slower. Smaller numbers are likely req
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
 \item \href{#method-Model-gradient}{\code{Model$gradient()}}
-\item \href{#method-Model-hessian}{\code{Model$hessian()}}
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
@@ -715,24 +714,34 @@ des$update_parameters(cov.pars = c(0.1,0.9))
 \if{html}{\out{<a id="method-Model-information_matrix"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-information_matrix}{}}}
 \subsection{Method \code{information_matrix()}}{
-Generates the information matrix of the GLS estimator
+Generates the information matrix of the mixed model GLS estimator (X'S^-1X). The inverse of this matrix is an
+estimator for the variance-covariance matrix of the fixed effect parameters. For various small sample corrections
+see \code{small_sample_correction()} and \code{box()}. For models with non-linear functions of fixed effect parameters,
+a correction to the Hessian matrix is required, which is automatically calculated or optionally returned or disabled.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE, theta = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(
+  include.re = FALSE,
+  theta = FALSE,
+  hessian.corr = "add"
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{include.re}}{logical indicating whether to return the information matrix including the random effects components (TRUE),
-or the GLS information matrix for beta only (FALSE).}
+or the mixed model information matrix for beta only (FALSE).}
 
 \item{\code{theta}}{Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
 parameter information matrix is returned.}
+
+\item{\code{hessian.corr}}{String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its
+own ("return"), or ignored ("none")}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A PxP matrix
+A matrix
 }
 }
 \if{html}{\out{<hr>}}
@@ -1172,22 +1181,6 @@ A vector of the gradient
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-hessian"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-hessian}{}}}
-\subsection{Method \code{hessian()}}{
-Calculates the Hessian of the model fixed and random effect parameters. Uses an autodifferentiation
-method to handle non-linear fixed effect specifications. The upper left PxP submatrix of the inverse
-of the negative Hessian provides an estimator of the variance-covariance matrix of the fixed
-effect parameters.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$hessian()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A matrix
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-partial_sigma"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-partial_sigma}{}}}
 \subsection{Method \code{partial_sigma()}}{
@@ -1258,24 +1251,15 @@ The log-likelihood of the model parameters
 \if{html}{\out{<a id="method-Model-calculator_instructions"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-calculator_instructions}{}}}
 \subsection{Method \code{calculator_instructions()}}{
-Prints the internal instructions used to calculate the linear predictor and/or
-the log likelihood. Internally the class uses a reverse polish notation to store and
+Prints the internal instructions and data used to calculate the linear predictor.
+Internally the class uses a reverse polish notation to store and
 calculate different functions, including user-specified non-linear mean functions. This
 function will print all the steps. Mainly used for debugging and determining how the
 class has interpreted non-linear model specifications.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$calculator_instructions(linpred = TRUE, loglik = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$calculator_instructions()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{linpred}}{Logical. Whether to print the linear predictor instructions.}
-
-\item{\code{loglik}}{Logical. Whether to print the log-likelihood instructions.}
-}
-\if{html}{\out{</div>}}
-}
 \subsection{Returns}{
 None. Called for effects.
 }

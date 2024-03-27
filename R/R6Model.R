@@ -1508,14 +1508,13 @@ Model <- R6::R6Class("Model",
                        mcmc_sample = function(mcmc.pkg = "rstan"){
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          if(!private$y_has_been_updated) stop("No y data has been added")
-                         if(mcmc.pkg == "cmdstan"){
+                         if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                            file_type <- mcnr_family(self$family,self$mcmc_options$use_cmdstan)
-                           if(self$mcmc_options$use_cmdstan){
+                           if(mcmc.pkg == "cmdstan"){
                              if(!requireNamespace("cmdstanr")){
-                               stop("cmdstanr is required to use Stan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.\n
-                                    Set option usestan=FALSE to use the in-built MCMC sampler.")
+                               stop("cmdstanr is required to use cmdstan for sampling. See https://mc-stan.org/cmdstanr/ for details on how to install.")
                              } else {
-                               if(verbose)message("If this is the first time running this model, it will be compiled by cmdstan.")
+                               if(private$trace>=1)message("If this is the first time running this model, it will be compiled by cmdstan.")
                                model_file <- system.file("cmdstan",
                                                          file_type$file,
                                                          package = "glmmrBase",
@@ -1535,7 +1534,8 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                            if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
                            if(private$trace <= 1){
-                             if(self$mcmc_options$use_cmdstan){
+                             if(private$trace==1)message("Starting MCMC sampling. Set self$trace(2) for detailed output")
+                             if(mcmc.pkg == "cmdstan"){
                                capture.output(fit <- mod$sample(data = data,
                                                                 chains = 1,
                                                                 iter_warmup = self$mcmc_options$warmup,
@@ -1552,19 +1552,19 @@ Model <- R6::R6Class("Model",
                                               file=tempfile())
                              }
                            } else {
-                             if(self$mcmc_options$use_cmdstan){
+                             if(mcmc.pkg == "cmdstan"){
                                fit <- mod$sample(data = data,
                                                  chains = 1,
                                                  iter_warmup = self$mcmc_options$warmup,
                                                  iter_sampling = self$mcmc_options$samps,
-                                                 refresh = 0)
+                                                 refresh = 50)
                              } else {
                                fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                       data=data,
                                                       chains=1,
                                                       iter = self$mcmc_options$warmup+self$mcmc_options$samps,
                                                       warmup = self$mcmc_options$warmup,
-                                                      refresh = 0)
+                                                      refresh = 50)
                              }
                            }
                            if(mcmc.pkg == "cmdstan"){
@@ -1574,6 +1574,7 @@ Model <- R6::R6Class("Model",
                              dsamps <- rstan::extract(fit,"gamma",FALSE)
                              dsamps <- as.matrix(dsamps[,1,])
                            }
+                           if(private$trace==1)message("Sampling complete, updating model")
                            Model__update_u(private$ptr,as.matrix(t(dsamps)),private$model_type())
                            dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% Matrix::t(dsamps)) #check this
                          } else {
