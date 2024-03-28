@@ -73,6 +73,7 @@ void Model_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
   Eigen::ArrayXd L = as<Eigen::ArrayXd>(L_);
   XPtr<glmm_hsgp> ptr(xp);
   ptr->model.covariance.update_approx_parameters(m,L);
+  ptr->reset_u();
 }
 
 // [[Rcpp::export]]
@@ -219,19 +220,6 @@ void Model__print_names(SEXP xp, bool data, bool parameters, int type = 0){
   };
   std::visit(functor,model.ptr);
 }
-
-// // [[Rcpp::export]]
-// void Model__vcalc_print(SEXP xp, int type = 0){
-//   glmmrType model(xp,static_cast<Type>(type));
-//   auto functor = overloaded {
-//     [](int) {}, 
-//     [&](auto ptr){
-//       ptr->model.vcalc.print_names(true,true);
-//       ptr->model.vcalc.print_instructions();
-//     }
-//   };
-//   std::visit(functor,model.ptr);
-// }
 
 // [[Rcpp::export]]
 void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
@@ -466,17 +454,6 @@ SEXP Model__cov_deriv(SEXP xp, int type = 0){
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<std::vector<Eigen::MatrixXd> >(S));
 }
-
-// // [[Rcpp::export]]
-// SEXP Model__hessian(SEXP xp, int type = 0){
-//   glmmrType model(xp,static_cast<Type>(type));
-//   auto functor = overloaded {
-//     [](int) {  return returnType(0);}, 
-//     [](auto ptr){return returnType(ptr->matrix.re_score());}
-//   };
-//   auto S = std::visit(functor,model.ptr);
-//   return wrap(std::get<VectorMatrix>(S));
-// }
 
 // [[Rcpp::export]]
 SEXP Model__predict(SEXP xp, SEXP newdata_,

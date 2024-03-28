@@ -35,6 +35,7 @@ public:
   virtual void    update_beta(const dblvec &beta_);
   virtual void    update_theta(const dblvec &theta_);
   virtual void    update_u(const MatrixXd &u_, bool append = false);
+  virtual void    reset_u(); // just resets the random effects samples to zero
   virtual void    set_trace(int trace_);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
@@ -92,15 +93,34 @@ inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
 }
 
 template<typename modeltype>
+inline void glmmr::Model<modeltype>::reset_u(){
+  re.u_.resize(model.covariance.Q(),1);
+  re.u_.setZero();
+  re.zu_.resize(NoChange,1);
+  re.zu_.setZero();
+}
+
+template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
 #ifdef R_BUILD
   if(u_.rows()!=model.covariance.Q())Rcpp::stop(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
 #endif
   
+  bool action_append = append;
+  // if HSGP then check and update the size of u is m has changed
+  if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+    if(model.covariance.Q() != re.u_.rows()){
+      re.u_.resize(model.covariance.Q(),1);
+      re.u_.setZero();
+    }
+  }
+  
   int newcolsize = u_.cols();
   int currcolsize = re.u_.cols();
+  // check if the existing samples are a single column of zeros - if so remove them
+  if(append && re.u_.cols() == 1 && re.u_.col(0).isZero()) action_append = false;
   
-  if(append){
+  if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;

@@ -1527,7 +1527,7 @@ Model <- R6::R6Class("Model",
                              Q = Model__Q(private$ptr,private$model_type()),
                              Xb = Model__xb(private$ptr,private$model_type()),
                              Z = Model__ZL(private$ptr,private$model_type()),
-                             y = y,
+                             y = Model__y(private$ptr,private$model_type()),
                              type=as.numeric(file_type$type)
                            )
                            if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))

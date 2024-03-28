@@ -337,18 +337,12 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
   model.covariance.derivatives(derivs,1);
   int R = model.covariance.npar();
   int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
-  // MatrixXd M = information_matrix();
-  // M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
   MatrixXd SigmaInv = Sigma(true);
   MatrixXd Z = model.covariance.Z();
-  // MatrixXd X = model.linear_predictor.X();
-  // MatrixXd SigX = SigmaInv*X;
   MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
   MatrixXd partial1(model.n(),model.n());
   MatrixXd partial2(model.n(),model.n());
   glmmr::MatrixField<MatrixXd> S;
-  // glmmr::MatrixField<MatrixXd> P;
-  // glmmr::MatrixField<MatrixXd> Q;
   int counter = 0;
   for(int i = 0; i < Rmod; i++){
     if(i < R){
@@ -357,7 +351,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
       partial1 = MatrixXd::Identity(n,n);
       if((model.data.weights != 1).any())partial1 = model.data.weights.inverse().matrix().asDiagonal();
     }
-    // P.add(-1*SigX.transpose()*partial1*SigX);
     for(int j = i; j < Rmod; j++){
       if(j < R){
         partial2 = Z*derivs[1+j]*Z.transpose();
@@ -365,19 +358,17 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
         partial2 = MatrixXd::Identity(n,n);
         if((model.data.weights != 1).any())partial2 = model.data.weights.inverse().matrix().asDiagonal();
       }
-      // Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
       S.add(SigmaInv*partial1*SigmaInv*partial2);
     }
   }
   counter = 0;
   for(int i = 0; i < Rmod; i++){
     for(int j = i; j < Rmod; j++){
-      M_theta(i,j) = 0.5*(S(counter).trace()); //- (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
+      M_theta(i,j) = 0.5*(S(counter).trace()); 
       if(i!=j)M_theta(j,i)=M_theta(i,j);
       counter++;
     }
   }
-  // M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
   return M_theta;
 }
 
@@ -947,6 +938,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
   ArrayXXd linpred = re.zu_.array();
   ArrayXd xb = model.xb();
   linpred.colwise() += xb;
+  linpred.colwise() += model.data.offset;
 #pragma omp parallel for 
   for(int i = 0; i<n ; i++){
     double dfdmu;
