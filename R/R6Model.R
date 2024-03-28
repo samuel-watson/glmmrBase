@@ -590,8 +590,11 @@ Model <- R6::R6Class("Model",
                        #' parameter information matrix is returned.
                        #' @param hessian.corr String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its 
                        #' own ("return"), or ignored ("none")
+                       #' @param adj.nonspd Logical. For models nonlinear in fixed effect parameters, the Hessian of the linear predictor with respect to the 
+                       #' model parameters is often not positive semi-definite, which can cause a singular matrix and failure to calculate valid standard errors. 
+                       #' The adjustment matrix will be corrected if it is not positive semi-definite and this option is TRUE.
                         #' @return A matrix
-                       information_matrix = function(include.re = FALSE, theta = FALSE, hessian.corr = "add"){
+                       information_matrix = function(include.re = FALSE, theta = FALSE, hessian.corr = "add", adj.nonpsd = TRUE){
                          private$update_ptr()
                          nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
                          if(nonlin){
@@ -601,7 +604,7 @@ Model <- R6::R6Class("Model",
                          if(theta){
                            M <- Model__infomat_theta(private$ptr,private$model_type())
                          } else {
-                           if((nonlin & hessian.corr=="add") | !nonlin){
+                           if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
                              if(include.re & !private$model_type()>0){
                                M <- Model__obs_information_matrix(private$ptr,private$model_type())
                              } else {
@@ -614,6 +617,10 @@ Model <- R6::R6Class("Model",
                            }
                            if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
                              A <- Model__hessian_correction(private$ptr,private$model_type())
+                             if(any(eigen(A)$values < 0)){
+                               if(adj.nonpsd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonpsd = FALSE")
+                               A <- near_semi_pd(A)
+                             }
                              if(hessian.corr == "add"){
                                M <- M + A
                              } else {
@@ -1098,7 +1105,8 @@ Model <- R6::R6Class("Model",
                          u <- Model__u(private$ptr,TRUE,private$model_type())
                          if(private$model_type()==0){
                            if(se == "gls" || se == "bw" || se == "box"){
-                             M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
+                             M <- self$information_matrix() #Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
+                             M <- solve(M)
                              if(se.theta){
                                SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                              } else {
@@ -1120,7 +1128,7 @@ Model <- R6::R6Class("Model",
                          } else {
                            # crudely calculate the information matrix for GP approximations - this will be integrated into the main
                            # library in future versions, but can cause error/crash with the above methods
-                           M <- Model__information_matrix_crude(private$ptr,private$model_type())
+                           M <- self$information_matrix()#Model__information_matrix_crude(private$ptr,private$model_type())
                            nB <- nrow(M)
                            M <- tryCatch(solve(M), error = matrix(NA,nrow = nB,ncol=nB))
                            SE_theta <- rep(NA, ncovpar)
@@ -1368,7 +1376,8 @@ Model <- R6::R6Class("Model",
                          u <- Model__u(private$ptr,TRUE,private$model_type())
                          if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
                          if(se == "gls" || se =="bw" || se == "box"){
-                           M <- Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
+                           M <- self$information_matrix()#Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
+                           M <- solve(M)
                            if(se.theta){
                              SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
                            } else {

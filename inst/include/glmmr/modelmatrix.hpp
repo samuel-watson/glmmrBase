@@ -589,14 +589,28 @@ inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score()
 // template<typename modeltype>
 // inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian()
 // {
+//   // create the log-likelihood calculator
+//   glmmr::calculator vcalc = model.linear_predictor.calc;
+//   glmmr::re_linear_predictor(vcalc,model.covariance.Q());
+//   glmmr::linear_predictor_to_link(vcalc,model.family.link);
+//   glmmr::link_to_likelihood(vcalc,model.family.family);
+//   glmmr::re_log_likelihood(vcalc,model.covariance.Q());
+//   vcalc.variance.conservativeResize(model.n());
+//   vcalc.variance = model.data.variance;
+//   vcalc.data.conservativeResize(model.n(),model.linear_predictor.calc.data_count + model.covariance.Q());
+//   vcalc.parameters.resize(model.linear_predictor.P()+model.covariance.Q());
+//   vcalc.y.resize(n());
+//   std::fill(vcalc.parameters.begin(),vcalc.parameters.end(),0.0);
+//   std::fill(vcalc.y.begin(),vcalc.y.end(),0.0);
+//   
 //   // update the relevant calculator
 //   int Q = model.covariance.Q();
 //   int P = model.linear_predictor.P();
-//   
+// 
 //   if(model.vcalc.data.cols() != model.vcalc.data_count){
 //     model.vcalc.data.conservativeResize(model.n(),model.vcalc.data_count);
 //     model.vcalc.data.leftCols(model.linear_predictor.calc.data_count) = model.linear_predictor.calc.data;
-//   } 
+//   }
 //   if(model.vcalc.parameters.size()!= P+Q) model.vcalc.parameters.resize(P+Q);
 //   model.vcalc.data.rightCols(model.covariance.Q()) = model.covariance.ZL();
 //   for(int i = 0; i < model.n(); i++) model.vcalc.y[i] = model.data.y(i);
@@ -605,11 +619,11 @@ inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score()
 //   offsetmat.col(0) = model.data.offset;
 //   MatrixXd hess(P + Q,P + Q);
 //   hess.setZero();
-//   
+// 
 // #ifdef R_BUILD
 //   if(model.vcalc.parameter_count != P+Q) Rcpp::stop("Calculator parameter count not equal to number of parameters");
 // #endif
-//   
+// 
 //   for(int i = 0; i < re.zu_.cols(); i++)
 //   {
 //     for(int j = 0; j < Q; j ++) model.vcalc.parameters[P + j] = re.u_(j,i);
@@ -937,8 +951,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
   MatrixXd H = MatrixXd::Zero(n2d,n);
   ArrayXXd linpred = re.zu_.array();
   ArrayXd xb = model.xb();
-  linpred.colwise() += xb;
-  linpred.colwise() += model.data.offset;
+  linpred.colwise() += xb + model.data.offset.array();
 #pragma omp parallel for 
   for(int i = 0; i<n ; i++){
     double dfdmu;
@@ -1076,7 +1089,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
     for(int k = 0; k < iter; k++){
       dblvec out = model.linear_predictor.calc.template calculate<CalcDyDx::BetaSecond>(i,0,0,re.zu_(i,k));
       for(int j = 0; j < n2d; j++){
-        H(j,i) += dfdmu*out[model.linear_predictor.calc.parameter_count + 1 + j]/iter;
+        H(j,i) += dfdmu*out[model.linear_predictor.calc.parameter_count + 1 + j]/(double)iter;
       }
     }
   }

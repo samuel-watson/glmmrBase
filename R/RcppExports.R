@@ -389,6 +389,10 @@ Model__xb <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__xb`, xp, type)
 }
 
+near_semi_pd <- function(mat_) {
+    .Call(`_glmmrBase_near_semi_pd`, mat_)
+}
+
 Covariance__submatrix <- function(xp, i) {
     .Call(`_glmmrBase_Covariance__submatrix`, xp, i)
 }

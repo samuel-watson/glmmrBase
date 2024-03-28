@@ -1219,6 +1219,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// near_semi_pd
+SEXP near_semi_pd(SEXP mat_);
+RcppExport SEXP _glmmrBase_near_semi_pd(SEXP mat_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type mat_(mat_SEXP);
+    rcpp_result_gen = Rcpp::wrap(near_semi_pd(mat_));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Covariance__submatrix
 SEXP Covariance__submatrix(SEXP xp, int i);
 RcppExport SEXP _glmmrBase_Covariance__submatrix(SEXP xpSEXP, SEXP iSEXP) {
@@ -1794,6 +1805,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__L", (DL_FUNC) &_glmmrBase_Model__L, 2},
     {"_glmmrBase_Model__ZL", (DL_FUNC) &_glmmrBase_Model__ZL, 2},
     {"_glmmrBase_Model__xb", (DL_FUNC) &_glmmrBase_Model__xb, 2},
+    {"_glmmrBase_near_semi_pd", (DL_FUNC) &_glmmrBase_near_semi_pd, 1},
     {"_glmmrBase_Covariance__submatrix", (DL_FUNC) &_glmmrBase_Covariance__submatrix, 2},
     {"_glmmrBase_Model_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Model_hsgp__set_approx_pars, 3},
     {"_glmmrBase_Covariance_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Covariance_hsgp__set_approx_pars, 3},

@@ -61,6 +61,13 @@ SEXP wrap(const BoxResults& x){
 using namespace Rcpp;
 
 // [[Rcpp::export]]
+SEXP near_semi_pd(SEXP mat_){
+  Eigen::MatrixXd mat = as<Eigen::MatrixXd>(mat_);
+  glmmr::Eigen_ext::near_semi_pd(mat);
+  return wrap(mat);
+}
+
+// [[Rcpp::export]]
 SEXP Covariance__submatrix(SEXP xp, int i){
   XPtr<nngp> ptr(xp);
   VectorMatrix result = ptr->submatrix(i);
@@ -74,6 +81,8 @@ void Model_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
   XPtr<glmm_hsgp> ptr(xp);
   ptr->model.covariance.update_approx_parameters(m,L);
   ptr->reset_u();
+  std::vector<double> theta = ptr->model.covariance.parameters_;
+  ptr->model.covariance.update_parameters(theta);
 }
 
 // [[Rcpp::export]]

@@ -144,6 +144,13 @@ inline bool issympd(Eigen::MatrixXd& mat){
   Eigen::LLT<Eigen::MatrixXd> lltOfA(mat);
   return lltOfA.info() == Eigen::NumericalIssue;
 }
+
+inline void near_semi_pd(MatrixXd& mat)
+{
+  const SelfAdjointEigenSolver<MatrixXd> solver(mat);
+  mat = solver.eigenvectors() * solver.eigenvalues().cwiseMax(0).asDiagonal() * solver.eigenvectors().transpose();
+}
+
 }
 
 class SigmaBlock {
