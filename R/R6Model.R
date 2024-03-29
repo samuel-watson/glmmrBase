@@ -1054,16 +1054,16 @@ Model <- R6::R6Class("Model",
                              llvar <- Model__ll_diff_variance(private$ptr, TRUE, conv.criterion==2, private$model_type())
                              if(adaptive) n_mcmc_sampling <- max(n_mcmc_sampling, min(self$mcmc_options$samps, ceiling(llvar * (qnorm(convergence.prob) + qnorm(0.8))^2)/uval^2))
                              if(conv.criterion %in% c(2,3)){
-                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
-                               prob.converged <- pnorm(-uval/sqrt(llvar/n_mcmc_sampling))
+                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar)#/n_mcmc_sampling
+                               prob.converged <- pnorm(-uval/sqrt(llvar))#/n_mcmc_sampling
                                converged <- conv.criterion.value < 0
                              } 
                              if(conv.criterion == 4){
                                llvart <- Model__ll_diff_variance(private$ptr, FALSE, TRUE, private$model_type())
-                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
-                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar/n_mcmc_sampling))
-                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart/n_mcmc_sampling)
-                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/n_mcmc_sampling))
+                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar)#/n_mcmc_sampling
+                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar))#/n_mcmc_sampling
+                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart)#/n_mcmc_sampling
+                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart))#/n_mcmc_sampling
                                converged <- conv.criterion.value < 0 & conv.criterion.valuet < 0
                              }
                            }

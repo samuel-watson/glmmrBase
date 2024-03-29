@@ -211,8 +211,10 @@ inline void two_way_fn(std::vector<char>& formula,
   calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
   calc.numbers[calc.user_number_count] = -1.0 / l;
   calc.user_number_count++;
-  calc.instructions.push_back(Do::Multiply);
-  sign_fn(f_s2,calc,data,colnames,Xdata,0);
+  if(type > 0){
+    calc.instructions.push_back(Do::Multiply);
+    sign_fn(f_s2,calc,data,colnames,Xdata,0);
+  }
   calc.instructions.push_back(Do::Log);
   calc.instructions.push_back(Do::Add);
   calc.instructions.push_back(Do::Exp);
@@ -221,8 +223,6 @@ inline void two_way_fn(std::vector<char>& formula,
   if(type == 0){
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
-    calc.instructions.push_back(Do::Multiply);
-    sign_fn(f_s2,calc,data,colnames,Xdata,0);
     calc.instructions.push_back(Do::Divide);
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata);
     add_check = check_parameter(par3,calc,true);
@@ -250,18 +250,19 @@ inline void two_way_fn(std::vector<char>& formula,
     add_check = check_parameter(par2,calc,true);
   }
   calc.instructions.push_back(Do::Exp);
-  calc.instructions.push_back(Do::Multiply);
-  calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
-  calc.numbers[calc.user_number_count] = -0.5 * l;
-  calc.user_number_count++;
-  calc.instructions.push_back(Do::Add);
-  sign_fn(f_s2,calc,data,colnames,Xdata,0);
-  if(!variable_in_data){
-    #ifdef R_BUILD
-    Rcpp::stop("Syntax error in twoway: "+token_as_str+" not in data");
-    #endif
-  } 
-  calc.instructions.push_back(Do::Int1);
+  if(type > 0){
+    calc.instructions.push_back(Do::Multiply);
+    calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+    calc.numbers[calc.user_number_count] = -0.5 * l;
+    calc.user_number_count++;
+    calc.instructions.push_back(Do::Add);
+    sign_fn(f_s2,calc,data,colnames,Xdata,0);
+    calc.instructions.push_back(Do::Int1);
+  } else {
+    calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+    calc.numbers[calc.user_number_count] = -1.0 * l;
+    calc.user_number_count++;
+  }
   add_check = check_parameter(par1,calc,true);
   add_check = check_number(nu_as_str, calc);
   if(!add_check){
