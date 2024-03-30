@@ -263,7 +263,10 @@ public:
             #ifdef R_BUILD
             if(trace >= 2)
             {
-                Rcpp::Rcout << "\nL-BFGS-B iteration " << k << " x = " << x.transpose() << " f(x) = " << fx;
+                Rcpp::Rcout << "\nL-BFGS-B iteration " << k << " x = " << x.transpose() << "\nf(x) = " << fx;
+              if(trace == 2){
+                Rcpp::Rcout << "\nGrad: " << m_grad.transpose() << " ||proj_grad|| = " << m_projgnorm ;
+              }
             }
             #endif 
         }

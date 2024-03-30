@@ -171,9 +171,12 @@ public:
             step = Scalar(1);
             k++;
         #ifdef R_BUILD
-            if(trace >= 2)
+            if(trace >= 1)
             {
-            Rcpp::Rcout << "\nL-BFGS iteration " << k << " x = " << x.transpose() << " f(x) = " << fx;
+            Rcpp::Rcout << "\nL-BFGS iteration " << k << " x = " << x.transpose() << "\nf(x) = " << fx;
+            if(trace == 2){
+              Rcpp::Rcout << "\nGrad: " << m_grad.transpose() << " ||grad|| = " << m_gnorm ;
+            }
             }
         #endif 
         }

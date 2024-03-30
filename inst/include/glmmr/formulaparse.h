@@ -162,6 +162,7 @@ inline void two_way_fn(std::vector<char>& formula,
   std::vector<char> f_s2;
   std::vector<char> nu_val;
   std::vector<char> l_val;
+  std::vector<char> k_val;
   int comma_count = 0;
   for(int i = 0; i < formula.size(); i++)
   {
@@ -173,6 +174,8 @@ inline void two_way_fn(std::vector<char>& formula,
       } else if(comma_count == 1){
         nu_val.push_back(formula[i]);
       } else if(comma_count == 2){
+        k_val.push_back(formula[i]);
+      } else if(comma_count == 3){
         l_val.push_back(formula[i]);
       } else {
         #ifdef R_BUILD
@@ -181,10 +184,14 @@ inline void two_way_fn(std::vector<char>& formula,
       }
     }
   }
+#ifdef R_BUILD
+  if(comma_count != 3)Rcpp::stop("Syntax error in twoway: incorrect number of options specified");
+#endif
   double l = 0;
   str token_as_str(f_s2.begin(),f_s2.end());
   str nu_as_str(nu_val.begin(),nu_val.end());
   str l_as_str(l_val.begin(),l_val.end());
+  str k_as_str(l_val.begin(),k_val.end());
   
   if(glmmr::is_number(l_as_str)) {
     l = std::stod(l_as_str); 
@@ -194,7 +201,7 @@ inline void two_way_fn(std::vector<char>& formula,
     #endif
   }
   
-  str par1 = "b_twoway_k";
+  // str par1 = "b_twoway_k";
   str par2 = "b_twoway_del_i";
   str par3 = "b_twoway_del_e";
   str par4 = "b_twoway_eff";
@@ -263,7 +270,13 @@ inline void two_way_fn(std::vector<char>& formula,
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
   }
-  add_check = check_parameter(par1,calc,true);
+  // add_check = check_parameter(par1,calc,true);
+  add_check = check_number(k_as_str, calc);
+  if(!add_check){
+#ifdef R_BUILD
+    Rcpp::stop("Syntax error in twoway: k is not a number");
+#endif
+  }
   add_check = check_number(nu_as_str, calc);
   if(!add_check){
     #ifdef R_BUILD

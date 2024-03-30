@@ -1046,7 +1046,7 @@ Model <- R6::R6Class("Model",
                            theta_diff <- max(abs(theta-theta_new))
                            fn_counter <- Model__get_fn_counter(private$ptr,private$model_type())
                            if(conv.criterion == 1){
-                             converged <- !(beta_diff > algo_tol[1] & theta_diff > algo_tol[2])
+                             converged <- !(beta_diff > algo_tol[1]) & !(theta_diff > algo_tol[2])
                            } 
                            if(iter > 1){
                              udiagnostic <- Model__u_diagnostic(private$ptr,private$model_type())
@@ -1614,11 +1614,11 @@ Model <- R6::R6Class("Model",
                            if(!private$y_has_been_updated) stop("No y data has been added")
                          }
                          if(missing(u)){
-                           u_in <- Model__u(private$ptr, TRUE, private$model_type())
+                           u_in <- Model__u(private$ptr, FALSE, private$model_type())
                          } else {
                            u_in <- u
                          }
-                         grad <- matrix(NA,ifelse(beta,self$mean$P(),nrow(u)),ncol(u))
+                         grad <- matrix(NA,ifelse(beta,ncol(self$mean$X),nrow(u_in)),ncol(u_in))
                          for(i in 1:ncol(u)){
                            grad[,i] <- Model__log_gradient(private$ptr,u,beta, private$model_type())
                          }
