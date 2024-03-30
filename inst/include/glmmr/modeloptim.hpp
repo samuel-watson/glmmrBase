@@ -595,7 +595,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& be
 {
   model.linear_predictor.update_parameters(beta);
   double ll = log_likelihood();
-  fn_counter.first += model.n() * re.scaled_u_.cols();
+  fn_counter.first += re.scaled_u_.cols();
   if(control.saem)
   {
     int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
@@ -637,7 +637,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta_with_gradient(co
   model.linear_predictor.update_parameters(beta.array());
   g.setZero();
   double ll = log_likelihood();
-  fn_counter.first += model.n() * re.scaled_u_.cols();
+  fn_counter.first += re.scaled_u_.cols();
   if(control.saem)
   {
     throw std::runtime_error("L-BFGS-B not currently available with SAEM");
@@ -653,7 +653,7 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& theta)
 {
   model.covariance.update_parameters(theta);
-  fn_counter.second += Q() * re.scaled_u_.cols();
+  fn_counter.second += re.scaled_u_.cols();
 #pragma omp parallel
   for(int i = 0; i < re.scaled_u_.cols(); i++)
   {
@@ -699,7 +699,7 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g)
 {
   model.covariance.update_parameters(theta.array());
-  fn_counter.second += Q() * re.scaled_u_.cols();
+  fn_counter.second += re.scaled_u_.cols();
   double ll = 0;
   if(control.saem)
   {
@@ -714,7 +714,7 @@ template<>
 inline double glmmr::ModelOptim<bits_nngp>::log_likelihood_theta_with_gradient(const VectorXd& theta, VectorXd& g)
 {
   model.covariance.update_parameters_d(theta.array());
-  fn_counter.second += Q() * re.scaled_u_.cols();
+  fn_counter.second += re.scaled_u_.cols();
   double ll = 0;
   if(control.saem)
   {
@@ -773,7 +773,7 @@ inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& t
   model.covariance.update_parameters(theta);
   re.zu_ = model.covariance.ZLu(re.u_);
   double ll = log_likelihood(false);
-  fn_counter.first += model.n() * re.scaled_u_.cols();
+  fn_counter.first += re.scaled_u_.cols();
   if(control.saem)
   {
     int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);

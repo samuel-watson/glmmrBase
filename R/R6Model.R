@@ -1620,7 +1620,7 @@ Model <- R6::R6Class("Model",
                          }
                          grad <- matrix(NA,ifelse(beta,ncol(self$mean$X),nrow(u_in)),ncol(u_in))
                          for(i in 1:ncol(u)){
-                           grad[,i] <- Model__log_gradient(private$ptr,u,beta, private$model_type())
+                           grad[,i] <- Model__log_gradient(private$ptr,u_in,beta, private$model_type())
                          }
                          return(grad)
                        },
