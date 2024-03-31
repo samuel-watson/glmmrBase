@@ -958,7 +958,7 @@ Model <- R6::R6Class("Model",
                            cat("\nStarting Beta (GLM): ", round(beta,5))
                            cat("\n",Reduce(paste0,rep("-",40)),"\n")
                          }
-                         Model__saem(private$ptr, method == "saem", self$mcmc_options$samps, alpha, pr.average, private$model_type())
+                         Model__set_sml_parameters(private$ptr, method == "saem", self$mcmc_options$samps, alpha, pr.average, private$model_type())
                          # START THE MAIN ALGORITHM
                          while(!converged & iter < max.iter){
                            if(iter > 0){
@@ -1018,7 +1018,7 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__mcmc_sample(private$ptr, self$mcmc_options$warmup, n_mcmc_sampling, self$mcmc_options$adapt,private$model_type())
+                             Model__mcmc_sample(private$ptr, self$mcmc_options$warmup, n_mcmc_sampling, self$mcmc_options$adapt, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
@@ -1054,16 +1054,16 @@ Model <- R6::R6Class("Model",
                              llvar <- Model__ll_diff_variance(private$ptr, TRUE, conv.criterion==2, private$model_type())
                              if(adaptive) n_mcmc_sampling <- max(n_mcmc_sampling, min(self$mcmc_options$samps, ceiling(llvar * (qnorm(convergence.prob) + qnorm(0.8))^2)/uval^2))
                              if(conv.criterion %in% c(2,3)){
-                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar)#/n_mcmc_sampling
-                               prob.converged <- pnorm(-uval/sqrt(llvar))#/n_mcmc_sampling
+                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
+                               prob.converged <- pnorm(-uval/sqrt(llvar/n_mcmc_sampling))
                                converged <- conv.criterion.value < 0
                              } 
                              if(conv.criterion == 4){
                                llvart <- Model__ll_diff_variance(private$ptr, FALSE, TRUE, private$model_type())
-                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar)#/n_mcmc_sampling
-                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar))#/n_mcmc_sampling
-                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart)#/n_mcmc_sampling
-                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart))#/n_mcmc_sampling
+                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
+                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar/n_mcmc_sampling))
+                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart/n_mcmc_sampling)
+                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/n_mcmc_sampling))
                                converged <- conv.criterion.value < 0 & conv.criterion.valuet < 0
                              }
                            }
@@ -1090,14 +1090,6 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          if(!converged)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         # if(sim.lik.step){
-                         #   if(private$trace >= 1)cat("\n\n")
-                         #   if(private$trace >= 1)message("Optimising simulated likelihood")
-                         #   Model__ml_all(private$ptr,0,private$model_type())
-                         #   beta_new <- Model__get_beta(private$ptr,private$model_type())
-                         #   theta_new <- Model__get_theta(private$ptr,private$model_type())
-                         #   var_par_new <- Model__get_var_par(private$ptr,private$model_type())
-                         # }
                          self$update_parameters(mean.pars = beta_new,
                                                 cov.pars = theta_new)
                          if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")

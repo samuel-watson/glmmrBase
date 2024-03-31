@@ -119,6 +119,9 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   int currcolsize = re.u_.cols();
   // check if the existing samples are a single column of zeros - if so remove them
   if(append && re.u_.cols() == 1 && re.u_.col(0).isZero()) action_append = false;
+  // update stored ll values 
+  if(optim.ll_previous.rows() != optim.ll_current.rows()) optim.ll_previous.resize(optim.ll_current.rows(),NoChange);
+  optim.ll_previous = optim.ll_current;
   
   if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
@@ -127,14 +130,14 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
     optim.ll_current.resize(currcolsize + newcolsize,NoChange);
   } else {
     if(u_.cols()!=re.u_.cols()){
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-      Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
-#endif
+      #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+        Rcpp::Rcout << "\nResize u: " << model.covariance.Q() << "x" << u_.cols();
+      #endif
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
-      re.u_ = u_;
-      if(newcolsize != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
     }
+    re.u_ = u_;
+    if(re.u_.cols() != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
   }
   re.zu_ = model.covariance.ZLu(re.u_);
 }

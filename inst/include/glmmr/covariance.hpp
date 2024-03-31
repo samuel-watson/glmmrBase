@@ -1105,23 +1105,6 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
     logl -= 0.5 * qf;
   }
 
-  // VectorXd grad2(npars);
-  // MatrixXd Sinv = D();
-  // Sinv = Sinv.llt().solve(MatrixXd::Identity(Sinv.rows(),Sinv.cols()));
-  // for(int i = 1; i < derivs.size(); i++)
-  //   {
-  //     MatrixXd Sdi = Sinv * derivs[i];
-  //     double dlogdet = Sdi.trace();
-  //     grad2(i-1) = -1.0*dlogdet;
-  //     MatrixXd dinv = Sdi * Sinv;
-  //     double val = 0;
-  //     for(int j = 0; j < niter; j++)
-  //       {
-  //          val += ((umat.col(j).transpose()*dinv)*umat.col(j))(0);
-  //       }
-  //     grad2(i-1) += val/((double)niter);
-  //     grad2(i-1) *= 0.5;
-  //   }
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nTHETA: ";
   for(const auto& x: parameters_) Rcpp::Rcout << x << " ";

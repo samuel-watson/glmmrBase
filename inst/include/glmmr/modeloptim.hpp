@@ -170,8 +170,11 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   // store previous log likelihood values for convergence calculations
   previous_ll_values.first = current_ll_values.first;
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  double old_ll = log_likelihood_beta(start);
   ll_previous.col(0) = ll_current.col(0);
+  
+  Rcpp::Rcout << "\nCURRENT: head:\n"<< ll_current.topRows(10) << "\nbottom: " << ll_current.bottomRows(10);
+  Rcpp::Rcout << "\nPREVIOUS: head:\n"<< ll_previous.topRows(10) << "\nbottom: " << ll_previous.bottomRows(10);
+  
   // optimisations
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
@@ -211,6 +214,9 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   calculate_var_par();
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   current_ll_values.first = ll_current.col(0).tail(eval_size).mean();
+  
+  Rcpp::Rcout << "\nEND CURRENT: head:\n"<< ll_current.topRows(10) << "\nbottom: " << ll_current.bottomRows(10);
+  Rcpp::Rcout << "\nEND PREVIOUS: head:\n"<< ll_previous.topRows(10) << "\nbottom: " << ll_previous.bottomRows(10);
 }
 
 template<typename modeltype>
@@ -224,7 +230,6 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);  
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  double old_ll = log_likelihood_theta(start);
   ll_previous.col(1) = ll_current.col(1);
   // optimisation
   if constexpr (std::is_same_v<algo,LBFGS>){
@@ -274,7 +279,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
 template<typename modeltype>
 template<class algo, typename>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
-  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.conservativeResize(NoChange,re.u_.cols());
+  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);
   dblvec start = get_start_values(true,true,false);
   optim<double(const std::vector<double>&),algo> op(start);
@@ -473,7 +478,7 @@ inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool the
 #endif
   // double sum_ll = 0;
   // double sum_ll_sq = 0;
-  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
+  int eval_size = ll_previous.rows() < ll_current.rows() ? ll_previous.rows() : ll_current.rows();
   // if(beta) {
   //   sum_ll += (ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size)).sum();
   //   if(theta){
@@ -490,8 +495,8 @@ inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool the
   // double sum_sq_ll = sum_ll * sum_ll;
   // return (1.0/eval_size) * sum_ll * sum_ll * (sum_ll_sq/sum_sq_ll - 2 / eval_size + 1);
   ArrayXd diff = ArrayXd::Zero(eval_size); 
-  if(beta) diff += ll_current.col(0).tail(eval_size) - ll_previous.col(0).tail(eval_size);
-  if(theta) diff += ll_current.col(1).tail(eval_size) - ll_previous.col(1).tail(eval_size);
+  if(beta) diff += ll_current.col(0).head(eval_size) - ll_previous.col(0).head(eval_size);
+  if(theta) diff += ll_current.col(1).head(eval_size) - ll_previous.col(1).head(eval_size);
   return (diff - diff.mean()).square().sum() / (diff.size() - 1);
 }
 
@@ -654,7 +659,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 {
   model.covariance.update_parameters(theta);
   fn_counter.second += re.scaled_u_.cols();
-#pragma omp parallel
+// #pragma omp parallel
   for(int i = 0; i < re.scaled_u_.cols(); i++)
   {
     ll_current(i,1) = model.covariance.log_likelihood(re.scaled_u_.col(i));
@@ -881,10 +886,24 @@ inline void glmmr::ModelOptim<modeltype>::update_theta(const VectorXd &theta){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_, bool append){
+  bool action_append = append;
+  // if HSGP then check and update the size of u is m has changed
+  if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+    if(model.covariance.Q() != re.u_.rows()){
+      re.u_.resize(model.covariance.Q(),1);
+      re.u_.setZero();
+    }
+  }
+  
   int newcolsize = u_.cols();
   int currcolsize = re.u_.cols();
+  // check if the existing samples are a single column of zeros - if so remove them
+  if(append && re.u_.cols() == 1 && re.u_.col(0).isZero()) action_append = false;
+  // update stored ll values 
+  if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
+  ll_previous = ll_current;
   
-  if(append){
+  if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;
@@ -893,9 +912,9 @@ inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_, bool appe
     if(u_.cols()!=re.u_.cols()){
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
-      re.u_ = u_;
-      if(newcolsize != ll_current.rows()) ll_current.resize(newcolsize,NoChange);
     }
+    re.u_ = u_;
+    if(re.u_.cols() != ll_current.rows()) ll_current.resize(newcolsize,NoChange);
   }
   re.zu_ = model.covariance.ZLu(re.u_);
 }
@@ -906,9 +925,9 @@ inline void glmmr::ModelOptim<modeltype>::update_u(const MatrixXd &u_){
   if(u_.cols()!=re.u_.cols()){
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
-      re.u_ = u_;
-      if(newcolsize != ll_current.rows()) ll_current.resize(newcolsize,NoChange);
     }
+  re.u_ = u_;
+  if(newcolsize != ll_current.rows()) ll_current.resize(newcolsize,NoChange);
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
@@ -1119,16 +1138,9 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   for(int i = 0; i < niter; ++i){
     VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
     w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
-    // w = ((w.array() *nvar_par) * model.data.weights.inverse()).matrix();
-    VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-    VectorXd dmu = glmmr::maths::detadmu(zd.col(i),model.family.link);
-    if(model.family.family == Fam::binomial){
-      zdu = zdu.cwiseProduct(model.data.variance.matrix());
-      dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
-    }
-    ArrayXd resid = (model.data.y - zdu);
+    ArrayXd resid(model.n());
+    matrix.gradient_eta(re.u_.col(i),resid);
     XtXW.block(P()*i, 0, P(), P()) = X.transpose() * w.asDiagonal() * X;
-    w = w.cwiseProduct(dmu);
     w = w.cwiseProduct(resid.matrix());
     Wu.col(i) = w;
   }
@@ -1136,29 +1148,94 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   MatrixXd XtWXm = XtXW.block(0,0,P(),P());
   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
   XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
+  if(model.linear_predictor.calc.any_nonlinear)
+  {
+    MatrixXd A = matrix.hessian_nonlinear_correction();
+    glmmr::Eigen_ext::near_semi_pd(A);
+    XtWXm += A;
+  }
   VectorXd Wum = Wu.rowwise().mean();
   VectorXd bincr = XtWXm * X.transpose() * Wum;
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   calculate_var_par();
+  
   current_ll_values.first = log_likelihood(); // repopulate loglikelihood history - assumes NR can 
   // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
 }
 
+
+// old function version
+// template<typename modeltype>
+// inline void glmmr::ModelOptim<modeltype>::nr_beta(){
+//   // save the old likelihood values
+//   previous_ll_values.first = current_ll_values.first;
+//   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
+//   ll_previous.col(0) = ll_current.col(0);
+//   
+//   int niter = re.u(false).cols();
+//   MatrixXd zd = matrix.linpred();
+//   ArrayXd sigmas(niter);
+// #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+//   Rcpp::Rcout << "\nNR Beta: XtWX";
+// #endif
+//   MatrixXd XtXW = MatrixXd::Zero(P()*niter,P());
+//   MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
+//   MatrixXd X = model.linear_predictor.X();
+//   ArrayXd nvar_par(model.n());
+//   switch(model.family.family){
+//   case Fam::gaussian:
+//     nvar_par = model.data.variance;
+//     break;
+//   case Fam::gamma:
+//     nvar_par = model.data.variance.inverse();
+//     break;
+//   case Fam::beta:
+//     nvar_par = (1+model.data.variance);
+//     break;
+//   case Fam::binomial:
+//     nvar_par = model.data.variance.inverse();
+//     break;
+//   default:
+//     nvar_par.setConstant(1.0);
+//   }
+//   
+// #pragma omp parallel for
+//   for(int i = 0; i < niter; ++i){
+//     VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
+//     w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
+//     // w = ((w.array() *nvar_par) * model.data.weights.inverse()).matrix();
+//     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
+//     VectorXd dmu = glmmr::maths::detadmu(zd.col(i),model.family.link);
+//     if(model.family.family == Fam::binomial){
+//       zdu = zdu.cwiseProduct(model.data.variance.matrix());
+//       dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
+//     }
+//     ArrayXd resid = (model.data.y - zdu);
+//     XtXW.block(P()*i, 0, P(), P()) = X.transpose() * w.asDiagonal() * X;
+//     w = w.cwiseProduct(dmu);
+//     w = w.cwiseProduct(resid.matrix());
+//     Wu.col(i) = w;
+//   }
+//   XtXW *= (double)1.0/niter;
+//   MatrixXd XtWXm = XtXW.block(0,0,P(),P());
+//   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
+//   XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
+//   VectorXd Wum = Wu.rowwise().mean();
+//   VectorXd bincr = XtWXm * X.transpose() * Wum;
+//   update_beta(model.linear_predictor.parameter_vector() + bincr);
+//   calculate_var_par();
+//   current_ll_values.first = log_likelihood(); // repopulate loglikelihood history - assumes NR can 
+//   // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
+// }
+
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   matrix.W.update();
-  VectorXd zd = (matrix.linpred()).col(0);
-  VectorXd dmu =  glmmr::maths::detadmu(zd,model.family.link);
   MatrixXd infomat = matrix.observed_information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
-  VectorXd zdu =  glmmr::maths::mod_inv_func(zd, model.family.link);
-  if(model.family.family == Fam::binomial){
-    zdu = zdu.cwiseProduct(model.data.variance.matrix());
-    dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
-  }
-  ArrayXd resid = (model.data.y - zdu).array();
-  VectorXd w = matrix.W.W();//.array().inverse().matrix();
-  w = w.cwiseProduct(dmu);
+  ArrayXd resid(model.n());
+  matrix.gradient_eta(re.u_.col(0),resid);
+  VectorXd w = matrix.W.W();
   w = w.cwiseProduct(resid.matrix());
   VectorXd params(P()+Q());
   params.head(P()) = model.linear_predictor.parameter_vector();
@@ -1171,6 +1248,35 @@ inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   update_u(params.tail(Q()));
   calculate_var_par();
 }
+
+// old function versoin 
+// template<typename modeltype>
+// inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
+//   matrix.W.update();
+//   VectorXd zd = (matrix.linpred()).col(0);
+//   VectorXd dmu =  glmmr::maths::detadmu(zd,model.family.link);
+//   MatrixXd infomat = matrix.observed_information_matrix();
+//   infomat = infomat.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
+//   VectorXd zdu =  glmmr::maths::mod_inv_func(zd, model.family.link);
+//   if(model.family.family == Fam::binomial){
+//     zdu = zdu.cwiseProduct(model.data.variance.matrix());
+//     dmu = dmu.cwiseProduct(model.data.variance.inverse().matrix());
+//   }
+//   ArrayXd resid = (model.data.y - zdu).array();
+//   VectorXd w = matrix.W.W();//.array().inverse().matrix();
+//   w = w.cwiseProduct(dmu);
+//   w = w.cwiseProduct(resid.matrix());
+//   VectorXd params(P()+Q());
+//   params.head(P()) = model.linear_predictor.parameter_vector();
+//   params.tail(Q()) = re.u_.col(0);
+//   VectorXd pderiv(P()+Q());
+//   pderiv.head(P()) = (model.linear_predictor.X()).transpose() * w;
+//   pderiv.tail(Q()) = matrix.log_gradient(re.u_.col(0));
+//   params += infomat*pderiv;
+//   update_beta(params.head(P()));
+//   update_u(params.tail(Q()));
+//   calculate_var_par();
+// }
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::update_var_par(const double& v){

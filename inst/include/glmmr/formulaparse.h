@@ -191,7 +191,7 @@ inline void two_way_fn(std::vector<char>& formula,
   str token_as_str(f_s2.begin(),f_s2.end());
   str nu_as_str(nu_val.begin(),nu_val.end());
   str l_as_str(l_val.begin(),l_val.end());
-  str k_as_str(l_val.begin(),k_val.end());
+  str k_as_str(k_val.begin(),k_val.end());
   
   if(glmmr::is_number(l_as_str)) {
     l = std::stod(l_as_str); 

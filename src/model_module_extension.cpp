@@ -242,7 +242,7 @@ void Model__mcmc_set_max_steps(SEXP xp, SEXP max_steps_, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, bool pr_average = true, int type = 0){
+void Model__set_sml_parameters(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, bool pr_average = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
@@ -251,6 +251,10 @@ void Model__saem(SEXP xp, bool saem_, int block_size = 20, double alpha = 0.8, b
       ptr->optim.control.alpha = alpha;
       ptr->re.mcmc_block_size = block_size;
       ptr->optim.control.pr_average = pr_average;
+      if(!saem_){
+        ptr->optim.ll_current.resize(block_size,NoChange);
+        ptr->optim.ll_previous.resize(block_size,NoChange);
+      }
     }
   };
   std::visit(functor,model.ptr);

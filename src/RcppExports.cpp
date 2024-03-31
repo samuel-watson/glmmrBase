@@ -1410,9 +1410,9 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__saem
-void Model__saem(SEXP xp, bool saem_, int block_size, double alpha, bool pr_average, int type);
-RcppExport SEXP _glmmrBase_Model__saem(SEXP xpSEXP, SEXP saem_SEXP, SEXP block_sizeSEXP, SEXP alphaSEXP, SEXP pr_averageSEXP, SEXP typeSEXP) {
+// Model__set_sml_parameters
+void Model__set_sml_parameters(SEXP xp, bool saem_, int block_size, double alpha, bool pr_average, int type);
+RcppExport SEXP _glmmrBase_Model__set_sml_parameters(SEXP xpSEXP, SEXP saem_SEXP, SEXP block_sizeSEXP, SEXP alphaSEXP, SEXP pr_averageSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
@@ -1421,7 +1421,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     Rcpp::traits::input_parameter< bool >::type pr_average(pr_averageSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__saem(xp, saem_, block_size, alpha, pr_average, type);
+    Model__set_sml_parameters(xp, saem_, block_size, alpha, pr_average, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1820,7 +1820,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_fn_counter", (DL_FUNC) &_glmmrBase_Model__get_fn_counter, 2},
     {"_glmmrBase_Model__print_names", (DL_FUNC) &_glmmrBase_Model__print_names, 4},
     {"_glmmrBase_Model__mcmc_set_max_steps", (DL_FUNC) &_glmmrBase_Model__mcmc_set_max_steps, 3},
-    {"_glmmrBase_Model__saem", (DL_FUNC) &_glmmrBase_Model__saem, 6},
+    {"_glmmrBase_Model__set_sml_parameters", (DL_FUNC) &_glmmrBase_Model__set_sml_parameters, 6},
     {"_glmmrBase_Model__ll_diff_variance", (DL_FUNC) &_glmmrBase_Model__ll_diff_variance, 4},
     {"_glmmrBase_Model__mcmc_set_refresh", (DL_FUNC) &_glmmrBase_Model__mcmc_set_refresh, 3},
     {"_glmmrBase_Model__mcmc_set_target_accept", (DL_FUNC) &_glmmrBase_Model__mcmc_set_target_accept, 3},

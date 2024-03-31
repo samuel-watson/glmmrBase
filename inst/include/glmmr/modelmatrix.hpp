@@ -14,43 +14,44 @@ using namespace Eigen;
 
 template<typename modeltype>
 class ModelMatrix{
-  public:
-    modeltype&                        model;
-    glmmr::MatrixW<modeltype>         W;
-    glmmr::RandomEffects<modeltype>&  re;
-    // constructors
-    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_);
-    ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix);
-    ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
-    // functions
-    MatrixXd                information_matrix();
-    MatrixXd                Sigma(bool inverse = false);
-    MatrixXd                observed_information_matrix();
-    MatrixXd                sandwich_matrix(); 
-    std::vector<MatrixXd>   sigma_derivatives();
-    MatrixXd                information_matrix_theta();
-    template<SE corr>
-    CorrectionData<corr>    small_sample_correction();
-    MatrixXd                linpred();
-    VectorMatrix            b_score();
-    VectorMatrix            re_score();
-    MatrixXd                hessian_nonlinear_correction();
-    VectorXd                log_gradient(const VectorXd &v,bool beta = false);
-    std::vector<glmmr::SigmaBlock> get_sigma_blocks();
-    BoxResults              box();
-    int                     P() const;
-    int                     Q() const;
-    MatrixXd                residuals(const int type, bool conditional = true);
-    
-  private:
-    std::vector<glmmr::SigmaBlock>  sigma_blocks;
-    void                            gen_sigma_blocks();
-    MatrixXd                        sigma_block(int b, bool inverse = false);
-    MatrixXd                        sigma_builder(int b, bool inverse = false);
-    MatrixXd                        information_matrix_by_block(int b);
-    bool                            useBlock = true;
-    bool                            useSparse = true;
-    
+public:
+  modeltype&                        model;
+  glmmr::MatrixW<modeltype>         W;
+  glmmr::RandomEffects<modeltype>&  re;
+  // constructors
+  ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_);
+  ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix);
+  ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
+  // functions
+  MatrixXd                information_matrix();
+  MatrixXd                Sigma(bool inverse = false);
+  MatrixXd                observed_information_matrix();
+  MatrixXd                sandwich_matrix(); 
+  std::vector<MatrixXd>   sigma_derivatives();
+  MatrixXd                information_matrix_theta();
+  template<SE corr>
+  CorrectionData<corr>    small_sample_correction();
+  MatrixXd                linpred();
+  VectorMatrix            b_score();
+  VectorMatrix            re_score();
+  MatrixXd                hessian_nonlinear_correction();
+  VectorXd                log_gradient(const VectorXd &v,bool beta = false);
+  void                    gradient_eta(const VectorXd &v,ArrayXd& size_n_array);
+  std::vector<glmmr::SigmaBlock> get_sigma_blocks();
+  BoxResults              box();
+  int                     P() const;
+  int                     Q() const;
+  MatrixXd                residuals(const int type, bool conditional = true);
+  
+private:
+  std::vector<glmmr::SigmaBlock>  sigma_blocks;
+  void                            gen_sigma_blocks();
+  MatrixXd                        sigma_block(int b, bool inverse = false);
+  MatrixXd                        sigma_builder(int b, bool inverse = false);
+  MatrixXd                        information_matrix_by_block(int b);
+  bool                            useBlock = true;
+  bool                            useSparse = true;
+  
 };
 
 }
@@ -175,10 +176,10 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::Sigma(bool inverse){
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
-                                                bool inverse){
-  #if defined(ENABLE_DEBUG) && defined(R_BUILD)
+                                                           bool inverse){
+#if defined(ENABLE_DEBUG) && defined(R_BUILD)
   if(b >= sigma_blocks.size())Rcpp::stop("Index out of range");
-  #endif
+#endif
   // UPDATE THIS TO NOT USE SPARSE IF DESIRED
   sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
   MatrixXd ZL = sparse_to_dense(ZLs,false);
@@ -194,7 +195,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_builder(int b,
-                                                  bool inverse){
+                                                             bool inverse){
   int B_ = sigma_blocks.size();
   if (b == B_ - 1) {
     return sigma_block(b,inverse);
@@ -219,28 +220,17 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_builder(int b,
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
-  // this works but its too slow doing all the cross partial derivatives
-  //MatrixXd XZ(n_,P_+Q_);
-  //int iter = zu_.cols();
-  //XZ.leftCols(P_) = linp_.X();
-  //XZ.rightCols(Q_) = sparse_to_dense(ZL_,false);
-  //MatrixXd result = MatrixXd::Zero(P_+Q_,P_+Q_);
-  //MatrixXd I = MatrixXd::Identity(P_+Q_,P_+Q_);
-  //dblvec params(P_+Q_);
-  //std::copy_n(linp_.parameters_.begin(),P_,params.begin());
-  //for(int i = 0; i < iter; i++){
-  //  for(int j = 0; j < Q_; j++){
-  //    params[P_+j] = u_(j,i);
-  //  }
-  //  MatrixMatrix hess = vcalc_.jacobian_and_hessian(params,XZ,Map<MatrixXd>(offset_.data(),offset_.size(),1));
-  //  result += hess.mat1;
-  //}
-  //result *= (1.0/iter);
-  //return result;
   W.update();
-  MatrixXd XtXW = (model.linear_predictor.X()).transpose() * W.W_.asDiagonal() * model.linear_predictor.X();
+  MatrixXd X = model.linear_predictor.X();
+  MatrixXd XtXW = X.transpose() * W.W_.asDiagonal() * X;
+  if(model.linear_predictor.calc.any_nonlinear)
+  {
+    MatrixXd A = hessian_nonlinear_correction();
+    glmmr::Eigen_ext::near_semi_pd(A);
+    XtXW += A;
+  }
   MatrixXd ZL = model.covariance.ZL();
-  MatrixXd XtWZL = (model.linear_predictor.X()).transpose() * W.W_.asDiagonal() * ZL;
+  MatrixXd XtWZL = X.transpose() * W.W_.asDiagonal() * ZL;
   MatrixXd ZLWLZ = ZL.transpose() * W.W_.asDiagonal() * ZL;
   ZLWLZ += MatrixXd::Identity(Q(),Q());
   MatrixXd infomat(P()+Q(),P()+Q());
@@ -301,15 +291,15 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   //   zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
   // }
   // MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
-
+  
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nSANDWICH\n";
   int size = resid_sum.rows() < 10 ? resid_sum.rows() : 10;
   Rcpp::Rcout << "\nResidual cross prod: \n" << resid_sum.block(0,0,size,size).transpose();
 #endif
-
+  
   MatrixXd robust = infomat * SX.transpose() * resid_sum * SX * infomat;//(infomat.rows(),infomat.cols());
-
+  
   // if(type == SandwichType::CR2){
   //   MatrixXd H = MatrixXd::Identity(X.rows(),X.rows()) - X*infomat * SX.transpose();
   //   H = H.llt().solve(MatrixXd::Identity(X.rows(),X.rows()));
@@ -516,11 +506,11 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
       }
     }
     
-    #if defined(R_BUILD) && defined(ENABLE_DEBUG)
+#if defined(R_BUILD) && defined(ENABLE_DEBUG)
     Rcpp::Rcout << "\n(K-R) Improved correction matrix: \n" << M_correction;
     Rcpp::Rcout << "\nV: ";
     for(const auto& v: V)Rcpp::Rcout << v << " ";
-    #endif
+#endif
     
     if constexpr (corr == SE::KR2) {
       out.vcov_beta -= M_correction;
@@ -585,69 +575,6 @@ inline VectorMatrix glmmr::ModelMatrix<modeltype>::b_score()
   out.vec = hess.mat2.rowwise().sum();
   return out;
 }
-
-// template<typename modeltype>
-// inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian()
-// {
-//   // create the log-likelihood calculator
-//   glmmr::calculator vcalc = model.linear_predictor.calc;
-//   glmmr::re_linear_predictor(vcalc,model.covariance.Q());
-//   glmmr::linear_predictor_to_link(vcalc,model.family.link);
-//   glmmr::link_to_likelihood(vcalc,model.family.family);
-//   glmmr::re_log_likelihood(vcalc,model.covariance.Q());
-//   vcalc.variance.conservativeResize(model.n());
-//   vcalc.variance = model.data.variance;
-//   vcalc.data.conservativeResize(model.n(),model.linear_predictor.calc.data_count + model.covariance.Q());
-//   vcalc.parameters.resize(model.linear_predictor.P()+model.covariance.Q());
-//   vcalc.y.resize(n());
-//   std::fill(vcalc.parameters.begin(),vcalc.parameters.end(),0.0);
-//   std::fill(vcalc.y.begin(),vcalc.y.end(),0.0);
-//   
-//   // update the relevant calculator
-//   int Q = model.covariance.Q();
-//   int P = model.linear_predictor.P();
-// 
-//   if(model.vcalc.data.cols() != model.vcalc.data_count){
-//     model.vcalc.data.conservativeResize(model.n(),model.vcalc.data_count);
-//     model.vcalc.data.leftCols(model.linear_predictor.calc.data_count) = model.linear_predictor.calc.data;
-//   }
-//   if(model.vcalc.parameters.size()!= P+Q) model.vcalc.parameters.resize(P+Q);
-//   model.vcalc.data.rightCols(model.covariance.Q()) = model.covariance.ZL();
-//   for(int i = 0; i < model.n(); i++) model.vcalc.y[i] = model.data.y(i);
-//   for(int i = 0; i < P; i++) model.vcalc.parameters[i] = model.linear_predictor.parameters[i];
-//   MatrixXd offsetmat(model.n(),1);
-//   offsetmat.col(0) = model.data.offset;
-//   MatrixXd hess(P + Q,P + Q);
-//   hess.setZero();
-// 
-// #ifdef R_BUILD
-//   if(model.vcalc.parameter_count != P+Q) Rcpp::stop("Calculator parameter count not equal to number of parameters");
-// #endif
-// 
-//   for(int i = 0; i < re.zu_.cols(); i++)
-//   {
-//     for(int j = 0; j < Q; j ++) model.vcalc.parameters[P + j] = re.u_(j,i);
-//     MatrixMatrix j_hess = model.vcalc.jacobian_and_hessian(offsetmat);
-//     hess += j_hess.mat1;
-//     if(model.trace > 0){
-//       #ifdef R_BUILD
-//       if(i % 50 == 0 || i == (re.zu_.cols()-1)){
-//         Rcpp::Rcout << "\nHessian calculation: iteration " << i+1 << " of " << re.zu_.cols();
-//         if(model.trace == 2){
-//           Rcpp::Rcout << "\nLast Hessian: \n" << j_hess.mat1;
-//         }
-//       }
-//       #endif
-//     }
-//   }
-//   if(model.trace > 0){
-// #ifdef R_BUILD
-//     Rcpp::Rcout << "\nHessian calculation completed\n";
-// #endif
-//   }
-//   hess.array() *= 1.0/re.zu_.cols();
-//   return hess;
-// }
 
 // type = 0 - raw
 // type = 1 - pearson
@@ -737,15 +664,13 @@ inline BoxResults glmmr::ModelMatrix<modeltype>::box(){
 }
 
 template<typename modeltype>
-inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
-                                                bool betapars){
-  ArrayXd size_n_array = model.xb();
-  ArrayXd size_q_array = ArrayXd::Zero(Q());
-  ArrayXd size_p_array = ArrayXd::Zero(P());
-  sparse ZLt = model.covariance.ZL_sparse();
-  sparse ZL = ZLt;
-  ZLt.transpose();
-  size_n_array += SparseOperators::operator*(ZL,v).array();
+inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
+                                                        ArrayXd& size_n_array){
+  
+  if(size_n_array.size() != model.n())throw std::runtime_error("Size n array != n");
+  size_n_array = model.xb();
+  sparse ZL = model.covariance.ZL_sparse();
+  size_n_array += (SparseOperators::operator*(ZL,v)).array();
   
   switch(model.family.family){
   case Fam::poisson:
@@ -756,22 +681,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     size_n_array = size_n_array.inverse();
     size_n_array = model.data.y.array()*size_n_array;
     size_n_array -= ArrayXd::Ones(model.n());
-    if(betapars){
-      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-    }
     break;
   }
   default:
   {
     size_n_array = size_n_array.exp();
     size_n_array = model.data.y.array() - size_n_array;
-    if(!betapars){
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() -v.array() ;
-    } else {
-      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    }
     break;
   }
   }
@@ -787,11 +702,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     logitxb *= size_n_array.exp();
     size_n_array = (model.data.y.array() - model.data.variance)*logitxb;
     size_n_array += model.data.y.array();
-    if(betapars){
-      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-    }
     break;
   }
   case Link::identity:
@@ -802,11 +712,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     size_n_array = size_n_array.inverse();
     size_n_array *= model.data.y.array();
     size_n_array -= n_array2;
-    if(betapars){
-      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-    }
     break;
   }
   case Link::probit:
@@ -819,12 +724,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
     }
     size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
-    if (betapars) {
-      size_p_array += (model.linear_predictor.X().transpose() * size_n_array.matrix()).array();
-    }
-    else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array() - v.array();
-    }
     break;
   }
   default:
@@ -835,11 +734,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     logitxb = logitxb.inverse();
     logitxb *= size_n_array.exp();
     size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
-    if(betapars){
-      size_p_array +=  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-    }
     break;
   }
   }
@@ -851,26 +745,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   case Link::loglink:
   {
     size_n_array = (model.data.y.array() - size_n_array)*model.data.weights*size_n_array.exp();
-    if(betapars){
-      size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
-      size_q_array *= 1.0/(model.data.var_par);
-      size_q_array -= v.array();
-    }
     break;
   }
   default:
   {
     size_n_array = model.data.y.array() - size_n_array;
-    size_n_array *= model.data.weights;
-      if(betapars){
-      size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
-      size_q_array *= 1.0/(model.data.var_par);
-      size_q_array -= v.array();
-    }
+    size_n_array *= model.data.weights/model.data.var_par;
     break;
   }
   }
@@ -883,26 +763,12 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   {
     size_n_array = size_n_array.inverse();
     size_n_array -= model.data.y.array();
-    if(betapars){
-      size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
-      size_q_array *= model.data.var_par;
-      size_q_array -= v.array();
-    }
     break;
   }
   case Link::identity:
   {
     size_n_array = size_n_array.inverse();
     size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
-    if(betapars){
-      size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
-      size_q_array *= model.data.var_par;
-      size_q_array -= v.array();
-    }
     break;
   }
   default:
@@ -911,13 +777,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     size_n_array *= -1.0;
     size_n_array = size_n_array.exp();
     size_n_array *= model.data.y.array();
-    if(betapars){
-      size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
-      size_q_array *= model.data.var_par;
-      size_q_array -= v.array();
-    }
     break;
   }
   }
@@ -930,15 +789,83 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
       size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
       size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
     }
-    if(betapars){
-      size_p_array += (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
-    } else {
-      size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
-    }
     break;
   }
   }
+}
+
+template<typename modeltype>
+inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
+                                                            bool betapars){
+  ArrayXd size_n_array(model.n());
+  gradient_eta(v,size_n_array);
+  ArrayXd size_q_array = ArrayXd::Zero(Q());
+  ArrayXd size_p_array = ArrayXd::Zero(P());
+  sparse ZLt = model.covariance.ZL_sparse();
+  ZLt.transpose();
   
+  switch(model.family.family){
+  case Fam::poisson: case Fam::bernoulli: case Fam::binomial: case Fam::beta: 
+  {
+    if(betapars){
+    size_p_array =  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
+  } else {
+    size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+  }
+  break;
+  }
+  case Fam::gaussian:
+  {
+    if(betapars){
+    size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
+  } else {
+    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array *= 1.0/(model.data.var_par);
+    size_q_array -= v.array();
+  }
+  break;
+  }
+  case Fam::gamma:
+  {
+    switch(model.family.link){
+  case Link::inverse:
+  {
+    if(betapars){
+    size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
+  } else {
+    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array *= model.data.var_par;
+    size_q_array -= v.array();
+  }
+  break;
+  }
+  case Link::identity:
+  {
+    if(betapars){
+    size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
+  } else {
+    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array *= model.data.var_par;
+    size_q_array -= v.array();
+  }
+  break;
+  }
+  default:
+    //log
+  {
+    if(betapars){
+    size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
+  } else {
+    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array *= model.data.var_par;
+    size_q_array -= v.array();
+  }
+  break;
+  }
+  }
+    break;
+  }
+  }
   return betapars ? size_p_array.matrix() : size_q_array.matrix();
 }
 
@@ -1077,9 +1004,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
     case Fam::beta:
     {
       for(int i = 0; i < xb_ind.size(); i++){
-        xb_ind(i) = exp(xb_ind(i))/(exp(xb_ind(i))+1);
-        xb_ind(i) = (xb_ind(i)/(1+exp(xb_ind(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(xb_ind(i)*model.data.var_par) + boost::math::digamma((1-xb_ind(i))*model.data.var_par));
-      }
+      xb_ind(i) = exp(xb_ind(i))/(exp(xb_ind(i))+1);
+      xb_ind(i) = (xb_ind(i)/(1+exp(xb_ind(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(xb_ind(i)*model.data.var_par) + boost::math::digamma((1-xb_ind(i))*model.data.var_par));
+    }
       break;
     }
     }
