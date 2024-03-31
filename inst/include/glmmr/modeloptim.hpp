@@ -462,9 +462,6 @@ inline void glmmr::ModelOptim<modeltype>::reset_fn_counter()
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::ll_diff_variance(bool beta, bool theta)
 {
-#ifdef R_BUILD
-  if(ll_current.rows() != ll_previous.rows())Rcpp::stop("Not evaluating variance on equivalent MCMC samples");
-#endif
   // double sum_ll = 0;
   // double sum_ll_sq = 0;
   int eval_size = ll_previous.rows() < ll_current.rows() ? ll_previous.rows() : ll_current.rows();
