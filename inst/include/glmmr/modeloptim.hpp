@@ -171,10 +171,6 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   previous_ll_values.first = current_ll_values.first;
   if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
   ll_previous.col(0) = ll_current.col(0);
-  
-  Rcpp::Rcout << "\nCURRENT: head:\n"<< ll_current.topRows(10) << "\nbottom: " << ll_current.bottomRows(10);
-  Rcpp::Rcout << "\nPREVIOUS: head:\n"<< ll_previous.topRows(10) << "\nbottom: " << ll_previous.bottomRows(10);
-  
   // optimisations
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
@@ -214,9 +210,6 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   calculate_var_par();
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   current_ll_values.first = ll_current.col(0).tail(eval_size).mean();
-  
-  Rcpp::Rcout << "\nEND CURRENT: head:\n"<< ll_current.topRows(10) << "\nbottom: " << ll_current.bottomRows(10);
-  Rcpp::Rcout << "\nEND PREVIOUS: head:\n"<< ll_previous.topRows(10) << "\nbottom: " << ll_previous.bottomRows(10);
 }
 
 template<typename modeltype>
