@@ -169,9 +169,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   dblvec start = get_start_values(true,false,false);
   // store previous log likelihood values for convergence calculations
   previous_ll_values.first = current_ll_values.first;
-  if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  ll_previous.col(0) = ll_current.col(0);
-  // optimisations
+  
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
@@ -222,8 +220,6 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   previous_ll_values.second = current_ll_values.second;
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);  
-  if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  ll_previous.col(1) = ll_current.col(1);
   // optimisation
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
