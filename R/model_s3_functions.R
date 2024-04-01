@@ -18,7 +18,7 @@ summary.Model <- function(object, max_n = 10, ...){
   cat("\nWeights: ", object$weights[1:max_n])
   
   if(object$.__enclos_env__$private$y_has_been_updated){
-    cat("\nLog-likelihood: ", mod$log_likelihood())
+    cat("\nLog-likelihood: ", object$log_likelihood())
   }
   
   cat("\n\nFIXED EFFECTS")
@@ -94,13 +94,13 @@ family.Model <- function(object,...){
 #' 
 #' Extracts the \link[stats]{formula} from a `Model` object. This information can also be
 #' accessed directly from the Model as `Model$formula`
-#' @param object A `Model` object.
+#' @param x A `Model` object.
 #' @param ... Further arguments passed from other methods
 #' @return A \link[stats]{formula} object.
 #' @method formula Model
 #' @export
-formula.Model <- function(object,...){
-  return(as.formula(object$formula))
+formula.Model <- function(x,...){
+  return(as.formula(x$formula))
 }
 
 #' Calculate Variance-Covariance matrix for a `Model` object
@@ -151,7 +151,7 @@ predict.Model <- function(object,
   } else {
     mm <- m
   }
-  return(model$predict(newdata, off, mm))
+  return(object$predict(newdata, off, mm))
 }
 
 #' Extract or generate fitted values from a `Model` object
@@ -166,7 +166,7 @@ predict.Model <- function(object,
 #' @method fitted Model
 #' @export
 fitted.Model <- function(object, ...){
-  return(model$fitted())
+  return(object$fitted())
 }
 
 #' Extract residuals from a `Model` object
@@ -185,6 +185,6 @@ fitted.Model <- function(object, ...){
 #' @method residuals Model
 #' @export
 residuals.Model <- function(object, type, conditional, ...){
-  return(model$residuals(type, conditional))
+  return(object$residuals(type, conditional))
 }
 

@@ -722,7 +722,8 @@ a correction to the Hessian matrix is required, which is automatically calculate
 \if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(
   include.re = FALSE,
   theta = FALSE,
-  hessian.corr = "add"
+  hessian.corr = "add",
+  adj.nonpsd = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -737,6 +738,10 @@ parameter information matrix is returned.}
 
 \item{\code{hessian.corr}}{String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its
 own ("return"), or ignored ("none")}
+
+\item{\code{adj.nonspd}}{Logical. For models nonlinear in fixed effect parameters, the Hessian of the linear predictor with respect to the
+model parameters is often not positive semi-definite, which can cause a singular matrix and failure to calculate valid standard errors.
+The adjustment matrix will be corrected if it is not positive semi-definite and this option is TRUE.}
 }
 \if{html}{\out{</div>}}
 }

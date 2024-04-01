@@ -120,8 +120,8 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   // check if the existing samples are a single column of zeros - if so remove them
   if(append && re.u_.cols() == 1 && re.u_.col(0).isZero()) action_append = false;
   // update stored ll values 
-  if(optim.ll_previous.rows() != optim.ll_current.rows()) optim.ll_previous.resize(optim.ll_current.rows(),NoChange);
-  optim.ll_previous = optim.ll_current;
+  // if(optim.ll_previous.rows() != optim.ll_current.rows()) optim.ll_previous.resize(optim.ll_current.rows(),NoChange);
+  // optim.ll_previous = optim.ll_current;
   
   if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);

@@ -173,19 +173,13 @@ family.mcml <- function(object,...){
 #' specified for the fixed and random effects in the model, either of which can be
 #' returned. The complete formula is available from the generating `Model` object as 
 #' `Model$formula` or `formula(Model)`
-#' @param object A `mcml` object.
-#' @param fixed Logical. If TRUE the formula for the fixed effects is returned, otherwise the formula
-#' for the random effects is returned.
+#' @param x A `mcml` object.
 #' @param ... Further arguments passed from other methods
 #' @return A \link[stats]{formula} object.
 #' @method formula mcml
 #' @export
-formula.mcml <- function(object,fixed = TRUE,...){
-  if(fixed){
-    return(as.formula(paste0("~",object$mean_form)))
-  } else {
-    return(as.formula(paste0("~",object$cov_form)))
-  }
+formula.mcml <- function(x,...){
+  return(as.formula(paste0("~",x$mean_form,x$cov_form)))
 }
 
 #' Extract the Variance-Covariance matrix for a `mcml` object

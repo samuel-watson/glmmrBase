@@ -253,7 +253,7 @@ void Model__set_sml_parameters(SEXP xp, bool saem_, int block_size = 20, double 
       ptr->optim.control.pr_average = pr_average;
       if(!saem_){
         ptr->optim.ll_current.resize(block_size,NoChange);
-        ptr->optim.ll_previous.resize(block_size,NoChange);
+        // ptr->optim.ll_previous.resize(block_size,NoChange);
       }
     }
   };
