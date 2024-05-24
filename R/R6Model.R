@@ -1978,8 +1978,10 @@ Model <- R6::R6Class("Model",
                            stop(paste0("The following variables are not in the data: ",paste0(s1[not_in],collapse = " ")))
                          } else {
                            new_data <- data[,match(s1,cnames),drop=FALSE]
-                           for(i in 1:ncol(new_data)){
-                             if(is(new_data[,i],"character"))new_data[,i] <- as.numeric(as.factor(new_data[,i]))
+                           if(ncol(new_data)>0){
+                             for(i in 1:ncol(new_data)){
+                               if(is(new_data[,i],"character"))new_data[,i] <- as.numeric(as.factor(new_data[,i]))
+                             }
                            }
                            return(new_data)
                          }

@@ -15,7 +15,7 @@
 #' df <- data.frame(cl = 1:3, t = 4:6)
 #' f1 <- lme4_to_glmmr(y ~ x + (1|cl/t))
 lme4_to_glmmr <- function(formula,cnames){
-  re1 <- re0 <- glmmrBase:::re_names(as.character(formula)[3])
+  re1 <- re0 <- re_names(as.character(formula)[3])
   int1 <- unlist(lapply(regmatches(re1, gregexpr("\\|.*?\\)", re1)), function(x)gsub("[\\|\\)]","",x)))
   for(i in 1:length(int1)){
     if(int1[[i]]%in%colnames(data)){
