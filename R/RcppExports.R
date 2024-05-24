@@ -534,8 +534,8 @@ setParallel <- function(parallel_, cores_ = 2L) {
     invisible(.Call(`_glmmrBase_setParallel`, parallel_, cores_))
 }
 
-re_names <- function(formula) {
-    .Call(`_glmmrBase_re_names`, formula)
+re_names <- function(formula, as_formula = TRUE) {
+    .Call(`_glmmrBase_re_names`, formula, as_formula)
 }
 
 attenuate_xb <- function(xb, Z, D, link) {
@@ -548,5 +548,9 @@ dlinkdeta <- function(xb, link) {
 
 girling_algorithm <- function(xp, N_, C_, tol_) {
     .Call(`_glmmrBase_girling_algorithm`, xp, N_, C_, tol_)
+}
+
+get_variable_names <- function(formula_, colnames_) {
+    .Call(`_glmmrBase_get_variable_names`, formula_, colnames_)
 }
 

@@ -286,9 +286,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_all(){
   } else if constexpr (std::is_same_v<algo,NEWUOA>) {
     set_newuoa_control(op);
   } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    #ifdef R_BUILD
-      Rcpp::stop("L-BFGS not available for beta & theta optimisation");
-    #endif
+    throw std::runtime_error("L-BFGS not available for beta & theta optimisation");
   }
   dblvec lower = get_lower_values(true,true,false);
   dblvec upper = get_upper_values(true,true,false);
@@ -391,9 +389,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta()
     } else if constexpr (std::is_same_v<algo,NEWUOA>) {
       set_newuoa_control(op);
     } else if constexpr (std::is_same_v<algo,LBFGS>) {
-      #ifdef R_BUILD
-        Rcpp::stop("L-BFGS not available for Laplace theta optimisation");
-      #endif
+      throw std::runtime_error("L-BFGS not available for Laplace theta optimisation");
     }
     op.set_bounds(lower,upper);
     if constexpr (std::is_same_v<modeltype,bits>)
@@ -427,9 +423,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_beta_theta(){
   } else if constexpr (std::is_same_v<algo,NEWUOA>) {
     set_newuoa_control(op);
   } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    #ifdef R_BUILD
-      Rcpp::stop("L-BFGS not available for Laplace beta-theta optimisation");
-    #endif
+    throw std::runtime_error("L-BFGS not available for Laplace beta-theta optimisation");
   }
   op.set_bounds(lower,upper);
   if constexpr (std::is_same_v<modeltype,bits>)
@@ -988,9 +982,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower)
 {
-#ifdef R_BUILD
-  if(bound.size()!=P())Rcpp::stop("Bound not equal to number of parameters");
-#endif
+  if(bound.size()!=P())throw std::runtime_error("Bound not equal to number of parameters");
   if(lower){
     if(lower_bound.size() != bound.size())lower_bound.resize(P());
     lower_bound = bound; 
@@ -1216,7 +1208,7 @@ inline ArrayXd glmmr::ModelOptim<modeltype>::optimum_weights(double N,
                                                              double tol,
                                                              int max_iter){
 #if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(C.size()!=P())Rcpp::stop("C is wrong size");
+  if(C.size()!=P())throw std::runtime_error("C is wrong size");
 #endif 
   
   VectorXd Cvec(C);

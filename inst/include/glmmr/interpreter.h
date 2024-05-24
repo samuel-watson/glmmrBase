@@ -261,9 +261,7 @@ inline void re_log_likelihood(glmmr::calculator& calc,
     calc.instructions.insert(calc.instructions.end(),re_seq.begin(),re_seq.end());
     auto uidx = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"v_"+std::to_string(i));
     if(uidx == calc.parameter_names.end()){
-      #ifdef R_BUILD
-      Rcpp::stop("Error finding name of random effect in calculator");
-      #endif
+      throw std::runtime_error("Error finding name of random effect in calculator");
     } else {
       int idx_to_add = uidx - calc.parameter_names.begin();
       calc.indexes.push_back(idx_to_add);

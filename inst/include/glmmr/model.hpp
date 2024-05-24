@@ -102,9 +102,7 @@ inline void glmmr::Model<modeltype>::reset_u(){
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
-#ifdef R_BUILD
-  if(u_.rows()!=model.covariance.Q())Rcpp::stop(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
-#endif
+  if(u_.rows()!=model.covariance.Q())throw std::runtime_error(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
   
   bool action_append = append;
   // if HSGP then check and update the size of u is m has changed
@@ -183,11 +181,9 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   int total_p = at.size() + atmeans.size() + average.size() + 1;
   int intercept = 1- (int)model.linear_predictor.form.RM_INT;
   
-#ifdef R_BUILD
-  if(total_p != (model.linear_predictor.P() - intercept))Rcpp::stop("All variables must be named");
-  if(at.size() != atvals.size())Rcpp::stop("Not enough values specified for at");
-  if(re_type == RandomEffectMargin::Average && re.zu_.cols()<=1)Rcpp::warning("No MCMC samples of random effects. Random effects will be set at estimated values.");
-#endif
+  if(total_p != (model.linear_predictor.P() - intercept))throw std::runtime_error("All variables must be named");
+  if(at.size() != atvals.size())throw std::runtime_error("Not enough values specified for at");
+  //if(re_type == RandomEffectMargin::Average && re.zu_.cols()<=1)Rcpp::warning("No MCMC samples of random effects. Random effects will be set at estimated values.");
     
   bool single_row = true;
   MatrixXd newXdata(1,model.linear_predictor.calc.data.cols());
@@ -202,9 +198,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
     newXdata.conservativeResize(model.n(),NoChange);
     newXdata.col(xcol) = model.linear_predictor.calc.data.col(xcol);
     
-#ifdef R_BUILD
-   if(re_type == RandomEffectMargin::At && atrevals.size() != model.covariance.Q())Rcpp::stop("Need to provide values for u vector");
-#endif
+   if(re_type == RandomEffectMargin::At && atrevals.size() != model.covariance.Q())throw std::runtime_error("Need to provide values for u vector");
    
    for(const auto& p: average){
      auto colidx = std::find(model.linear_predictor.calc.data_names.begin(),model.linear_predictor.calc.data_names.end(),p);
@@ -212,17 +206,13 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
        int pcol = colidx - model.linear_predictor.calc.data_names.begin();
        newXdata.col(pcol) = model.linear_predictor.calc.data.col(pcol);
      } else {
-#ifdef R_BUILD
-       Rcpp::stop("Variable "+p+" not in data names");  
-#endif
+       throw std::runtime_error("Variable "+p+" not in data names");  
      }
    }
   } else {
     newXdata(0,xcol) = xvals.first;
-#ifdef R_BUILD
-    if(re_type == RandomEffectMargin::At && atrevals.size() != 1)Rcpp::stop("Need to provide single value for Zu");
-    if(re_type == RandomEffectMargin::AtEstimated)Rcpp::stop("All covariates are at fixed values, cannot used estimated random effects.");
-#endif
+    if(re_type == RandomEffectMargin::At && atrevals.size() != 1)throw std::runtime_error("Need to provide single value for Zu");
+    if(re_type == RandomEffectMargin::AtEstimated)throw std::runtime_error("All covariates are at fixed values, cannot used estimated random effects.");
   }
   
   if(at.size() > 0){
@@ -234,9 +224,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
           newXdata(i,pcol) = atvals[p];
         }
       } else {
-#ifdef R_BUILD
-        Rcpp::stop("Variable "+at[p]+" not in data names");  
-#endif
+        throw std::runtime_error("Variable "+at[p]+" not in data names");  
       }
     }
   }
@@ -252,9 +240,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
           newXdata(i,pcol) = xmean;
         }
       } else {
-#ifdef R_BUILD
-        Rcpp::stop("Variable "+atmeans[p]+" not in data names");  
-#endif
+        throw std::runtime_error("Variable "+atmeans[p]+" not in data names");  
       }
     }
   }

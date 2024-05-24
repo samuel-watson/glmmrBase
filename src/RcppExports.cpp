@@ -1649,13 +1649,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // re_names
-std::vector<std::string> re_names(const std::string& formula);
-RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP) {
+std::vector<std::string> re_names(const std::string& formula, bool as_formula);
+RcppExport SEXP _glmmrBase_re_names(SEXP formulaSEXP, SEXP as_formulaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::string& >::type formula(formulaSEXP);
-    rcpp_result_gen = Rcpp::wrap(re_names(formula));
+    Rcpp::traits::input_parameter< bool >::type as_formula(as_formulaSEXP);
+    rcpp_result_gen = Rcpp::wrap(re_names(formula, as_formula));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1696,6 +1697,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type C_(C_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type tol_(tol_SEXP);
     rcpp_result_gen = Rcpp::wrap(girling_algorithm(xp, N_, C_, tol_));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_variable_names
+SEXP get_variable_names(SEXP formula_, SEXP colnames_);
+RcppExport SEXP _glmmrBase_get_variable_names(SEXP formula_SEXP, SEXP colnames_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    rcpp_result_gen = Rcpp::wrap(get_variable_names(formula_, colnames_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1839,10 +1852,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 5},
     {"_glmmrBase_Model__predict_re", (DL_FUNC) &_glmmrBase_Model__predict_re, 5},
     {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 2},
-    {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 1},
+    {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 2},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},
     {"_glmmrBase_dlinkdeta", (DL_FUNC) &_glmmrBase_dlinkdeta, 2},
     {"_glmmrBase_girling_algorithm", (DL_FUNC) &_glmmrBase_girling_algorithm, 4},
+    {"_glmmrBase_get_variable_names", (DL_FUNC) &_glmmrBase_get_variable_names, 2},
     {"_rcpp_module_boot_stan_fit4mcml_bernoulli_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_bernoulli_mod, 0},
     {"_rcpp_module_boot_stan_fit4mcml_beta_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_beta_mod, 0},
     {"_rcpp_module_boot_stan_fit4mcml_binomial_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_binomial_mod, 0},

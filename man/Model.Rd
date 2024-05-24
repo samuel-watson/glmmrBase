@@ -101,7 +101,7 @@ during model fitting use the \code{self$set_trace()} function.
 ## ------------------------------------------------
 
 \dontshow{
-setParallel(FALSE) # for the CRAN check
+setParallel(FALSE) 
 }
 #create a data frame describing a cross-sectional parallel cluster
 #randomised trial
@@ -118,24 +118,22 @@ mod <- Model$new(
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
-# the preferred way of specifying with parameter values
+
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  data = df,
+  family = stats::poisson()
+)
+  
+  # or with parameter values specified
+  
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
   covariance = c(0.05),
   mean = c(1,0.5),
   data = df,
   family = stats::poisson()
-  )
-# also works:
-des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(ind)),
-    parameters = c(0.05)),
-  mean = list(
-    formula = ~ int,
-    parameters = c(1,0.5)),
-  data = df,
-  family = stats::poisson())
+)
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -477,8 +475,11 @@ generated from a previous model fit.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{formula}}{An optional model formula containing fixed and random effect terms. If not specified, then
-separate formulae need to be provided to the covariance and mean arguments below.}
+\item{\code{formula}}{A model formula containing fixed and random effect terms. The formula can be one way (e.g. \code{~ x + (1|gr(cl))}) or
+two-way (e.g. \code{y ~ x + (1|gr(cl))}). One way formulae will generate a valid model enabling data simulation, matrix calculation,
+and power, etc. Outcome data can be passed directly to model fitting functions, or updated later using member function \code{update_y()}.
+For binomial models, either the syntax \code{cbind(y, n-y)} can be used for outcomes, or just \code{y} and the number of trials passed to the argument
+\code{trials} described below.}
 
 \item{\code{covariance}}{(Optional) Either a \link[glmmrBase]{Covariance} object, an equivalent list of arguments
 that can be passed to \code{Covariance} to create a new object, or a vector of parameter values. At a minimum the list must specify a formula.
@@ -516,7 +517,7 @@ A new Model class object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontshow{
-setParallel(FALSE) # for the CRAN check
+setParallel(FALSE) 
 }
 #create a data frame describing a cross-sectional parallel cluster
 #randomised trial
@@ -533,24 +534,22 @@ mod <- Model$new(
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
-# the preferred way of specifying with parameter values
+
+des <- Model$new(
+  formula = ~ int + (1|gr(ind)),
+  data = df,
+  family = stats::poisson()
+)
+  
+  # or with parameter values specified
+  
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
   covariance = c(0.05),
   mean = c(1,0.5),
   data = df,
   family = stats::poisson()
-  )
-# also works:
-des <- Model$new(
-  covariance = list(
-    formula = ~ (1|gr(ind)),
-    parameters = c(0.05)),
-  mean = list(
-    formula = ~ int,
-    parameters = c(1,0.5)),
-  data = df,
-  family = stats::poisson())
+)
 
 #an example of a spatial grid with two time points
 df <- nelder(~ (x(10)*y(10))*t(2))
@@ -723,7 +722,7 @@ a correction to the Hessian matrix is required, which is automatically calculate
   include.re = FALSE,
   theta = FALSE,
   hessian.corr = "add",
-  adj.nonpsd = TRUE
+  adj.nonspd = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -920,7 +919,7 @@ A matrix.
 Stochastic Maximum Likelihood model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
-  y,
+  y = NULL,
   method = "saem",
   tol = 0.01,
   max.iter = 50,
@@ -942,7 +941,8 @@ Stochastic Maximum Likelihood model fitting
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{y}}{A numeric vector of outcome data}
+\item{\code{y}}{Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when
+initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
 
 \item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt} and \code{mcnr.adapt} will use adaptive
 MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which results in faster convergence. \code{saem} uses a
@@ -1031,7 +1031,7 @@ fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
 Maximum Likelihood model fitting with Laplace Approximation
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$LA(
-  y,
+  y = NULL,
   start,
   method = "nr",
   se = "gls",
@@ -1049,7 +1049,8 @@ Maximum Likelihood model fitting with Laplace Approximation
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{y}}{A numeric vector of outcome data}
+\item{\code{y}}{Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when
+initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
 
 \item{\code{start}}{Optional. A numeric vector indicating starting values for the model parameters.}
 

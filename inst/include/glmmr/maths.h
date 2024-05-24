@@ -560,14 +560,17 @@ inline double logdet(const Eigen::MatrixXd& M) {
 }
 
 inline MatrixXd sample_MVN(const VectorMatrix& mu,
-                           int m){
+                           int m) {
   int n = mu.vec.size();
   MatrixXd L = mu.mat.llt().matrixL();
-  Rcpp::NumericVector z(n);
-  MatrixXd samps(n,m);
-  for(int i = 0; i < m; i++){
-    z = Rcpp::rnorm(n);
-    samps.col(i) = Rcpp::as<VectorXd>(z);
+  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
+    generator(boost::mt19937(time(0)),
+              boost::normal_distribution<>());
+  VectorXd z(n);
+  MatrixXd samps(n, m);
+  for (int i = 0; i < m; i++) {
+    randomGaussian(generator, z);
+    samps.col(i) = z;
     samps.col(i) += mu.vec;
   }
   return samps;

@@ -4,13 +4,10 @@
 \alias{formula.mcml}
 \title{Extracts the formula from a `mcml` object.}
 \usage{
-\method{formula}{mcml}(object, fixed = TRUE, ...)
+\method{formula}{mcml}(x, ...)
 }
 \arguments{
-\item{object}{A `mcml` object.}
-
-\item{fixed}{Logical. If TRUE the formula for the fixed effects is returned, otherwise the formula
-for the random effects is returned.}
+\item{x}{A `mcml` object.}
 
 \item{...}{Further arguments passed from other methods}
 }

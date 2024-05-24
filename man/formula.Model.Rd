@@ -4,10 +4,10 @@
 \alias{formula.Model}
 \title{Extracts the formula from a `Model` object}
 \usage{
-\method{formula}{Model}(object, ...)
+\method{formula}{Model}(x, ...)
 }
 \arguments{
-\item{object}{A `Model` object.}
+\item{x}{A `Model` object.}
 
 \item{...}{Further arguments passed from other methods}
 }

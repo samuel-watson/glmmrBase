@@ -3,12 +3,22 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-std::vector<std::string> re_names(const std::string& formula){
+std::vector<std::string> re_names(const std::string& formula,
+                                  bool as_formula = true){
   glmmr::Formula form(formula);
-  std::vector<std::string> re(form.re_.size());
-  for(int i = 0; i < form.re_.size(); i++){
-    re[i] = "("+form.z_[i]+"|"+form.re_[i]+")";
+  std::vector<std::string> re;
+  if(as_formula){
+    re.resize(form.re_.size());
+    for(int i = 0; i < form.re_.size(); i++){
+      re[i] = "("+form.z_[i]+"|"+form.re_[i]+")";
+    }
+  } else {
+    for(int i = 0; i < form.re_.size(); i++){
+      re.push_back(form.re_[i]);
+      re.push_back(form.z_[i]);
+    }
   }
+  
   return re;
 }
 
@@ -43,3 +53,18 @@ SEXP girling_algorithm(SEXP xp,
   return wrap(w);
 }
 
+// [[Rcpp::export]]
+SEXP get_variable_names(SEXP formula_, 
+                        SEXP colnames_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data(1,1);
+  Eigen::MatrixXd Xdata(1,1);
+  data.setZero();
+  Xdata.setZero();
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  glmmr::Formula form(formula);
+  glmmr::calculator calc;
+  bool out = glmmr::parse_formula(form.linear_predictor_,calc,data,colnames,Xdata,false,false);
+  (void)out;
+  return wrap(calc.data_names);
+}
