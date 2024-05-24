@@ -14,20 +14,21 @@
 #' @examples 
 #' df <- data.frame(cl = 1:3, t = 4:6)
 #' f1 <- lme4_to_glmmr(y ~ x + (1|cl/t))
+#' @export
 lme4_to_glmmr <- function(formula,cnames){
   re1 <- re0 <- re_names(as.character(formula)[3])
   int1 <- unlist(lapply(regmatches(re1, gregexpr("\\|.*?\\)", re1)), function(x)gsub("[\\|\\)]","",x)))
   for(i in 1:length(int1)){
-    if(int1[[i]]%in%colnames(data)){
+    if(int1[[i]]%in%cnames){
       re1[[i]] <- gsub(int1[[i]],paste0("gr(",int1[[i]],")"),re1[[i]])
     } else {
       int2 <- unlist(strsplit(int1[[i]],"/"))
-      if(all(int2%in%colnames(data))){
+      if(all(int2%in%cnames)){
         re1[[i]] <- gsub(int1[[i]],paste0("gr(",int2[1],")"),re1[[i]])
         re1[[i]] <- paste0(re1[[i]],"+(1|gr(",int2[1],",",int2[2],"))")
       } else {
         int3 <- unlist(strsplit(int1[[i]],":"))
-        if(all(int3%in%colnames(data))){
+        if(all(int3%in%cnames)){
           re1[[i]] <- gsub(int1[[i]],paste0("gr(",int2[1],",",int2[2],")"),re1[[i]])
         } 
       }

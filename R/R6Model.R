@@ -463,12 +463,9 @@ Model <- R6::R6Class("Model",
                        #' setParallel(FALSE) # for the CRAN check
                        #' }
                        #' des <- Model$new(
-                       #'   covariance = list(
-                       #'     formula = ~ (1|gr(cl)*ar0(t)),
-                       #'     parameters = c(0.05,0.8)),
-                       #'   mean = list(
-                       #'     formula = ~ factor(t) + int - 1,
-                       #'     parameters = c(rep(0,5),0.6)),
+                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
+                       #'   covariance = c(0.05,0.8),
+                       #'   mean = c(rep(0,5),0.6),
                        #'   data = df,
                        #'   family = stats::binomial()
                        #' )
