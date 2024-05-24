@@ -26,5 +26,5 @@ in the `mcml_lmer` and `mcml_glmer` functions.
 }
 \examples{
 df <- data.frame(cl = 1:3, t = 4:6)
-f1 <- lme4_to_glmmr(y ~ x + (1|cl/t))
+f1 <- lme4_to_glmmr(y ~ x + (1|cl/t),colnames(df))
 }

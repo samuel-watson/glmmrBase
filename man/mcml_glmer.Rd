@@ -63,5 +63,5 @@ df$y <- Model$new(
   data = df,
   family = stats::binomial()
 )$sim_data()
-fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
+fit <- mcml_glmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
 }

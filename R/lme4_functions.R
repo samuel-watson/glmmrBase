@@ -13,7 +13,7 @@
 #' @return A formula.
 #' @examples 
 #' df <- data.frame(cl = 1:3, t = 4:6)
-#' f1 <- lme4_to_glmmr(y ~ x + (1|cl/t))
+#' f1 <- lme4_to_glmmr(y ~ x + (1|cl/t),colnames(df))
 #' @export
 lme4_to_glmmr <- function(formula,cnames){
   re1 <- re0 <- re_names(as.character(formula)[3])
@@ -134,7 +134,7 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
 #'   data = df,
 #'   family = stats::binomial()
 #' )$sim_data()
-#' fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
+#' fit <- mcml_glmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
 #' @export
 mcml_glmer <- function(formula, data, family, start = NULL, offset = NULL, verbose = 1L,
                        iter.warmup = 100, iter.sampling = 50, weights = NULL,...){
