@@ -144,8 +144,6 @@ mcml_glmer <- function(formula, data, family, start = NULL, offset = NULL, verbo
                      family = family,
                      offset = offset,
                      weights = weights)
-  print(model)
-  print(Model__y(model$.__enclos_env__$private$ptr))
   model$mcmc_options$warmup <- iter.warmup
   model$mcmc_options$samps <- iter.sampling
   model$set_trace(verbose)
