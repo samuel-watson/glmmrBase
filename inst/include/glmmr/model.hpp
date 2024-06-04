@@ -315,7 +315,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       double d_result = 0;
       dblvec m_result(2+2*P);
       dblvec delta_vec(P,0.0);
-      for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
+      for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) private(m_result)
       for(int i = 0; i < N; i++){
         newXdata(i,xcol) = xvals.first;
@@ -364,7 +364,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
       dblvec delta1(P,0);
       dblvec m_result0(P+1);
       dblvec m_result1(P+1);
-      for(int i = 0; i < newXdata.rows(); i++) newXdata(i,xcol) = xvals.first;
+      for(int i = 0; i < newXdata.rows(); i++) mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result0) reduction(+:d_result0) reduction(vec_dbl_plus:delta0)  
       for(int i = 0; i < N; i++)
       {
@@ -400,7 +400,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         double d_result = 0;
         dblvec m_result(2+2*P);
         dblvec delta_vec(P,0.0);
-        for(int i = 0; i < newXdata.rows(); i++) newXdata(i,xcol) = xvals.first;
+        for(int i = 0; i < newXdata.rows(); i++) mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
         for(int i = 0; i < model.n(); i++){
           for(int j = 0; j < iter; j++){
@@ -424,7 +424,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         double d_result = 0;
         dblvec m_result(P+1);
         dblvec delta_vec(P,0.0);
-        for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
+        for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result) reduction(+:d_result) reduction(vec_dbl_plus:delta_vec) collapse(2)
         for(int i = 0; i < model.n(); i++)
         {
@@ -469,7 +469,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
         dblvec delta1(P,0);
         dblvec m_result0(1+P);
         dblvec m_result1(1+P);
-        for(int i = 0; i < newXdata.rows(); i++)newXdata(i,xcol) = xvals.first;
+        for(int i = 0; i < newXdata.rows(); i++)mcalc.data(i,xcol) = xvals.first;
 #pragma omp parallel for private(m_result0) reduction(+:d_result0) reduction(vec_dbl_plus:delta0) collapse(2)
         for(int i = 0; i < model.n(); i++)
         {

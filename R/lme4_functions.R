@@ -83,7 +83,9 @@ lme4_to_glmmr <- function(formula,cnames){
 #'   data = df,
 #'   family = stats::gaussian()
 #' )$sim_data()
+#' \dontrun{
 #' fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df)
+#' }
 #' @export
 mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
                       iter.warmup = 100, iter.sampling = 50, weights = NULL,...){
@@ -134,7 +136,9 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
 #'   data = df,
 #'   family = stats::binomial()
 #' )$sim_data()
+#' \dontrun{
 #' fit <- mcml_glmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
+#' }
 #' @export
 mcml_glmer <- function(formula, data, family, start = NULL, offset = NULL, verbose = 1L,
                        iter.warmup = 100, iter.sampling = 50, weights = NULL,...){

@@ -60,5 +60,7 @@ df$y <- Model$new(
   data = df,
   family = stats::gaussian()
 )$sim_data()
+\dontrun{
 fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df)
+}
 }
