@@ -9,16 +9,22 @@ A GLMM Model
 A GLMM Model
 }
 \details{
-A generalised linear mixed model and a range of associated functions
+A generalised linear mixed model
 
-A detailed vingette for this package is available online\url{doi:10.48550/arXiv.2303.12657}. Briefly, for the generalised linear mixed model
+See \link[glmmrBase]{glmmrBase-package} for a more in-depth guide.
+
+The generalised linear mixed model is:
 
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Zu)}
 \deqn{u \sim MVN(0,D)}
 
-where h is the link function. The class provides access to all of the matrices above and associated calculations and functions including model fitting, power analysis,
-and various relevant decompositions. The object is an R6 class and so can serve as a parent class for extended functionality.
+where F is a distribution with scale parameter \deqn{\sigma}, h is a link function, X are the fixed effects with parameters \deqn{\beta}, Z is the random effect design matrix with multivariate Gaussian distributed effects u.
+The class provides access to all of the elements of the model above and associated calculations and functions including model fitting, power analysis,
+and various relevant matrices, including information matrices and related corrections. The object is an R6 class and so can serve as a parent class for extended functionality.
+
+The currently support families (links) are Gaussian (identity, log), Binomial (logit, log, probit, identity), Poisson (log, identity), Gamma (logit, identity, inverse), and Beta (logit). The class also supports mixed quantile
+regression models, although functionality is currently experimental. Quantile models use an asymmetrical Laplace distribution for the likelihood and support all five link functions listed before.
 
 Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
 other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
@@ -32,11 +38,7 @@ to, for individual \emph{i} \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partia
 improve the accuracy of approximations based on the marginal quasilikelihood is also available, see \code{use_attenuation()}.
 
 See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
-detailed guide on model specification.
-
-The class also includes model fitting with Markov Chain Monte Carlo Maximum Likelihood implementing the algorithms described by McCulloch (1997),
-and fast model fitting using Laplace approximation. Functions for returning related values such as the log gradient, log probability, and other
-matrices are also available.
+detailed guide on model specification. A detailed vingette for this package is also available online\url{doi:10.48550/arXiv.2303.12657}.
 
 \strong{Attenuation}
 For calculations such as the information matrix, the first-order approximation to the covariance matrix
@@ -114,7 +116,16 @@ mod <- Model$new(
   family = stats::gaussian()
 )
 
-#here we will specify a cohort study and provide parameter values
+# We can also include the outcome data in the model initialisation. For example, simulating data and creating a new object:
+df$y <- mod$sim_data()
+
+mod <- Model$new(
+  formula = y ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  data = df,
+  family = stats::gaussian()
+)
+
+# Here we will specify a cohort study
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
@@ -125,7 +136,7 @@ des <- Model$new(
   family = stats::poisson()
 )
   
-  # or with parameter values specified
+# or with parameter values specified
   
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
@@ -136,10 +147,22 @@ des <- Model$new(
 )
 
 #an example of a spatial grid with two time points
+
 df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
                         data = df,
                         family = stats::gaussian())
+
+# A quantile regression model for the 25th percentile (experimental)
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+
+qmod <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  data = df,
+  family = quantile(link = "identity", scaled = TRUE, q = 0.25)
+)
 
 ## ------------------------------------------------
 ## Method `Model$sim_data`
@@ -490,10 +513,8 @@ If parameters are not included then they are initialised to 0.}
 can be ignored if data are provided to the covariance or mean arguments either via \code{Covariance} and \code{MeanFunction}
 object, or as a member of the list of arguments to both \code{covariance} and \code{mean}.}
 
-\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. This
-argument is optional if the family is provided either via a \code{MeanFunction} or \code{MeanFunction}
-objects, or as members of the list of arguments to \code{mean}. Current accepts \link[stats]{binomial},
-\link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, and \link[glmmrBase]{Beta}.}
+\item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. Currently accepts \link[stats]{binomial},
+\link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, \link[glmmrBase]{Beta}, and \link[glmmrBase]{quantile}.}
 
 \item{\code{var_par}}{(Optional) Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
@@ -527,7 +548,16 @@ mod <- Model$new(
   family = stats::gaussian()
 )
 
-#here we will specify a cohort study and provide parameter values
+# We can also include the outcome data in the model initialisation. For example, simulating data and creating a new object:
+df$y <- mod$sim_data()
+
+mod <- Model$new(
+  formula = y ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  data = df,
+  family = stats::gaussian()
+)
+
+# Here we will specify a cohort study
 df <- nelder(~ind(20) * t(6))
 df$int <- 0
 df[df$t > 3, 'int'] <- 1
@@ -538,7 +568,7 @@ des <- Model$new(
   family = stats::poisson()
 )
   
-  # or with parameter values specified
+# or with parameter values specified
   
 des <- Model$new(
   formula = ~ int + (1|gr(ind)),
@@ -549,10 +579,22 @@ des <- Model$new(
 )
 
 #an example of a spatial grid with two time points
+
 df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
                         data = df,
                         family = stats::gaussian())
+
+# A quantile regression model for the 25th percentile (experimental)
+df <- nelder(~(cl(10)*t(5)) > ind(10))
+df$int <- 0
+df[df$cl > 5, 'int'] <- 1
+
+qmod <- Model$new(
+  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
+  data = df,
+  family = quantile(link = "identity", scaled = TRUE, q = 0.25)
+)
 }
 \if{html}{\out{</div>}}
 
