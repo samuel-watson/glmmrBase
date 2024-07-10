@@ -605,6 +605,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__set_quantile
+void Model__set_quantile(SEXP xp, double q, int type);
+RcppExport SEXP _glmmrBase_Model__set_quantile(SEXP xpSEXP, SEXP qSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< double >::type q(qSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__set_quantile(xp, q, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__use_attenuation
 void Model__use_attenuation(SEXP xp, SEXP use_, int type);
 RcppExport SEXP _glmmrBase_Model__use_attenuation(SEXP xpSEXP, SEXP use_SEXP, SEXP typeSEXP) {
@@ -1719,6 +1731,7 @@ RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_binomial_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_gamma_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_gaussian_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_poisson_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_quantile_mod();
 
 static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
@@ -1768,6 +1781,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__update_beta", (DL_FUNC) &_glmmrBase_Model__update_beta, 3},
     {"_glmmrBase_Model__update_theta", (DL_FUNC) &_glmmrBase_Model__update_theta, 3},
     {"_glmmrBase_Model__update_u", (DL_FUNC) &_glmmrBase_Model__update_u, 4},
+    {"_glmmrBase_Model__set_quantile", (DL_FUNC) &_glmmrBase_Model__set_quantile, 3},
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
@@ -1863,6 +1877,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rcpp_module_boot_stan_fit4mcml_gamma_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_gamma_mod, 0},
     {"_rcpp_module_boot_stan_fit4mcml_gaussian_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_gaussian_mod, 0},
     {"_rcpp_module_boot_stan_fit4mcml_poisson_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_poisson_mod, 0},
+    {"_rcpp_module_boot_stan_fit4mcml_quantile_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4mcml_quantile_mod, 0},
     {NULL, NULL, 0}
 };
 

@@ -232,6 +232,16 @@ void Model__update_u(SEXP xp, SEXP u_, bool append = false, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__set_quantile(SEXP xp, double q, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&q](auto ptr){ptr->model.family.set_quantile(q);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
 void Model__use_attenuation(SEXP xp, SEXP use_, int type = 0){
   bool use = as<bool>(use_);
   glmmrType model(xp,static_cast<Type>(type));

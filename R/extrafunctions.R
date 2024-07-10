@@ -67,6 +67,7 @@ mcnr_family <- function(family, cmdstan){
   gaussian_list <- c("identity")
   binomial_list <- c("logit","log","identity","probit")
   bernoulli_list <- c("logit","log","identity","probit")
+  quantile_list <- quantile_scaled_list <- c("identity","log","logit","probit","inverse")
   poisson_list <- c("log")
   gamma_list <- c("identity","inverse","log")
   beta_list <- c("logit")

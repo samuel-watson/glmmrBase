@@ -189,6 +189,10 @@ Model__update_u <- function(xp, u_, append = FALSE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__update_u`, xp, u_, append, type))
 }
 
+Model__set_quantile <- function(xp, q, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__set_quantile`, xp, q, type))
+}
+
 Model__use_attenuation <- function(xp, use_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__use_attenuation`, xp, use_, type))
 }

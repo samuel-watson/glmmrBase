@@ -95,7 +95,9 @@ enum class Fam {
     poisson = 2,
     gamma = 3,
     beta = 4,
-    binomial = 5
+    binomial = 5,
+    quantile = 6, // quantile is the asymmetric Laplacian distribution
+    quantile_scaled = 7
 };
 
 enum class Link {

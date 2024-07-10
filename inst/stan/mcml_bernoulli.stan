@@ -25,9 +25,9 @@ parameters {
 model {
   to_vector(gamma) ~ std_normal();
   if(type==1) y ~ bernoulli_logit(Xb + Z*to_vector(gamma));
-  if(type==2) y ~ bernoulli(Xb + Z*to_vector(gamma));
+  if(type==2) y ~ bernoulli(exp(Xb + Z*to_vector(gamma)));
   if(type==3) y ~ bernoulli(Xb + Z*to_vector(gamma));
-  if(type==4) y ~ bernoulli(Xb + Z*to_vector(gamma));
+  if(type==4) y ~ bernoulli(Phi_approx(Xb + Z*to_vector(gamma)));
   
   // int grainsize = 1;
   // target += reduce_sum(partial_sum1_lpdf,gamma,grainsize);

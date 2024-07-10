@@ -97,6 +97,7 @@ public:
   std::pair<double,double>  current_likelihood_values();
   std::pair<double,double>  u_diagnostic();
   void            reset_fn_counter();
+  void            set_quantile(const double& q);
   // functions to optimise
   double          log_likelihood_beta(const dblvec &beta);
   double          log_likelihood_beta_with_gradient(const VectorXd &beta, VectorXd& g);
@@ -115,6 +116,7 @@ protected:
   dblvec    lower_bound_theta;
   dblvec    upper_bound_theta; // bounds for beta
   bool      beta_bounded = false;
+  double    quantile = 0.5;
   
   // functions
   void            calculate_var_par();
@@ -457,6 +459,13 @@ inline void glmmr::ModelOptim<modeltype>::reset_fn_counter()
 {
   fn_counter.first = 0;
   fn_counter.second = 0;
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::set_quantile(const double& q)
+{
+  if(q <= 0 || q >= 1)throw std::runtime_error("q !in [0,1]");
+  quantile = q;
 }
 
 template<typename modeltype>
@@ -918,7 +927,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol ) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                              model.data.variance(i)/model.data.weights(i),
-                                             model.family.family,model.family.link);
+                                             model.family);
         }
       }
     } else {
@@ -926,7 +935,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
 #pragma omp parallel for
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-                                   model.data.variance(i),model.family.family,model.family.link);
+                                   model.data.variance(i),model.family);
         }
       }
       ll_current.col(llcol) *= model.data.weights.sum()/model.n();
@@ -936,8 +945,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
 #pragma omp parallel for
       for(int i = 0; i<model.n(); i++){
         ll_current(j,llcol) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-                                           model.data.variance(i),model.family.family,
-                                           model.family.link);
+                                           model.data.variance(i),model.family);
       }
     }
   }

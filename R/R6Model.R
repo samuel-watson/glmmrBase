@@ -877,6 +877,10 @@ Model <- R6::R6Class("Model",
                          if(!conv.criterion %in% 1:4)stop("Convergence criterion must be 1, 2, or 3")
                          if(alpha < 0.5 | alpha >= 1)stop("alpha must be in [0.5, 1)")
                          if(convergence.prob <= 0 | convergence.prob >= 1)stop("Convergence probability must be in (0, 1)")
+                         if(self$family[[1]]%in%c("quantile","quantile_scaled")){
+                           Model__set_quantile(self$family$q)
+                           message("Quantile regression is EXPERIMENTAL. Do not rely on reported results.")
+                         }
                          if(!mcmc.pkg == "hmc"){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
                            Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
@@ -946,6 +950,8 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
                          if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                          if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
+                         if(self$family[[1]]%in%c("quantile","quantile_scaled"))data <- append(data,list(var_par = self$var_par,
+                                                                                                         quantile = self$family$quantile))
                          iter <- 0
                          n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
                          beta_diff <- 1
