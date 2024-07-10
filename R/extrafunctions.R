@@ -71,6 +71,7 @@ mcnr_family <- function(family, cmdstan){
   poisson_list <- c("log")
   gamma_list <- c("identity","inverse","log")
   beta_list <- c("logit")
+  if(f1 == "quantile_scaled")f1 <- "quantile"
   type <- which(get(paste0(f1,"_list"))==link)
   if(length(type)==0)stop("link not supported for this family")
   if(cmdstan){

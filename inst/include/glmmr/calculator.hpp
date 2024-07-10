@@ -55,7 +55,7 @@ public:
 }
 
 inline void glmmr::calculator::update_parameters(const dblvec& parameters_in){
-  if(parameters_in.size() < parameter_count)throw std::runtime_error("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
+  if(static_cast<int>(parameters_in.size()) < parameter_count)throw std::runtime_error("Expecting "+std::to_string(parameter_count)+" parameters in calculator but got "+std::to_string(parameters_in.size()));
   for(int i = 0; i < parameter_indexes.size(); i++)parameters[i] = parameters_in[parameter_indexes[i]];
 }
 

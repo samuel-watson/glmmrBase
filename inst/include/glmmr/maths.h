@@ -217,7 +217,7 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
         }
         case Link::inverse:
         {
-          p = xb.square().inverse();
+          p = xb.array().square().inverse();
           break;
         }
         case Link::logit:
@@ -450,7 +450,7 @@ inline double log_factorial_approx(double n){
 inline double log_likelihood(const double y,
                              const double mu,
                              const double var_par,
-                             const glmmr::Family fam) {
+                             const glmmr::Family family) {
   double logl = 0;
   switch(family.family){
   case Fam::poisson:
@@ -596,8 +596,8 @@ inline double log_likelihood(const double y,
   {
     double resid = y;
     resid -= mod_inv_func(mu,family.link);
-    if(family.family == Fam::quantile_scaled) resid *= 1/var_par;
-    logl = log(family.quantile) + log(1.0 - family.quantile) - log(var_par) - 0.5*(abs(resid) + (2*family.quantile - 1.0)*resid);
+    if(family.family == Fam::quantile_scaled) resid *= 1/sqrt(var_par);
+    logl = log(family.quantile) + log(1.0 - family.quantile) - 0.5*log(var_par) - 0.5*(abs(resid) + (2*family.quantile - 1.0)*resid);
     break;
   }
   }

@@ -10,5 +10,5 @@
 quantile <- function(link="identity", scaled = FALSE, q = 0.5){
   if(! link %in% c("identity","log","logit","inverse","probit"))stop("Link not supported for quantile regression")
   if(q <= 0 | q >= 1) stop("q outside [0,1]")
-  return(list(Family = ifelse(scaled,"quantile","quantile_scaled"), Link= link, q = q))
+  return(list(Family = ifelse(!scaled,"quantile","quantile_scaled"), Link= link, q = q))
 }

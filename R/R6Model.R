@@ -529,6 +529,28 @@ Model <- R6::R6Class("Model",
                              y <- rbeta(self$n(),logitxb*self$var_par,(1-logitxb)*self$var_par)
                            }
                          }
+                         if(f[1]%in%c("quantile","quantile_scaled")){
+                           message("Quantile based methods are currently EXPERIMENTAL")
+                           message("Simulation from quantile family produces random draws from an asymmetric Laplace distribution")
+                           if(f[2]=="logit"){
+                             mu <- exp(mu)/(1+exp(mu))
+                           } else if(f[2]=="log"){
+                             mu <- exp(mu)
+                           } else if(f[2] == "inverse"){
+                             mu <- 1/mu
+                           } else if(f[2] == "probit"){
+                             mu <- pnorm(mu)
+                           }
+                           rand_u <- runif(length(mu))
+                           y <- rep(NA,length(mu))
+                           for(i in 1:length(y)){
+                             if(u[i] <= self$family$q){
+                               y[i] <- (self$var_par/(1-self$family$q))*log(u[i]/self$family$q) + mu[i]
+                             } else {
+                               y[i] <- (self$var_par/self$family$q)*log((1-u[i])/(1-self$family$q)) + mu[i]
+                             }
+                           }
+                         }
                          if(type=="data.frame"|type=="data")y <- cbind(y,self$mean$data)
                          if(type=="all")y <- list(y = y, X = self$mean$X, beta = self$mean$parameters,
                                                   Z = self$covariance$Z, u = re)
@@ -878,7 +900,7 @@ Model <- R6::R6Class("Model",
                          if(alpha < 0.5 | alpha >= 1)stop("alpha must be in [0.5, 1)")
                          if(convergence.prob <= 0 | convergence.prob >= 1)stop("Convergence probability must be in (0, 1)")
                          if(self$family[[1]]%in%c("quantile","quantile_scaled")){
-                           Model__set_quantile(self$family$q)
+                           Model__set_quantile(private$ptr,self$family$q,private$model_type())
                            message("Quantile regression is EXPERIMENTAL. Do not rely on reported results.")
                          }
                          if(!mcmc.pkg == "hmc"){
@@ -911,7 +933,7 @@ Model <- R6::R6Class("Model",
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
-                         var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
+                         var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta","quantile_scaled"))
                          ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
                          all_pars <- c(beta,theta)
                          if(var_par_family)all_pars <- c(all_pars,var_par)
@@ -951,7 +973,7 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
                          if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
                          if(self$family[[1]]%in%c("quantile","quantile_scaled"))data <- append(data,list(var_par = self$var_par,
-                                                                                                         quantile = self$family$quantile))
+                                                                                                         q = self$family$q))
                          iter <- 0
                          n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
                          beta_diff <- 1
@@ -1142,7 +1164,7 @@ Model <- R6::R6Class("Model",
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
                          theta_names <- repar_table$term
-                         if(self$family[[1]]%in%c("Gamma","beta")){
+                         if(self$family[[1]]%in%c("Gamma","beta","quantile_scaled")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
@@ -1818,7 +1840,7 @@ Model <- R6::R6Class("Model",
                        },
                        update_ptr = function(force = FALSE){
                          if(is.null(private$ptr) | force | private$session_id != Sys.getpid()){
-                           if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta")
+                           if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta","quantile","quantile_scaled"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta, or quantile")
                            if(gsub(" ","",self$mean$formula) != gsub(" ","",self$covariance$formula)){
                              form <- paste0(self$mean$formula,"+",self$covariance$formula)
                            } else {

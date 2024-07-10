@@ -169,7 +169,7 @@ inline void two_way_fn(std::vector<char>& formula,
   std::vector<char> l_val;
   std::vector<char> k_val;
   int comma_count = 0;
-  for(int i = 0; i < formula.size(); i++)
+  for(int i = 0; i < static_cast<int>(formula.size()); i++)
   {
     if(formula[i]==','){
       comma_count++;

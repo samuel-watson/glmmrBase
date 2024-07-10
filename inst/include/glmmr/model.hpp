@@ -199,7 +199,7 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
     newXdata.conservativeResize(model.n(),NoChange);
     newXdata.col(xcol) = model.linear_predictor.calc.data.col(xcol);
     
-   if(re_type == RandomEffectMargin::At && atrevals.size() != model.covariance.Q())throw std::runtime_error("Need to provide values for u vector");
+   if(re_type == RandomEffectMargin::At && static_cast<int>(atrevals.size()) != model.covariance.Q())throw std::runtime_error("Need to provide values for u vector");
    
    for(const auto& p: average){
      auto colidx = std::find(model.linear_predictor.calc.data_names.begin(),model.linear_predictor.calc.data_names.end(),p);

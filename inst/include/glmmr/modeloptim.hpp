@@ -990,7 +990,7 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_start_values(bool beta, bool the
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bound(const dblvec& bound, bool lower)
 {
-  if(bound.size()!=P())throw std::runtime_error("Bound not equal to number of parameters");
+  if(static_cast<int>(bound.size())!=P())throw std::runtime_error("Bound not equal to number of parameters");
   if(lower){
     if(lower_bound.size() != bound.size())lower_bound.resize(P());
     lower_bound = bound; 
@@ -1180,7 +1180,7 @@ inline void glmmr::ModelOptim<modeltype>::update_var_par(const ArrayXd& v){
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
-  if(model.family.family==Fam::gaussian){
+  if(model.family.family==Fam::gaussian || model.family.family==Fam::quantile_scaled){
     // revise this for beta and Gamma re residuals
     int niter = re.u(false).cols();
     ArrayXd sigmas(niter);

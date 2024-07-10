@@ -131,8 +131,8 @@ inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_)
   for(const auto& i: parameters_)Rcpp::Rcout << i << " ";
 #endif
   
-  if(parameters_.size()!=P())throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
-  if(parameters_.size()!=calc.parameter_count)throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
+  if(static_cast<int>(parameters_.size())!=P())throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(P())+" required");
+  if(static_cast<int>(parameters_.size())!=calc.parameter_count)throw std::runtime_error(std::to_string(parameters_.size())+" parameters provided, "+std::to_string(calc.parameter_count)+" required");
   
   if(parameters.size()==0){
     parameters.resize(P_);

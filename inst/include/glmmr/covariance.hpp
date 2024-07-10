@@ -179,7 +179,7 @@ inline int glmmr::Covariance::parse(){
   strvec2d re_par_names_;
   intvec3d re_pars_;
   // now process each step of the random effect terms
-  if(colnames_.size()!= data_.cols())throw std::runtime_error("colnames length != data columns");
+  if(static_cast<int>(colnames_.size())!= data_.cols())throw std::runtime_error("colnames length != data columns");
   
   int nre = form_.re_.size();
   
@@ -551,7 +551,7 @@ inline void glmmr::Covariance::update_parameters(const dblvec& parameters)
 
 inline void glmmr::Covariance::update_parameters_extern(const dblvec& parameters)
 {
-  if(parameters.size()!=npar())throw std::runtime_error(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
+  if(static_cast<int>(parameters.size())!=npar())throw std::runtime_error(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
   if(parameters_.size()==0){
     parameters_.resize(npar());
   }

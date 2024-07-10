@@ -115,7 +115,9 @@ const std::map<str, Fam> str_to_family = {
   {"gamma",Fam::gamma},
   {"Gamma",Fam::gamma},
   {"beta",Fam::beta},
-  {"binomial",Fam::binomial}
+  {"binomial",Fam::binomial},
+  {"quantile",Fam::quantile},
+  {"quantile_scaled",Fam::quantile_scaled}
 };
 
 const std::map<str, Link> str_to_link = {
