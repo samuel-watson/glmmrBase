@@ -174,23 +174,12 @@ inline intvec interpret_re_par(const CovFunc& fn,
     addA();
     B.push_back(par_idx[1]);
     break;
-  case CovFunc::fexp0: case CovFunc::bessel:
+  case CovFunc::fexp0: case CovFunc::bessel: case CovFunc::sqexp0:
     B.push_back(par_idx[0]);
     addA();
     break;
-  case CovFunc::fexp:
+  case CovFunc::fexp: case CovFunc::sqexp:
     B.push_back(par_idx[1]);
-    addA();
-    B.push_back(par_idx[0]);
-    break;
-  case CovFunc::sqexp0:
-    addPar2(0);
-    addA();
-    addA();
-    break;
-  case CovFunc::sqexp:
-    addPar2(1);
-    addA();
     addA();
     B.push_back(par_idx[0]);
     break;
