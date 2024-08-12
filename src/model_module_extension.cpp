@@ -520,3 +520,31 @@ SEXP Model__predict_re(SEXP xp, SEXP newdata_,
     Rcpp::Named("re_parameters") = wrap(res)
   );
 }
+
+// [[Rcpp::export]]
+SEXP hessian_from_formula(SEXP form_, 
+                          SEXP data_,
+                          SEXP colnames_,
+                          SEXP parameters_){
+  std::string form = Rcpp::as<std::string>(form_);
+  Eigen::ArrayXXd data = Rcpp::as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = Rcpp::as<std::vector<std::string> >(colnames_);
+  std::vector<double> parameters = Rcpp::as<std::vector<double> >(parameters_);
+  glmmr::calculator calc;
+  calc.data.conservativeResize(data.rows(),NoChange);
+  std::vector<char> formula_as_chars(form.begin(),form.end());
+  bool outparse = glmmr::parse_formula(formula_as_chars,
+                                       calc,
+                                       data,
+                                       colnames,
+                                       calc.data);
+  (void)outparse;
+  std::reverse(calc.instructions.begin(),calc.instructions.end());
+  std::reverse(calc.indexes.begin(),calc.indexes.end());
+  calc.print_instructions();
+  Rcpp::Rcout << "\nNumber of parameters: " << calc.parameter_names.size();
+  if(calc.parameter_names.size() != parameters.size())throw std::runtime_error("Wrong number of parameters");
+  calc.parameters = parameters;
+  VectorMatrix result = calc.jacobian_and_hessian();
+  return Rcpp::wrap(result);
+}

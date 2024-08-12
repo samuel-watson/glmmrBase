@@ -525,6 +525,10 @@ Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {
     .Call(`_glmmrBase_Model__predict_re`, xp, newdata_, newoffset_, m, type)
 }
 
+hessian_from_formula <- function(form_, data_, colnames_, parameters_) {
+    .Call(`_glmmrBase_hessian_from_formula`, form_, data_, colnames_, parameters_)
+}
+
 #' Disable or enable parallelised computing
 #' 
 #' By default, the package will use multithreading for many calculations if OpenMP is 
