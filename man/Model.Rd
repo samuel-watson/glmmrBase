@@ -161,7 +161,7 @@ df[df$cl > 5, 'int'] <- 1
 qmod <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
-  family = quantile(link = "identity", scaled = TRUE, q = 0.25)
+  family = Quantile(link = "identity", scaled = TRUE, q = 0.25)
 )
 
 ## ------------------------------------------------
@@ -593,7 +593,7 @@ df[df$cl > 5, 'int'] <- 1
 qmod <- Model$new(
   formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
   data = df,
-  family = quantile(link = "identity", scaled = TRUE, q = 0.25)
+  family = Quantile(link = "identity", scaled = TRUE, q = 0.25)
 )
 }
 \if{html}{\out{</div>}}

@@ -1649,6 +1649,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// hessian_from_formula
+SEXP hessian_from_formula(SEXP form_, SEXP data_, SEXP colnames_, SEXP parameters_);
+RcppExport SEXP _glmmrBase_hessian_from_formula(SEXP form_SEXP, SEXP data_SEXP, SEXP colnames_SEXP, SEXP parameters_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type form_(form_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type parameters_(parameters_SEXP);
+    rcpp_result_gen = Rcpp::wrap(hessian_from_formula(form_, data_, colnames_, parameters_));
+    return rcpp_result_gen;
+END_RCPP
+}
 // setParallel
 void setParallel(SEXP parallel_, int cores_);
 RcppExport SEXP _glmmrBase_setParallel(SEXP parallel_SEXP, SEXP cores_SEXP) {
@@ -1865,6 +1879,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 2},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 5},
     {"_glmmrBase_Model__predict_re", (DL_FUNC) &_glmmrBase_Model__predict_re, 5},
+    {"_glmmrBase_hessian_from_formula", (DL_FUNC) &_glmmrBase_hessian_from_formula, 4},
     {"_glmmrBase_setParallel", (DL_FUNC) &_glmmrBase_setParallel, 2},
     {"_glmmrBase_re_names", (DL_FUNC) &_glmmrBase_re_names, 2},
     {"_glmmrBase_attenuate_xb", (DL_FUNC) &_glmmrBase_attenuate_xb, 4},

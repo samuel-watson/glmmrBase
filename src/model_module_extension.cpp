@@ -520,3 +520,57 @@ SEXP Model__predict_re(SEXP xp, SEXP newdata_,
     Rcpp::Named("re_parameters") = wrap(res)
   );
 }
+
+//' Automatic differentiation of formulae
+//' 
+//' Exposes the automatic differentiator. Allows for calculation of Jacobian and Hessian matrices 
+//' of formulae in terms of specified parameters. Formula specification is as a string. Data items are automatically 
+//' multiplied by a parameter unless enclosed in parentheses.
+//' @param form_ String. Formula to differentiate specified in terms of data items and parameters. Any string not identifying 
+//' a function or a data item names in `colnames` is assumed to be a parameter.
+//' @param data_ Matrix. A matrix including the data. Rows represent observations. The number of columns should match the number 
+//' of items in `colnames_`
+//' @param colnames_ Vector of strings. The names of the columns of `data_`, used to match data named in the formula.
+//' @param parameters_ Vector of doubles. The values of the parameters at which to calculate the derivatives. The parameters should be in the 
+//' same order they appear in the formula.
+//' @return A list including the jacobian and hessian matrices.
+//' @examples
+//' # obtain the Jacobian and Hessian of the log-binomial model log-likelihood. The model is of data from an intervention and control group
+//' # with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. The mean is exp(alpha) in the control 
+//' # group and exp(alpha + beta) in the intervention group, so that beta is the log relative risk.
+//' ll1 <- "(y1) * (alpha + beta) + ((n1) - (y1)) * log((1 - exp(alpha + beta))) + 
+//'     (y0) * alpha + ((n0) - (y0)) * log((1 - exp(alpha)))"
+//' ll1 <- gsub(" ","",ll1)
+//' dat <- matrix(c(10,100,20,100), nrow = 1)
+//' pars <- c(0.1,log(0.5)) 
+//' cnames <- c("y1","n1","y0","n0")
+//' H <- hessian_from_formula(ll1,dat,cnames,pars)
+//' H
+//' @export
+// [[Rcpp::export]]
+SEXP hessian_from_formula(SEXP form_, 
+                          SEXP data_,
+                          SEXP colnames_,
+                          SEXP parameters_){
+  std::string form = Rcpp::as<std::string>(form_);
+  Eigen::ArrayXXd data = Rcpp::as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = Rcpp::as<std::vector<std::string> >(colnames_);
+  std::vector<double> parameters = Rcpp::as<std::vector<double> >(parameters_);
+  glmmr::calculator calc;
+  calc.data.conservativeResize(data.rows(),NoChange);
+  std::vector<char> formula_as_chars(form.begin(),form.end());
+  bool outparse = glmmr::parse_formula(formula_as_chars,
+                                       calc,
+                                       data,
+                                       colnames,
+                                       calc.data);
+  (void)outparse;
+  std::reverse(calc.instructions.begin(),calc.instructions.end());
+  std::reverse(calc.indexes.begin(),calc.indexes.end());
+  // calc.print_instructions();
+  // Rcpp::Rcout << "\nNumber of parameters: " << calc.parameter_names.size();
+  if(calc.parameter_names.size() != parameters.size())throw std::runtime_error("Wrong number of parameters");
+  calc.parameters = parameters;
+  VectorMatrix result = calc.jacobian_and_hessian();
+  return Rcpp::wrap(result);
+}

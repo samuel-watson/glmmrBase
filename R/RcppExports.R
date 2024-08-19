@@ -525,6 +525,36 @@ Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {
     .Call(`_glmmrBase_Model__predict_re`, xp, newdata_, newoffset_, m, type)
 }
 
+#' Automatic differentiation of formulae
+#' 
+#' Exposes the automatic differentiator. Allows for calculation of Jacobian and Hessian matrices 
+#' of formulae in terms of specified parameters. Formula specification is as a string. Data items are automatically 
+#' multiplied by a parameter unless enclosed in parentheses.
+#' @param form_ String. Formula to differentiate specified in terms of data items and parameters. Any string not identifying 
+#' a function or a data item names in `colnames` is assumed to be a parameter.
+#' @param data_ Matrix. A matrix including the data. Rows represent observations. The number of columns should match the number 
+#' of items in `colnames_`
+#' @param colnames_ Vector of strings. The names of the columns of `data_`, used to match data named in the formula.
+#' @param parameters_ Vector of doubles. The values of the parameters at which to calculate the derivatives. The parameters should be in the 
+#' same order they appear in the formula.
+#' @return A list including the jacobian and hessian matrices.
+#' @examples
+#' # obtain the Jacobian and Hessian of the log-binomial model log-likelihood. The model is of data from an intervention and control group
+#' # with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. The mean is exp(alpha) in the control 
+#' # group and exp(alpha + beta) in the intervention group, so that beta is the log relative risk.
+#' ll1 <- "(y1) * (alpha + beta) + ((n1) - (y1)) * log((1 - exp(alpha + beta))) + 
+#'     (y0) * alpha + ((n0) - (y0)) * log((1 - exp(alpha)))"
+#' ll1 <- gsub(" ","",ll1)
+#' dat <- matrix(c(10,100,20,100), nrow = 1)
+#' pars <- c(0.1,log(0.5)) 
+#' cnames <- c("y1","n1","y0","n0")
+#' H <- hessian_from_formula(ll1,dat,cnames,pars)
+#' H
+#' @export
+hessian_from_formula <- function(form_, data_, colnames_, parameters_) {
+    .Call(`_glmmrBase_hessian_from_formula`, form_, data_, colnames_, parameters_)
+}
+
 #' Disable or enable parallelised computing
 #' 
 #' By default, the package will use multithreading for many calculations if OpenMP is 
