@@ -30,9 +30,10 @@ multiplied by a parameter unless enclosed in parentheses.
 # obtain the Jacobian and Hessian of the log-binomial model log-likelihood. The model is of data from an intervention and control group
 # with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. The mean is exp(alpha) in the control 
 # group and exp(alpha + beta) in the intervention group, so that beta is the log relative risk.
-ll1 <- "(y1) * (alpha + beta) + ((n1) - (y1)) * log((1 - exp(alpha + beta))) + (y0) * alpha + ((n0) - (y0)) * log((1 - exp(alpha)))"
+ll1 <- "(y1) * (alpha + beta) + ((n1) - (y1)) * log((1 - exp(alpha + beta))) + 
+    (y0) * alpha + ((n0) - (y0)) * log((1 - exp(alpha)))"
 ll1 <- gsub(" ","",ll1)
-dat <- matrix(10,100,20,100), nrow = 1)
+dat <- matrix(c(10,100,20,100), nrow = 1)
 pars <- c(0.1,log(0.5)) 
 cnames <- c("y1","n1","y0","n0")
 H <- hessian_from_formula(ll1,dat,cnames,pars)
