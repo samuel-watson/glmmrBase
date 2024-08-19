@@ -116,7 +116,8 @@ mod <- Model$new(
   family = stats::gaussian()
 )
 
-# We can also include the outcome data in the model initialisation. For example, simulating data and creating a new object:
+# We can also include the outcome data in the model initialisation. 
+# For example, simulating data and creating a new object:
 df$y <- mod$sim_data()
 
 mod <- Model$new(
@@ -514,7 +515,7 @@ can be ignored if data are provided to the covariance or mean arguments either v
 object, or as a member of the list of arguments to both \code{covariance} and \code{mean}.}
 
 \item{\code{family}}{A family object expressing the distribution and link function of the model, see \link[stats]{family}. Currently accepts \link[stats]{binomial},
-\link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, \link[glmmrBase]{Beta}, and \link[glmmrBase]{quantile}.}
+\link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, \link[glmmrBase]{Beta}, and \link[glmmrBase]{Quantile}.}
 
 \item{\code{var_par}}{(Optional) Scale parameter required for some distributions, including Gaussian. Default is NULL.}
 
@@ -548,7 +549,8 @@ mod <- Model$new(
   family = stats::gaussian()
 )
 
-# We can also include the outcome data in the model initialisation. For example, simulating data and creating a new object:
+# We can also include the outcome data in the model initialisation. 
+# For example, simulating data and creating a new object:
 df$y <- mod$sim_data()
 
 mod <- Model$new(

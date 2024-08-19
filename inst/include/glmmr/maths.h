@@ -226,6 +226,8 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
           p = p.square().inverse();
           break;
         }
+      
+      // p *= (family.quantile * family.quantile)/(1 + pow(family.quantile,4));
       break;
     }
   }
@@ -416,7 +418,7 @@ inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
   Eigen::ArrayXd wdiag(mu.size());
   
   switch (family) {
-  case Fam::gaussian:
+  case Fam::gaussian: case Fam::quantile: case Fam::quantile_scaled:
     wdiag.setConstant(var_par);
     break;
   case Fam::bernoulli: case Fam::binomial:

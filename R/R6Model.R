@@ -181,7 +181,7 @@ Model <- R6::R6Class("Model",
                        #' can be ignored if data are provided to the covariance or mean arguments either via `Covariance` and `MeanFunction`
                        #' object, or as a member of the list of arguments to both `covariance` and `mean`.
                        #' @param family A family object expressing the distribution and link function of the model, see \link[stats]{family}. Currently accepts \link[stats]{binomial},
-                       #' \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, \link[glmmrBase]{Beta}, and \link[glmmrBase]{quantile}.
+                       #' \link[stats]{gaussian}, \link[stats]{Gamma}, \link[stats]{poisson}, \link[glmmrBase]{Beta}, and \link[glmmrBase]{Quantile}.
                        #' @param var_par (Optional) Scale parameter required for some distributions, including Gaussian. Default is NULL.
                        #' @param offset (Optional) A vector of offset values. Optional - could be provided to the argument to mean instead.
                        #' @param trials (Optional) For binomial family models, the number of trials for each observation. If it is not set, then it will
@@ -205,7 +205,8 @@ Model <- R6::R6Class("Model",
                        #'   family = stats::gaussian()
                        #' )
                        #' 
-                       #' # We can also include the outcome data in the model initialisation. For example, simulating data and creating a new object:
+                       #' # We can also include the outcome data in the model initialisation. 
+                       #' # For example, simulating data and creating a new object:
                        #' df$y <- mod$sim_data()
                        #'
                        #' mod <- Model$new(

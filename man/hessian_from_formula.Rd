@@ -27,15 +27,13 @@ of formulae in terms of specified parameters. Formula specification is as a stri
 multiplied by a parameter unless enclosed in parentheses.
 }
 \examples{
-# obtain the Jacobian and Hessian of the log-binomial model log-likelihood. The model is of data from an intervention and control group
-# with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. The mean is exp(alpha) in the control 
+# obtain the Jacobian and Hessian of the log-binomial model log-likelihood. 
+# The model is of data from an intervention and control group
+# with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. 
+# The mean is exp(alpha) in the control 
 # group and exp(alpha + beta) in the intervention group, so that beta is the log relative risk.
-ll1 <- "(y1) * (alpha + beta) + ((n1) - (y1)) * log((1 - exp(alpha + beta))) + 
-    (y0) * alpha + ((n0) - (y0)) * log((1 - exp(alpha)))"
-ll1 <- gsub(" ","",ll1)
-dat <- matrix(c(10,100,20,100), nrow = 1)
-pars <- c(0.1,log(0.5)) 
-cnames <- c("y1","n1","y0","n0")
-H <- hessian_from_formula(ll1,dat,cnames,pars)
-H
+hessian_from_formula(form_ = "(y1)*(alpha+beta)+((n1)-(y1))*log((1-exp(alpha+beta)))+(y0)*alpha+((n0)-(y0))*log((1-exp(alpha)))",
+                    data_ = matrix(c(10,100,20,100), nrow = 1),
+                    colnames_ = c("y1","n1","y0","n0"),
+                    parameters_ = c(log(0.1),log(0.5)))
 }
