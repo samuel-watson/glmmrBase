@@ -566,10 +566,10 @@ Model <- R6::R6Class("Model",
                            rand_u <- runif(length(mu))
                            y <- rep(NA,length(mu))
                            for(i in 1:length(y)){
-                             if(u[i] <= self$family$q){
-                               y[i] <- (self$var_par/(1-self$family$q))*log(u[i]/self$family$q) + mu[i]
+                             if(rand_u[i] <= self$family$q){
+                               y[i] <- (self$var_par/(1-self$family$q))*log(rand_u[i]/self$family$q) + mu[i]
                              } else {
-                               y[i] <- (self$var_par/self$family$q)*log((1-u[i])/(1-self$family$q)) + mu[i]
+                               y[i] <- (self$var_par/self$family$q)*log((1-rand_u[i])/(1-self$family$q)) + mu[i]
                              }
                            }
                          }

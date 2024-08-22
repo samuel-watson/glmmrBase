@@ -1190,7 +1190,11 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
       ArrayXd resid = (model.data.y - zdu);
       resid *= model.data.weights.sqrt();
-      sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1);
+      if(model.family.family==Fam::gaussian){
+        sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1);
+      } else {
+        sigmas(i) = (0.5*resid.abs() + 0.5*(2*model.family.quantile - 1)*resid).mean();
+      }
     }
     update_var_par(sigmas.mean());
   }
