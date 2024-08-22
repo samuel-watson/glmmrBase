@@ -544,10 +544,11 @@ Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {
 #' # with n1 and n0 participants, respectively, with y1 and y0 the number of events in each group. 
 #' # The mean is exp(alpha) in the control 
 #' # group and exp(alpha + beta) in the intervention group, so that beta is the log relative risk.
-#' hessian_from_formula(form_ = "(y1)*(alpha+beta)+((n1)-(y1))*log((1-exp(alpha+beta)))+(y0)*alpha+((n0)-(y0))*log((1-exp(alpha)))",
-#'                     data_ = matrix(c(10,100,20,100), nrow = 1),
-#'                     colnames_ = c("y1","n1","y0","n0"),
-#'                     parameters_ = c(log(0.1),log(0.5)))
+#' hessian_from_formula(
+#'   form_ = "(y1)*(a+b)+((n1)-(y1))*log((1-exp(a+b)))+(y0)*a+((n0)-(y0))*log((1-exp(a)))",
+#'   data_ = matrix(c(10,100,20,100), nrow = 1),
+#'   colnames_ = c("y1","n1","y0","n0"),
+#'   parameters_ = c(log(0.1),log(0.5)))
 #' @export
 hessian_from_formula <- function(form_, data_, colnames_, parameters_) {
     .Call(`_glmmrBase_hessian_from_formula`, form_, data_, colnames_, parameters_)
