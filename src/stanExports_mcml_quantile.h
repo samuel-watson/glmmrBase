@@ -56,7 +56,7 @@ static constexpr std::array<const char*, 34> locations_array__ =
   " (in 'string', line 21, column 8 to column 9)",
   " (in 'string', line 3, column 4 to column 20)",
   " (in 'string', line 4, column 11 to column 12)",
-  " (in 'string', line 4, column 4 to column 29)",
+  " (in 'string', line 4, column 4 to column 37)",
   " (in 'string', line 5, column 11 to column 12)",
   " (in 'string', line 5, column 4 to column 55)",
   " (in 'string', line 6, column 4 to column 62)",
@@ -105,7 +105,8 @@ asymmetric_laplace_lpdf(const T0__& y_arg__, const T1__& mu_arg__,
     Eigen::Matrix<local_scalar_t__,-1,1> resid =
       Eigen::Matrix<local_scalar_t__,-1,1>::Constant(n, DUMMY_VAR__);
     current_statement__ = 28;
-    stan::model::assign(resid, stan::math::subtract(y, mu),
+    stan::model::assign(resid,
+      stan::math::divide(stan::math::subtract(y, mu), sigma),
       "assigning variable resid");
     current_statement__ = 29;
     stan::math::validate_non_negative_index("rho", "n", n);

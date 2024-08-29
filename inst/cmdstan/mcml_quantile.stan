@@ -1,7 +1,7 @@
 functions {
   real asymmetric_laplace_lpdf(vector y, vector mu, real sigma, real q){
     int n = size(y);
-    vector[n] resid = y - mu;
+    vector[n] resid = (y - mu)/sigma;
     vector[n] rho = (abs(resid) + (2*q - 1)*resid)*0.5;
     real ll = n*log(q) + n*log(1-q) - n*log(sigma) - sum(rho);
     return ll;

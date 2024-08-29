@@ -795,18 +795,27 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
     {
     switch(model.family.link){
       case Link::identity:
-        size_n_array = (model.data.y.array() - size_n_array);
-        if(model.family.family == Fam::quantile_scaled) size_n_array *= model.data.var_par;
+        // size_n_array = (model.data.y.array() - size_n_array);
+        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
         for(int i = 0; i < model.n(); i++){
-          size_n_array(i) = 0.5*size_n_array(i)/abs(size_n_array(i)) - 0.5*(2*model.family.quantile - 1);
+          if(size_n_array(i) <= 0){
+            size_n_array(i) *= model.family.quantile - 1;
+          } else {
+            size_n_array(i) *= model.family.quantile;
+          }
         }
         break;
     case Link::loglink:
       {
-        ArrayXd resid = (model.data.y.array() - size_n_array.exp());
-        if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
+        // ArrayXd resid = (model.data.y.array() - size_n_array.exp());
+        size_n_array = size_n_array.exp();
+        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
         for(int i = 0; i < model.n(); i++){
-          size_n_array(i) = 0.5*resid(i)*exp(size_n_array(i))/abs(resid(i)) - 0.5*(2*model.family.quantile - 1)*exp(size_n_array(i));
+          if(size_n_array(i) <= 0){
+            size_n_array(i) *= model.family.quantile - 1;
+          } else {
+            size_n_array(i) *= model.family.quantile;
+          }
         }
         break;
       }
@@ -816,34 +825,50 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
       logitxb += 1.0;
       logitxb = logitxb.inverse();
       logitxb *= size_n_array.exp();
-      ArrayXd resid = (model.data.y.array() - logitxb);
+      //ArrayXd resid = (model.data.y.array() - logitxb);
       logitxb *= (1+size_n_array.exp()).inverse();
-      if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
+      if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
       for(int i = 0; i < model.n(); i++){
-        size_n_array(i) = 0.5*logitxb(i)*(resid(i)/abs(resid(i)) - (2*model.family.quantile - 1));
+        if(size_n_array(i) <= 0){
+          size_n_array(i) = model.family.quantile - 1;
+        } else {
+          size_n_array(i) = model.family.quantile;
+        }
+        size_n_array(i) *= logitxb(i);
       }
+      
       break;
     }
     case Link::probit:
       {
       ArrayXd n_array2(model.n());
+      if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
       boost::math::normal norm(0, 1);
       for (int i = 0; i < model.n(); i++) {
         n_array2(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
-        size_n_array(i) = model.data.y(i) - ((double)cdf(norm, size_n_array(i)));
-        size_n_array(i) = 0.5*n_array2(i)*(size_n_array(i)/abs(size_n_array(i)) - (2*model.family.quantile - 1));
+        if(size_n_array(i) <= 0){
+          size_n_array(i) = model.family.quantile - 1;
+        } else {
+          size_n_array(i) = model.family.quantile;
+        }
+        size_n_array(i) *= n_array2(i);
       }
       break;
       }
     case Link::inverse:
       {
         ArrayXd logitxb = size_n_array.inverse();
-        ArrayXd resid = (model.data.y.array() - logitxb);
         logitxb *= size_n_array.inverse();
-        if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
+        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
         for(int i = 0; i < model.n(); i++){
-          size_n_array(i) = 0.5*logitxb(i)*(resid(i)/abs(resid(i)) - (2*model.family.quantile - 1));
+          if(size_n_array(i) <= 0){
+            size_n_array(i) = model.family.quantile - 1;
+          } else {
+            size_n_array(i) = model.family.quantile;
+          }
+          size_n_array(i) *= logitxb(i);
         }
+        
         break;
       }
     }

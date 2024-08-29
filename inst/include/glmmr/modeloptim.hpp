@@ -922,8 +922,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   
   if(model.weighted){
     if(model.family.family==Fam::gaussian){
-      for(int j= 0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
+      for(int j= 0; j< re.zu_.cols() ; j++){
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol ) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                              model.data.variance(i)/model.data.weights(i),
@@ -931,8 +931,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
         }
       }
     } else {
-      for(int j=0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
+      for(int j=0; j< re.zu_.cols() ; j++){
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                    model.data.variance(i),model.family);
@@ -941,8 +941,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
       ll_current.col(llcol) *= model.data.weights.sum()/model.n();
     }
   } else {
-    for(int j= 0; j< re.zu_.cols() ; j++){
 #pragma omp parallel for
+    for(int j= 0; j< re.zu_.cols() ; j++){
       for(int i = 0; i<model.n(); i++){
         ll_current(j,llcol) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
                                            model.data.variance(i),model.family);
@@ -1184,6 +1184,7 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
     // revise this for beta and Gamma re residuals
     int niter = re.u(false).cols();
     ArrayXd sigmas(niter);
+    sigmas.setZero();
     MatrixXd zd = matrix.linpred();
 #pragma omp parallel for
     for(int i = 0; i < niter; ++i){
@@ -1191,9 +1192,16 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       ArrayXd resid = (model.data.y - zdu);
       resid *= model.data.weights.sqrt();
       if(model.family.family==Fam::gaussian){
-        sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1);
+        sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1.0);
       } else {
-        sigmas(i) = (0.5*resid.abs() + 0.5*(2*model.family.quantile - 1)*resid).mean();
+        for(int j = 0; j < resid.size(); j++){
+          if(resid(j) < 0){
+            sigmas(i) += resid(j)*(model.family.quantile - 1.0);
+          } else {
+            sigmas(i) += resid(j)*model.family.quantile;
+          }
+        }
+        sigmas(i) *= 1.0/resid.size();
       }
     }
     update_var_par(sigmas.mean());

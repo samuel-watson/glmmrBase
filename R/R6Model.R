@@ -915,6 +915,7 @@ Model <- R6::R6Class("Model",
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          if(!method %in% c("mcem", "mcnr", "saem", "mcem.adapt", "mcnr.adapt"))stop("method must be either mcem, mcnr, saem, mcem.adapt, mcnr.adapt")
+                         if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "mcnr")stop("MCNR with quantile currently disabled, please use SAEM or MCEM with MCML")
                          append_u <- FALSE
                          if(mcmc.pkg == "hmc" & method == "saem")stop("saem and hmc options not currently compatible")
                          adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
@@ -923,7 +924,7 @@ Model <- R6::R6Class("Model",
                          if(convergence.prob <= 0 | convergence.prob >= 1)stop("Convergence probability must be in (0, 1)")
                          if(self$family[[1]]%in%c("quantile","quantile_scaled")){
                            Model__set_quantile(private$ptr,self$family$q,private$model_type())
-                           message("Quantile regression is EXPERIMENTAL. Do not rely on reported results.")
+                           message("Quantile regression is EXPERIMENTAL.")
                          }
                          if(!mcmc.pkg == "hmc"){
                            Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
@@ -1191,7 +1192,7 @@ Model <- R6::R6Class("Model",
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
                            mf_pars_names <- c(beta_names,theta_names)
-                           if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
+                           if(self$family[[1]]%in%c("gaussian")) mf_pars_names <- c(mf_pars_names,"sigma")
                            SE <- c(SE,SE_theta)
                          }
                          res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
@@ -1354,6 +1355,7 @@ Model <- R6::R6Class("Model",
                          if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
                          if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se == "kr2"||se == "sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
+                         if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "nr")stop("nr with quantile currently disabled, please use nloptim with LA")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!is.null(lower.bound)){
                            Model__set_bound(private$ptr,lower.bound,TRUE,TRUE,private$model_type())
@@ -1368,7 +1370,7 @@ Model <- R6::R6Class("Model",
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
                          }
-                         var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta"))
+                         var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta","quantile_scaled"))
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
@@ -1454,7 +1456,7 @@ Model <- R6::R6Class("Model",
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
                          theta_names <- repar_table$term
-                         if(self$family[[1]]%in%c("Gamma","beta")){
+                         if(self$family[[1]]%in%c("Gamma","beta","quantile_scaled")){
                            mf_pars_names <- c(beta_names,theta_names,"sigma")
                            SE <- c(SE,rep(NA,length(theta_new)+1))
                          } else {
