@@ -17,6 +17,10 @@
 #endif
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS 
 #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
+
+//glmmrbase version 
+#define GLMMR10
+
 // includes
 
 #include <vector>
