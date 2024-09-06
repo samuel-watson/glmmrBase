@@ -662,7 +662,7 @@ Model <- R6::R6Class("Model",
                            }
                            if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
                              A <- Model__hessian_correction(private$ptr,private$model_type())
-                             if(any(eigen(A)$values < 0) & adj.nonpsd){
+                             if(any(eigen(A)$values < 0) & adj.nonspd){
                                if(adj.nonpsd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonpsd = FALSE")
                                A <- near_semi_pd(A)
                              }
