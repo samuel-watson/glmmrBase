@@ -474,7 +474,18 @@ SEXP Model__obs_information_matrix(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.observed_information_matrix());}
+    [](auto ptr){return returnType(ptr->matrix.template observed_information_matrix<glmmr::IM::EIM>());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__observed_information_matrix(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->matrix.template observed_information_matrix<glmmr::IM::OIM>());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::MatrixXd>(S));

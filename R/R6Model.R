@@ -633,46 +633,53 @@ Model <- R6::R6Class("Model",
                        #' or the mixed model information matrix for beta only (FALSE).
                        #' @param theta Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
                        #' parameter information matrix is returned.
+                       #' @param oim Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.
                        #' @param hessian.corr String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its 
                        #' own ("return"), or ignored ("none")
                        #' @param adj.nonspd Logical. For models nonlinear in fixed effect parameters, the Hessian of the linear predictor with respect to the 
                        #' model parameters is often not positive semi-definite, which can cause a singular matrix and failure to calculate valid standard errors. 
                        #' The adjustment matrix will be corrected if it is not positive semi-definite and this option is TRUE.
                         #' @return A matrix
-                       information_matrix = function(include.re = FALSE, theta = FALSE, hessian.corr = "add", adj.nonspd = TRUE){
+                       information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE, hessian.corr = "add", adj.nonspd = TRUE){
+                         if(oim & !private$y_has_been_updated) stop("No y data has been added")
                          private$update_ptr()
                          nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
                          if(nonlin){
                            if(!private$y_has_been_updated) stop("No y data has been added")
                            if(!hessian.corr %in% c("add","return","none"))stop("hessian.corr must be add, return, or none")
                          }
-                         if(theta){
-                           M <- Model__infomat_theta(private$ptr,private$model_type())
+                         if(oim){
+                           M <- Model__observed_information_matrix(private$ptr,private$model_type())
                          } else {
-                           if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
-                             if(include.re & !private$model_type()>0){
-                               M <- Model__obs_information_matrix(private$ptr,private$model_type())
-                             } else {
-                               if(private$model_type()==0){
-                                 M <- Model__information_matrix(private$ptr,private$model_type())
+                           if(theta){
+                             M <- Model__infomat_theta(private$ptr,private$model_type())
+                           } else {
+                             if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
+                               if(include.re & !private$model_type()>0){
+                                 M <- Model__obs_information_matrix(private$ptr,private$model_type())
                                } else {
-                                 M <- Model__information_matrix_crude(private$ptr,private$model_type())
+                                 if(private$model_type()==0){
+                                   M <- Model__information_matrix(private$ptr,private$model_type())
+                                 } else {
+                                   M <- Model__information_matrix_crude(private$ptr,private$model_type())
+                                 }
+                               }
+                             }
+                             if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
+                               A <- Model__hessian_correction(private$ptr,private$model_type())
+                               if(any(eigen(A)$values < 0) & adj.nonspd){
+                                 if(adj.nonspd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonspd = FALSE")
+                                 A <- near_semi_pd(A)
+                               }
+                               if(hessian.corr == "add"){
+                                 M <- M + A
+                               } else {
+                                 M <- A
                                }
                              }
                            }
-                           if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
-                             A <- Model__hessian_correction(private$ptr,private$model_type())
-                             if(any(eigen(A)$values < 0) & adj.nonspd){
-                               if(adj.nonspd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonspd = FALSE")
-                               A <- near_semi_pd(A)
-                             }
-                             if(hessian.corr == "add"){
-                               M <- M + A
-                             } else {
-                               M <- A
-                             }
-                           }
                          }
+                         
                          return(M)
                        },
                        #' @description 
@@ -691,12 +698,14 @@ Model <- R6::R6Class("Model",
                        #' the variance rather than standard deviation, so the results will be unaffected. Option "sat" returns the "Satterthwaite"
                        #' correction, which only includes corrected degrees of freedom, along with the GLS standard errors.
                        #' @param type Either "KR", "KR2", or "sat", see description.
+                       #' @param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix
                        #' @return A PxP matrix
-                       small_sample_correction = function(type){
+                       small_sample_correction = function(type, oim = FALSE){
+                         if(oim & !private$y_has_been_updated) stop("No y data has been added")
                          private$update_ptr()
                          if(!type %in% c("KR","KR2","sat"))stop("type must be either KR, KR2, or sat")
                          ss_type <- ifelse(type == "KR",1,ifelse(type == "KR2",4,5))
-                         return(Model__small_sample_correction(private$ptr,ss_type,private$model_type()))
+                         return(Model__small_sample_correction(private$ptr,ss_type,oim,private$model_type()))
                        },
                        #' @description 
                        #' Returns the inferential statistics (F-stat, p-value) for a modified Box correction <doi:10.1002/sim.4072> for
@@ -842,6 +851,7 @@ Model <- R6::R6Class("Model",
                        #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom.
+                       #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
                        #'@param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
                        #'`hmc` to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number 
                        #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
@@ -890,6 +900,7 @@ Model <- R6::R6Class("Model",
                                        tol = 1e-2,
                                        max.iter = 50,
                                        se = "gls",
+                                       oim = FALSE,
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
@@ -1171,7 +1182,7 @@ Model <- R6::R6Class("Model",
                              }
                            } else if(se == "kr" || se == "kr2" || se == "sat"){
                              ss_type <- ifelse(se=="kr",1,ifelse(se=="kr2",4,5))
-                             Mout <- Model__small_sample_correction(private$ptr,ss_type,private$model_type())
+                             Mout <- Model__small_sample_correction(private$ptr,ss_type,oim,private$model_type())
                              M <- Mout[[1]]
                              SE_theta <- sqrt(diag(Mout[[2]]))
                            } 
@@ -1301,6 +1312,7 @@ Model <- R6::R6Class("Model",
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom. 
                        #' Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.
+                       #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
@@ -1336,6 +1348,7 @@ Model <- R6::R6Class("Model",
                                      start,
                                      method = "nr",
                                      se = "gls",
+                                     oim = FALSE,
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
@@ -1448,7 +1461,7 @@ Model <- R6::R6Class("Model",
                            }
                          } else if(se == "kr" || se == "kr2" || se == "sat"){
                            krtype <- ifelse(se=="kr",1,ifelse(se=="kr2",4,5))
-                           Mout <- Model__small_sample_correction(private$ptr,krtype,private$model_type())
+                           Mout <- Model__small_sample_correction(private$ptr,krtype,oim,private$model_type())
                            M <- Mout[[1]]
                            SE_theta <- sqrt(diag(Mout[[2]]))
                          }
@@ -1791,8 +1804,9 @@ Model <- R6::R6Class("Model",
                        #' @param xvals Optional. A vector specifying the values of `a` and `b` for `diff` and `ratio`. The default is (1,0).
                        #' @param atvals Optional. A vector specifying the values of fixed effects specified in `at` (in the same order).
                        #' @param revals Optional. If `re="at"` then this argument provides a vector of values for the random effects.
+                       #' @param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
                        #' @return A named vector with elements `margin` specifying the point estimate and `se` giving the standard error.
-                       marginal = function(x,type,re,se,at = c(),atmeans = c(),average=c(),xvals=c(1,0),atvals=c(),revals=c()){
+                       marginal = function(x,type,re,se,at = c(),atmeans = c(),average=c(),xvals=c(1,0),atvals=c(),revals=c(),oim = FALSE){
                          margin_types <- c("dydx","diff","ratio")
                          re_types <- c("estimated","at","zero","average")
                          se_types <- c("GLS","KR","Robust","BW","KR2","Sat")
@@ -1804,6 +1818,7 @@ Model <- R6::R6Class("Model",
                                                    margin = which(margin_types==type)-1,
                                                    re = which(re_types==re)-1, 
                                                    se = which(se_types==se)-1,
+                                                   oim = oim,
                                                    at = at,
                                                    atmeans = atmeans,
                                                    average = average,

@@ -1048,6 +1048,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__observed_information_matrix
+SEXP Model__observed_information_matrix(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__observed_information_matrix(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__observed_information_matrix(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__u
 SEXP Model__u(SEXP xp, bool scaled_, int type);
 RcppExport SEXP _glmmrBase_Model__u(SEXP xpSEXP, SEXP scaled_SEXP, SEXP typeSEXP) {
@@ -1340,8 +1352,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__marginal
-SEXP Model__marginal(SEXP xp, std::string x, int margin, int re, int se, Nullable<std::vector<std::string> > at, Nullable<std::vector<std::string> > atmeans, Nullable<std::vector<std::string> > average, double xvals_first, double xvals_second, Nullable<std::vector<double> > atvals, Nullable<std::vector<double> > revals, int type);
-RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP marginSEXP, SEXP reSEXP, SEXP seSEXP, SEXP atSEXP, SEXP atmeansSEXP, SEXP averageSEXP, SEXP xvals_firstSEXP, SEXP xvals_secondSEXP, SEXP atvalsSEXP, SEXP revalsSEXP, SEXP typeSEXP) {
+SEXP Model__marginal(SEXP xp, std::string x, int margin, int re, int se, int oim, Nullable<std::vector<std::string> > at, Nullable<std::vector<std::string> > atmeans, Nullable<std::vector<std::string> > average, double xvals_first, double xvals_second, Nullable<std::vector<double> > atvals, Nullable<std::vector<double> > revals, int type);
+RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP marginSEXP, SEXP reSEXP, SEXP seSEXP, SEXP oimSEXP, SEXP atSEXP, SEXP atmeansSEXP, SEXP averageSEXP, SEXP xvals_firstSEXP, SEXP xvals_secondSEXP, SEXP atvalsSEXP, SEXP revalsSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1350,6 +1362,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type margin(marginSEXP);
     Rcpp::traits::input_parameter< int >::type re(reSEXP);
     Rcpp::traits::input_parameter< int >::type se(seSEXP);
+    Rcpp::traits::input_parameter< int >::type oim(oimSEXP);
     Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type at(atSEXP);
     Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type atmeans(atmeansSEXP);
     Rcpp::traits::input_parameter< Nullable<std::vector<std::string> > >::type average(averageSEXP);
@@ -1358,7 +1371,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Nullable<std::vector<double> > >::type atvals(atvalsSEXP);
     Rcpp::traits::input_parameter< Nullable<std::vector<double> > >::type revals(revalsSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__marginal(xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type));
+    rcpp_result_gen = Rcpp::wrap(Model__marginal(xp, x, margin, re, se, oim, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1583,15 +1596,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__small_sample_correction
-SEXP Model__small_sample_correction(SEXP xp, int ss_type, int type);
-RcppExport SEXP _glmmrBase_Model__small_sample_correction(SEXP xpSEXP, SEXP ss_typeSEXP, SEXP typeSEXP) {
+SEXP Model__small_sample_correction(SEXP xp, int ss_type, bool oim, int type);
+RcppExport SEXP _glmmrBase_Model__small_sample_correction(SEXP xpSEXP, SEXP ss_typeSEXP, SEXP oimSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type ss_type(ss_typeSEXP);
+    Rcpp::traits::input_parameter< bool >::type oim(oimSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__small_sample_correction(xp, ss_type, type));
+    rcpp_result_gen = Rcpp::wrap(Model__small_sample_correction(xp, ss_type, oim, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1831,6 +1845,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__parameter_fn_index", (DL_FUNC) &_glmmrBase_Model__parameter_fn_index, 2},
     {"_glmmrBase_Model__information_matrix_crude", (DL_FUNC) &_glmmrBase_Model__information_matrix_crude, 2},
     {"_glmmrBase_Model__obs_information_matrix", (DL_FUNC) &_glmmrBase_Model__obs_information_matrix, 2},
+    {"_glmmrBase_Model__observed_information_matrix", (DL_FUNC) &_glmmrBase_Model__observed_information_matrix, 2},
     {"_glmmrBase_Model__u", (DL_FUNC) &_glmmrBase_Model__u, 3},
     {"_glmmrBase_Model__Zu", (DL_FUNC) &_glmmrBase_Model__Zu, 2},
     {"_glmmrBase_Model__X", (DL_FUNC) &_glmmrBase_Model__X, 2},
@@ -1855,7 +1870,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__residuals", (DL_FUNC) &_glmmrBase_Model__residuals, 4},
     {"_glmmrBase_Model__get_log_likelihood_values", (DL_FUNC) &_glmmrBase_Model__get_log_likelihood_values, 2},
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
-    {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 13},
+    {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 14},
     {"_glmmrBase_Model__mcmc_set_lambda", (DL_FUNC) &_glmmrBase_Model__mcmc_set_lambda, 3},
     {"_glmmrBase_Model__reset_fn_counter", (DL_FUNC) &_glmmrBase_Model__reset_fn_counter, 2},
     {"_glmmrBase_Model__get_fn_counter", (DL_FUNC) &_glmmrBase_Model__get_fn_counter, 2},
@@ -1874,7 +1889,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 2},
     {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 2},
     {"_glmmrBase_Model__kenward_roger", (DL_FUNC) &_glmmrBase_Model__kenward_roger, 2},
-    {"_glmmrBase_Model__small_sample_correction", (DL_FUNC) &_glmmrBase_Model__small_sample_correction, 3},
+    {"_glmmrBase_Model__small_sample_correction", (DL_FUNC) &_glmmrBase_Model__small_sample_correction, 4},
     {"_glmmrBase_Model__box", (DL_FUNC) &_glmmrBase_Model__box, 2},
     {"_glmmrBase_Model__cov_deriv", (DL_FUNC) &_glmmrBase_Model__cov_deriv, 2},
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 5},

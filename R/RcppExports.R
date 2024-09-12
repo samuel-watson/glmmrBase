@@ -333,6 +333,10 @@ Model__obs_information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__obs_information_matrix`, xp, type)
 }
 
+Model__observed_information_matrix <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__observed_information_matrix`, xp, type)
+}
+
 Model__u <- function(xp, scaled_, type = 0L) {
     .Call(`_glmmrBase_Model__u`, xp, scaled_, type)
 }
@@ -429,8 +433,8 @@ Model__u_diagnostic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__u_diagnostic`, xp, type)
 }
 
-Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
-    .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
+Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, oim = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
+    .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, oim, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
 }
 
 Model__mcmc_set_lambda <- function(xp, lambda_, type = 0L) {
@@ -505,8 +509,8 @@ Model__kenward_roger <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__kenward_roger`, xp, type)
 }
 
-Model__small_sample_correction <- function(xp, ss_type = 0L, type = 0L) {
-    .Call(`_glmmrBase_Model__small_sample_correction`, xp, ss_type, type)
+Model__small_sample_correction <- function(xp, ss_type = 0L, oim = FALSE, type = 0L) {
+    .Call(`_glmmrBase_Model__small_sample_correction`, xp, ss_type, oim, type)
 }
 
 Model__box <- function(xp, type = 0L) {

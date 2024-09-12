@@ -1149,7 +1149,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   matrix.W.update();
-  MatrixXd infomat = matrix.observed_information_matrix();
+  MatrixXd infomat = matrix.template observed_information_matrix<IM::EIM>();
   infomat = infomat.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
   ArrayXd resid(model.n());
   matrix.gradient_eta(re.u_.col(0),resid);

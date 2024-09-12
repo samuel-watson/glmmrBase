@@ -301,6 +301,11 @@ enum class SE {
   KRBoth = 6 // used for when two types of correction are required
 };
 
+enum class IM {
+  EIM = 0,
+  OIM = 1
+};
+
 }
 
 struct VectorMatrix {

@@ -151,6 +151,7 @@ SEXP Model__marginal(SEXP xp,
                      int margin = 0,
                      int re = 3,
                      int se = 0,
+                     int oim = 0,
                      Nullable<std::vector<std::string> > at = R_NilValue,
                      Nullable<std::vector<std::string> > atmeans = R_NilValue,
                      Nullable<std::vector<std::string> > average = R_NilValue,
@@ -181,6 +182,7 @@ SEXP Model__marginal(SEXP xp,
                                       x,atvar,atmeansvar,averagevar,
                                       static_cast<glmmr::RandomEffectMargin>(re),
                                       static_cast<glmmr::SE>(se),
+                                      static_cast<glmmr::IM>(oim),
                                       xvals,atxvals,atrevals
                                       ));}
   };
@@ -375,7 +377,7 @@ SEXP Model__infomat_theta(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.information_matrix_theta());}
+    [](auto ptr){return returnType(ptr->matrix.template information_matrix_theta<glmmr::IM::EIM>());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::MatrixXd>(S));
@@ -386,14 +388,14 @@ SEXP Model__kenward_roger(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.template small_sample_correction<glmmr::SE::KR>());}
+    [](auto ptr){return returnType(ptr->matrix.template small_sample_correction<glmmr::SE::KR, glmmr::IM::EIM>());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<CorrectionData<glmmr::SE::KR> >(S));
 }
 
 // [[Rcpp::export]]
-SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
+SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, bool oim = false, int type = 0){
   using namespace glmmr;
   glmmrType model(xp,static_cast<Type>(type));
   SE corr = static_cast<SE>(ss_type);
@@ -402,7 +404,12 @@ SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
       {
         auto functor = overloaded {
           [](int) {  return returnType(0);}, 
-          [&](auto ptr){return returnType(ptr->matrix.template small_sample_correction<SE::KR>());}
+          [&](auto ptr){
+          if(oim){
+            return returnType(ptr->matrix.template small_sample_correction<SE::KR,IM::OIM>());
+          } else {
+            return returnType(ptr->matrix.template small_sample_correction<SE::KR,IM::EIM>());
+          }}
         };
         auto S = std::visit(functor,model.ptr);
         return wrap(std::get<CorrectionData<SE::KR> >(S));
@@ -412,7 +419,12 @@ SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
     {
       auto functor = overloaded {
         [](int) {  return returnType(0);}, 
-        [&](auto ptr){return returnType(ptr->matrix.template small_sample_correction<SE::KR2>());}
+        [&](auto ptr){
+          if(oim){
+            return returnType(ptr->matrix.template small_sample_correction<SE::KR2,IM::OIM>());
+          } else {
+            return returnType(ptr->matrix.template small_sample_correction<SE::KR2,IM::EIM>());
+          }}
       };
       auto S = std::visit(functor,model.ptr);
       return wrap(std::get<CorrectionData<SE::KR2> >(S));
@@ -422,7 +434,12 @@ SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
     {
       auto functor = overloaded {
         [](int) {  return returnType(0);}, 
-        [&](auto ptr){return returnType(ptr->matrix.template small_sample_correction<SE::KRBoth>());}
+        [&](auto ptr){
+          if(oim){
+            return returnType(ptr->matrix.template small_sample_correction<SE::KRBoth,IM::OIM>());
+          } else {
+            return returnType(ptr->matrix.template small_sample_correction<SE::KRBoth,IM::EIM>());
+          }}
       };
       auto S = std::visit(functor,model.ptr);
       return wrap(std::get<CorrectionData<SE::KRBoth> >(S));
@@ -432,7 +449,12 @@ SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, int type = 0){
     {
       auto functor = overloaded {
         [](int) {  return returnType(0);}, 
-        [&](auto ptr){return returnType(ptr->matrix.template small_sample_correction<SE::Sat>());}
+        [&](auto ptr){
+          if(oim){
+            return returnType(ptr->matrix.template small_sample_correction<SE::Sat,IM::OIM>());
+          } else {
+            return returnType(ptr->matrix.template small_sample_correction<SE::Sat,IM::EIM>());
+          }}
       };
       auto S = std::visit(functor,model.ptr);
       return wrap(std::get<CorrectionData<SE::Sat> >(S));
