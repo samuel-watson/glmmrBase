@@ -386,7 +386,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
       counter++;
     }
   }
-  Rcpp::Rcout << "\nMtheta: \n" << M_theta; 
   if constexpr (imtype == IM::OIM){
     // add in the beta-theta part of the matrix
     MatrixXd X = model.linear_predictor.X();
@@ -428,7 +427,8 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
   MatrixField<MatrixXd> S;
   // in case of OIM
   glmmr::MatrixField<MatrixXd> Sbt;
-  MatrixXd M_theta_oim = MatrixXd::Zero(Rmod,Rmod); 
+  MatrixXd M_theta_oim = MatrixXd::Zero(Rmod,Rmod);
+  MatrixXd M_theta_kr = MatrixXd::Zero(Rmod,Rmod);
   VectorXd resid(1);
   int counter = 0;
   for(int i = 0; i < Rmod; i++){
@@ -440,9 +440,9 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
     }
     if constexpr (imtype == IM::OIM) {
       Sbt.add(SigmaInv*partial1*SigmaInv);
-      P.add(-1*X.transpose()*Sbt(i)*X);
+      P.add(-1.0*X.transpose()*Sbt(i)*X);
     } else {
-      P.add(-1*SigX.transpose()*partial1*SigX);
+      P.add(-1.0*SigX.transpose()*partial1*SigX);
     }
     
     for(int j = i; j < Rmod; j++){
@@ -453,17 +453,18 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
         if((model.data.weights != 1).any())partial2 = model.data.weights.inverse().matrix().asDiagonal();
       }
       S.add(SigmaInv*partial1*SigmaInv*partial2);
-      Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
-      if(i < R && j < R){
-        int scnd_idx = i + j*(R-1) - j*(j-1)/2;
-        RR.add(SigX.transpose()*Z*derivs[R+1+scnd_idx]*Z.transpose()*SigX);
+      if constexpr (corr == SE::KR || corr == SE::KR2 || corr == SE::KRBoth){
+        Q.add(X.transpose()*SigmaInv*partial1*SigmaInv*partial2*SigX);
+        if(i < R && j < R){
+          int scnd_idx = i + j*(R-1) - j*(j-1)/2;
+          RR.add(SigX.transpose()*Z*derivs[R+1+scnd_idx]*Z.transpose()*SigX);
+        }
       }
     }
   }
   
   if constexpr (imtype == IM::OIM){
     if(model.data.y.size() != model.n()) throw std::runtime_error("y data not correct size");
-    
     resid.resize(model.n());
     resid = model.linear_predictor.xb()+model.data.offset;
     resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
@@ -472,29 +473,38 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
   counter = 0;
   for(int i = 0; i < Rmod; i++){
     for(int j = i; j < Rmod; j++){
-      M_theta(i,j) = 0.5*(S(counter).trace()) - (M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
+      M_theta(i,j) = 0.5*(S(counter).trace());
+      if(i!=j)M_theta(j,i)=M_theta(i,j);
+      if constexpr (corr == SE::KR || corr == SE::KR2 || corr == SE::KRBoth){
+        M_theta_kr(i,j) += -1.0*(M*Q(counter)).trace() + 0.5*((M*P(i)*M*P(j)).trace());
+        if(i!=j)M_theta_kr(j,i)=M_theta_kr(i,j);
+      } 
       if constexpr (imtype == IM::OIM){
-        M_theta_oim(i,j) = 0.5*(S(counter).trace()) - (resid.transpose() * S(counter) * SigmaInv * resid)(0);
+        M_theta_oim(i,j) += -1.0*(resid.transpose() * S(counter) * SigmaInv * resid)(0);
         if(i!=j)M_theta_oim(j,i)=M_theta_oim(i,j);
       }
-      if(i!=j)M_theta(j,i)=M_theta(i,j);
       counter++;
     }
   }
-  M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
   
   if constexpr (imtype == IM::OIM){
     // add in the beta-theta part of the matrix
     MatrixXd Mbt(X.cols(),M_theta.rows());
     for(int i =0; i < M_theta.rows(); i++) Mbt.col(i) = X.transpose() * Sbt(i) * resid;
     MatrixXd Moim(this->P()+Rmod,this->P()+Rmod);
-    Moim.topLeftCorner(this->P(),this->P()) = M;
+    Moim.topLeftCorner(this->P(),this->P()) = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));
     Moim.topRightCorner(this->P(),Rmod) = Mbt;
     Moim.bottomLeftCorner(Rmod,this->P()) = Mbt.transpose();
-    Moim.bottomRightCorner(Rmod,Rmod) = -1.0*M_theta_oim;
+    Moim.bottomRightCorner(Rmod,Rmod) = -1.0*(M_theta + M_theta_oim);
     Moim = Moim.llt().solve(MatrixXd::Identity(Moim.rows(),Moim.cols()));
     M = Moim.topLeftCorner(this->P(),this->P());
+    // M_theta = Moim.bottomRightCorner(Rmod,Rmod);
+    // M_theta = M_theta.llt().solve(MatrixXd::Identity(M_theta.rows(),M_theta.cols()));
+    M_theta = -1.0*(M_theta + M_theta_oim);
   }
+  
+  if constexpr (corr == SE::KR || corr == SE::KR2 || corr == SE::KRBoth ) M_theta += M_theta_kr;
+  M_theta = M_theta.llt().solve(MatrixXd::Identity(Rmod,Rmod));
   
   if constexpr (corr == SE::KR || corr == SE::KR2 || corr == SE::KRBoth ){
     for(int i = 0; i < (Rmod-1); i++){
@@ -537,6 +547,8 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
     Rcpp::Rcout << "\n(K-R) First correction matrix: \n" << 2*M*meat*M;
 #endif
+  } else {
+    M_new = M;
   }
   
   CorrectionData<corr> out(this->P(),this->P(),Rmod,Rmod);
@@ -552,7 +564,7 @@ inline CorrectionData<corr> glmmr::ModelMatrix<modeltype>::small_sample_correcti
         if(i < R && j < R){
           int scnd_idx = i + j*(R-1) - j*(j-1)/2;
           double rep = i == j ? 1.0 : 2.0;
-          SS += rep * M_theta(i,j) *Z*derivs[R+1+scnd_idx]*Z.transpose()*SigmaInv;
+          SS += rep * M_theta(i,j)*Z*derivs[R+1+scnd_idx]*Z.transpose()*SigmaInv;
         }
       }
     }
