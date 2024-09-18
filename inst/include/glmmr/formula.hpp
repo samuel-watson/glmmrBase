@@ -85,7 +85,7 @@ inline void glmmr::Formula::tokenise(){
   while(cursor <= nchar){
     idx = cursor == nchar ? nchar - 1 : cursor;
     if(cursor == nchar || (formula_as_chars[idx]=='+' && bracket_count == 0 && cursor < nchar)){
-      if(temp_token[0]!='('){
+      if(temp_token[0]!='(' || std::find(temp_token.begin(),temp_token.end(),'|') == temp_token.end()){
         linear_predictor_.insert(linear_predictor_.end(),temp_token.begin(),temp_token.end());
         linear_predictor_.push_back('+');
       } else {
