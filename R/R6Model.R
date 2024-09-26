@@ -634,49 +634,45 @@ Model <- R6::R6Class("Model",
                        #' @param theta Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
                        #' parameter information matrix is returned.
                        #' @param oim Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.
-                       #' @param hessian.corr String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its 
-                       #' own ("return"), or ignored ("none")
-                       #' @param adj.nonspd Logical. For models nonlinear in fixed effect parameters, the Hessian of the linear predictor with respect to the 
-                       #' model parameters is often not positive semi-definite, which can cause a singular matrix and failure to calculate valid standard errors. 
-                       #' The adjustment matrix will be corrected if it is not positive semi-definite and this option is TRUE.
-                        #' @return A matrix
-                       information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE, hessian.corr = "add", adj.nonspd = TRUE){
+                       #' @return A matrix
+                       information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE){
                          if(oim & !private$y_has_been_updated) stop("No y data has been added")
                          private$update_ptr()
                          nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
-                         if(nonlin){
-                           if(!private$y_has_been_updated) stop("No y data has been added")
-                           if(!hessian.corr %in% c("add","return","none"))stop("hessian.corr must be add, return, or none")
-                         }
+                         # if(nonlin){
+                         #   if(!private$y_has_been_updated) stop("No y data has been added")
+                         #   # if(!hessian.corr %in% c("add","return","none"))stop("hessian.corr must be add, return, or none")
+                         # }
                          if(oim){
                            M <- Model__observed_information_matrix(private$ptr,private$model_type())
                          } else {
                            if(theta){
                              M <- Model__infomat_theta(private$ptr,private$model_type())
                            } else {
-                             if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
-                               if(include.re & !private$model_type()>0){
-                                 M <- Model__obs_information_matrix(private$ptr,private$model_type())
+                             if(include.re & !private$model_type()>0){
+                               M <- Model__obs_information_matrix(private$ptr,private$model_type())
+                             } else {
+                               if(private$model_type()==0){
+                                 M <- Model__information_matrix(private$ptr,private$model_type())
                                } else {
-                                 if(private$model_type()==0){
-                                   M <- Model__information_matrix(private$ptr,private$model_type())
-                                 } else {
-                                   M <- Model__information_matrix_crude(private$ptr,private$model_type())
-                                 }
+                                 M <- Model__information_matrix_crude(private$ptr,private$model_type())
                                }
                              }
-                             if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
-                               A <- Model__hessian_correction(private$ptr,private$model_type())
-                               if(any(eigen(A)$values < 0) & adj.nonspd){
-                                 if(adj.nonspd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonspd = FALSE")
-                                 A <- near_semi_pd(A)
-                               }
-                               if(hessian.corr == "add"){
-                                 M <- M + A
-                               } else {
-                                 M <- A
-                               }
-                             }
+                             # if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
+                             #   
+                             # }
+                             # if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
+                             #   A <- Model__hessian_correction(private$ptr,private$model_type())
+                             #   if(any(eigen(A)$values < 0) & adj.nonspd){
+                             #     if(adj.nonspd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonspd = FALSE")
+                             #     A <- near_semi_pd(A)
+                             #   }
+                             #   if(hessian.corr == "add"){
+                             #     M <- M + A
+                             #   } else {
+                             #     M <- A
+                             #   }
+                             # }
                            }
                          }
                          
@@ -911,7 +907,8 @@ Model <- R6::R6Class("Model",
                                        alpha = 0.8,
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
-                                       conv.criterion = 2){
+                                       conv.criterion = 2,
+                                       skip.theta = FALSE){
                          # Checks on options and data
                          if(is.null(y)){
                            if(!private$y_has_been_updated)stop("y not specified and not updated in Model object")
@@ -1096,14 +1093,16 @@ Model <- R6::R6Class("Model",
                            } else {
                              Model__nr_beta(private$ptr,private$model_type())
                            }
-                           if(algo == 3){ #& !self$mean$any_nonlinear()
-                             tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
-                                      error = function(e) {
-                                        if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
-                                        Model__ml_theta(private$ptr,0,private$model_type());
-                                      })
-                           } else {
-                             Model__ml_theta(private$ptr,0,private$model_type())
+                           if(!skip.theta){
+                             if(algo == 3){ #& !self$mean$any_nonlinear()
+                               tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
+                                        error = function(e) {
+                                          if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
+                                          Model__ml_theta(private$ptr,0,private$model_type());
+                                        })
+                             } else {
+                               Model__ml_theta(private$ptr,0,private$model_type())
+                             }
                            }
                            # set up the vectors needed 
                            beta_new <- Model__get_beta(private$ptr,private$model_type())

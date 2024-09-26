@@ -489,10 +489,6 @@ Model__theta_parameter_names <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__theta_parameter_names`, xp, type)
 }
 
-Model__hessian_correction <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Model__hessian_correction`, xp, type)
-}
-
 Model__any_nonlinear <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__any_nonlinear`, xp, type)
 }

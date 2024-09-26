@@ -227,12 +227,12 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   if constexpr (imtype == IM::EIM){
     W.update();
     MatrixXd XtXW = X.transpose() * W.W_.asDiagonal() * X;
-    if(model.linear_predictor.calc.any_nonlinear)
-    {
-      MatrixXd A = hessian_nonlinear_correction();
-      glmmr::Eigen_ext::near_semi_pd(A);
-      XtXW += A;
-    }
+    // if(model.linear_predictor.calc.any_nonlinear)
+    // {
+    //   MatrixXd A = hessian_nonlinear_correction();
+    //   glmmr::Eigen_ext::near_semi_pd(A);
+    //   XtXW += A;
+    // }
     MatrixXd ZL = model.covariance.ZL();
     MatrixXd XtWZL = X.transpose() * W.W_.asDiagonal() * ZL;
     MatrixXd ZLWLZ = ZL.transpose() * W.W_.asDiagonal() * ZL;

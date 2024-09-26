@@ -1535,18 +1535,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__hessian_correction
-SEXP Model__hessian_correction(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__hessian_correction(SEXP xpSEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__hessian_correction(xp, type));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Model__any_nonlinear
 SEXP Model__any_nonlinear(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__any_nonlinear(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1884,7 +1872,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 2},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 2},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 2},
-    {"_glmmrBase_Model__hessian_correction", (DL_FUNC) &_glmmrBase_Model__hessian_correction, 2},
     {"_glmmrBase_Model__any_nonlinear", (DL_FUNC) &_glmmrBase_Model__any_nonlinear, 2},
     {"_glmmrBase_Model__sandwich", (DL_FUNC) &_glmmrBase_Model__sandwich, 2},
     {"_glmmrBase_Model__infomat_theta", (DL_FUNC) &_glmmrBase_Model__infomat_theta, 2},

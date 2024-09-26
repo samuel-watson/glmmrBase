@@ -339,16 +339,16 @@ SEXP Model__theta_parameter_names(SEXP xp, int type = 0){
   return wrap(std::get<std::vector<std::string> >(S));
 }
 
-// [[Rcpp::export]]
-SEXP Model__hessian_correction(SEXP xp, int type = 0){
-  glmmrType model(xp,static_cast<Type>(type));
-  auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.hessian_nonlinear_correction());}
-  };
-  auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<MatrixXd>(S));
-}
+// // [[Rcpp::export]]
+// SEXP Model__hessian_correction(SEXP xp, int type = 0){
+//   glmmrType model(xp,static_cast<Type>(type));
+//   auto functor = overloaded {
+//     [](int) {  return returnType(0);}, 
+//     [](auto ptr){return returnType(ptr->matrix.hessian_nonlinear_correction());}
+//   };
+//   auto S = std::visit(functor,model.ptr);
+//   return wrap(std::get<MatrixXd>(S));
+// }
 
 // [[Rcpp::export]]
 SEXP Model__any_nonlinear(SEXP xp, int type = 0){
