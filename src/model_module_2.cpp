@@ -35,6 +35,16 @@ void Model__set_lbfgs_control(SEXP xp, double g_epsilon = 1e-8, int past = 3, do
 }
 
 // [[Rcpp::export]]
+void Model__use_reml(SEXP xp, bool reml = true, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&reml](auto ptr){ptr->optim.use_reml(reml);}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
 void Model__set_bound(SEXP xp, SEXP bound_, bool beta = true, bool lower = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   std::vector<double> bound = as<std::vector<double> >(bound_);

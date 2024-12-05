@@ -213,6 +213,10 @@ Model__set_lbfgs_control <- function(xp, g_epsilon = 1e-8, past = 3L, delta = 1e
     invisible(.Call(`_glmmrBase_Model__set_lbfgs_control`, xp, g_epsilon, past, delta, max_linesearch, type))
 }
 
+Model__use_reml <- function(xp, reml = TRUE, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__use_reml`, xp, reml, type))
+}
+
 Model__set_bound <- function(xp, bound_, beta = TRUE, lower = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_bound`, xp, bound_, beta, lower, type))
 }

@@ -1005,7 +1005,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
           size_B_array[b] += -0.5*log(var) -0.5*log(2*M_PI) - 0.5*umat(obs_counter,i)*umat(obs_counter,i)/(var);
         }
         size_B_array[b] *= 1.0/(double)niter;   
-        for(int i = 0; i < npars; i++) dlogdet_vals[i] += derivs[i](obs_counter,obs_counter) / var;        
+        for(int i = 0; i < npars; i++) dlogdet_vals[i] += derivs[i+1](obs_counter,obs_counter) / var;        
       } else {
         zquad.setZero();
         dmat_matrix.block(0,0,blocksize,blocksize) = get_chol_block(b);

@@ -848,6 +848,7 @@ Model <- R6::R6Class("Model",
                        #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
                        #' standard errors with between-within correction to the degrees of freedom.
                        #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
+                       #'@param reml Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters
                        #'@param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
                        #'`hmc` to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number 
                        #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
@@ -897,6 +898,7 @@ Model <- R6::R6Class("Model",
                                        max.iter = 50,
                                        se = "gls",
                                        oim = FALSE,
+                                       reml = TRUE,
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = ifelse(self$mean$any_nonlinear(),2,3),
@@ -957,6 +959,7 @@ Model <- R6::R6Class("Model",
                          } else {
                            algo_tol <- tol[1:2]
                          }
+                         Model__use_reml(private$ptr,reml,private$model_type())
                          Model__reset_fn_counter(private$ptr,private$model_type())
                          # set up all the required vectors and data to monitor the algorithm
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
@@ -1312,6 +1315,7 @@ Model <- R6::R6Class("Model",
                        #' standard errors with between-within correction to the degrees of freedom. 
                        #' Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.
                        #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
+                       #'@param reml Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters
                        #'@param max.iter Maximum number of algorithm iterations, default 20.
                        #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
@@ -1348,6 +1352,7 @@ Model <- R6::R6Class("Model",
                                      method = "nr",
                                      se = "gls",
                                      oim = FALSE,
+                                     reml = TRUE,
                                      max.iter = 40,
                                      tol = 1e-4,
                                      se.theta = TRUE,
@@ -1382,6 +1387,7 @@ Model <- R6::R6Class("Model",
                          if(!is.null(upper.bound.theta)){
                            Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
                          }
+                         Model__use_reml(private$ptr,reml,private$model_type())
                          var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta","quantile_scaled"))
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters

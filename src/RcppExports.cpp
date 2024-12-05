@@ -686,6 +686,18 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__use_reml
+void Model__use_reml(SEXP xp, bool reml, int type);
+RcppExport SEXP _glmmrBase_Model__use_reml(SEXP xpSEXP, SEXP remlSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type reml(remlSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__use_reml(xp, reml, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__set_bound
 void Model__set_bound(SEXP xp, SEXP bound_, bool beta, bool lower, int type);
 RcppExport SEXP _glmmrBase_Model__set_bound(SEXP xpSEXP, SEXP bound_SEXP, SEXP betaSEXP, SEXP lowerSEXP, SEXP typeSEXP) {
@@ -1803,6 +1815,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
     {"_glmmrBase_Model__set_direct_control", (DL_FUNC) &_glmmrBase_Model__set_direct_control, 10},
     {"_glmmrBase_Model__set_lbfgs_control", (DL_FUNC) &_glmmrBase_Model__set_lbfgs_control, 6},
+    {"_glmmrBase_Model__use_reml", (DL_FUNC) &_glmmrBase_Model__use_reml, 3},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 2},
     {"_glmmrBase_Model__log_prob", (DL_FUNC) &_glmmrBase_Model__log_prob, 3},
