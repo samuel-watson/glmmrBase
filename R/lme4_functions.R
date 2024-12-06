@@ -103,7 +103,7 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
   return(fit)
 }
 
-#' lme4 style generlized linear mixed model 
+#' lme4 style generalized linear mixed model 
 #' 
 #' A wrapper for Model stochastic maximum likelihood model fitting replicating lme4's syntax
 #' 

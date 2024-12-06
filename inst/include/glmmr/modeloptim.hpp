@@ -1285,7 +1285,7 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       MatrixXd Z = model.covariance.Z();
       
       VectorXd xb = model.linear_predictor.xb();
-      ArrayXd resid = (model.data.y - xb.array());
+      ArrayXd resid = (model.data.y.array() - xb.array());
       resid *= model.data.weights.sqrt();
       
       MatrixXd M = matrix.template observed_information_matrix<IM::EIM2>();

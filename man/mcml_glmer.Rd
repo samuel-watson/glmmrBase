@@ -2,7 +2,7 @@
 % Please edit documentation in R/lme4_functions.R
 \name{mcml_glmer}
 \alias{mcml_glmer}
-\title{lme4 style generlized linear mixed model}
+\title{lme4 style generalized linear mixed model}
 \usage{
 mcml_glmer(
   formula,

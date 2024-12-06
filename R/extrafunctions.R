@@ -114,7 +114,7 @@ NULL
 #' sim_model <- Model$new(
 #'   formula = ~ (1|fexp(x,y)),
 #'   data = SimGeospat,
-#'   covariance = c(0.25,0.3),
+#'   covariance = c(0.25,0.8),
 #'   mean = c(0),
 #'   family = gaussian()
 #' )

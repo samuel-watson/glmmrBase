@@ -960,7 +960,7 @@ Stochastic Maximum Likelihood model fitting
   reml = TRUE,
   mcmc.pkg = "rstan",
   se.theta = TRUE,
-  algo = ifelse(self$mean$any_nonlinear(), 2, 3),
+  algo = ifelse(self$mean$any_nonlinear(), 2, 1),
   lower.bound = NULL,
   upper.bound = NULL,
   lower.bound.theta = NULL,
