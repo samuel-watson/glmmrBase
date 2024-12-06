@@ -276,6 +276,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   current_ll_values.second = ll_current.col(1).tail(eval_size).mean();
   current_ll_var.second = (ll_current.col(1).tail(eval_size) - ll_current.col(1).tail(eval_size).mean()).square().sum() / (eval_size - 1);
+  calculate_var_par();
 }
 
 // THIS FUNCTION BELOW NEEDS UPDATING - IT IS NOT CURRENTLY USED AND LACKS FUNCTIONALITY
@@ -581,7 +582,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const d
         trCZZ += D(i,j)*CZZD(j,i);
       }
     }
-    ll += 0.5*trCZZ;
+    ll -= 0.5*trCZZ;
   }
   
   return -1.0*ll;
@@ -687,7 +688,6 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
         trCZZ += D(i,j)*CZZD(j,i);
       }
     }
-    Rcpp::Rcout << "\ntrCZZ: " << trCZZ;
     ll_current.col(1).array() -= 0.5*trCZZ;
   }
   
@@ -1278,29 +1278,35 @@ template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
   if(model.family.family==Fam::gaussian || model.family.family==Fam::quantile_scaled){
     // revise this for beta and Gamma re residuals
-    int niter = re.u(false).cols();
-    ArrayXd sigmas(niter);
-    sigmas.setZero();
-    
-    if(control.reml && model.family.family==Fam::gaussian){
+    if(control.reml){
       // reml update of marginal variance parameter
       MatrixXd SigmaInv = matrix.Sigma(true);
       MatrixXd X = model.linear_predictor.X();
       MatrixXd Z = model.covariance.Z();
-      MatrixXd M = matrix.template observed_information_matrix<IM::EIM>();
+      
+      VectorXd xb = model.linear_predictor.xb();
+      ArrayXd resid = (model.data.y - xb.array());
+      resid *= model.data.weights.sqrt();
+      
+      MatrixXd M = matrix.template observed_information_matrix<IM::EIM2>();
       M = M.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
-      MatrixXd PP = SigmaInv - (SigmaInv * X) * (M.topLeftCorner(P(),P()) * X.transpose()) * SigmaInv;
-      VectorXd e = model.data.var_par * PP * model.data.y;
+      // MatrixXd SX = SigmaInv * X;
+      // MatrixXd PP = SigmaInv - SX * M.topLeftCorner(P(),P()) * SX.transpose();
+      // VectorXd e = model.data.var_par * model.data.weights.inverse().matrix().asDiagonal() * PP * model.data.y;
+      VectorXd e = model.data.var_par * SigmaInv * resid.matrix();
       M.topLeftCorner(P(),P()) = X * M.topLeftCorner(P(),P()) * X.transpose();
-      M.topRightCorner(P(),Q()) = X * M.topRightCorner(P(),Q()) * Z.transpose();
-      M.bottomRightCorner(P(),Q()) = Z * M.bottomRightCorner(P(),Q()) * Z.transpose();
-      M.bottomLeftCorner(P(),Q()) = Z * M.bottomLeftCorner(P(),Q()) * X.transpose();
-      Rcpp::Rcout << "\n(varpar) ee: "<< e.transpose()*e;
-      Rcpp::Rcout << "\n(varpar) Mtrace: " << M.trace();
-      double new_var_par = (1.0/model.n()) * (e.transpose()*e + M.trace());
-      Rcpp::Rcout << "\n(varpar) new var par: " << M.trace();
+      M.bottomRightCorner(Q(),Q()) = Z * M.bottomRightCorner(Q(),Q()) * Z.transpose();
+      double new_var_par;
+      if((model.data.weights != 1).any()){
+        new_var_par = (1.0/model.n()) * (e.transpose() * e + (model.data.weights.inverse().matrix().asDiagonal()*M).trace());
+      } else {
+        new_var_par = (1.0/model.n()) * (e.transpose()* e + M.trace());
+      }
       update_var_par(new_var_par);
     } else {
+      int niter = re.u(false).cols();
+      ArrayXd sigmas(niter);
+      sigmas.setZero();
       MatrixXd zd = matrix.linpred();
 #pragma omp parallel for
       for(int i = 0; i < niter; ++i){

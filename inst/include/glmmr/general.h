@@ -304,7 +304,8 @@ enum class SE {
 enum class IM {
   EIM = 0,
   OIM = 1,
-  GEE_IND = 2
+  GEE_IND = 2,
+  EIM2 = 3
 };
 
 }

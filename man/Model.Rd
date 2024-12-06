@@ -23,8 +23,10 @@ where F is a distribution with scale parameter \deqn{\sigma}, h is a link functi
 The class provides access to all of the elements of the model above and associated calculations and functions including model fitting, power analysis,
 and various relevant matrices, including information matrices and related corrections. The object is an R6 class and so can serve as a parent class for extended functionality.
 
-The currently support families (links) are Gaussian (identity, log), Binomial (logit, log, probit, identity), Poisson (log, identity), Gamma (logit, identity, inverse), and Beta (logit). The class also supports mixed quantile
-regression models, although functionality is currently experimental. Quantile models use an asymmetrical Laplace distribution for the likelihood and support all five link functions listed before.
+The currently supported families (links) are Gaussian (identity, log), Binomial (logit, log, probit, identity), Poisson (log, identity), Gamma (logit, identity, inverse), and Beta (logit).
+
+This class provides model fitting functionality with a variety of stochastic maximum likelihood algorithms with and without restricted maximum likelihood corrections. A fast Laplace approximation is also included.
+Small sample corrections are also provided including Kenward-Roger and Satterthwaite corrections.
 
 Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
 other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
@@ -756,12 +758,7 @@ estimator for the variance-covariance matrix of the fixed effect parameters. For
 see \code{small_sample_correction()} and \code{box()}. For models with non-linear functions of fixed effect parameters,
 a correction to the Hessian matrix is required, which is automatically calculated or optionally returned or disabled.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(
-  include.re = FALSE,
-  theta = FALSE,
-  hessian.corr = "add",
-  adj.nonspd = TRUE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE, theta = FALSE, oim = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -773,12 +770,7 @@ or the mixed model information matrix for beta only (FALSE).}
 \item{\code{theta}}{Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
 parameter information matrix is returned.}
 
-\item{\code{hessian.corr}}{String. If there are non-linear functions of fixed effect parameters then a correction to the Hessian can be applied ("add"), returned on its
-own ("return"), or ignored ("none")}
-
-\item{\code{adj.nonspd}}{Logical. For models nonlinear in fixed effect parameters, the Hessian of the linear predictor with respect to the
-model parameters is often not positive semi-definite, which can cause a singular matrix and failure to calculate valid standard errors.
-The adjustment matrix will be corrected if it is not positive semi-definite and this option is TRUE.}
+\item{\code{oim}}{Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.}
 }
 \if{html}{\out{</div>}}
 }
@@ -811,13 +803,15 @@ in parameters. Exchangeable covariance structures in this package (i.e. \code{gr
 the variance rather than standard deviation, so the results will be unaffected. Option "sat" returns the "Satterthwaite"
 correction, which only includes corrected degrees of freedom, along with the GLS standard errors.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$small_sample_correction(type)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$small_sample_correction(type, oim = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{type}}{Either "KR", "KR2", or "sat", see description.}
+
+\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix}
 }
 \if{html}{\out{</div>}}
 }
@@ -962,6 +956,8 @@ Stochastic Maximum Likelihood model fitting
   tol = 0.01,
   max.iter = 50,
   se = "gls",
+  oim = FALSE,
+  reml = TRUE,
   mcmc.pkg = "rstan",
   se.theta = TRUE,
   algo = ifelse(self$mean$any_nonlinear(), 2, 3),
@@ -972,7 +968,8 @@ Stochastic Maximum Likelihood model fitting
   alpha = 0.8,
   convergence.prob = 0.95,
   pr.average = FALSE,
-  conv.criterion = 2
+  conv.criterion = 2,
+  skip.theta = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -998,6 +995,10 @@ applied to the fixed effect and covariance parameters.}
 degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.}
+
+\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.}
+
+\item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
 
 \item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
 \code{hmc} to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number
@@ -1073,6 +1074,8 @@ Maximum Likelihood model fitting with Laplace Approximation
   start,
   method = "nr",
   se = "gls",
+  oim = FALSE,
+  reml = TRUE,
   max.iter = 40,
   tol = 1e-04,
   se.theta = TRUE,
@@ -1101,6 +1104,10 @@ degrees of freedom correction as Kenward-Roger, but with GLS standard errors)"bo
 "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
 standard errors with between-within correction to the degrees of freedom.
 Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.}
+
+\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.}
+
+\item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
 
 \item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
 
@@ -1341,7 +1348,8 @@ of the stored parameters and data variables see the member function \code{names(
   average = c(),
   xvals = c(1, 0),
   atvals = c(),
-  revals = c()
+  revals = c(),
+  oim = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -1370,6 +1378,8 @@ or \code{robust} to use a robust sandwich estimator.}
 \item{\code{atvals}}{Optional. A vector specifying the values of fixed effects specified in \code{at} (in the same order).}
 
 \item{\code{revals}}{Optional. If \code{re="at"} then this argument provides a vector of values for the random effects.}
+
+\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.}
 }
 \if{html}{\out{</div>}}
 }

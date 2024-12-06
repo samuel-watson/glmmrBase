@@ -14,8 +14,10 @@
 #' The class provides access to all of the elements of the model above and associated calculations and functions including model fitting, power analysis,
 #' and various relevant matrices, including information matrices and related corrections. The object is an R6 class and so can serve as a parent class for extended functionality.
 #'
-#' The currently support families (links) are Gaussian (identity, log), Binomial (logit, log, probit, identity), Poisson (log, identity), Gamma (logit, identity, inverse), and Beta (logit). The class also supports mixed quantile 
-#' regression models, although functionality is currently experimental. Quantile models use an asymmetrical Laplace distribution for the likelihood and support all five link functions listed before. 
+#' The currently supported families (links) are Gaussian (identity, log), Binomial (logit, log, probit, identity), Poisson (log, identity), Gamma (logit, identity, inverse), and Beta (logit).
+#' 
+#' This class provides model fitting functionality with a variety of stochastic maximum likelihood algorithms with and without restricted maximum likelihood corrections. A fast Laplace approximation is also included. 
+#' Small sample corrections are also provided including Kenward-Roger and Satterthwaite corrections. 
 #'
 #' Many calculations use the covariance matrix of the observations, such as the information matrix, which is used in power calculations and
 #' other functions. For non-Gaussian models, the class uses the first-order approximation proposed by Breslow and Clayton (1993) based on the
@@ -306,21 +308,24 @@ Model <- R6::R6Class("Model",
                                stop("Data must be specified with a formula")
                              } else {
                                if(missing(covariance) || (!all(is(covariance,"numeric")) & !"parameters"%in%names(covariance))){
+                                 processed_data <- private$process_data(form_1,data,TRUE,FALSE)
                                  self$covariance <- Covariance$new(
-                                   formula = form_1,
-                                   data = private$process_data(form_1,data,TRUE,FALSE)
+                                   formula = processed_data$formula,
+                                   data = processed_data$data
                                  )
                                } else {
                                  if("parameters"%in%names(covariance)){
+                                   processed_data <- private$process_data(form_1,data,TRUE,FALSE)
                                    self$covariance <- Covariance$new(
-                                     formula = form_1,
-                                     data = private$process_data(form_1,data,TRUE,FALSE),
+                                     formula = processed_data$formula,
+                                     data = processed_data$data,
                                      parameters = covariance$parameters
                                    )
                                  } else if(all(is(covariance,"numeric"))){
+                                   processed_data <- private$process_data(form_1,data,TRUE,FALSE)
                                    self$covariance <- Covariance$new(
-                                     formula = form_1,
-                                     data = private$process_data(form_1,data,TRUE,FALSE),
+                                     formula = processed_data$formula,
+                                     data = processed_data$data,
                                      parameters = covariance
                                    )
                                  } else {
@@ -328,21 +333,24 @@ Model <- R6::R6Class("Model",
                                  }
                                }
                                if(missing(mean) || (!"parameters"%in%names(mean) & !all(is(mean,"numeric")))){
+                                 processed_data <- private$process_data(form_1,data,FALSE,TRUE)
                                  self$mean <- MeanFunction$new(
-                                   formula = form_1,
-                                   data = private$process_data(form_1,data,FALSE,TRUE)
+                                   formula = processed_data$formula,
+                                   data = processed_data$data
                                  )
                                } else {
                                  if("parameters"%in%names(mean)){
+                                   processed_data <- private$process_data(form_1,data,FALSE,TRUE)
                                    self$mean <- MeanFunction$new(
-                                     formula = form_1,
-                                     data = private$process_data(form_1,data,FALSE,TRUE),
+                                     formula = processed_data$formula,
+                                     data = processed_data$data,
                                      parameters = mean$parameters
                                    )
                                  } else if(all(is(mean,"numeric"))){
+                                   processed_data <- private$process_data(form_1,data,FALSE,TRUE)
                                    self$mean <- MeanFunction$new(
-                                     formula = form_1,
-                                     data = private$process_data(form_1,data,FALSE,TRUE),
+                                     formula = processed_data$formula,
+                                     data = processed_data$data,
                                      parameters = mean
                                    )
                                  } else {
@@ -358,7 +366,7 @@ Model <- R6::R6Class("Model",
                                    if(is.null(data)){
                                      stop("No data specified in covariance object or call to function.")
                                    } else {
-                                     self$covariance$data <- private$process_data(covariance$formula,data,TRUE,FALSE)
+                                     self$covariance$data <- private$process_data(covariance$formula,data,TRUE,FALSE)$data
                                    }
                                  }
                                } else {
@@ -371,7 +379,7 @@ Model <- R6::R6Class("Model",
                                  formula= covariance$formula
                                )
                                if(is.null(covariance$data)){
-                                 self$covariance$data <- private$process_data(self$covariance$formula,data,TRUE,FALSE)
+                                 self$covariance$data <- private$process_data(self$covariance$formula,data,TRUE,FALSE)$data
                                } else {
                                  self$covariance$data <- covariance$data
                                }
@@ -387,9 +395,10 @@ Model <- R6::R6Class("Model",
                                if(is.null(mean$formula))stop("A formula must be specified for the mean function.")
                                if(is.null(mean$data) & is.null(data))stop("No data specified in mean list or call to function.")
                                if(is.null(mean$data)){
+                                 processed_data <- private$process_data(form_1,data,TRUE,FALSE)
                                  self$mean <- MeanFunction$new(
-                                   formula = mean$formula,
-                                   data = private$process_data(mean$formula,data,TRUE,FALSE)
+                                   formula = processed_data$formula,
+                                   data = processed_data$data
                                  )
                                } else {
                                  self$mean <- MeanFunction$new(
@@ -1276,6 +1285,7 @@ Model <- R6::R6Class("Model",
                                      re.samps = u,
                                      iter = iter,
                                      dof = dof,
+                                     reml = reml,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family,
@@ -1546,6 +1556,7 @@ Model <- R6::R6Class("Model",
                                      re.samps = u,
                                      iter = iter,
                                      dof = dof,
+                                     reml = reml,
                                      P = length(self$mean$parameters),
                                      Q = length(self$covariance$parameters),
                                      var_par_family = var_par_family,
@@ -1858,7 +1869,7 @@ Model <- R6::R6Class("Model",
                      private = list(
                        W = NULL,
                        Xb = NULL,
-                       trace = 0,
+                       trace = 1,
                        useSparse = TRUE,
                        session_id = NULL,
                        logit = function(x){
@@ -1901,7 +1912,7 @@ Model <- R6::R6Class("Model",
                              cnames <- which(!colnames(self$mean$data)%in%colnames(data))
                              data <- cbind(data,self$mean$data[,cnames,drop=FALSE])
                            }
-                           data <- private$process_data(as.formula(paste0("~",form)),data,TRUE,TRUE)
+                           #data <- private$process_data(as.formula(paste0("~",form)),data,TRUE,TRUE)
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
                            if(type == 0){
                              private$ptr <- Model__new_w_pars(form,
@@ -2032,29 +2043,69 @@ Model <- R6::R6Class("Model",
                          f1 <- as.character(form)[2]
                          f1 <- gsub(" ","",f1[length(f1)])
                          cnames <- colnames(data)
-                         if(is_covariance){
-                           s1a <- re_names(f1, FALSE)
-                           s1a <- s1a[s1a!="1"]
-                           s1a <- Reduce(c,strsplit(s1a,"\\*"))
-                           s1a <- lapply(regmatches(s1a, gregexpr("\\(.*?\\)", s1a)), function(x)gsub("[\\(\\)]","",x))
-                           s1a <- Reduce(c,lapply(s1a,function(x)strsplit(x,",")))
-                           s1 <- c(s1,unique(Reduce(c,s1a)))
-                         } 
-                         if(is_mean) {
-                           s1 <- c(s1,get_variable_names(f1,cnames))
-                         }
-                         if(!all(s1 %in% cnames)){
-                           not_in <- which(!s1 %in% cnames)
-                           stop(paste0("The following variables are not in the data: ",paste0(s1[not_in],collapse = " ")))
-                         } else {
-                           new_data <- data[,match(s1,cnames),drop=FALSE]
-                           if(ncol(new_data)>0){
-                             for(i in 1:ncol(new_data)){
-                               if(is(new_data[,i],"character"))new_data[,i] <- as.numeric(as.factor(new_data[,i]))
-                             }
+                         result <- list(formula= NA, data = NA)
+                         # first check if we can just use R's functions:
+                         if(is_mean){
+                           r1 <- re_names(f1)
+                           f2 <- f1
+                           for(i in 1:length(r1)){
+                             r1[i] <- gsub("\\(","\\\\(",r1[i])
+                             r1[i] <- gsub("\\|","\\\\|",r1[i])
+                             r1[i] <- gsub("\\)","\\\\)",r1[i])
+                             f2 <- gsub(paste0("\\+",r1[i]),"",f2)
                            }
-                           return(new_data)
+                           mm_result <- tryCatch(model.matrix(as.formula(paste0("~",f2)),data),
+                                                 error = function(e)return(NA))
+                           if(!is(mm_result,"logical")){
+                             if(any(colnames(mm_result)=="(Intercept)")) mm_result <- mm_result[,-which(colnames(mm_result)=="(Intercept)")]
+                             for(i in 1:ncol(mm_result)){
+                               colnames(mm_result)[i] <- gsub("-","",colnames(mm_result)[i])
+                               colnames(mm_result)[i] <- gsub("+","",colnames(mm_result)[i])
+                               if(grepl("factor",colnames(mm_result)[i])){
+                                 colnames(mm_result)[i] <- gsub("factor","",colnames(mm_result)[i])
+                                 colnames(mm_result)[i] <- gsub("\\(","",colnames(mm_result)[i])
+                                 colnames(mm_result)[i] <- gsub("\\)","",colnames(mm_result)[i])
+                               }
+                             }
+                             new_formula <- paste0(colnames(mm_result),collapse = "+")
+                             if(grepl("-1",f1))new_formula <- paste0(new_formula,"-1")
+                             r1 <- re_names(f1)
+                             for(i in 1:length(r1)){
+                               new_formula <- paste0(new_formula,"+",r1[i])
+                             }
+                             new_formula <- as.formula(paste0("~",new_formula))
+                             result <- list(formula = new_formula, data = as.data.frame(mm_result))
+                           } 
                          }
+                         
+                         if(is(result$formula,"logical")){
+                           if(is_covariance){
+                             s1a <- re_names(f1, FALSE)
+                             s1a <- s1a[s1a!="1"]
+                             s1a <- Reduce(c,strsplit(s1a,"\\*"))
+                             s1a <- lapply(regmatches(s1a, gregexpr("\\(.*?\\)", s1a)), function(x)gsub("[\\(\\)]","",x))
+                             s1a <- Reduce(c,lapply(s1a,function(x)strsplit(x,",")))
+                             s1 <- c(s1,unique(Reduce(c,s1a)))
+                           } 
+                           if(is_mean) {
+                             s1 <- c(s1,get_variable_names(f1,cnames))
+                           }
+                           if(!all(s1 %in% cnames)){
+                             not_in <- which(!s1 %in% cnames)
+                             stop(paste0("The following variables are not in the data: ",paste0(s1[not_in],collapse = " ")))
+                           } else {
+                             new_data <- data[,match(s1,cnames),drop=FALSE]
+                             if(ncol(new_data)>0){
+                               for(i in 1:ncol(new_data)){
+                                 if(is(new_data[,i],"character")|is(new_data[,i],"factor"))new_data[,i] <- as.numeric(as.factor(new_data[,i]))
+                               }
+                             }
+                             return(list(formula = form, data = new_data))
+                           }
+                         } else {
+                           return(result)
+                         }
+                         
                        }
                      ))
 

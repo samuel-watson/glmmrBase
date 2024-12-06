@@ -253,6 +253,17 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     infomat.bottomLeftCorner(npar,P()) = -1.0*Mt.bottomRows(P()).transpose();
     infomat.bottomRightCorner(npar,npar) = Mt.topRows(npar);
     return -1.0*infomat;
+  } else if constexpr (imtype == IM::EIM2) {
+    W.update();
+    MatrixXd Z = model.covariance.Z();
+    MatrixXd D = model.covariance.D();
+    D = D.llt().solve(MatrixXd::Identity(D.rows(),D.cols()));
+    MatrixXd infomat(P()+Q(),P()+Q());
+    infomat.topLeftCorner(P(),P()) = X.transpose() * W.W_.asDiagonal() * X;
+    infomat.topRightCorner(P(),Q()) = X.transpose() * W.W_.asDiagonal() * Z;
+    infomat.bottomLeftCorner(Q(),P()) = Z.transpose() * W.W_.asDiagonal() * X;
+    infomat.bottomRightCorner(Q(),Q()) = Z.transpose() * W.W_.asDiagonal() * Z + D;
+    return infomat;
   } else {
     MatrixXd M = information_matrix();
     M = M.llt().solve(MatrixXd::Identity(M.rows(),M.cols()));

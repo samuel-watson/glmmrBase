@@ -19,13 +19,14 @@
 #' @export
 print.mcml <- function(x, ...){
   digits <- 4
-  cat(ifelse(x$method%in%c("mcem","mcnr"),
+  cat(ifelse(x$method%in%c("mcem","mcnr","saem"),
              "Markov chain Monte Carlo Maximum Likelihood Estimation\nAlgorithm: ",
              "Maximum Likelihood Estimation with Laplace Approximation\nAlgorithm: "),
       ifelse(x$method%in%c("nloptim","nr"),ifelse(x$method=="nr","Newton-Raphson","BOBYQA"),
              ifelse(x$method=="mcem","Markov Chain Expectation Maximisation",
-                                        "Markov Chain Newton-Raphson")),
-      ifelse(x$sim_step," with simulated likelihood step\n","\n"))
+                                        ifelse(x$method=="mcnr","Markov Chain Newton-Raphson",
+                                               "Stochastic Approximation Expectation Maximisation"))),
+      ifelse(x$reml,"with REML\n","\n"))
   
   cat("\nFixed effects formula :",x$mean_form)
   cat("\nCovariance function formula: ",x$cov_form)

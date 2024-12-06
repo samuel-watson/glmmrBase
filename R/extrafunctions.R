@@ -81,26 +81,55 @@ mcnr_family <- function(family, cmdstan){
   }
 }
 
-#' Data for model tests
+#' Simulated data from a stepped-wedge cluster trial
 #'
-#' @name ytest1
+#' @name SimTrial
 #' @docType data
+#' @examples
+#' #Data were generated with the following code:
+#' SimTrial <- nelder(~ (cl(10)*t(7))>i(10))
+#' SimTrial$int <- 0
+#' SimTrial[SimTrial$t > SimTrial$cl,'int'] <- 1
+#' 
+#' model <- Model$new(
+#'   formula = ~ int + factor(t) - 1 + (1|gr(cl)*ar1(t)),
+#'   covariance = c(0.05,0.8),
+#'   mean = rep(0,8),
+#'   data = SimTrial,
+#'   family = gaussian()
+#' )
+#' 
+#' SimTrial$y <- model$sim_data()
 NULL
 
-#' Data for first example in Section 3.12 of JSS paper
+#' Simulated data from a geospatial study with continuous outcomes
 #'
-#' @name yexample312a
+#' @name SimGeospat
 #' @docType data
+#' @examples
+#' #Data were generated with the following code:
+#' n <- 600
+#' SimGeospat <- data.frame(x = runif(n,-1,1), y = runif(n,-1,1))
+#' 
+#' sim_model <- Model$new(
+#'   formula = ~ (1|fexp(x,y)),
+#'   data = SimGeospat,
+#'   covariance = c(0.25,0.3),
+#'   mean = c(0),
+#'   family = gaussian()
+#' )
+#' 
+#' SimGeospat$y <- sim_model$sim_data()
 NULL
 
-#' Data for second example in Section 3.12 of JSS paper
-#'
-#' @name yexample312b
-#' @docType data
-NULL
-
-#' Data for third example in Section 3.12 of JSS paper
-#'
-#' @name yexample312c
+#' Salamanders data
+#' 
+#' Obtained from 
+#' \code{
+#' uu <- url("http://www.math.mcmaster.ca/bolker/R/misc/salamander.txt")
+#' sdat <- read.table(uu,header=TRUE,colClasses=c(rep("factor",5),"numeric"))
+#' }
+#' See \url{https://rpubs.com/bbolker/salamander} for more information.
+#' @name Salamanders
 #' @docType data
 NULL
