@@ -2,7 +2,7 @@
 % Please edit documentation in R/lme4_functions.R
 \name{mcml_glmer}
 \alias{mcml_glmer}
-\title{lme4 style generalized linear mixed model}
+\title{lme4 style generlized linear mixed model}
 \usage{
 mcml_glmer(
   formula,
@@ -53,17 +53,9 @@ would be valid formulae.
 }
 \examples{
 #create a data frame describing a cross-sectional parallel cluster
-#randomised trial
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-# simulate data using the Model class
-df$y <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
-  data = df,
-  family = stats::binomial()
-)$sim_data()
+data(Salamanders, package = "glmmrBase")
 \dontrun{
-fit <- mcml_glmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, family = binomial())
+glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),data=Salamanders,family=binomial(),reml=FALSE)
+glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), data =Salamanders, family=binomial(),reml=TRUE)
 }
 }

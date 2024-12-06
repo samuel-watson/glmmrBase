@@ -228,6 +228,29 @@ des$power() #power of 0.90 for the int parameter
 ## ------------------------------------------------
 
 \dontrun{
+# Simulated trial data example
+data(SimTrial,package = "glmmrBase")
+model <- Model$new(
+  formula = y ~ int + factor(t) - 1 + (1|gr(cl)*ar1(t)),
+  data = SimTrial,
+  family = gaussian()
+)
+glm3 <- model$MCML()
+
+# Salamanders data example
+data(Salamanders,package="glmmrBase")
+model <- Model$new(
+  mating~fpop:mpop-1+(1|gr(mnum))+(1|gr(fnum)),
+  data = Salamanders,
+  family = binomial()
+)
+
+# we will try MCEM with 500 MCMC iterations
+model$mcmc_options$samps <- 500
+# view the grouping structure 
+glm2 <- model$MCML(method = "mcem")
+
+# Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
 df <- nelder(~(cl(6)*t(5)) > ind(5))
 # parallel trial design intervention indicator
@@ -1039,6 +1062,29 @@ A \code{mcml} object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
+# Simulated trial data example
+data(SimTrial,package = "glmmrBase")
+model <- Model$new(
+  formula = y ~ int + factor(t) - 1 + (1|gr(cl)*ar1(t)),
+  data = SimTrial,
+  family = gaussian()
+)
+glm3 <- model$MCML()
+
+# Salamanders data example
+data(Salamanders,package="glmmrBase")
+model <- Model$new(
+  mating~fpop:mpop-1+(1|gr(mnum))+(1|gr(fnum)),
+  data = Salamanders,
+  family = binomial()
+)
+
+# we will try MCEM with 500 MCMC iterations
+model$mcmc_options$samps <- 500
+# view the grouping structure 
+glm2 <- model$MCML(method = "mcem")
+
+# Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
 df <- nelder(~(cl(6)*t(5)) > ind(5))
 # parallel trial design intervention indicator
