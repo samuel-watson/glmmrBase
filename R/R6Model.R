@@ -955,6 +955,8 @@ Model <- R6::R6Class("Model",
                        #' 
                        #' summary(nfit)
                        #' summary(nm1)
+                       #' 
+                       #' 
                        #'}
                        #'@md
                        MCML = function(y = NULL,

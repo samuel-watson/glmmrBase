@@ -55,7 +55,9 @@ would be valid formulae.
 #create a data frame describing a cross-sectional parallel cluster
 data(Salamanders, package = "glmmrBase")
 \dontrun{
-glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),data=Salamanders,family=binomial(),reml=FALSE)
-glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), data =Salamanders, family=binomial(),reml=TRUE)
+glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),
+  data=Salamanders,family=binomial(),reml=FALSE)
+glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), 
+  data =Salamanders, family=binomial(),reml=TRUE)
 }
 }

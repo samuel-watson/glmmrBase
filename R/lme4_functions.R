@@ -128,8 +128,10 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
 #' #create a data frame describing a cross-sectional parallel cluster
 #' data(Salamanders, package = "glmmrBase")
 #' \dontrun{
-#' glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),data=Salamanders,family=binomial(),reml=FALSE)
-#' glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), data =Salamanders, family=binomial(),reml=TRUE)
+#' glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),
+#'   data=Salamanders,family=binomial(),reml=FALSE)
+#' glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), 
+#'   data =Salamanders, family=binomial(),reml=TRUE)
 #' }
 #' @export
 mcml_glmer <- function(formula, data, family, start = NULL, offset = NULL, verbose = 1L,

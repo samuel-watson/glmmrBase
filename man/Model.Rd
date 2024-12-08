@@ -289,6 +289,8 @@ nfit <- model$MCML(method = "mcem.adapt")
 
 summary(nfit)
 summary(nm1)
+
+
 }
 
 ## ------------------------------------------------
@@ -1147,6 +1149,8 @@ nfit <- model$MCML(method = "mcem.adapt")
 
 summary(nfit)
 summary(nm1)
+
+
 }
 }
 \if{html}{\out{</div>}}
