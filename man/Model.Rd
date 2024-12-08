@@ -57,7 +57,7 @@ Using \code{update_parameters()} is the preferred way of updating the parameters
 mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
 
-\strong{Stochastic maximum likelihood}
+\strong{Monte Carlo maximum likelihood}
 Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
 Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation
 maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
@@ -107,6 +107,8 @@ during model fitting use the \code{self$set_trace()} function.
 \dontshow{
 setParallel(FALSE) 
 }
+# For more examples, see the examples for MCML.
+
 #create a data frame describing a cross-sectional parallel cluster
 #randomised trial
 df <- nelder(~(cl(10)*t(5)) > ind(10))
@@ -155,17 +157,6 @@ df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
                         data = df,
                         family = stats::gaussian())
-
-# A quantile regression model for the 25th percentile (experimental)
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-qmod <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
-  data = df,
-  family = Quantile(link = "identity", scaled = TRUE, q = 0.25)
-)
 
 ## ------------------------------------------------
 ## Method `Model$sim_data`
@@ -268,6 +259,36 @@ ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
 # use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
 fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
+
+# Non-linear model fitting example using the example provided by nlmer in lme4
+data(Orange, package = "lme4")
+
+# the lme4 example:
+startvec <- c(Asym = 200, xmid = 725, scal = 350)
+(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
+              Orange, start = startvec))
+
+Orange <- as.data.frame(Orange)
+Orange$Tree <- as.numeric(Orange$Tree)
+
+# Here we can specify the model as a function. 
+
+model <- Model$new(
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  data = Orange,
+  family = gaussian(),
+  mean = c(200,725,350),
+  covariance = c(500),
+  var_par = 50
+)
+
+# for this example, we will use MCEM with adaptive MCMC sample sizes
+
+model$mcmc_options$samps <- 1000
+nfit <- model$MCML(method = "mcem.adapt")
+
+summary(nfit)
+summary(nm1)
 }
 
 ## ------------------------------------------------
@@ -563,6 +584,8 @@ A new Model class object
 \preformatted{\dontshow{
 setParallel(FALSE) 
 }
+# For more examples, see the examples for MCML.
+
 #create a data frame describing a cross-sectional parallel cluster
 #randomised trial
 df <- nelder(~(cl(10)*t(5)) > ind(10))
@@ -611,17 +634,6 @@ df <- nelder(~ (x(10)*y(10))*t(2))
 spt_design <- Model$new(formula = ~ 1 + (1|ar0(t)*fexp(x,y)),
                         data = df,
                         family = stats::gaussian())
-
-# A quantile regression model for the 25th percentile (experimental)
-df <- nelder(~(cl(10)*t(5)) > ind(10))
-df$int <- 0
-df[df$cl > 5, 'int'] <- 1
-
-qmod <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)) + (1|gr(cl,t)),
-  data = df,
-  family = Quantile(link = "identity", scaled = TRUE, q = 0.25)
-)
 }
 \if{html}{\out{</div>}}
 
@@ -1053,6 +1065,9 @@ will result in lower bias but slower convergence, values closer to 1 will result
 2 = The probability of improvement in the overall log-likelihood is less than 1 - \code{convergence.prob}
 3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - \code{convergence.prob}
 4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - \code{convergence.prob}}
+
+\item{\code{skip.theta}}{Logical. If TRUE then the covariance parameter estimation step is skipped. This option is mainly used for testing, but may be useful
+if covariance parameters are known.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1102,6 +1117,36 @@ ysim <- des$sim_data() # simulate some data from the model
 fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
 # use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
 fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
+
+# Non-linear model fitting example using the example provided by nlmer in lme4
+data(Orange, package = "lme4")
+
+# the lme4 example:
+startvec <- c(Asym = 200, xmid = 725, scal = 350)
+(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
+              Orange, start = startvec))
+
+Orange <- as.data.frame(Orange)
+Orange$Tree <- as.numeric(Orange$Tree)
+
+# Here we can specify the model as a function. 
+
+model <- Model$new(
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  data = Orange,
+  family = gaussian(),
+  mean = c(200,725,350),
+  covariance = c(500),
+  var_par = 50
+)
+
+# for this example, we will use MCEM with adaptive MCMC sample sizes
+
+model$mcmc_options$samps <- 1000
+nfit <- model$MCML(method = "mcem.adapt")
+
+summary(nfit)
+summary(nm1)
 }
 }
 \if{html}{\out{</div>}}

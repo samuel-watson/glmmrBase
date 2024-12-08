@@ -20,12 +20,12 @@ Imports:
 LinkingTo: 
     Rcpp (>= 1.0.11),
     RcppEigen,
-    SparseChol (>= 0.3.1),
+    SparseChol (>= 0.3.2),
     BH,
     RcppParallel (>= 5.0.1),
     rstan (>= 2.32.1),
     StanHeaders (>= 2.32.0)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]
 URL: https://github.com/samuel-watson/glmmrBase

@@ -432,8 +432,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model_nngp__new
-SEXP Model_nngp__new(SEXP formula_, SEXP data_, SEXP colnames_, SEXP family_, SEXP link_);
-RcppExport SEXP _glmmrBase_Model_nngp__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP, SEXP family_SEXP, SEXP link_SEXP) {
+SEXP Model_nngp__new(SEXP formula_, SEXP data_, SEXP colnames_, SEXP family_, SEXP link_, int nn);
+RcppExport SEXP _glmmrBase_Model_nngp__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP, SEXP family_SEXP, SEXP link_SEXP, SEXP nnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -442,7 +442,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type family_(family_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type link_(link_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Model_nngp__new(formula_, data_, colnames_, family_, link_));
+    Rcpp::traits::input_parameter< int >::type nn(nnSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model_nngp__new(formula_, data_, colnames_, family_, link_, nn));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -785,6 +786,42 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__log_likelihood(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__n_cov_pars
+SEXP Model__n_cov_pars(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__n_cov_pars(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__n_cov_pars(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__Z
+SEXP Model__Z(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__Z(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__Z(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__Z_needs_updating
+SEXP Model__Z_needs_updating(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__Z_needs_updating(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__Z_needs_updating(xp, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1796,7 +1833,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_ModelBits__update_theta", (DL_FUNC) &_glmmrBase_ModelBits__update_theta, 2},
     {"_glmmrBase_Model__new_w_pars", (DL_FUNC) &_glmmrBase_Model__new_w_pars, 7},
     {"_glmmrBase_Model__new", (DL_FUNC) &_glmmrBase_Model__new, 5},
-    {"_glmmrBase_Model_nngp__new", (DL_FUNC) &_glmmrBase_Model_nngp__new, 5},
+    {"_glmmrBase_Model_nngp__new", (DL_FUNC) &_glmmrBase_Model_nngp__new, 6},
     {"_glmmrBase_Model_nngp__new_w_pars", (DL_FUNC) &_glmmrBase_Model_nngp__new_w_pars, 8},
     {"_glmmrBase_Model_hsgp__new", (DL_FUNC) &_glmmrBase_Model_hsgp__new, 5},
     {"_glmmrBase_Model_hsgp__new_w_pars", (DL_FUNC) &_glmmrBase_Model_hsgp__new_w_pars, 7},
@@ -1823,6 +1860,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__log_gradient", (DL_FUNC) &_glmmrBase_Model__log_gradient, 4},
     {"_glmmrBase_Model__linear_predictor", (DL_FUNC) &_glmmrBase_Model__linear_predictor, 2},
     {"_glmmrBase_Model__log_likelihood", (DL_FUNC) &_glmmrBase_Model__log_likelihood, 2},
+    {"_glmmrBase_Model__n_cov_pars", (DL_FUNC) &_glmmrBase_Model__n_cov_pars, 2},
+    {"_glmmrBase_Model__Z", (DL_FUNC) &_glmmrBase_Model__Z, 2},
+    {"_glmmrBase_Model__Z_needs_updating", (DL_FUNC) &_glmmrBase_Model__Z_needs_updating, 2},
     {"_glmmrBase_Model__cov_set_nn", (DL_FUNC) &_glmmrBase_Model__cov_set_nn, 2},
     {"_glmmrBase_Model__test_lbfgs", (DL_FUNC) &_glmmrBase_Model__test_lbfgs, 2},
     {"_glmmrBase_Model__test_lbfgs_theta", (DL_FUNC) &_glmmrBase_Model__test_lbfgs_theta, 2},

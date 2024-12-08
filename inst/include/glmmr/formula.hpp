@@ -15,10 +15,12 @@ public:
   strvec              z_;
   intvec              re_order_;
   bool                RM_INT;
+  strvec              fe_parameter_names_;
   Formula(const str& formula) : formula_(formula) {tokenise();};
-  Formula(const glmmr::Formula& formula) : formula_(formula.formula_){tokenise();};
+  Formula(const glmmr::Formula& formula) : formula_(formula.formula_), fe_parameter_names_(formula.fe_parameter_names_) {tokenise();};
   Formula& operator= (const glmmr::Formula& formula){
     formula_ = formula.formula_;
+    fe_parameter_names_ = formula.fe_parameter_names_;
     tokenise();
     return *this;
   };

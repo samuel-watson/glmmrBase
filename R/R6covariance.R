@@ -101,7 +101,7 @@ Covariance <- R6::R6Class("Covariance",
                         #'
                         #' @param parameters A vector of parameters for the covariance function(s). See Details.
                         update_parameters = function(parameters){
-                          if(is.null(private$ptr)){
+                          if(is.null(private$ptr) & is.null(private$model_ptr)){
                             if(is.null(self$data))stop("No data")
                             private$cov_form()
                           }
@@ -109,10 +109,18 @@ Covariance <- R6::R6Class("Covariance",
                           if(is.null(private$model_ptr)){
                             Covariance__Update_parameters(private$ptr,parameters,private$type)
                             self$D <- Matrix::Matrix(Covariance__D(private$ptr,private$type))
+                            re <- Covariance__re_terms(private$ptr,private$type)
+                            paridx <- Covariance__parameter_fn_index(private$ptr,private$type)+1
+                            names(self$parameters) <- re[paridx]
                           } else {
                             Model__update_theta(private$model_ptr,parameters,private$type) 
                             self$D <- Matrix::Matrix(Model__D(private$model_ptr,private$type))
+                            if(private$z_requires_update)self$Z <- Model__Z(private$model_ptr,private$type)
+                            re <- Model__re_terms(private$model_ptr,private$type)
+                            paridx <- Model__parameter_fn_index(private$model_ptr,private$type)+1
+                            names(self$parameters) <- re[paridx]
                           }
+                          
                         },
                         #' @description
                         #' Show details of Covariance object
@@ -303,6 +311,7 @@ Covariance <- R6::R6Class("Covariance",
                         ptr = NULL,
                         model_ptr = NULL,
                         type = 0,
+                        z_requires_update = FALSE,
                         nn = 10,
                         m = 10,
                         L = 1.5,
@@ -326,36 +335,54 @@ Covariance <- R6::R6Class("Covariance",
                             }
                           }
                           
-                          if(private$type == 0){
-                            private$ptr <- Covariance__new(self$formula,
-                                                           as.matrix(self$data),
-                                                           colnames(self$data))
-                          } else if(private$type == 1){
-                            private$ptr <- Covariance_nngp__new(self$formula,
-                                                           as.matrix(self$data),
-                                                           colnames(self$data))
-                            Covariance__set_nn(private$ptr,private$nn)
-                          } else if(private$type==2){
-                            private$ptr <- Covariance_hsgp__new(self$formula,
-                                                                as.matrix(self$data),
-                                                                colnames(self$data))
-                          }
-                          
-                          private$parcount <- Covariance__n_cov_pars(private$ptr,private$type)
-                          if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
-                          Covariance__Update_parameters(private$ptr,self$parameters,private$type)
-                          private$genD()
-                          self$Z <- Covariance__Z(private$ptr,private$type)
-                          if(private$type==2){
-                            dim <- Model_hsgp__dim(private$ptr)
-                            private$m <- rep(10,dim)
-                            private$L <- rep(1.5,dim)
+                          if(is.null(private$model_ptr)){
+                            if(private$type == 0){
+                              private$ptr <- Covariance__new(self$formula,
+                                                             as.matrix(self$data),
+                                                             colnames(self$data))
+                            } else if(private$type == 1){
+                              private$ptr <- Covariance_nngp__new(self$formula,
+                                                                  as.matrix(self$data),
+                                                                  colnames(self$data))
+                              Covariance__set_nn(private$ptr,private$nn)
+                            } else if(private$type==2){
+                              private$ptr <- Covariance_hsgp__new(self$formula,
+                                                                  as.matrix(self$data),
+                                                                  colnames(self$data))
+                            }
+                            
+                            private$parcount <- Covariance__n_cov_pars(private$ptr,private$type)
+                            if(is.null(self$parameters))self$parameters <- runif(private$parcount,0,1)
+                            Covariance__Update_parameters(private$ptr,self$parameters,private$type)
+                            private$genD()
+                            self$Z <- Covariance__Z(private$ptr,private$type)
+                            if(private$type==2){
+                              dim <- Model_hsgp__dim(private$ptr)
+                              private$m <- rep(10,dim)
+                              private$L <- rep(1.5,dim)
+                            }
+                          } else {
+                            private$parcount <- Model__n_cov_pars(private$model_ptr,private$type)
+                            if(is.null(self$parameters))self$update_parameters(runif(private$parcount,0,1))
+                            private$z_requires_update <- Model__Z_needs_updating(private$model_ptr,private$type)
+                            private$genD()
+                            self$Z <- Model__Z(private$model_ptr,private$type)
+                            if(private$type==2){
+                              dim <- Model_hsgp__dim(private$model_ptr)
+                              private$m <- rep(10,dim)
+                              private$L <- rep(1.5,dim)
+                            }
                           }
                         },
                         genD = function(update=TRUE){
                           if(private$parcount != length(self$parameters))stop(paste0("Wrong number of parameters for covariance function(s). "))
-                          if(private$type == 0 & Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
-                          D <- Covariance__D(private$ptr,private$type)
+                          if(is.null(private$model_ptr))if(private$type == 0 & Covariance__any_gr(private$ptr))Covariance__make_sparse(private$ptr)
+                          if(is.null(private$model_ptr)){
+                            D <- Covariance__D(private$ptr,private$type)
+                          } else {
+                            D <- Model__D(private$model_ptr,private$type)
+                          }
+                          
                           if(update){
                             self$D <- Matrix::Matrix(D)
                           } else {

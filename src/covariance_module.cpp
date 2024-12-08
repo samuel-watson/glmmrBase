@@ -7,7 +7,8 @@ SEXP Covariance__new(SEXP form_,SEXP data_, SEXP colnames_){
   std::string form = as<std::string>(form_);
   Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
   std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
-  XPtr<covariance> ptr(new covariance(form,data,colnames),true);
+  glmmr::Formula f1(form);
+  XPtr<covariance> ptr(new covariance(f1,data,colnames),true);
   return ptr;
 }
 

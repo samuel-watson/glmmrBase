@@ -26,6 +26,7 @@ public:
   strvec            colnames() const;
   virtual VectorXd  xb();
   virtual MatrixXd  X();
+  virtual double    X(const int i, const int j) const;
   strvec            parameter_names() const;
   VectorXd          parameter_vector();
   bool              any_nonlinear() const;
@@ -67,6 +68,7 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   } else {
     X_.setZero();
   }
+  form.fe_parameter_names_ = calc.parameter_names;
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
@@ -86,6 +88,8 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
+  glmmr::print_vec_1d(calc.parameter_names);
+  form.fe_parameter_names_ = calc.parameter_names;
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
@@ -105,6 +109,8 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
+  glmmr::print_vec_1d(calc.parameter_names);
+  form.fe_parameter_names_ = calc.parameter_names;
 };
 
 inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& linpred) :
@@ -121,6 +127,8 @@ inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& lin
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
+  glmmr::print_vec_1d(calc.parameter_names);
+  form.fe_parameter_names_ = calc.parameter_names;
 };
 
 inline void glmmr::LinearPredictor::update_parameters(const dblvec& parameters_){
@@ -181,6 +189,10 @@ inline MatrixXd glmmr::LinearPredictor::X(){
     X_ = calc.jacobian();
   }
   return X_;
+}
+
+inline double glmmr::LinearPredictor::X(const int i, const int j) const {
+  return X_(i,j);
 }
 
 inline strvec glmmr::LinearPredictor::parameter_names() const{

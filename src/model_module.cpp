@@ -15,7 +15,14 @@ SEXP ModelBits__new(SEXP formula_, SEXP data_, SEXP colnames_,
   std::vector<double> theta = as<std::vector<double> >(theta_);
   XPtr<bits>ptr(new bits(formula,data,colnames,family,link),true);
   ptr->linear_predictor.update_parameters(beta);
-  ptr->covariance.update_parameters(theta);
+  int covnpar = ptr->covariance.npar();
+  std::vector<double> cov_pars(covnpar);
+  if(theta.size() != covnpar){
+    for(int i = 0; i < covnpar; i++) cov_pars[i] = Rcpp::runif(1)(0);
+  } else {
+    cov_pars = theta;
+  }
+  ptr->covariance.update_parameters(cov_pars);
   return ptr;
 }
 
@@ -64,13 +71,14 @@ SEXP Model__new(SEXP formula_, SEXP data_, SEXP colnames_,
 
 // [[Rcpp::export]]
 SEXP Model_nngp__new(SEXP formula_, SEXP data_, SEXP colnames_,
-                     SEXP family_, SEXP link_){
+                     SEXP family_, SEXP link_, int nn){
   std::string formula = as<std::string>(formula_);
   Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
   std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
   std::string family = as<std::string>(family_);
   std::string link = as<std::string>(link_);
   XPtr<glmm_nngp> ptr(new glmm_nngp(formula,data,colnames,family,link),true);
+  ptr->model.covariance.gen_NN(nn);
   return ptr;
 }
 

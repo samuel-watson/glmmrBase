@@ -1,4 +1,3 @@
-#' R6 Class representing a mean function/linear predictor
 #' 
 #' For the generalised linear mixed model 
 #' 

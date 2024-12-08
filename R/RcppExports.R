@@ -137,8 +137,8 @@ Model__new <- function(formula_, data_, colnames_, family_, link_) {
     .Call(`_glmmrBase_Model__new`, formula_, data_, colnames_, family_, link_)
 }
 
-Model_nngp__new <- function(formula_, data_, colnames_, family_, link_) {
-    .Call(`_glmmrBase_Model_nngp__new`, formula_, data_, colnames_, family_, link_)
+Model_nngp__new <- function(formula_, data_, colnames_, family_, link_, nn) {
+    .Call(`_glmmrBase_Model_nngp__new`, formula_, data_, colnames_, family_, link_, nn)
 }
 
 Model_nngp__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_, theta_, nn) {
@@ -243,6 +243,18 @@ Model__linear_predictor <- function(xp, type = 0L) {
 
 Model__log_likelihood <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__log_likelihood`, xp, type)
+}
+
+Model__n_cov_pars <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__n_cov_pars`, xp, type)
+}
+
+Model__Z <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__Z`, xp, type)
+}
+
+Model__Z_needs_updating <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__Z_needs_updating`, xp, type)
 }
 
 Model__cov_set_nn <- function(xp, nn) {

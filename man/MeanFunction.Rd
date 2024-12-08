@@ -2,15 +2,13 @@
 % Please edit documentation in R/R6meanfunction.R
 \name{MeanFunction}
 \alias{MeanFunction}
-\title{R6 Class representing a mean function/linear predictor}
+\title{For the generalised linear mixed model}
 \description{
-R6 Class representing a mean function/linear predictor
+For the generalised linear mixed model
 
-R6 Class representing a mean function/linear predictor
+For the generalised linear mixed model
 }
 \details{
-For the generalised linear mixed model 
-
 \deqn{Y \sim F(\mu,\sigma)}
 \deqn{\mu = h^-1(X\beta + Z\gamma)}
 \deqn{\gamma \sim MVN(0,D)}

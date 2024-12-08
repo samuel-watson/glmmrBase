@@ -144,6 +144,39 @@ SEXP Model__log_likelihood(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__n_cov_pars(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.npar());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<int>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__Z(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.Z());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__Z_needs_updating(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.z_requires_update);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<bool>(S));
+}
+
+// [[Rcpp::export]]
 void Model__cov_set_nn(SEXP xp, int nn){
   XPtr<glmm_nngp> ptr(xp);
   ptr->model.covariance.gen_NN(nn);
