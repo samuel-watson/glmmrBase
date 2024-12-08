@@ -1114,7 +1114,7 @@ Model <- R6::R6Class("Model",
                              if(private$trace <= 1){
                                if(mcmc.pkg == "cmdstan"){
                                  capture.output(fit <- mod$sample(data = data,
-                                                                  chains = 1,
+                                                                  chains = self$mcmc_options$chains,
                                                                   iter_warmup = self$mcmc_options$warmup,
                                                                   iter_sampling = n_mcmc_sampling,
                                                                   refresh = 0),
@@ -1122,7 +1122,7 @@ Model <- R6::R6Class("Model",
                                } else {
                                  capture.output(suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                                        data=data,
-                                                                       chains=1,
+                                                                       chains=self$mcmc_options$chains,
                                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                                        warmup = self$mcmc_options$warmup,
                                                                        refresh = 0)),
@@ -1132,14 +1132,14 @@ Model <- R6::R6Class("Model",
                                # warnings have been suppressed below as it warns about R-hat etc, which is not reliable with a single chain.
                                if(mcmc.pkg == "cmdstan"){
                                  suppressWarnings(fit <- mod$sample(data = data,
-                                                   chains = 1,
+                                                   chains = self$mcmc_options$chains,
                                                    iter_warmup = self$mcmc_options$warmup,
                                                    iter_sampling = n_mcmc_sampling,
                                                    refresh = 50))
                                } else {
                                  suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                         data=data,
-                                                        chains=1,
+                                                        chains=chains,
                                                         iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                         warmup = self$mcmc_options$warmup,
                                                         refresh = 50))
@@ -1830,6 +1830,7 @@ Model <- R6::R6Class("Model",
                        #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
                        mcmc_options = list(warmup = 100,
                                            samps = 25,
+                                           chains = 1,
                                            lambda = 1,
                                            refresh = 500,
                                            maxsteps = 100,
