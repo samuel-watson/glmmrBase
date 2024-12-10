@@ -20,6 +20,7 @@
 
 //glmmrbase version 
 #define GLMMR10
+#define GLMMR11
 
 // includes
 
