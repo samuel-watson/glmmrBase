@@ -49,30 +49,3 @@ using returnType = std::variant<int, double, bool, Eigen::VectorXd, Eigen::Array
                                 CorrectionData<glmmr::SE::Sat>, std::vector<Eigen::MatrixXd>, std::pair<double,double>, BoxResults,
                                 std::pair<int,int> >;
 
-// WORKING ON A SOLUTION TO REDUCE SIZE OF CPP CODE WITH FUNCTION 
-// TEMPLATE - HAVEN'T WORKED OUT HOW TO PASS FUNCTION ARGUMENTS AND ALSO ONLY REMOVES ONE LINE PER FUNCTION
-// SO FAR! WILL COME BACK TO THIS
-// struct FnBase {
-//   glmmrType model;
-//   FnBase(SEXP xp, int type = 0) : model(xp,static_cast<Type>(type)) {};
-// };
-// 
-// template<typename T>
-// struct Fn : public FnBase
-// {
-//   Fn(SEXP xp, int type = 0) : FnBase(xp, type) {};
-//   template<class Visitor>
-//   constexpr T operator()(Visitor vis){
-//     auto S = std::visit(vis,model.ptr);
-//     return std::get<T>(S);
-//   }
-// };
-// 
-// struct FnVoid : public FnBase
-// {
-//   FnVoid(SEXP xp, int type = 0) : FnBase(xp, type) {};
-//   template<class Visitor>
-//   constexpr void operator()(Visitor vis){
-//     auto S = std::visit(vis,model.ptr);
-//   }
-// };

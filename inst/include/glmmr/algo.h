@@ -161,51 +161,11 @@ class SigmaBlock {
     SigmaBlock(const intvec& db) : Dblocks(db) {};
     SigmaBlock(const SigmaBlock& x): Dblocks(x.Dblocks), RowIndexes(x.RowIndexes) {};
     
-    bool operator==(const intvec& x){
-      bool element_is_in = false;
-      for(auto i : x){
-        auto it = std::find(Dblocks.begin(),Dblocks.end(),i);
-        if(it != Dblocks.end()){
-          element_is_in = true;
-          break;
-        } 
-      }
-      return element_is_in;
-    }
-    
-    void add(const intvec& x){
-      intvec xout;
-      bool element_is_in = false;
-      for(auto i : x){
-        auto it = std::find(Dblocks.begin(),Dblocks.end(),i);
-        if(it != Dblocks.end()){
-          element_is_in = true;
-        } else {
-          xout.push_back(i); 
-        }
-      }
-      if(element_is_in){
-        Dblocks.insert(Dblocks.end(),xout.begin(),xout.end());
-        std::sort(Dblocks.begin(),Dblocks.end());
-      }
-    }
-    
-    void merge(const SigmaBlock& x){
-      RowIndexes.insert(RowIndexes.end(),x.RowIndexes.begin(),x.RowIndexes.end());
-      std::sort(RowIndexes.begin(), RowIndexes.end() );
-      RowIndexes.erase( std::unique( RowIndexes.begin(), RowIndexes.end() ), RowIndexes.end() );
-      Dblocks.insert(Dblocks.end(),x.Dblocks.begin(),x.Dblocks.end());
-      std::sort(Dblocks.begin(), Dblocks.end() );
-      Dblocks.erase( std::unique( Dblocks.begin(), Dblocks.end() ), Dblocks.end() );
-    }
-    
-    void add_row(int i){
-      RowIndexes.push_back(i);
-    }
-    
-    intvec rows(){
-      return RowIndexes;
-    }
+    bool operator==(const intvec& x);
+    void add(const intvec& x);
+    void merge(const SigmaBlock& x);
+    void add_row(int i);
+    intvec rows();
 };
 
 }

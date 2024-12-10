@@ -1,14 +1,10 @@
 #pragma once
 
-#include "general.h"
 #include "covariance.hpp"
 #include "hsgpcovariance.hpp"
 #include "nngpcovariance.hpp"
-#include "linearpredictor.hpp"
 #include "family.hpp"
 #include "modelextradata.hpp"
-#include "calculator.hpp"
-#include "formula.hpp"
 
 namespace glmmr {
 
@@ -35,53 +31,7 @@ public:
 
 }
 
-template<>
-inline glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor>::ModelBits(const std::string& formula_,
-          const ArrayXXd& data_,
-          const strvec& colnames_,
-          std::string family_, 
-          std::string link_) : 
-  formula(formula_), 
-  linear_predictor(formula,data_,colnames_),
-  covariance(formula,data_,colnames_),
-  data(data_.rows()),
-  family(family_,link_) {
-  covariance.linear_predictor_ptr(&linear_predictor);
-};
 
-template<>
-inline glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor>::ModelBits(const std::string& formula_,
-                                                 const ArrayXXd& data_,
-                                                 const strvec& colnames_,
-                                                 std::string family_, 
-                                                 std::string link_) : 
-  formula(formula_), 
-  linear_predictor(formula,data_,colnames_),
-  covariance(formula,data_,colnames_),
-  data(data_.rows()),
-  family(family_,link_) {};
-
-template<>
-inline glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>::ModelBits(const std::string& formula_,
-                                                                                  const ArrayXXd& data_,
-                                                                                  const strvec& colnames_,
-                                                                                  std::string family_, 
-                                                                                  std::string link_) : 
-  formula(formula_), 
-  linear_predictor(formula,data_,colnames_),
-  covariance(formula,data_,colnames_),
-  data(data_.rows()),
-  family(family_,link_) {};
-
-template<typename cov, typename linpred>
-inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(bool amd){
-  covariance.set_sparse(true,amd);
-}
-
-template<typename cov, typename linpred>
-inline void glmmr::ModelBits<cov, linpred>::make_covariance_dense(){
-  covariance.set_sparse(false);
-}
 
 typedef glmmr::Covariance covariance;
 typedef glmmr::nngpCovariance nngp;

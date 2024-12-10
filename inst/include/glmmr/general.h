@@ -21,6 +21,7 @@
 //glmmrbase version 
 #define GLMMR10
 #define GLMMR11
+#define GLMMRONLY
 
 // includes
 
@@ -392,30 +393,3 @@ struct ZNonZero {
   int     xcol;
 };
 
-// // scaled back version of exempt_ptr  https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3514.pdf
-// template<class E>
-// class exempt_ptr
-// {
-// public:
-//   // default c’tor: 
-//   exempt_ptr( ) noexcept : p{ nullptr } {
-//     Rcpp::Rcout << "\nInitialise nullptr";}
-//   
-//   // pointer-accepting c’tors:
-//   exempt_ptr( std::nullptr_t ) noexcept : exempt_ptr{} { }
-//   exempt_ptr( E* other ) noexcept : p{ other } { 
-//     Rcpp::Rcout << "\nInitialise ptr" << p; }
-//   
-//   // copying c’tors (in addition to compiler-generated copy c’tor):
-//     exempt_ptr( exempt_ptr<E> const & other ) noexcept : p {other.get()} {
-//       Rcpp::Rcout << "\nInitialise copy ptr" << p;  }
-//   
-//   // observers:
-//   E* get( ) const noexcept { return p; }
-//   E operator * ( ) const noexcept { return *get(); }
-//   E* operator -> ( ) const noexcept { return get(); }
-//   
-// private:
-//   E* p;
-//     
-// };

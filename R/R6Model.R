@@ -1072,7 +1072,8 @@ Model <- R6::R6Class("Model",
                          )
                          if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
                          if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
-                         if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
+                         if(self$family[[1]]%in%c("bernoulli","poisson"))data <- append(data,list(n = rep(1,self$n())))
+                         if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(sigma = rep(self$var_par,self$n())))
                          if(self$family[[1]]%in%c("quantile","quantile_scaled"))data <- append(data,list(var_par = self$var_par,
                                                                                                          q = self$family$q))
                          iter <- 0

@@ -2,6 +2,7 @@
 
 using namespace Rcpp;
 
+
 // [[Rcpp::export]]
 SEXP ModelBits__new(SEXP formula_, SEXP data_, SEXP colnames_,
                     SEXP family_, SEXP link_, SEXP beta_,

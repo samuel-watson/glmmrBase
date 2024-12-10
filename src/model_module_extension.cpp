@@ -1,5 +1,28 @@
 #include <glmmr.h>
 
+// extern template class glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor>;
+// extern template class glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>;
+// extern template class glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor>;
+// extern template class glmmr::MatrixField<Eigen::MatrixXd>;
+// extern template class glmmr::RandomEffects<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::RandomEffects<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::RandomEffects<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::MatrixW<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::MatrixW<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::MatrixW<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMatrix<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMatrix<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMatrix<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelOptim<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelOptim<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelOptim<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMCMC<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMCMC<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::ModelMCMC<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::Model<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::Model<glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor> >;
+// extern template class glmmr::Model<glmmr::ModelBits<glmmr::nngpCovariance, glmmr::LinearPredictor> >;
+
 namespace Rcpp {
 template<>
 SEXP wrap(const VectorMatrix& x){

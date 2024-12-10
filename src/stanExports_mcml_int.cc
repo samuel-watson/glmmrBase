@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_mcml_binomial.h"
+#include "stanExports_mcml_int.h"
 
-RCPP_MODULE(stan_fit4mcml_binomial_mod) {
+RCPP_MODULE(stan_fit4mcml_int_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_mcml_binomial")
+    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_mcml_int")
 
     .constructor<SEXP,SEXP,SEXP>()
 
