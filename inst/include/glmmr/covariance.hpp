@@ -1,11 +1,8 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
-
-#include "openmpheader.h"
-#include "general.h"
+#include <sstream>
 #include "maths.h"
-#include "algo.h"
 #include "interpreter.h"
 #include "formula.hpp"
 #include "sparse.h"
@@ -15,6 +12,24 @@
 using namespace Eigen;
 
 namespace glmmr {
+
+inline bool validate_fn(const str& fn){
+  bool not_fn = str_to_covfunc.find(fn) == str_to_covfunc.end();
+  return not_fn;
+}
+
+inline bool is_compact_fn(const CovFunc& fn){
+  bool compact = false;
+  if(fn == CovFunc::truncpow2 || fn == CovFunc::truncpow3 || fn == CovFunc::truncpow4 || fn == CovFunc::truncpow20 || fn == CovFunc::truncpow30
+       || fn == CovFunc::truncpow40 || fn == CovFunc::cauchy || fn == CovFunc::cauchy3 || fn == CovFunc::cauchy0  || fn == CovFunc::cauchy30) compact = true;
+  return compact;
+}
+
+struct ZNonZero {
+  int     col;
+  intvec  rows;
+  int     xcol;
+};
 
 class Covariance {
 public:

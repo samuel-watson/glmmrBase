@@ -1,12 +1,76 @@
 #pragma once
 
-#include "general.h"
+#include <boost/math/distributions/fisher_f.hpp>
 #include "modelbits.hpp"
 #include "matrixw.hpp"
 #include "randomeffects.hpp"
-#include "openmpheader.h"
-#include "maths.h"
 #include "matrixfield.h"
+
+namespace glmmr {
+
+enum class SE {
+  GLS = 0,
+    KR = 1,
+    Robust = 2,
+    BW = 3,
+    KR2 = 4,
+    Sat = 5,
+    KRBoth = 6 // used for when two types of correction are required
+};
+
+enum class IM {
+  EIM = 0,
+    OIM = 1,
+    GEE_IND = 2,
+    EIM2 = 3
+};
+
+}
+
+struct BoxResults {
+  dblvec dof;
+  dblvec scale;
+  dblvec test_stat;
+  dblvec p_value;
+  BoxResults(const int r) : dof(r), scale(r), test_stat(r), p_value(r) {};
+};
+
+struct CorrectionDataBase {
+public:
+  MatrixXd vcov_beta;
+  MatrixXd vcov_theta;
+  VectorXd dof;
+  VectorXd lambda;
+  CorrectionDataBase(int n1, int m1, int n2, int m2): vcov_beta(n1,m1), vcov_theta(n2,m2), dof(n1), lambda(n1) {};
+  CorrectionDataBase(const MatrixXd& vcov_beta_, const MatrixXd& vcov_theta_, const MatrixXd& dof_, const MatrixXd& lambda_) : 
+    vcov_beta(vcov_beta_), vcov_theta(vcov_theta_), dof(dof_), lambda(lambda_)  {};
+  CorrectionDataBase(const CorrectionDataBase& x) : vcov_beta(x.vcov_beta), vcov_theta(x.vcov_theta), dof(x.dof), lambda(x.lambda) {};
+  CorrectionDataBase& operator=(const CorrectionDataBase& x) = default;
+};
+
+template<glmmr::SE corr>
+struct CorrectionData : public CorrectionDataBase {
+public:
+  CorrectionData(int n1, int m1, int n2, int m2): CorrectionDataBase(n1,m1,n2,m2) {};
+  CorrectionData(const CorrectionData& x) : CorrectionDataBase(x.vcov_beta, x.vcov_theta, x.dof, x.lambda) {};
+  CorrectionData& operator=(const CorrectionData& x){
+    CorrectionDataBase::operator=(x);
+    return *this;
+  };
+};
+
+template<>
+struct CorrectionData<glmmr::SE::KRBoth> : public CorrectionDataBase {
+public:
+  MatrixXd vcov_beta_second;
+  CorrectionData(int n1, int m1, int n2, int m2): CorrectionDataBase(n1,m1,n2,m2), vcov_beta_second(n1,m1) {};
+  CorrectionData(const CorrectionData& x) : CorrectionDataBase(x.vcov_beta, x.vcov_theta, x.dof, x.lambda), vcov_beta_second(x.vcov_beta_second) {};
+  CorrectionData& operator=(const CorrectionData& x){
+    CorrectionDataBase::operator=(x);
+    vcov_beta_second = x.vcov_beta_second;
+    return *this;
+  };
+};
 
 namespace glmmr {
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include "glmmr/general.h"
 #include "glmmr/maths.h"
 #include "glmmr/formula.hpp"

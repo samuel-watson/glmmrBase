@@ -11,6 +11,74 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// Linpred__new
+SEXP Linpred__new(SEXP formula_, SEXP data_, SEXP colnames_);
+RcppExport SEXP _glmmrBase_Linpred__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__new(formula_, data_, colnames_));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Linpred__update_pars
+void Linpred__update_pars(SEXP xp, SEXP parameters_);
+RcppExport SEXP _glmmrBase_Linpred__update_pars(SEXP xpSEXP, SEXP parameters_SEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type parameters_(parameters_SEXP);
+    Linpred__update_pars(xp, parameters_);
+    return R_NilValue;
+END_RCPP
+}
+// Linpred__xb
+SEXP Linpred__xb(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__xb(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__xb(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Linpred__x
+SEXP Linpred__x(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__x(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__x(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Linpred__beta_names
+SEXP Linpred__beta_names(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__beta_names(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__beta_names(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Linpred__any_nonlinear
+SEXP Linpred__any_nonlinear(SEXP xp);
+RcppExport SEXP _glmmrBase_Linpred__any_nonlinear(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Linpred__any_nonlinear(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Covariance__new
 SEXP Covariance__new(SEXP form_, SEXP data_, SEXP colnames_);
 RcppExport SEXP _glmmrBase_Covariance__new(SEXP form_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
@@ -289,74 +357,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type_(type_SEXP);
     rcpp_result_gen = Rcpp::wrap(Covariance__re_count(xp, type_));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Linpred__new
-SEXP Linpred__new(SEXP formula_, SEXP data_, SEXP colnames_);
-RcppExport SEXP _glmmrBase_Linpred__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP colnames_SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
-    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__new(formula_, data_, colnames_));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Linpred__update_pars
-void Linpred__update_pars(SEXP xp, SEXP parameters_);
-RcppExport SEXP _glmmrBase_Linpred__update_pars(SEXP xpSEXP, SEXP parameters_SEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type parameters_(parameters_SEXP);
-    Linpred__update_pars(xp, parameters_);
-    return R_NilValue;
-END_RCPP
-}
-// Linpred__xb
-SEXP Linpred__xb(SEXP xp);
-RcppExport SEXP _glmmrBase_Linpred__xb(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__xb(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Linpred__x
-SEXP Linpred__x(SEXP xp);
-RcppExport SEXP _glmmrBase_Linpred__x(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__x(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Linpred__beta_names
-SEXP Linpred__beta_names(SEXP xp);
-RcppExport SEXP _glmmrBase_Linpred__beta_names(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__beta_names(xp));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Linpred__any_nonlinear
-SEXP Linpred__any_nonlinear(SEXP xp);
-RcppExport SEXP _glmmrBase_Linpred__any_nonlinear(SEXP xpSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    rcpp_result_gen = Rcpp::wrap(Linpred__any_nonlinear(xp));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1799,6 +1799,12 @@ RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_poisson_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4mcml_quantile_mod();
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_glmmrBase_Linpred__new", (DL_FUNC) &_glmmrBase_Linpred__new, 3},
+    {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
+    {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},
+    {"_glmmrBase_Linpred__x", (DL_FUNC) &_glmmrBase_Linpred__x, 1},
+    {"_glmmrBase_Linpred__beta_names", (DL_FUNC) &_glmmrBase_Linpred__beta_names, 1},
+    {"_glmmrBase_Linpred__any_nonlinear", (DL_FUNC) &_glmmrBase_Linpred__any_nonlinear, 1},
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
     {"_glmmrBase_Covariance_nngp__new", (DL_FUNC) &_glmmrBase_Covariance_nngp__new, 3},
     {"_glmmrBase_Covariance_hsgp__new", (DL_FUNC) &_glmmrBase_Covariance_hsgp__new, 3},
@@ -1822,12 +1828,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__parameter_fn_index", (DL_FUNC) &_glmmrBase_Covariance__parameter_fn_index, 2},
     {"_glmmrBase_Covariance__re_terms", (DL_FUNC) &_glmmrBase_Covariance__re_terms, 2},
     {"_glmmrBase_Covariance__re_count", (DL_FUNC) &_glmmrBase_Covariance__re_count, 2},
-    {"_glmmrBase_Linpred__new", (DL_FUNC) &_glmmrBase_Linpred__new, 3},
-    {"_glmmrBase_Linpred__update_pars", (DL_FUNC) &_glmmrBase_Linpred__update_pars, 2},
-    {"_glmmrBase_Linpred__xb", (DL_FUNC) &_glmmrBase_Linpred__xb, 1},
-    {"_glmmrBase_Linpred__x", (DL_FUNC) &_glmmrBase_Linpred__x, 1},
-    {"_glmmrBase_Linpred__beta_names", (DL_FUNC) &_glmmrBase_Linpred__beta_names, 1},
-    {"_glmmrBase_Linpred__any_nonlinear", (DL_FUNC) &_glmmrBase_Linpred__any_nonlinear, 1},
     {"_glmmrBase_ModelBits__new", (DL_FUNC) &_glmmrBase_ModelBits__new, 7},
     {"_glmmrBase_ModelBits__update_beta", (DL_FUNC) &_glmmrBase_ModelBits__update_beta, 2},
     {"_glmmrBase_ModelBits__update_theta", (DL_FUNC) &_glmmrBase_ModelBits__update_theta, 2},

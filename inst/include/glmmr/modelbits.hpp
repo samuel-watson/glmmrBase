@@ -7,7 +7,6 @@
 #include "linearpredictor.hpp"
 #include "family.hpp"
 #include "modelextradata.hpp"
-#include "calculator.hpp"
 #include "formula.hpp"
 
 namespace glmmr {

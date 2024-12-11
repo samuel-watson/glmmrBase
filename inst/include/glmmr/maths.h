@@ -1,10 +1,42 @@
 #pragma once
 
+#include <boost/math/distributions/normal.hpp>
+#include <boost/random.hpp>
 #include "algo.h"
 #include "general.h"
 #include "family.hpp"
 
 // [[Rcpp::depends(RcppEigen)]]
+
+struct VectorMatrix {
+public:
+  VectorXd vec;
+  MatrixXd mat;
+  VectorMatrix(int n): vec(n), mat(n,n) {};
+  VectorMatrix(const VectorMatrix& x) : vec(x.vec), mat(x.mat) {};
+  VectorMatrix& operator=(VectorMatrix x){
+    vec = x.vec;
+    mat = x.mat;
+    return *this;
+  };
+};
+
+struct MatrixMatrix {
+public:
+  MatrixXd mat1;
+  MatrixXd mat2;
+  double a = 0;
+  double b = 0;
+  MatrixMatrix(int n1, int m1, int n2, int m2): mat1(n1,m1), mat2(n2,m2) {};
+  MatrixMatrix(const MatrixMatrix& x) : mat1(x.mat1), mat2(x.mat2) {};
+  MatrixMatrix& operator=(MatrixMatrix x){
+    mat1 = x.mat1;
+    mat2 = x.mat2;
+    a = x.a;
+    b = x.b;
+    return *this;
+  };
+};
 
 namespace glmmr {
 

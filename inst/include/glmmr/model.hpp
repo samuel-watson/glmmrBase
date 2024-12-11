@@ -11,6 +11,12 @@ namespace glmmr {
 
 using namespace Eigen;
 
+enum class MarginType {
+  DyDx = 0,
+    Diff = 1,
+    Ratio = 2
+};
+
 template<class>
 struct check_type : std::false_type {};
 
