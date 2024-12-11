@@ -2,12 +2,12 @@
 
 #include <Rcpp.h>
 using namespace Rcpp ;
-#include "stanExports_mcml_bernoulli.h"
+#include "stanExports_mcml.h"
 
-RCPP_MODULE(stan_fit4mcml_bernoulli_mod) {
+RCPP_MODULE(stan_fit4mcml_mod) {
 
 
-    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_mcml_bernoulli")
+    class_<rstan::stan_fit<stan_model, boost::random::ecuyer1988> >("rstantools_model_mcml")
 
     .constructor<SEXP,SEXP,SEXP>()
 

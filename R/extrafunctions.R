@@ -64,20 +64,66 @@ progress_bar <- function(i,n,len=30){
 mcnr_family <- function(family, cmdstan){
   f1 <- tolower(family[[1]])
   link <- family[[2]]
-  gaussian_list <- c("identity")
-  binomial_list <- c("logit","log","identity","probit")
-  bernoulli_list <- c("logit","log","identity","probit")
-  quantile_list <- quantile_scaled_list <- c("identity","log","logit","probit","inverse")
-  poisson_list <- c("log")
-  gamma_list <- c("identity","inverse","log")
-  beta_list <- c("logit")
-  if(f1 == "quantile_scaled")f1 <- "quantile"
-  type <- which(get(paste0(f1,"_list"))==link)
+  # if(f1 %in% c("gaussian","beta","gamma")) fty <- "cont"
+  # if(f1 %in% c("bernoulli","binomial","poisson")) fty <- "int"
+  # if(f1 %in% c("quantile","quantile_scaled")) fty <- "quantile"
+  if(f1 == "gaussian"){
+    if(link == "identity"){
+      type <- 1
+    } else if(link == "log") {
+      type <- 2
+    }
+  } else if(f1 == "beta"){
+    type <- 3
+  } else if(f1 == "gamma"){
+    if(link == "identity"){
+      type <- 4
+    } else if(link == "inverse"){
+      type <- 5
+    } else if(link == "log"){
+      type <- 6
+    }
+  } else if(f1 == "bernoulli"){
+    if(link == "logit"){
+      type <- 7
+    } else if(link == "log"){
+      type <- 8
+    } else if(link == "identity"){
+      type <- 9
+    } else if(link == "probit"){
+      type <- 10
+    }
+  } else if(f1 == "binomial"){
+    if(link == "logit"){
+      type <- 11
+    } else if(link == "log"){
+      type <- 12
+    } else if(link == "identity"){
+      type <- 13
+    } else if(link == "probit"){
+      type <- 14
+    }
+  } else if(f1 == "poisson"){
+    type <- 15
+  } else if(f1 %in% c("quantile", "quantile_scaled")){
+    if(link == "logit"){
+      type <- 17
+    } else if(link == "log"){
+      type <- 16
+    } else if(link == "identity"){
+      type <- 16
+    } else if(link == "probit"){
+      type <- 18
+    } else if(link == "inverse"){
+      type <- 19
+    }
+  }
+  
   if(length(type)==0)stop("link not supported for this family")
   if(cmdstan){
-    return(list(file = paste0("mcml_",f1,".stan"),type=type))
+    return(list(file = "mcml.stan",type=type))
   } else {
-    return(list(file = paste0("mcml_",f1),type=type))#,".stan"
+    return(list(file = "mcml",type=type))#,".stan"
   }
 }
 

@@ -160,7 +160,7 @@ Model <- R6::R6Class("Model",
                        predict = function(newdata,
                                           offset = rep(0,nrow(newdata)),
                                           m=0
-                                          ){
+                       ){
                          preddata <- private$model_data(newdata)
                          out <- Model__predict(private$ptr,as.matrix(preddata),offset,m,private$model_type())
                          return(out)
@@ -384,7 +384,7 @@ Model <- R6::R6Class("Model",
                              } else {
                                stop("mean should be MeanFunction class or parameter vector")
                              }
-                               
+                             
                              #   if(is(mean,"list")){
                              #   if(is.null(mean$formula))stop("A formula must be specified for the mean function.")
                              #   if(is.null(mean$data) & is.null(data))stop("No data specified in mean list or call to function.")
@@ -775,7 +775,7 @@ Model <- R6::R6Class("Model",
                              pwr <- pnorm(-self$mean$parameters/v0 - qnorm(1-alpha/2))
                            }
                          }
-
+                         
                          res <- data.frame(Value = self$mean$parameters,
                                            SE = v0,
                                            Power = pwr)
@@ -1063,18 +1063,30 @@ Model <- R6::R6Class("Model",
                          }
                          # SET UP MCMC DATA STRUCTURE
                          data <- list(
-                           N = self$n(),
                            Q = Model__Q(private$ptr,private$model_type()),
                            Xb = Model__xb(private$ptr,private$model_type()),
                            Z = Model__ZL(private$ptr,private$model_type()),
-                           y = Model__y(private$ptr,private$model_type()),
                            type=as.numeric(file_type$type)
                          )
-                         if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
-                         if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
-                         if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
-                         if(self$family[[1]]%in%c("quantile","quantile_scaled"))data <- append(data,list(var_par = self$var_par,
-                                                                                                         q = self$family$q))
+                         if(self$family[[1]]%in%c("gaussian","beta","Gamma","quantile","quantile_scaled"))data <- append(data,list(N_cont = self$n(),
+                                                                                  N_int = 1,
+                                                                                  N_binom = 1,
+                                                                                  sigma = rep(self$var_par/self$weights, self$n()),
+                                                                                  ycont = Model__y(private$ptr,private$model_type()),
+                                                                                  yint = array(0,dim = 1),
+                                                                                  q = 0,
+                                                                                  n = array(0,dim = 1)))
+                         if(self$family[[1]]%in%c("binomial","bernoulli","poisson"))data <- append(data,list(N_int = self$n(),
+                                                                                                      N_cont = 1,
+                                                                                                      N_binom = 1,
+                                                                                                      sigma = array(0,dim = 1),
+                                                                                                      yint = Model__y(private$ptr,private$model_type()),
+                                                                                                      ycont = array(0,dim = 1),
+                                                                                                      q = 0,
+                                                                                                      n = array(0,dim = 1)))
+                         if(self$family[[1]]=="binomial")data <- append(data,list(N_binom  = self$n(), n = self$trials))
+                         if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
+                         if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
                          iter <- 0
                          n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
                          beta_diff <- 1
@@ -1121,28 +1133,28 @@ Model <- R6::R6Class("Model",
                                                 file=tempfile())
                                } else {
                                  capture.output(suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
-                                                                       data=data,
-                                                                       chains=self$mcmc_options$chains,
-                                                                       iter = self$mcmc_options$warmup+n_mcmc_sampling,
-                                                                       warmup = self$mcmc_options$warmup,
-                                                                       refresh = 0)),
+                                                                                        data=data,
+                                                                                        chains=self$mcmc_options$chains,
+                                                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
+                                                                                        warmup = self$mcmc_options$warmup,
+                                                                                        refresh = 0)),
                                                 file=tempfile())
                                }
                              } else {
                                # warnings have been suppressed below as it warns about R-hat etc, which is not reliable with a single chain.
                                if(mcmc.pkg == "cmdstan"){
                                  suppressWarnings(fit <- mod$sample(data = data,
-                                                   chains = self$mcmc_options$chains,
-                                                   iter_warmup = self$mcmc_options$warmup,
-                                                   iter_sampling = n_mcmc_sampling,
-                                                   refresh = 50))
+                                                                    chains = self$mcmc_options$chains,
+                                                                    iter_warmup = self$mcmc_options$warmup,
+                                                                    iter_sampling = n_mcmc_sampling,
+                                                                    refresh = 50))
                                } else {
                                  suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
-                                                        data=data,
-                                                        chains=chains,
-                                                        iter = self$mcmc_options$warmup+n_mcmc_sampling,
-                                                        warmup = self$mcmc_options$warmup,
-                                                        refresh = 50))
+                                                                         data=data,
+                                                                         chains=chains,
+                                                                         iter = self$mcmc_options$warmup+n_mcmc_sampling,
+                                                                         warmup = self$mcmc_options$warmup,
+                                                                         refresh = 50))
                                }
                              }
                              if(mcmc.pkg == "cmdstan"){
@@ -1474,23 +1486,23 @@ Model <- R6::R6Class("Model",
                            } else {
                              if(algo %in% c(1,3)){
                                tryCatch(Model__laplace_ml_beta_u(private$ptr,2,private$model_type()),
-                                         error = function(e) {
-                                           if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
-                                           Model__laplace_ml_beta_u(private$ptr,0,private$model_type());
-                                           })
+                                        error = function(e) {
+                                          if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
+                                          Model__laplace_ml_beta_u(private$ptr,0,private$model_type());
+                                        })
                              } else {
                                Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
                              }
                            }
-                          if(algo == 3){
-                               tryCatch(Model__laplace_ml_theta(private$ptr,2,private$model_type()),
-                                         error = function(e) {
-                                           if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
-                                           Model__laplace_ml_theta(private$ptr,0,private$model_type());
-                                           })
-                             } else {
-                               Model__laplace_ml_theta(private$ptr,0,private$model_type())
-                             }
+                           if(algo == 3){
+                             tryCatch(Model__laplace_ml_theta(private$ptr,2,private$model_type()),
+                                      error = function(e) {
+                                        if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
+                                        Model__laplace_ml_theta(private$ptr,0,private$model_type());
+                                      })
+                           } else {
+                             Model__laplace_ml_theta(private$ptr,0,private$model_type())
+                           }
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
                            var_par_new <- Model__get_var_par(private$ptr,private$model_type())
@@ -1980,24 +1992,24 @@ Model <- R6::R6Class("Model",
                            if(is.null(self$covariance$parameters)){
                              if(type == 0){
                                private$ptr <- Model__new(form,
-                                                          as.matrix(data),
-                                                          colnames(data),
-                                                          tolower(self$family[[1]]),
-                                                          self$family[[2]])
+                                                         as.matrix(data),
+                                                         colnames(data),
+                                                         tolower(self$family[[1]]),
+                                                         self$family[[2]])
                              } else if(type==1){
                                nngp <- self$covariance$nngp()
                                private$ptr <- Model_nngp__new(form,
-                                                                     as.matrix(data),
-                                                                     colnames(data),
-                                                                     tolower(self$family[[1]]),
-                                                                     self$family[[2]],
-                                                                     nngp[2])
+                                                              as.matrix(data),
+                                                              colnames(data),
+                                                              tolower(self$family[[1]]),
+                                                              self$family[[2]],
+                                                              nngp[2])
                              } else if(type==2){
                                private$ptr <- Model_hsgp__new(form,
-                                                                     as.matrix(data),
-                                                                     colnames(data),
-                                                                     tolower(self$family[[1]]),
-                                                                     self$family[[2]])
+                                                              as.matrix(data),
+                                                              colnames(data),
+                                                              tolower(self$family[[1]]),
+                                                              self$family[[2]])
                              }
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
@@ -2209,4 +2221,3 @@ Model <- R6::R6Class("Model",
                          
                        }
                      ))
-

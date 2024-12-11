@@ -117,7 +117,6 @@ private:
   MatrixXd                        information_matrix_by_block(int b);
   bool                            useBlock = true;
   bool                            useSparse = true;
-  
 };
 
 }
