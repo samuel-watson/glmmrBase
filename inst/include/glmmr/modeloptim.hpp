@@ -377,7 +377,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta()
   
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.conservativeResize(NoChange,re.u_.cols());
   re.scaled_u_ = model.covariance.Lu(re.u_);
-
+  if(control.reml) generate_czz();
   if constexpr (std::is_same_v<algo,LBFGS>){
     VectorXd start_vec = Map<VectorXd>(start.data(),start.size());
     optim<double(const VectorXd&, VectorXd&),algo> op(start_vec);
@@ -574,8 +574,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const d
   if(control.reml){
     // REML correction to the log-likelihood
     MatrixXd D = model.covariance.D().llt().solve(MatrixXd::Identity(Q(),Q()));
-    if(D.rows()!=Q() || D.cols()!=Q()) throw std::runtime_error("D wrong size");
-    if(CZZ.rows()!=Q() || CZZ.cols()!=Q()) throw std::runtime_error("CZZ wrong size");
+    // if(D.rows()!=Q() || D.cols()!=Q()) throw std::runtime_error("D wrong size");
+    // if(CZZ.rows()!=Q() || CZZ.cols()!=Q()) throw std::runtime_error("CZZ wrong size");
     MatrixXd CZZD = CZZ + D;
     CZZD = CZZD.llt().solve(MatrixXd::Identity(Q(),Q()));
     double trCZZ = 0;
