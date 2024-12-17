@@ -107,15 +107,15 @@ mcnr_family <- function(family, cmdstan){
     type <- 15
   } else if(f1 %in% c("quantile", "quantile_scaled")){
     if(link == "logit"){
-      type <- 17
+      type <- 18
     } else if(link == "log"){
-      type <- 16
+      type <- 17
     } else if(link == "identity"){
       type <- 16
     } else if(link == "probit"){
-      type <- 18
-    } else if(link == "inverse"){
       type <- 19
+    } else if(link == "inverse"){
+      type <- 20
     }
   }
   

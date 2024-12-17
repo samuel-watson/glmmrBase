@@ -46,11 +46,11 @@ model {
   if(type==13) yint ~ binomial(n,Xb + Z*to_vector(gamma));
   if(type==14) yint ~ binomial(n,Phi_approx(Xb + Z*to_vector(gamma)));
   
-  if(type==14) yint ~ poisson_log(Xb + Z*to_vector(gamma));
+  if(type==15) yint ~ poisson_log(Xb + Z*to_vector(gamma));
   
-  if(type==15) to_vector(ycont) ~ asymmetric_laplace(Xb + Z*to_vector(gamma), sigma[1], q);
-  if(type==16) to_vector(ycont) ~ asymmetric_laplace(exp(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==17) to_vector(ycont) ~ asymmetric_laplace(inv_logit(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==18) to_vector(ycont) ~ asymmetric_laplace(Phi_approx(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==19) to_vector(ycont) ~ asymmetric_laplace(1/(Xb + Z*to_vector(gamma)), sigma[1], q);
+  if(type==16) to_vector(ycont) ~ asymmetric_laplace(Xb + Z*to_vector(gamma), sigma[1], q);
+  if(type==17) to_vector(ycont) ~ asymmetric_laplace(exp(Xb + Z*to_vector(gamma)), sigma[1], q);
+  if(type==18) to_vector(ycont) ~ asymmetric_laplace(inv_logit(Xb + Z*to_vector(gamma)), sigma[1], q);
+  if(type==19) to_vector(ycont) ~ asymmetric_laplace(Phi_approx(Xb + Z*to_vector(gamma)), sigma[1], q);
+  if(type==20) to_vector(ycont) ~ asymmetric_laplace(1/(Xb + Z*to_vector(gamma)), sigma[1], q);
 }

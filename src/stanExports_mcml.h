@@ -563,7 +563,7 @@ public:
                                  stan::math::to_vector(gamma))))));
         }
         current_statement__ = 35;
-        if (stan::math::logical_eq(type, 14)) {
+        if (stan::math::logical_eq(type, 15)) {
           current_statement__ = 34;
           lp_accum__.add(stan::math::poisson_log_lpmf<propto__>(yint,
                            stan::math::add(Xb,
@@ -571,7 +571,7 @@ public:
                                stan::math::to_vector(gamma)))));
         }
         current_statement__ = 37;
-        if (stan::math::logical_eq(type, 15)) {
+        if (stan::math::logical_eq(type, 16)) {
           current_statement__ = 36;
           lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
                            stan::math::to_vector(ycont),
@@ -582,7 +582,7 @@ public:
                              stan::model::index_uni(1)), q, pstream__));
         }
         current_statement__ = 39;
-        if (stan::math::logical_eq(type, 16)) {
+        if (stan::math::logical_eq(type, 17)) {
           current_statement__ = 38;
           lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
                            stan::math::to_vector(ycont),
@@ -594,7 +594,7 @@ public:
                              stan::model::index_uni(1)), q, pstream__));
         }
         current_statement__ = 41;
-        if (stan::math::logical_eq(type, 17)) {
+        if (stan::math::logical_eq(type, 18)) {
           current_statement__ = 40;
           lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
                            stan::math::to_vector(ycont),
@@ -606,7 +606,7 @@ public:
                              stan::model::index_uni(1)), q, pstream__));
         }
         current_statement__ = 43;
-        if (stan::math::logical_eq(type, 18)) {
+        if (stan::math::logical_eq(type, 19)) {
           current_statement__ = 42;
           lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
                            stan::math::to_vector(ycont),
@@ -618,7 +618,7 @@ public:
                              stan::model::index_uni(1)), q, pstream__));
         }
         current_statement__ = 45;
-        if (stan::math::logical_eq(type, 19)) {
+        if (stan::math::logical_eq(type, 20)) {
           current_statement__ = 44;
           lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
                            stan::math::to_vector(ycont),
