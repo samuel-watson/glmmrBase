@@ -10,6 +10,8 @@
 #include <RcppEigen.h>
 #else
 #include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/LU>
 #endif
 
 #ifdef __clang__
@@ -31,10 +33,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cctype>
-#include <SparseChol.h>
 #include <set>
+#include <map>
 #include <unordered_map>
-#include <random>
+#include "sparsechol.h"
 
 
 using namespace Eigen;

@@ -1,9 +1,10 @@
 #pragma once
 
-#include <boost/math/distributions/normal.hpp>
-#include <boost/random.hpp>
-#include "algo.h"
+//#include <boost/math/distributions/normal.hpp>
+// #include <boost/math/distributions/students_t.hpp>
+#include <random>
 #include "general.h"
+#include "algo.h"
 #include "family.hpp"
 
 // [[Rcpp::depends(RcppEigen)]]
@@ -39,7 +40,7 @@ public:
 };
 
 namespace glmmr {
-
+ /*
 template<class T>
 inline T randomGaussian(T generator,
                  VectorXd& res)
@@ -48,7 +49,7 @@ inline T randomGaussian(T generator,
     res(i) = generator();
   // Note the generator is returned back
   return  generator;
-}
+}*/
 
 namespace maths {
 
@@ -56,6 +57,7 @@ inline double gaussian_cdf(double value)
 {
   return 0.5 * erfc(-value * 0.707106781186547524401);
 }
+
 
 inline Eigen::VectorXd gaussian_cdf_vec(const Eigen::VectorXd& v) {
   Eigen::VectorXd res(v.size());
@@ -404,7 +406,10 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
 //   return result;
 // }
 
-
+inline double normalCDF(double value)
+{
+    return 0.5 * erfc(-value * sqrt(0.5));
+}
 
 inline Eigen::VectorXd attenuted_xb(const Eigen::VectorXd& xb,
                                     const Eigen::MatrixXd& Z,
@@ -524,12 +529,12 @@ inline double log_likelihood(const double y,
     break;
   case Link::probit:
   {
-    boost::math::normal norm(0,1);
+    //boost::math::normal norm(0,1);
     if (y == 1) {
-      logl = (double)cdf(norm,mu);
+        logl = normalCDF(mu);//(double)cdf(norm,mu);
     }
     else {
-      logl = log(1 - (double)cdf(norm, mu));
+      logl = log(1 - normalCDF(mu));//(double)cdf(norm, mu)
     }
     break;
   }
@@ -565,11 +570,11 @@ inline double log_likelihood(const double y,
   }
   case Link::probit:
   {
-    boost::math::normal norm(0, 1);
+    //boost::math::normal norm(0, 1);
     double lfk = glmmr::maths::log_factorial_approx(y);
     double lfn = glmmr::maths::log_factorial_approx(var_par);
     double lfnk = glmmr::maths::log_factorial_approx(var_par - y);
-    logl = lfn - lfk - lfnk + y*((double)cdf(norm,mu)) + (var_par - y)*log(1 - (double)cdf(norm,mu));
+    logl = lfn - lfk - lfnk + y*(normalCDF(mu)) + (var_par - y)*log(1 - normalCDF(mu)); //(double)cdf(norm,mu)
     break;
   }
   default:
@@ -651,13 +656,14 @@ inline MatrixXd sample_MVN(const VectorMatrix& mu,
                            int m) {
   int n = mu.vec.size();
   MatrixXd L = mu.mat.llt().matrixL();
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-    generator(boost::mt19937(time(0)),
-              boost::normal_distribution<>());
   VectorXd z(n);
   MatrixXd samps(n, m);
   for (int i = 0; i < m; i++) {
-    randomGaussian(generator, z);
+      std::random_device rd{};
+      std::mt19937 gen{ rd() };
+      std::normal_distribution d{ 0.0, 1.0 };
+      auto random_norm = [&d, &gen] { return d(gen); };
+      for (int j = 0; j < z.size(); j++) z(j) = random_norm();
     samps.col(i) = z;
     samps.col(i) += mu.vec;
   }

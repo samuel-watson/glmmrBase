@@ -72,6 +72,7 @@ public:
   virtual MatrixXd  Lu(const MatrixXd& u);
   virtual void      set_sparse(bool sparse, bool amd = true);
   bool              any_group_re() const;
+  bool              all_group_re() const;
   intvec            parameter_fn_index() const;
   virtual intvec    re_count() const;
   virtual sparse    ZL_sparse();
@@ -717,21 +718,26 @@ inline VectorXd glmmr::Covariance::sim_re()
   VectorXd samps(Q_);
   int idx = 0;
   int ndim;
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-    generator(boost::mt19937(time(0)),
-              boost::normal_distribution<>());
   if(!isSparse){
     for(int i=0; i< B(); i++){
       MatrixXd L = get_chol_block(i);
       ndim = block_dim(i);//re_data_[i].rows();
       VectorXd zz(ndim);      
-      randomGaussian(generator, zz);
+      std::random_device rd{};
+      std::mt19937 gen{ rd() };
+      std::normal_distribution d{ 0.0, 1.0 };
+      auto random_norm = [&d, &gen] { return d(gen); };
+      for (int j = 0; j < zz.size(); j++) zz(j) = random_norm();
       samps.segment(idx,ndim) = L*zz;
       idx += ndim;
     }
   } else {
     VectorXd zz(Q_);
-    randomGaussian(generator, zz);
+    std::random_device rd{};
+    std::mt19937 gen{ rd() };
+    std::normal_distribution d{ 0.0, 1.0 };
+    auto random_norm = [&d, &gen] { return d(gen); };
+    for (int j = 0; j < zz.size(); j++) zz(j) = random_norm();
     samps = SparseOperators::operator*(matL, zz);
   }  
   return samps;
@@ -1025,6 +1031,16 @@ inline bool glmmr::Covariance::any_group_re() const{
   return gr;
 }
 
+inline bool glmmr::Covariance::all_group_re() const {
+    bool gr = true;
+    for (int i = 0; i < fn_.size(); i++) {
+        for (int j = 0; j < fn_[i].size(); j++) {
+            gr *= (fn_[i][j] == CovFunc::gr);
+        }
+    }
+    return gr;
+}
+
 inline strvec glmmr::Covariance::parameter_names(){
   strvec parnames;
   for(int i = 0; i < form_.re_.size(); i++){
@@ -1040,9 +1056,9 @@ inline strvec glmmr::Covariance::parameter_names(){
 
 inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& logl){
 
-#pragma omp declare reduction(vec_dbl_plus : std::vector<double> : \
-                    std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-                    initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+//#pragma omp declare reduction(vec_dbl_plus : std::vector<double> : \
+ //                   std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+  //                  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
 
   std::vector<MatrixXd> derivs;
   derivatives(derivs,1);
@@ -1091,7 +1107,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
           dlogdet_vals[i] += detmat2.trace();
         }
         double baccuml = 0.0;
-      #pragma omp parallel for if(niter > 30) reduction(+:baccuml) reduction(vec_dbl_plus : dqf)
+      // #pragma omp parallel for if(niter > 30) reduction(+:baccuml) reduction(vec_dbl_plus : dqf)
         for(int i = 0; i < niter; i++)
         {
           VectorXd ozquad = Lmat.triangularView<Lower>().solve(umat.col(i).segment(obs_counter, blocksize)); //glmmr::algo::forward_sub(dmat_matrix, umat.col(i).segment(obs_counter, blocksize), blocksize);
@@ -1124,7 +1140,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
       }
     logl += -0.5*Q_ * log(2*M_PI) - 0.5*logdet_val;
     double qf = 0;
-#pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
+// #pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
     for(int i = 0; i < niter; i++)
     {
       VectorXd ucol = umat.col(i);

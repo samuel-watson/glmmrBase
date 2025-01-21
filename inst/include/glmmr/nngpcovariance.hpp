@@ -125,11 +125,12 @@ inline VectorXd glmmr::nngpCovariance::sim_re(){
   if(parameters_.size()==0)throw std::runtime_error("no parameters");
   VectorXd samps(this->Q_);
   MatrixXd L = D(true,false);
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-    generator(boost::mt19937(time(0)),
-              boost::normal_distribution<>());
-  VectorXd zz(this->Q_);      
-  randomGaussian(generator, zz);
+  std::random_device rd{};
+  std::mt19937 gen{ rd() };
+  std::normal_distribution d{ 0.0, 1.0 };
+  auto random_norm = [&d, &gen] { return d(gen); };
+  VectorXd zz(this->Q_);
+  for (int j = 0; j < zz.size(); j++) zz(j) = random_norm();;
   samps = L*zz;
   return samps;
 }
@@ -345,9 +346,9 @@ inline void glmmr::nngpCovariance::gen_AD_derivatives(glmmr::MatrixField<VectorX
 
 inline VectorXd glmmr::nngpCovariance::log_gradient(const MatrixXd& umat, double& ll)
 {
-  #pragma omp declare reduction(vec_dbl_plus : std::vector<double> : \
-                    std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-                    initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+ // #pragma omp declare reduction(vec_dbl_plus : std::vector<double> : \
+  //                  std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+   //                 initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
   
   int npars = this->npar();
   VectorXd grad(npars);

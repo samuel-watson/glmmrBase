@@ -88,7 +88,6 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
-  glmmr::print_vec_1d(calc.parameter_names);
   form.fe_parameter_names_ = calc.parameter_names;
 };
 
@@ -109,7 +108,6 @@ inline glmmr::LinearPredictor::LinearPredictor(glmmr::Formula& form_,
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
-  glmmr::print_vec_1d(calc.parameter_names);
   form.fe_parameter_names_ = calc.parameter_names;
 };
 
@@ -127,7 +125,6 @@ inline glmmr::LinearPredictor::LinearPredictor(const glmmr::LinearPredictor& lin
   X_ = calc.jacobian();
   x_set = true;
   if(X_.array().isNaN().any())throw std::runtime_error("NaN in data");
-  glmmr::print_vec_1d(calc.parameter_names);
   form.fe_parameter_names_ = calc.parameter_names;
 };
 

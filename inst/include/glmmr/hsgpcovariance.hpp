@@ -271,11 +271,12 @@ inline MatrixXd glmmr::hsgpCovariance::D(bool chol, bool upper){
 inline VectorXd glmmr::hsgpCovariance::sim_re(){
   if(parameters_.size()==0)throw std::runtime_error("no parameters");
   VectorXd samps(this->Q_);
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-    generator(boost::mt19937(time(0)),
-              boost::normal_distribution<>());
+  std::random_device rd{};
+  std::mt19937 gen{ rd() };
+  std::normal_distribution d{ 0.0, 1.0 };
+  auto random_norm = [&d, &gen] { return d(gen); };
   VectorXd zz(this->Q_);      
-  randomGaussian(generator, zz);
+  for (int j = 0; j < zz.size(); j++) zz(j) = random_norm();
   samps = glmmr::hsgpCovariance::ZL()*zz;
   return samps;
 }

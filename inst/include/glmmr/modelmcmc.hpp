@@ -103,11 +103,13 @@ inline VectorXd glmmr::ModelMCMC<modeltype>::new_proposal(const VectorXd& u0_,
                                               int iter_,
                                               double runif_){
   
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-  generator(boost::mt19937(time(0)),
-            boost::normal_distribution<>());
-  VectorXd r(model.covariance.Q());
-  randomGaussian(generator, r);
+    VectorXd r(model.covariance.Q()); 
+    std::random_device rd{};
+    std::mt19937 gen{ rd() };
+    std::normal_distribution d{ 0.0, 1.0 };
+    auto random_norm = [&d, &gen] { return d(gen); };
+    for (int j = 0; j < r.size(); j++) r(j) = random_norm();
+  
   VectorXd grad = matrix.log_gradient(u0_,false);
   double lpr = 0.5*r.transpose()*r;
   VectorXd up = u0_;
@@ -163,34 +165,35 @@ template<typename modeltype>
 inline void glmmr::ModelMCMC<modeltype>::sample(int warmup_,
                                  int nsamp_,
                                  int adapt_){
-  boost::variate_generator<boost::mt19937, boost::normal_distribution<> >
-  generator(boost::mt19937(time(0)),
-            boost::normal_distribution<>());
-  VectorXd unew(model.covariance.Q());
-  randomGaussian(generator, unew);
+    VectorXd unew(model.covariance.Q());
+    std::random_device rd{};
+    std::mt19937 gen{ rd() };
+    std::normal_distribution d{ 0.0, 1.0 };
+    auto random_norm = [&d, &gen] { return d(gen); };
+    for (int j = 0; j < unew.size(); j++) unew(j) = random_norm();
   accept = 0;
-  std::minstd_rand gen(std::random_device{}());
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  std::minstd_rand gen2(std::random_device{}());
+  std::uniform_real_distribution<double> dist2(0.0, 1.0);
   int totalsamps = nsamp_ + warmup_;
   int i;
   double prob;
-  prob = dist(gen);
+  prob = dist2(gen2);
   // warmups
   for(i = 0; i < warmup_; i++){
-    prob = dist(gen);
+    prob = dist2(gen2);
     if(i < adapt_){
       unew = new_proposal(unew,true,i+1,prob);
     } else {
       unew = new_proposal(unew,false,i+1,prob);
     }
     if(verbose && i%refresh== 0){
-      Rcpp::Rcout << "\nWarmup: Iter " << i << " of " << totalsamps;
+      //Rcpp::Rcout << "\nWarmup: Iter " << i << " of " << totalsamps;
     }
   }
   re.u_.col(0) = unew;
   //sampling
   for(i = 0; i < nsamp_-1; i++){
-    prob = dist(gen);
+    prob = dist2(gen2);
     re.u_.col(i+1) = new_proposal(re.u_.col(i),false,i+1,prob);
 #ifdef R_BUILD
     if(verbose && i%refresh== 0){

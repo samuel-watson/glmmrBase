@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cmath> 
-#include <RcppEigen.h>
 #include <memory>
+#include "general.h"
+
 
 namespace glmmr {
 

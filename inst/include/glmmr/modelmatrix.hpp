@@ -287,18 +287,22 @@ template<typename modeltype>
 template<glmmr::IM imtype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   MatrixXd X = model.linear_predictor.X();
+  bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();
   if constexpr (imtype == IM::EIM){
     W.update();
-    MatrixXd XtXW = X.transpose() * W.W_.asDiagonal() * X;
-    // if(model.linear_predictor.calc.any_nonlinear)
-    // {
-    //   MatrixXd A = hessian_nonlinear_correction();
-    //   glmmr::Eigen_ext::near_semi_pd(A);
-    //   XtXW += A;
-    // }
+    MatrixXd WX = X;
+    if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
+    MatrixXd XtXW = X.transpose() * WX;
     MatrixXd ZL = model.covariance.ZL();
-    MatrixXd XtWZL = X.transpose() * W.W_.asDiagonal() * ZL;
-    MatrixXd ZLWLZ = ZL.transpose() * W.W_.asDiagonal() * ZL;
+    MatrixXd WZL = ZL;
+    if (nonlinear_w) WZL.applyOnTheLeft(W.W_.asDiagonal());
+    MatrixXd XtWZL = X.transpose() * WZL;
+    MatrixXd ZLWLZ = ZL.transpose() * WZL;
+    if (!nonlinear_w) {
+        XtXW *= (1.0 / model.data.var_par);
+        XtWZL *= (1.0 / model.data.var_par);
+        ZLWLZ *= (1.0 / model.data.var_par);
+    }
     ZLWLZ += MatrixXd::Identity(Q(),Q());
     MatrixXd infomat(P()+Q(),P()+Q());
     infomat.topLeftCorner(P(),P()) = XtXW;
@@ -318,14 +322,23 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     return -1.0*infomat;
   } else if constexpr (imtype == IM::EIM2) {
     W.update();
+    MatrixXd WX = X;
+    if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
     MatrixXd Z = model.covariance.Z();
+    MatrixXd WZ = Z;
+    if (nonlinear_w) WZ.applyOnTheLeft(W.W_.asDiagonal());
+
     MatrixXd D = model.covariance.D();
-    D = D.llt().solve(MatrixXd::Identity(D.rows(),D.cols()));
+    if (model.covariance.all_group_re()) {
+        for (int i = 0; i < D.rows(); i++)D(i, i) = 1.0 / D(i, i);
+    } else {
+        D = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
+    }    
     MatrixXd infomat(P()+Q(),P()+Q());
-    infomat.topLeftCorner(P(),P()) = X.transpose() * W.W_.asDiagonal() * X;
-    infomat.topRightCorner(P(),Q()) = X.transpose() * W.W_.asDiagonal() * Z;
-    infomat.bottomLeftCorner(Q(),P()) = Z.transpose() * W.W_.asDiagonal() * X;
-    infomat.bottomRightCorner(Q(),Q()) = Z.transpose() * W.W_.asDiagonal() * Z + D;
+    infomat.topLeftCorner(P(),P()) = X.transpose() * WX;
+    infomat.topRightCorner(P(),Q()) = X.transpose() * WZ;
+    infomat.bottomLeftCorner(Q(),P()) = infomat.topRightCorner(P(), Q()).transpose();
+    infomat.bottomRightCorner(Q(),Q()) = WZ.transpose() * Z + D;
     return infomat;
   } else {
     MatrixXd M = information_matrix();
@@ -989,11 +1002,10 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   case Link::probit:
   {
     ArrayXd n_array2(model.n());
-    boost::math::normal norm(0, 1);
 #pragma omp parallel for    
     for (int i = 0; i < model.n(); i++) {
-      size_n_array(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
-      n_array2(i) = -1.0 * (double)pdf(norm, size_n_array(i)) / (1 - (double)cdf(norm, size_n_array(i)));
+      size_n_array(i) = glmmr::maths::gaussian_pdf(size_n_array(i)) / glmmr::maths::gaussian_cdf(size_n_array(i));
+      n_array2(i) = -1.0 * glmmr::maths::gaussian_pdf(size_n_array(i)) / (1 - glmmr::maths::gaussian_cdf(size_n_array(i)));
     }
     size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
     break;
@@ -1115,9 +1127,8 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
       {
       ArrayXd n_array2(model.n());
       if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-      boost::math::normal norm(0, 1);
       for (int i = 0; i < model.n(); i++) {
-        n_array2(i) = (double)pdf(norm, size_n_array(i)) / ((double)cdf(norm, size_n_array(i)));
+        n_array2(i) = glmmr::maths::gaussian_pdf(size_n_array(i)) / (glmmr::maths::gaussian_cdf(size_n_array(i)));
         if(size_n_array(i) <= 0){
           size_n_array(i) = model.family.quantile - 1;
         } else {
@@ -1283,10 +1294,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
     case Link::probit:
     {
       ArrayXd n_array2(xb_ind.size());
-      boost::math::normal norm(0, 1);
       for (int i = 0; i < xb_ind.size(); i++) {
-        xb_ind(i) = (double)pdf(norm, xb_ind(i)) / ((double)cdf(norm, xb_ind(i)));
-        n_array2(i) = -1.0 * (double)pdf(norm, xb_ind(i)) / (1 - (double)cdf(norm, xb_ind(i)));
+        xb_ind(i) = glmmr::maths::gaussian_pdf(xb_ind(i)) / (glmmr::maths::gaussian_cdf(xb_ind(i)));
+        n_array2(i) = -1.0 * glmmr::maths::gaussian_pdf(xb_ind(i)) / (1 - glmmr::maths::gaussian_cdf(xb_ind(i)));
       }
       xb_ind = model.data.y(i) * xb_ind + (model.data.variance(i) - model.data.y(i)) * n_array2;
       break;
@@ -1400,10 +1410,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
         case Link::probit:
         {
           ArrayXd n_array2(model.n());
-          boost::math::normal norm(0, 1);
           for (int i = 0; i < model.n(); i++) {
-            n_array2(i) = (double)pdf(norm, xb_ind(i)) / ((double)cdf(norm, xb_ind(i)));
-            xb_ind(i) = model.data.y(i) - ((double)cdf(norm, xb_ind(i)));
+            n_array2(i) = glmmr::maths::gaussian_pdf(xb_ind(i)) / (glmmr::maths::gaussian_cdf(xb_ind(i)));
+            xb_ind(i) = model.data.y(i) - (glmmr::maths::gaussian_cdf(xb_ind(i)));
             xb_ind(i) = 0.5*n_array2(i)*(xb_ind(i)/abs(xb_ind(i)) - (2*model.family.quantile - 1));
           }
           break;
