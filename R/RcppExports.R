@@ -311,6 +311,10 @@ Model__laplace_nr_beta_u <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__laplace_nr_beta_u`, xp, type))
 }
 
+Model__laplace_beta_u <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__laplace_beta_u`, xp, type))
+}
+
 Model__Sigma <- function(xp, inverse, type = 0L) {
     .Call(`_glmmrBase_Model__Sigma`, xp, inverse, type)
 }

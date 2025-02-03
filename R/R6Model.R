@@ -1482,7 +1482,7 @@ Model <- R6::R6Class("Model",
                            iter <- iter + 1
                            if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
                            if(method=="nr"){
-                             Model__laplace_nr_beta_u(private$ptr,private$model_type())
+                             Model__laplace_beta_u(private$ptr,private$model_type())
                            } else {
                              if(algo %in% c(1,3)){
                                tryCatch(Model__laplace_ml_beta_u(private$ptr,2,private$model_type()),

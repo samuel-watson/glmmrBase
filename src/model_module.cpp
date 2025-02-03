@@ -1357,6 +1357,16 @@ void Model__laplace_nr_beta_u(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__laplace_beta_u(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [](auto ptr){ptr->optim.laplace_beta_u();}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
 SEXP Model__Sigma(SEXP xp, bool inverse, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

@@ -963,6 +963,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__laplace_beta_u
+void Model__laplace_beta_u(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__laplace_beta_u(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__laplace_beta_u(xp, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__Sigma
 SEXP Model__Sigma(SEXP xp, bool inverse, int type);
 RcppExport SEXP _glmmrBase_Model__Sigma(SEXP xpSEXP, SEXP inverseSEXP, SEXP typeSEXP) {
@@ -1869,6 +1880,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 3},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 2},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 2},
+    {"_glmmrBase_Model__laplace_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_beta_u, 2},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
     {"_glmmrBase_Model__D", (DL_FUNC) &_glmmrBase_Model__D, 2},
