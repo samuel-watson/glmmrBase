@@ -1687,16 +1687,30 @@ Model <- R6::R6Class("Model",
                              }
                            }
                            data <- list(
-                             N = self$n(),
                              Q = Model__Q(private$ptr,private$model_type()),
                              Xb = Model__xb(private$ptr,private$model_type()),
                              Z = Model__ZL(private$ptr,private$model_type()),
-                             y = Model__y(private$ptr,private$model_type()),
                              type=as.numeric(file_type$type)
                            )
-                           if(self$family[[1]]=="gaussian")data <- append(data,list(sigma = self$var_par/self$weights))
-                           if(self$family[[1]]=="binomial")data <- append(data,list(n = self$trials))
-                           if(self$family[[1]]%in%c("beta","Gamma"))data <- append(data,list(var_par = self$var_par))
+                           if(self$family[[1]]%in%c("gaussian","beta","Gamma","quantile","quantile_scaled"))data <- append(data,list(N_cont = self$n(),
+                                                                                                                                     N_int = 1,
+                                                                                                                                     N_binom = 1,
+                                                                                                                                     sigma = rep(self$var_par/self$weights, self$n()),
+                                                                                                                                     ycont = Model__y(private$ptr,private$model_type()),
+                                                                                                                                     yint = array(0,dim = 1),
+                                                                                                                                     q = 0,
+                                                                                                                                     n = array(0,dim = 1)))
+                           if(self$family[[1]]%in%c("binomial","bernoulli","poisson"))data <- append(data,list(N_int = self$n(),
+                                                                                                               N_cont = 1,
+                                                                                                               N_binom = 1,
+                                                                                                               sigma = array(0,dim = 1),
+                                                                                                               yint = Model__y(private$ptr,private$model_type()),
+                                                                                                               ycont = array(0,dim = 1),
+                                                                                                               q = 0,
+                                                                                                               n = array(0,dim = 1)))
+                           if(self$family[[1]]=="binomial")data <- append(data,list(N_binom  = self$n(), n = self$trials))
+                           if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
+                           if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
                            if(private$trace <= 1){
                              if(private$trace==1)message("Starting MCMC sampling. Set self$trace(2) for detailed output")
                              if(mcmc.pkg == "cmdstan"){

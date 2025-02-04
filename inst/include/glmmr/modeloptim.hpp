@@ -221,7 +221,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   current_ll_values.first = ll_current.col(0).tail(eval_size).mean();
   current_ll_var.first = (ll_current.col(0).tail(eval_size) - ll_current.col(0).tail(eval_size).mean()).square().sum() / (eval_size - 1);
-  calculate_var_par();
+  
 }
 
 template<typename modeltype>
@@ -278,7 +278,7 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
   current_ll_values.second = ll_current.col(1).tail(eval_size).mean();
   current_ll_var.second = (ll_current.col(1).tail(eval_size) - ll_current.col(1).tail(eval_size).mean()).square().sum() / (eval_size - 1);
-  
+  calculate_var_par();
 }
 
 // THIS FUNCTION BELOW NEEDS UPDATING - IT IS NOT CURRENTLY USED AND LACKS FUNCTIONALITY
@@ -413,7 +413,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_ml_theta()
     }
     op.minimise();
   }
-
+  calculate_var_par();
  
 }
 
@@ -1262,7 +1262,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   VectorXd Wum = Wu.rowwise().mean();
   VectorXd bincr = XtWXm * X.transpose() * Wum;
   update_beta(model.linear_predictor.parameter_vector() + bincr);
-  calculate_var_par();
+  //calculate_var_par();
   
   // repopulate loglikelihood history - assumes NR can 
   // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
@@ -1288,7 +1288,6 @@ inline void glmmr::ModelOptim<modeltype>::laplace_beta_u() {
     if (!nonlinear_w) newparams *= (1.0 / model.data.var_par);
     update_beta(newparams.head(P()));
     update_u(newparams.tail(Q()));
-    calculate_var_par();
 }
 
 template<typename modeltype>
@@ -1309,7 +1308,7 @@ inline void glmmr::ModelOptim<modeltype>::laplace_nr_beta_u(){
   params += infomat*pderiv;
   update_beta(params.head(P()));
   update_u(params.tail(Q()));
-  calculate_var_par();
+  //calculate_var_par();
 }
 
 template<typename modeltype>
@@ -1328,28 +1327,54 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
   if(model.family.family==Fam::gaussian || model.family.family==Fam::quantile_scaled){
     // revise this for beta and Gamma re residuals
     if(control.reml){
-      // reml update of marginal variance parameter
-      MatrixXd SigmaInv = matrix.Sigma(true);
-      MatrixXd XZ(model.n(), P()+Q());
-      XZ.leftCols(P()) = model.linear_predictor.X();
-      XZ.rightCols(Q()) = model.covariance.Z();
-      
-      VectorXd xb = model.linear_predictor.xb();
-      ArrayXd resid = (model.data.y.array() - xb.array());
+      // using Diffey 2017
+      // generate_czz();
+      re.zu_ = model.covariance.ZLu(re.u_);
+      VectorXd resid = (model.data.y - re.zu_.col(0));
+      MatrixXd X = model.linear_predictor.X();
+      MatrixXd XW = X;
       bool weighted = (model.data.weights != 1).any();
-      
-      MatrixXd M = matrix.template observed_information_matrix<IM::EIM2>();
-      M = M.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
-      MatrixXd XZMZX = XZ * M * XZ.transpose();
-      VectorXd e = model.data.var_par * SigmaInv * resid.matrix();
-      double new_var_par;
+      if (weighted) XW.applyOnTheLeft(model.data.weights.matrix().asDiagonal());
+      MatrixXd XWX = X.transpose() * XW;
+      XWX = XWX.llt().solve(MatrixXd::Identity(XWX.rows(),XWX.cols()));
+      MatrixXd U = -1.0* XW * XWX * XW.transpose();
       if(weighted){
-        XZMZX = model.data.weights.matrix().asDiagonal() * XZMZX;
-        double sumw = model.data.weights.sum();
-        new_var_par = (1.0/sumw) * (e.transpose() * e + XZMZX.trace()); //(model.data.weights.inverse().matrix().asDiagonal()* X * M.topLeftCorner(P(), P()) * X.transpose()).trace() + (model.data.weights.inverse().matrix().asDiagonal() * Z * M.bottomRightCorner(Q(), Q()) * Z.transpose()).trace());
+        U = U + model.data.weights.matrix().asDiagonal().toDenseMatrix();
       } else {
-        new_var_par = (1.0/model.n()) * (e.transpose()* e + XZMZX.trace());//(X * M.topLeftCorner(P(), P()) * X.transpose()).trace() + (Z * M.bottomRightCorner(Q(), Q()) * Z.transpose()).trace()
+        U += MatrixXd::Identity(U.rows(),U.cols());
       }
+      MatrixXd ZUZC = model.covariance.Z().transpose() * U * model.covariance.Z();
+      ZUZC *= CZZ;
+      double new_var_par = (1.0 /( model.n() - X.cols())) * (resid.transpose() * U * resid + ZUZC.trace());
+      Rcpp::Rcout << "\n rTr: " << resid.transpose() * U * resid << " ZUZCtr: " << ZUZC.trace();
+      Rcpp::Rcout << "\n resid: " << resid.head(10).transpose() << " U:\n" << U.topRightCorner(10,10) << "\nZUZC\n:" << ZUZC.topRightCorner(5,5); 
+      
+      // reml update of marginal variance parameter
+      // Rcpp::Rcout << "\nGen sigma inverse";
+      // MatrixXd SigmaInv = matrix.Sigma(true);
+      // Rcpp::Rcout << "\nGen other matrices";
+      // MatrixXd XZ(model.n(), P()+Q());
+      // XZ.leftCols(P()) = model.linear_predictor.X();
+      // XZ.rightCols(Q()) = model.covariance.Z();
+      // 
+      // VectorXd xb = model.linear_predictor.xb();
+      // ArrayXd resid = (model.data.y.array() - xb.array());
+      // bool weighted = (model.data.weights != 1).any();
+      // Rcpp::Rcout << "\nGen Infomat";
+      // MatrixXd M = matrix.template observed_information_matrix<IM::EIM2>();
+      // M = M.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
+      // Rcpp::Rcout << "\nGen XZM";
+      // MatrixXd XZMZX = XZ * M * XZ.transpose();
+      // Rcpp::Rcout << "\nGen e";
+      // VectorXd e = model.data.var_par * SigmaInv * resid.matrix();
+      // double new_var_par;
+      // if(weighted){
+      //   XZMZX = model.data.weights.matrix().asDiagonal() * XZMZX;
+      //   double sumw = model.data.weights.sum();
+      //   new_var_par = (1.0/sumw) * (e.transpose() * e + XZMZX.trace()); //(model.data.weights.inverse().matrix().asDiagonal()* X * M.topLeftCorner(P(), P()) * X.transpose()).trace() + (model.data.weights.inverse().matrix().asDiagonal() * Z * M.bottomRightCorner(Q(), Q()) * Z.transpose()).trace());
+      // } else {
+      //   new_var_par = (1.0/model.n()) * (e.transpose()* e + XZMZX.trace());//(X * M.topLeftCorner(P(), P()) * X.transpose()).trace() + (Z * M.bottomRightCorner(Q(), Q()) * Z.transpose()).trace()
+      // }
       update_var_par(new_var_par);
     } else {
       int niter = re.u(false).cols();
