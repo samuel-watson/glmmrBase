@@ -1101,11 +1101,13 @@ inline void glmmr::ModelOptim<modeltype>::generate_czz()
           WX = w.asDiagonal() * X;
       }
       MatrixXd XtWX = X.transpose() * WX;
-      WX.applyOnTheLeft(model.covariance.Z().transpose());
+      WX = model.covariance.Z().transpose() * WX;
+      // WX.applyOnTheLeft(model.covariance.Z().transpose());
       XtWX = XtWX.llt().solve(MatrixXd::Identity(P(), P()));
       MatrixXd WZ = model.covariance.Z();
       if (nonlinear_w) {
-          WZ.applyOnTheLeft(w.asDiagonal());
+        WZ = w.asDiagonal() * WZ;
+          //WZ.applyOnTheLeft(w.asDiagonal());
       }
 
       MatrixXd ZWZ = model.covariance.Z().transpose() * WZ;
@@ -1115,7 +1117,8 @@ inline void glmmr::ModelOptim<modeltype>::generate_czz()
   else {
       MatrixXd WZ = model.covariance.Z();
       if (nonlinear_w) {
-          WZ.applyOnTheLeft(w.asDiagonal());
+        WZ = w.asDiagonal() * WZ;
+          //WZ.applyOnTheLeft(w.asDiagonal());
       }
       CZZ = model.covariance.Z().transpose() * WZ;
       if (!nonlinear_w) CZZ *= 1.0 / model.data.var_par;
@@ -1131,7 +1134,6 @@ inline void glmmr::ModelOptim<modeltype>::generate_czz()
   }  
   CZZ += D;
   CZZ = CZZ.llt().solve(MatrixXd::Identity(Q(), Q()));
-  //std::cout << "\nDone generate CZZ";
 }
 
 template<typename modeltype>
@@ -1277,9 +1279,9 @@ inline void glmmr::ModelOptim<modeltype>::laplace_beta_u() {
     infomat = infomat.llt().solve(MatrixXd::Identity(P() + Q(), P() + Q()));
     VectorXd params(P() + Q());
     MatrixXd WX = (model.linear_predictor.X()).transpose();
-    if (nonlinear_w) WX.applyOnTheRight(w.asDiagonal());
+    if (nonlinear_w) WX *= w.asDiagonal().toDenseMatrix();
     MatrixXd ZL = (model.covariance.ZL()).transpose();
-    if (nonlinear_w) ZL.applyOnTheRight(w.asDiagonal());
+    if (nonlinear_w) ZL *= w.asDiagonal().toDenseMatrix(); 
     params.head(P()) = WX * model.data.y;
     params.tail(Q()) = ZL * model.data.y;
     VectorXd newparams = infomat * params;
@@ -1340,10 +1342,9 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       M = M.llt().solve(MatrixXd::Identity(P()+Q(),P()+Q()));
       MatrixXd XZMZX = XZ * M * XZ.transpose();
       VectorXd e = model.data.var_par * SigmaInv * resid.matrix();
-      
       double new_var_par;
       if(weighted){
-        XZMZX.applyOnTheLeft(model.data.weights.matrix().asDiagonal());
+        XZMZX = model.data.weights.matrix().asDiagonal() * XZMZX;
         double sumw = model.data.weights.sum();
         new_var_par = (1.0/sumw) * (e.transpose() * e + XZMZX.trace()); //(model.data.weights.inverse().matrix().asDiagonal()* X * M.topLeftCorner(P(), P()) * X.transpose()).trace() + (model.data.weights.inverse().matrix().asDiagonal() * Z * M.bottomRightCorner(Q(), Q()) * Z.transpose()).trace());
       } else {
