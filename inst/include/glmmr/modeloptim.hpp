@@ -1346,8 +1346,6 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       MatrixXd ZUZC = model.covariance.Z().transpose() * U * model.covariance.Z();
       ZUZC *= CZZ;
       double new_var_par = (1.0 /( model.n() - X.cols())) * (resid.transpose() * U * resid + ZUZC.trace());
-      Rcpp::Rcout << "\n rTr: " << resid.transpose() * U * resid << " ZUZCtr: " << ZUZC.trace();
-      Rcpp::Rcout << "\n resid: " << resid.head(10).transpose() << " U:\n" << U.topRightCorner(10,10) << "\nZUZC\n:" << ZUZC.topRightCorner(5,5); 
       
       // reml update of marginal variance parameter
       // Rcpp::Rcout << "\nGen sigma inverse";
