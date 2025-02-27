@@ -1084,7 +1084,10 @@ Model <- R6::R6Class("Model",
                                                                                                       ycont = array(0,dim = 1),
                                                                                                       q = 0,
                                                                                                       n = array(0,dim = 1)))
-                         if(self$family[[1]]=="binomial")data <- append(data,list(N_binom  = self$n(), n = self$trials))
+                         if(self$family[[1]]=="binomial"){
+                           data$N_binom = self$n()
+                           data$n = self$trials
+                         }
                          if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
                          if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
                          iter <- 0
@@ -1149,9 +1152,10 @@ Model <- R6::R6Class("Model",
                                                                     iter_sampling = n_mcmc_sampling,
                                                                     refresh = 50))
                                } else {
+                                 
                                  suppressWarnings(fit <- rstan::sampling(stanmodels[[file_type$file]],
                                                                          data=data,
-                                                                         chains=chains,
+                                                                         chains=self$mcmc_options$chains,
                                                                          iter = self$mcmc_options$warmup+n_mcmc_sampling,
                                                                          warmup = self$mcmc_options$warmup,
                                                                          refresh = 50))
