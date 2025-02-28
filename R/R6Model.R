@@ -770,9 +770,9 @@ Model <- R6::R6Class("Model",
                            pwr <- pnorm(abs(self$mean$parameters/v0) - qnorm(1-alpha/2))
                          } else {
                            if(alternative == "pos"){
-                             pwr <- pnorm(self$mean$parameters/v0 - qnorm(1-alpha/2))
+                             pwr <- pnorm(self$mean$parameters/v0 - qnorm(1-alpha))
                            } else {
-                             pwr <- pnorm(-self$mean$parameters/v0 - qnorm(1-alpha/2))
+                             pwr <- pnorm(-self$mean$parameters/v0 - qnorm(1-alpha))
                            }
                          }
                          
@@ -985,7 +985,7 @@ Model <- R6::R6Class("Model",
                            private$verify_data(y)
                            private$set_y(y)
                          }
-                         if(private$model_type() > 0 & reml = TRUE) stop("REML not available with HSGP/NNGP approximations, please set reml=FALSE")
+                         if(private$model_type() > 0 & reml == TRUE) stop("REML not available with HSGP/NNGP approximations, please set reml=FALSE")
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
                          if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
