@@ -1035,7 +1035,7 @@ inline bool glmmr::Covariance::all_group_re() const {
     bool gr = true;
     for (int i = 0; i < fn_.size(); i++) {
         for (int j = 0; j < fn_[i].size(); j++) {
-            gr *= (fn_[i][j] == CovFunc::gr);
+            gr = gr && (fn_[i][j] == CovFunc::gr);
         }
     }
     return gr;
