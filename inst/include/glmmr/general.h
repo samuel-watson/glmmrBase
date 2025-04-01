@@ -36,7 +36,7 @@
 #include <set>
 #include <map>
 #include <unordered_map>
-#include "sparsechol.h"
+#include <SparseChol.h>
 
 
 using namespace Eigen;
