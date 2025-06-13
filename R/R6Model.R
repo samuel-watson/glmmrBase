@@ -2110,7 +2110,7 @@ Model <- R6::R6Class("Model",
                        model_data = function(newdata){
                          cnames <- colnames(self$covariance$data)
                          if(any(!colnames(self$mean$data)%in%cnames)){
-                           cnames <- c(cnames1, which(!colnames(self$mean$data)%in%cnames))
+                           cnames <- c(cnames, which(!colnames(self$mean$data)%in%cnames))
                          }
                          if(!isTRUE(all.equal(cnames,colnames(newdata)))){
                            newdat <- newdata[,cnames[cnames%in%colnames(newdata)],drop=FALSE]
