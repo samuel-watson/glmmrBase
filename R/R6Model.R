@@ -2112,7 +2112,6 @@ Model <- R6::R6Class("Model",
                          if(any(!colnames(self$mean$data)%in%cnames)){
                            cnames <- c(cnames, colnames(self$mean$data)[which(!colnames(self$mean$data)%in%cnames)])
                          }
-                         print(cnames)
                          if(!isTRUE(all.equal(cnames,colnames(newdata)))){
                            newdat <- newdata[,cnames[cnames%in%colnames(newdata)],drop=FALSE]
                            newcnames <- cnames[!cnames%in%colnames(newdata)]
