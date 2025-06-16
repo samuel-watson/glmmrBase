@@ -608,7 +608,7 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& beta)
 {
   model.linear_predictor.update_parameters(beta);
-  double ll = log_likelihood();
+  double ll = 0.0;
   fn_counter.first += re.scaled_u_.cols();
   if(control.saem)
   {
