@@ -1,12 +1,12 @@
-functions {
-  real asymmetric_laplace_lpdf(vector y, vector mu, real sigma, real q){
-    int n = size(y);
-    vector[n] resid = (y - mu)/sigma;
-    vector[n] rho = (abs(resid) + (2*q - 1)*resid)*0.5;
-    real ll = n*log(q) + n*log(1-q) - n*log(sigma) - sum(rho);
-    return ll;
-  }
-}
+// functions {
+//   real asymmetric_laplace_lpdf(vector y, vector mu, real sigma, real q){
+//     int n = size(y);
+//     vector[n] resid = (y - mu)/sigma;
+//     vector[n] rho = (abs(resid) + (2*q - 1)*resid)*0.5;
+//     real ll = n*log(q) + n*log(1-q) - n*log(sigma) - sum(rho);
+//     return ll;
+//   }
+// }
 data {
   int N_cont; // sample size
   int N_int;
@@ -48,9 +48,9 @@ model {
   
   if(type==15) yint ~ poisson_log(Xb + Z*to_vector(gamma));
   
-  if(type==16) to_vector(ycont) ~ asymmetric_laplace(Xb + Z*to_vector(gamma), sigma[1], q);
-  if(type==17) to_vector(ycont) ~ asymmetric_laplace(exp(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==18) to_vector(ycont) ~ asymmetric_laplace(inv_logit(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==19) to_vector(ycont) ~ asymmetric_laplace(Phi_approx(Xb + Z*to_vector(gamma)), sigma[1], q);
-  if(type==20) to_vector(ycont) ~ asymmetric_laplace(1/(Xb + Z*to_vector(gamma)), sigma[1], q);
+  // if(type==16) to_vector(ycont) ~ asymmetric_laplace(Xb + Z*to_vector(gamma), sigma[1], q);
+  // if(type==17) to_vector(ycont) ~ asymmetric_laplace(exp(Xb + Z*to_vector(gamma)), sigma[1], q);
+  // if(type==18) to_vector(ycont) ~ asymmetric_laplace(inv_logit(Xb + Z*to_vector(gamma)), sigma[1], q);
+  // if(type==19) to_vector(ycont) ~ asymmetric_laplace(Phi_approx(Xb + Z*to_vector(gamma)), sigma[1], q);
+  // if(type==20) to_vector(ycont) ~ asymmetric_laplace(1/(Xb + Z*to_vector(gamma)), sigma[1], q);
 }
