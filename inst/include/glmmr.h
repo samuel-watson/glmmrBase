@@ -1,15 +1,8 @@
 #pragma once
 
 #include <variant>
-#include "glmmr/general.h"
-#include "glmmr/maths.h"
-#include "glmmr/formula.hpp"
-#include "glmmr/covariance.hpp"
-#include "glmmr/linearpredictor.hpp"
 #include "glmmr/model.hpp"
-#include "glmmr/modelbits.hpp"
 #include "glmmr/openmpheader.h"
-#include "glmmr/nngpcovariance.hpp"
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]

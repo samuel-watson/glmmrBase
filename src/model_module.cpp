@@ -2307,3 +2307,4 @@ SEXP get_variable_names(SEXP formula_,
   (void)out;
   return wrap(calc.data_names);
 }
+
