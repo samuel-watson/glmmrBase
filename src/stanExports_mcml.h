@@ -27,53 +27,51 @@ namespace model_mcml_namespace {
 using stan::model::model_base_crtp;
 using namespace stan::math;
 stan::math::profile_map profiles__;
-static constexpr std::array<const char*, 74> locations_array__ =
+static constexpr std::array<const char*, 64> locations_array__ =
   {" (found before start of program)",
-  " (in 'string', line 25, column 2 to column 22)",
-  " (in 'string', line 28, column 2 to column 34)",
-  " (in 'string', line 29, column 16 to column 80)",
-  " (in 'string', line 29, column 2 to column 80)",
-  " (in 'string', line 30, column 16 to column 85)",
-  " (in 'string', line 30, column 2 to column 85)",
-  " (in 'string', line 32, column 11 to column 17)",
-  " (in 'string', line 32, column 4 to column 67)",
-  " (in 'string', line 33, column 4 to column 68)",
-  " (in 'string', line 31, column 15 to line 34, column 3)",
-  " (in 'string', line 31, column 2 to line 34, column 3)",
-  " (in 'string', line 35, column 14 to column 91)",
-  " (in 'string', line 35, column 2 to column 91)",
-  " (in 'string', line 36, column 14 to column 87)",
-  " (in 'string', line 36, column 2 to column 87)",
-  " (in 'string', line 37, column 14 to column 94)",
-  " (in 'string', line 37, column 2 to column 94)",
-  " (in 'string', line 38, column 14 to column 62)",
-  " (in 'string', line 38, column 2 to column 62)",
-  " (in 'string', line 39, column 14 to column 61)",
-  " (in 'string', line 39, column 2 to column 61)",
-  " (in 'string', line 40, column 14 to column 56)",
-  " (in 'string', line 40, column 2 to column 56)",
-  " (in 'string', line 41, column 15 to column 69)",
-  " (in 'string', line 41, column 2 to column 69)",
-  " (in 'string', line 43, column 15 to column 65)",
-  " (in 'string', line 43, column 2 to column 65)",
-  " (in 'string', line 44, column 15 to column 63)",
-  " (in 'string', line 44, column 2 to column 63)",
-  " (in 'string', line 45, column 15 to column 58)",
-  " (in 'string', line 45, column 2 to column 58)",
-  " (in 'string', line 46, column 15 to column 70)",
-  " (in 'string', line 46, column 2 to column 70)",
-  " (in 'string', line 48, column 15 to column 59)",
-  " (in 'string', line 48, column 2 to column 59)",
-  " (in 'string', line 50, column 15 to column 91)",
-  " (in 'string', line 50, column 2 to column 91)",
-  " (in 'string', line 51, column 15 to column 96)",
-  " (in 'string', line 51, column 2 to column 96)",
-  " (in 'string', line 52, column 15 to column 102)",
-  " (in 'string', line 52, column 2 to column 102)",
-  " (in 'string', line 53, column 15 to column 103)",
-  " (in 'string', line 53, column 2 to column 103)",
-  " (in 'string', line 54, column 15 to column 95)",
-  " (in 'string', line 54, column 2 to column 95)",
+  " (in 'string', line 25, column 2 to column 18)",
+  " (in 'string', line 28, column 2 to column 23)",
+  " (in 'string', line 29, column 9 to column 40)",
+  " (in 'string', line 29, column 2 to column 60)",
+  " (in 'string', line 30, column 16 to column 59)",
+  " (in 'string', line 30, column 2 to column 59)",
+  " (in 'string', line 31, column 16 to column 64)",
+  " (in 'string', line 31, column 2 to column 64)",
+  " (in 'string', line 33, column 11 to column 17)",
+  " (in 'string', line 33, column 4 to column 27)",
+  " (in 'string', line 34, column 11 to column 17)",
+  " (in 'string', line 34, column 4 to column 28)",
+  " (in 'string', line 36, column 6 to column 45)",
+  " (in 'string', line 37, column 6 to column 35)",
+  " (in 'string', line 35, column 22 to line 38, column 5)",
+  " (in 'string', line 35, column 4 to line 38, column 5)",
+  " (in 'string', line 39, column 4 to column 65)",
+  " (in 'string', line 32, column 15 to line 40, column 3)",
+  " (in 'string', line 32, column 2 to line 40, column 3)",
+  " (in 'string', line 41, column 14 to column 68)",
+  " (in 'string', line 41, column 2 to column 68)",
+  " (in 'string', line 42, column 14 to column 64)",
+  " (in 'string', line 42, column 2 to column 64)",
+  " (in 'string', line 43, column 14 to column 73)",
+  " (in 'string', line 43, column 2 to column 73)",
+  " (in 'string', line 44, column 14 to column 41)",
+  " (in 'string', line 44, column 2 to column 41)",
+  " (in 'string', line 45, column 14 to column 40)",
+  " (in 'string', line 45, column 2 to column 40)",
+  " (in 'string', line 46, column 14 to column 35)",
+  " (in 'string', line 46, column 2 to column 35)",
+  " (in 'string', line 47, column 15 to column 48)",
+  " (in 'string', line 47, column 2 to column 48)",
+  " (in 'string', line 49, column 15 to column 44)",
+  " (in 'string', line 49, column 2 to column 44)",
+  " (in 'string', line 50, column 15 to column 42)",
+  " (in 'string', line 50, column 2 to column 42)",
+  " (in 'string', line 51, column 15 to column 37)",
+  " (in 'string', line 51, column 2 to column 37)",
+  " (in 'string', line 52, column 15 to column 49)",
+  " (in 'string', line 52, column 2 to column 49)",
+  " (in 'string', line 54, column 15 to column 38)",
+  " (in 'string', line 54, column 2 to column 38)",
   " (in 'string', line 11, column 2 to column 13)",
   " (in 'string', line 12, column 2 to column 12)",
   " (in 'string', line 13, column 2 to column 14)",
@@ -93,81 +91,7 @@ static constexpr std::array<const char*, 74> locations_array__ =
   " (in 'string', line 20, column 2 to column 23)",
   " (in 'string', line 21, column 2 to column 31)",
   " (in 'string', line 22, column 2 to column 11)",
-  " (in 'string', line 25, column 8 to column 9)",
-  " (in 'string', line 3, column 4 to column 20)",
-  " (in 'string', line 4, column 11 to column 12)",
-  " (in 'string', line 4, column 4 to column 37)",
-  " (in 'string', line 5, column 11 to column 12)",
-  " (in 'string', line 5, column 4 to column 55)",
-  " (in 'string', line 6, column 4 to column 62)",
-  " (in 'string', line 7, column 4 to column 14)",
-  " (in 'string', line 2, column 71 to line 8, column 3)"};
-template <bool propto__, typename T0__, typename T1__, typename T2__,
-          typename T3__,
-          stan::require_all_t<stan::is_col_vector<T0__>,
-                              stan::is_vt_not_complex<T0__>,
-                              stan::is_col_vector<T1__>,
-                              stan::is_vt_not_complex<T1__>,
-                              stan::is_stan_scalar<T2__>,
-                              stan::is_stan_scalar<T3__>>* = nullptr>
-stan::promote_args_t<stan::base_type_t<T0__>, stan::base_type_t<T1__>, T2__,
-  T3__>
-asymmetric_laplace_lpdf(const T0__& y_arg__, const T1__& mu_arg__,
-                        const T2__& sigma, const T3__& q, std::ostream*
-                        pstream__);
-template <bool propto__, typename T0__, typename T1__, typename T2__,
-          typename T3__,
-          stan::require_all_t<stan::is_col_vector<T0__>,
-                              stan::is_vt_not_complex<T0__>,
-                              stan::is_col_vector<T1__>,
-                              stan::is_vt_not_complex<T1__>,
-                              stan::is_stan_scalar<T2__>,
-                              stan::is_stan_scalar<T3__>>*>
-stan::promote_args_t<stan::base_type_t<T0__>, stan::base_type_t<T1__>, T2__,
-  T3__>
-asymmetric_laplace_lpdf(const T0__& y_arg__, const T1__& mu_arg__,
-                        const T2__& sigma, const T3__& q, std::ostream*
-                        pstream__) {
-  using local_scalar_t__ = stan::promote_args_t<stan::base_type_t<T0__>,
-                             stan::base_type_t<T1__>, T2__, T3__>;
-  int current_statement__ = 0;
-  const auto& y = stan::math::to_ref(y_arg__);
-  const auto& mu = stan::math::to_ref(mu_arg__);
-  local_scalar_t__ DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
-  // suppress unused var warning
-  (void) DUMMY_VAR__;
-  try {
-    int n = std::numeric_limits<int>::min();
-    current_statement__ = 66;
-    n = stan::math::size(y);
-    current_statement__ = 67;
-    stan::math::validate_non_negative_index("resid", "n", n);
-    Eigen::Matrix<local_scalar_t__,-1,1> resid =
-      Eigen::Matrix<local_scalar_t__,-1,1>::Constant(n, DUMMY_VAR__);
-    current_statement__ = 68;
-    stan::model::assign(resid,
-      stan::math::divide(stan::math::subtract(y, mu), sigma),
-      "assigning variable resid");
-    current_statement__ = 69;
-    stan::math::validate_non_negative_index("rho", "n", n);
-    Eigen::Matrix<local_scalar_t__,-1,1> rho =
-      Eigen::Matrix<local_scalar_t__,-1,1>::Constant(n, DUMMY_VAR__);
-    current_statement__ = 70;
-    stan::model::assign(rho,
-      stan::math::multiply(
-        stan::math::add(stan::math::abs(resid),
-          stan::math::multiply(((2 * q) - 1), resid)), 0.5),
-      "assigning variable rho");
-    local_scalar_t__ ll = DUMMY_VAR__;
-    current_statement__ = 71;
-    ll = ((((n * stan::math::log(q)) + (n * stan::math::log((1 - q)))) - (n *
-      stan::math::log(sigma))) - stan::math::sum(rho));
-    current_statement__ = 72;
-    return ll;
-  } catch (const std::exception& e) {
-    stan::lang::rethrow_located(e, locations_array__[current_statement__]);
-  }
-}
+  " (in 'string', line 25, column 9 to column 10)"};
 #include <stan_meta_header.hpp>
 class model_mcml final : public model_base_crtp<model_mcml> {
 private:
@@ -207,35 +131,35 @@ public:
     try {
       int pos__ = std::numeric_limits<int>::min();
       pos__ = 1;
-      current_statement__ = 46;
+      current_statement__ = 44;
       context__.validate_dims("data initialization", "N_cont", "int",
         std::vector<size_t>{});
       N_cont = std::numeric_limits<int>::min();
-      current_statement__ = 46;
+      current_statement__ = 44;
       N_cont = context__.vals_i("N_cont")[(1 - 1)];
-      current_statement__ = 47;
+      current_statement__ = 45;
       context__.validate_dims("data initialization", "N_int", "int",
         std::vector<size_t>{});
       N_int = std::numeric_limits<int>::min();
-      current_statement__ = 47;
+      current_statement__ = 45;
       N_int = context__.vals_i("N_int")[(1 - 1)];
-      current_statement__ = 48;
+      current_statement__ = 46;
       context__.validate_dims("data initialization", "N_binom", "int",
         std::vector<size_t>{});
       N_binom = std::numeric_limits<int>::min();
-      current_statement__ = 48;
+      current_statement__ = 46;
       N_binom = context__.vals_i("N_binom")[(1 - 1)];
-      current_statement__ = 49;
+      current_statement__ = 47;
       context__.validate_dims("data initialization", "Q", "int",
         std::vector<size_t>{});
       Q = std::numeric_limits<int>::min();
-      current_statement__ = 49;
+      current_statement__ = 47;
       Q = context__.vals_i("Q")[(1 - 1)];
-      current_statement__ = 50;
+      current_statement__ = 48;
       stan::math::validate_non_negative_index("Xb",
         "N_cont > N_int ? N_cont : N_int",
         (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int));
-      current_statement__ = 51;
+      current_statement__ = 49;
       context__.validate_dims("data initialization", "Xb", "double",
         std::vector<size_t>{static_cast<size_t>(
                               (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int))});
@@ -246,27 +170,27 @@ public:
         (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int));
       {
         std::vector<local_scalar_t__> Xb_flat__;
-        current_statement__ = 51;
+        current_statement__ = 49;
         Xb_flat__ = context__.vals_r("Xb");
-        current_statement__ = 51;
+        current_statement__ = 49;
         pos__ = 1;
-        current_statement__ = 51;
+        current_statement__ = 49;
         for (int sym1__ = 1; sym1__ <=
              (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int); ++sym1__) {
-          current_statement__ = 51;
+          current_statement__ = 49;
           stan::model::assign(Xb, Xb_flat__[(pos__ - 1)],
             "assigning variable Xb", stan::model::index_uni(sym1__));
-          current_statement__ = 51;
+          current_statement__ = 49;
           pos__ = (pos__ + 1);
         }
       }
-      current_statement__ = 52;
+      current_statement__ = 50;
       stan::math::validate_non_negative_index("Z",
         "N_cont > N_int ? N_cont : N_int",
         (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int));
-      current_statement__ = 53;
+      current_statement__ = 51;
       stan::math::validate_non_negative_index("Z", "Q", Q);
-      current_statement__ = 54;
+      current_statement__ = 52;
       context__.validate_dims("data initialization", "Z", "double",
         std::vector<size_t>{static_cast<size_t>(
                               (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int)),
@@ -278,44 +202,44 @@ public:
         (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int), Q);
       {
         std::vector<local_scalar_t__> Z_flat__;
-        current_statement__ = 54;
+        current_statement__ = 52;
         Z_flat__ = context__.vals_r("Z");
-        current_statement__ = 54;
+        current_statement__ = 52;
         pos__ = 1;
-        current_statement__ = 54;
+        current_statement__ = 52;
         for (int sym1__ = 1; sym1__ <= Q; ++sym1__) {
-          current_statement__ = 54;
+          current_statement__ = 52;
           for (int sym2__ = 1; sym2__ <=
                (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int); ++sym2__) {
-            current_statement__ = 54;
+            current_statement__ = 52;
             stan::model::assign(Z, Z_flat__[(pos__ - 1)],
               "assigning variable Z", stan::model::index_uni(sym2__),
               stan::model::index_uni(sym1__));
-            current_statement__ = 54;
+            current_statement__ = 52;
             pos__ = (pos__ + 1);
           }
         }
       }
-      current_statement__ = 55;
+      current_statement__ = 53;
       stan::math::validate_non_negative_index("ycont", "N_cont", N_cont);
-      current_statement__ = 56;
+      current_statement__ = 54;
       context__.validate_dims("data initialization", "ycont", "double",
         std::vector<size_t>{static_cast<size_t>(N_cont)});
       ycont = std::vector<double>(N_cont,
                 std::numeric_limits<double>::quiet_NaN());
-      current_statement__ = 56;
+      current_statement__ = 54;
       ycont = context__.vals_r("ycont");
-      current_statement__ = 57;
+      current_statement__ = 55;
       stan::math::validate_non_negative_index("yint", "N_int", N_int);
-      current_statement__ = 58;
+      current_statement__ = 56;
       context__.validate_dims("data initialization", "yint", "int",
         std::vector<size_t>{static_cast<size_t>(N_int)});
       yint = std::vector<int>(N_int, std::numeric_limits<int>::min());
-      current_statement__ = 58;
+      current_statement__ = 56;
       yint = context__.vals_i("yint");
-      current_statement__ = 59;
+      current_statement__ = 57;
       stan::math::validate_non_negative_index("sigma", "N_cont", N_cont);
-      current_statement__ = 60;
+      current_statement__ = 58;
       context__.validate_dims("data initialization", "sigma", "double",
         std::vector<size_t>{static_cast<size_t>(N_cont)});
       sigma_data__ = Eigen::Matrix<double,-1,1>::Constant(N_cont,
@@ -324,44 +248,44 @@ public:
         Eigen::Map<Eigen::Matrix<double,-1,1>>(sigma_data__.data(), N_cont);
       {
         std::vector<local_scalar_t__> sigma_flat__;
-        current_statement__ = 60;
+        current_statement__ = 58;
         sigma_flat__ = context__.vals_r("sigma");
-        current_statement__ = 60;
+        current_statement__ = 58;
         pos__ = 1;
-        current_statement__ = 60;
+        current_statement__ = 58;
         for (int sym1__ = 1; sym1__ <= N_cont; ++sym1__) {
-          current_statement__ = 60;
+          current_statement__ = 58;
           stan::model::assign(sigma, sigma_flat__[(pos__ - 1)],
             "assigning variable sigma", stan::model::index_uni(sym1__));
-          current_statement__ = 60;
+          current_statement__ = 58;
           pos__ = (pos__ + 1);
         }
       }
-      current_statement__ = 61;
+      current_statement__ = 59;
       stan::math::validate_non_negative_index("n", "N_binom", N_binom);
-      current_statement__ = 62;
+      current_statement__ = 60;
       context__.validate_dims("data initialization", "n", "int",
         std::vector<size_t>{static_cast<size_t>(N_binom)});
       n = std::vector<int>(N_binom, std::numeric_limits<int>::min());
-      current_statement__ = 62;
+      current_statement__ = 60;
       n = context__.vals_i("n");
-      current_statement__ = 63;
+      current_statement__ = 61;
       context__.validate_dims("data initialization", "q", "double",
         std::vector<size_t>{});
       q = std::numeric_limits<double>::quiet_NaN();
-      current_statement__ = 63;
+      current_statement__ = 61;
       q = context__.vals_r("q")[(1 - 1)];
-      current_statement__ = 63;
+      current_statement__ = 61;
       stan::math::check_greater_or_equal(function__, "q", q, 0);
-      current_statement__ = 63;
+      current_statement__ = 61;
       stan::math::check_less_or_equal(function__, "q", q, 1);
-      current_statement__ = 64;
+      current_statement__ = 62;
       context__.validate_dims("data initialization", "type", "int",
         std::vector<size_t>{});
       type = std::numeric_limits<int>::min();
-      current_statement__ = 64;
+      current_statement__ = 62;
       type = context__.vals_i("type")[(1 - 1)];
-      current_statement__ = 65;
+      current_statement__ = 63;
       stan::math::validate_non_negative_index("gamma", "Q", Q);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -395,239 +319,163 @@ public:
     // suppress unused var warning
     (void) function__;
     try {
-      std::vector<local_scalar_t__> gamma =
-        std::vector<local_scalar_t__>(Q, DUMMY_VAR__);
+      Eigen::Matrix<local_scalar_t__,-1,1> gamma =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(Q, DUMMY_VAR__);
       current_statement__ = 1;
-      gamma = in__.template read<std::vector<local_scalar_t__>>(Q);
+      gamma = in__.template read<Eigen::Matrix<local_scalar_t__,-1,1>>(Q);
       {
         current_statement__ = 2;
-        lp_accum__.add(stan::math::std_normal_lpdf<propto__>(
-                         stan::math::to_vector(gamma)));
+        lp_accum__.add(stan::math::std_normal_lpdf<propto__>(gamma));
+        current_statement__ = 3;
+        stan::math::validate_non_negative_index("mu",
+          "N_cont > N_int ? N_cont : N_int",
+          (stan::math::logical_gt(N_cont, N_int) ? N_cont : N_int));
+        Eigen::Matrix<local_scalar_t__,-1,1> mu =
+          Eigen::Matrix<local_scalar_t__,-1,1>::Constant((stan::math::logical_gt(
+                                                            N_cont, N_int) ? N_cont : N_int),
+            DUMMY_VAR__);
         current_statement__ = 4;
-        if (stan::math::logical_eq(type, 1)) {
-          current_statement__ = 3;
-          lp_accum__.add(stan::math::normal_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma))),
-                           stan::math::sqrt(sigma)));
-        }
+        stan::model::assign(mu,
+          stan::math::add(Xb, stan::math::multiply(Z, gamma)),
+          "assigning variable mu");
         current_statement__ = 6;
-        if (stan::math::logical_eq(type, 2)) {
+        if (stan::math::logical_eq(type, 1)) {
           current_statement__ = 5;
           lp_accum__.add(stan::math::normal_lpdf<propto__>(
-                           stan::math::to_vector(stan::math::log(ycont)),
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma))),
+                           stan::math::to_vector(ycont), mu,
                            stan::math::sqrt(sigma)));
         }
-        current_statement__ = 11;
-        if (stan::math::logical_eq(type, 3)) {
+        current_statement__ = 8;
+        if (stan::math::logical_eq(type, 2)) {
           current_statement__ = 7;
+          lp_accum__.add(stan::math::normal_lpdf<propto__>(
+                           stan::math::to_vector(stan::math::log(ycont)), mu,
+                           stan::math::sqrt(sigma)));
+        }
+        current_statement__ = 19;
+        if (stan::math::logical_eq(type, 3)) {
+          current_statement__ = 9;
           stan::math::validate_non_negative_index("logitmu", "N_cont", N_cont);
           Eigen::Matrix<local_scalar_t__,-1,1> logitmu =
             Eigen::Matrix<local_scalar_t__,-1,1>::Constant(N_cont,
               DUMMY_VAR__);
-          current_statement__ = 8;
-          stan::model::assign(logitmu,
-            stan::math::divide(1,
-              stan::math::add(1,
-                stan::math::exp(
-                  stan::math::subtract(stan::math::multiply(-1, Xb),
-                    stan::math::multiply(Z, stan::math::to_vector(gamma)))))),
-            "assigning variable logitmu");
-          current_statement__ = 9;
+          current_statement__ = 11;
+          stan::math::validate_non_negative_index("logitmu1", "N_cont",
+            N_cont);
+          Eigen::Matrix<local_scalar_t__,-1,1> logitmu1 =
+            Eigen::Matrix<local_scalar_t__,-1,1>::Constant(N_cont,
+              DUMMY_VAR__);
+          current_statement__ = 16;
+          for (int i = 1; i <= N_cont; ++i) {
+            current_statement__ = 13;
+            stan::model::assign(logitmu,
+              (stan::math::exp(
+                 stan::model::rvalue(mu, "mu", stan::model::index_uni(i))) /
+              (1 +
+              stan::math::exp(
+                stan::model::rvalue(mu, "mu", stan::model::index_uni(i))))),
+              "assigning variable logitmu", stan::model::index_uni(i));
+            current_statement__ = 14;
+            stan::model::assign(logitmu1, (1 -
+              stan::model::rvalue(logitmu, "logitmu",
+                stan::model::index_uni(i))), "assigning variable logitmu1",
+              stan::model::index_uni(i));
+          }
+          current_statement__ = 17;
           lp_accum__.add(stan::math::beta_lpdf<propto__>(
                            stan::math::to_vector(ycont),
                            stan::math::multiply(logitmu,
                              stan::model::rvalue(sigma, "sigma",
                                stan::model::index_uni(1))),
-                           stan::math::multiply(
-                             stan::math::subtract(1, logitmu),
+                           stan::math::multiply(logitmu1,
                              stan::model::rvalue(sigma, "sigma",
                                stan::model::index_uni(1)))));
-        }
-        current_statement__ = 13;
-        if (stan::math::logical_eq(type, 4)) {
-          current_statement__ = 12;
-          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
-                           stan::math::to_vector(ycont), (1 /
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1))),
-                           stan::math::divide(1,
-                             stan::math::multiply(
-                               stan::model::rvalue(sigma, "sigma",
-                                 stan::model::index_uni(1)),
-                               stan::math::add(Xb,
-                                 stan::math::multiply(Z,
-                                   stan::math::to_vector(gamma)))))));
-        }
-        current_statement__ = 15;
-        if (stan::math::logical_eq(type, 5)) {
-          current_statement__ = 14;
-          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
-                           stan::math::to_vector(ycont), (1 /
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1))),
-                           stan::math::divide(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma))),
-                             stan::model::rvalue(sigma, "sigma",
-                               stan::model::index_uni(1)))));
-        }
-        current_statement__ = 17;
-        if (stan::math::logical_eq(type, 6)) {
-          current_statement__ = 16;
-          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
-                           stan::math::to_vector(ycont), (1 /
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1))),
-                           stan::math::divide(1,
-                             stan::math::multiply(
-                               stan::model::rvalue(sigma, "sigma",
-                                 stan::model::index_uni(1)),
-                               stan::math::log(
-                                 stan::math::add(Xb,
-                                   stan::math::multiply(Z,
-                                     stan::math::to_vector(gamma))))))));
-        }
-        current_statement__ = 19;
-        if (stan::math::logical_eq(type, 7)) {
-          current_statement__ = 18;
-          lp_accum__.add(stan::math::bernoulli_logit_lpmf<propto__>(yint,
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma)))));
         }
         current_statement__ = 21;
-        if (stan::math::logical_eq(type, 8)) {
+        if (stan::math::logical_eq(type, 4)) {
           current_statement__ = 20;
-          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint,
-                           stan::math::exp(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma))))));
+          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
+                           stan::math::to_vector(ycont), (1 /
+                           stan::model::rvalue(sigma, "sigma",
+                             stan::model::index_uni(1))),
+                           stan::math::divide(1,
+                             stan::math::multiply(
+                               stan::model::rvalue(sigma, "sigma",
+                                 stan::model::index_uni(1)), mu))));
         }
         current_statement__ = 23;
-        if (stan::math::logical_eq(type, 9)) {
+        if (stan::math::logical_eq(type, 5)) {
           current_statement__ = 22;
-          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint,
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma)))));
+          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
+                           stan::math::to_vector(ycont), (1 /
+                           stan::model::rvalue(sigma, "sigma",
+                             stan::model::index_uni(1))),
+                           stan::math::divide(mu,
+                             stan::model::rvalue(sigma, "sigma",
+                               stan::model::index_uni(1)))));
         }
         current_statement__ = 25;
-        if (stan::math::logical_eq(type, 10)) {
+        if (stan::math::logical_eq(type, 6)) {
           current_statement__ = 24;
-          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint,
-                           stan::math::Phi_approx(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma))))));
+          lp_accum__.add(stan::math::gamma_lpdf<propto__>(
+                           stan::math::to_vector(ycont), (1 /
+                           stan::model::rvalue(sigma, "sigma",
+                             stan::model::index_uni(1))),
+                           stan::math::divide(1,
+                             stan::math::multiply(
+                               stan::model::rvalue(sigma, "sigma",
+                                 stan::model::index_uni(1)),
+                               stan::math::log(mu)))));
         }
         current_statement__ = 27;
-        if (stan::math::logical_eq(type, 11)) {
+        if (stan::math::logical_eq(type, 7)) {
           current_statement__ = 26;
-          lp_accum__.add(stan::math::binomial_logit_lpmf<propto__>(yint, n,
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma)))));
+          lp_accum__.add(stan::math::bernoulli_logit_lpmf<propto__>(yint, mu));
         }
         current_statement__ = 29;
-        if (stan::math::logical_eq(type, 12)) {
+        if (stan::math::logical_eq(type, 8)) {
           current_statement__ = 28;
-          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n,
-                           stan::math::exp(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma))))));
+          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint,
+                           stan::math::exp(mu)));
         }
         current_statement__ = 31;
-        if (stan::math::logical_eq(type, 13)) {
+        if (stan::math::logical_eq(type, 9)) {
           current_statement__ = 30;
-          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n,
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma)))));
+          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint, mu));
         }
         current_statement__ = 33;
-        if (stan::math::logical_eq(type, 14)) {
+        if (stan::math::logical_eq(type, 10)) {
           current_statement__ = 32;
-          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n,
-                           stan::math::Phi_approx(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma))))));
+          lp_accum__.add(stan::math::bernoulli_lpmf<propto__>(yint,
+                           stan::math::Phi_approx(mu)));
         }
         current_statement__ = 35;
-        if (stan::math::logical_eq(type, 15)) {
+        if (stan::math::logical_eq(type, 11)) {
           current_statement__ = 34;
-          lp_accum__.add(stan::math::poisson_log_lpmf<propto__>(yint,
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma)))));
+          lp_accum__.add(stan::math::binomial_logit_lpmf<propto__>(yint, n,
+                           mu));
         }
         current_statement__ = 37;
-        if (stan::math::logical_eq(type, 16)) {
+        if (stan::math::logical_eq(type, 12)) {
           current_statement__ = 36;
-          lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::add(Xb,
-                             stan::math::multiply(Z,
-                               stan::math::to_vector(gamma))),
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1)), q, pstream__));
+          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n,
+                           stan::math::exp(mu)));
         }
         current_statement__ = 39;
-        if (stan::math::logical_eq(type, 17)) {
+        if (stan::math::logical_eq(type, 13)) {
           current_statement__ = 38;
-          lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::exp(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma)))),
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1)), q, pstream__));
+          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n, mu));
         }
         current_statement__ = 41;
-        if (stan::math::logical_eq(type, 18)) {
+        if (stan::math::logical_eq(type, 14)) {
           current_statement__ = 40;
-          lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::inv_logit(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma)))),
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1)), q, pstream__));
+          lp_accum__.add(stan::math::binomial_lpmf<propto__>(yint, n,
+                           stan::math::Phi_approx(mu)));
         }
         current_statement__ = 43;
-        if (stan::math::logical_eq(type, 19)) {
+        if (stan::math::logical_eq(type, 15)) {
           current_statement__ = 42;
-          lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::Phi_approx(
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma)))),
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1)), q, pstream__));
-        }
-        current_statement__ = 45;
-        if (stan::math::logical_eq(type, 20)) {
-          current_statement__ = 44;
-          lp_accum__.add(asymmetric_laplace_lpdf<propto__>(
-                           stan::math::to_vector(ycont),
-                           stan::math::divide(1,
-                             stan::math::add(Xb,
-                               stan::math::multiply(Z,
-                                 stan::math::to_vector(gamma)))),
-                           stan::model::rvalue(sigma, "sigma",
-                             stan::model::index_uni(1)), q, pstream__));
+          lp_accum__.add(stan::math::poisson_log_lpmf<propto__>(yint, mu));
         }
       }
     } catch (const std::exception& e) {
@@ -667,10 +515,11 @@ public:
     // suppress unused var warning
     (void) function__;
     try {
-      std::vector<double> gamma =
-        std::vector<double>(Q, std::numeric_limits<double>::quiet_NaN());
+      Eigen::Matrix<double,-1,1> gamma =
+        Eigen::Matrix<double,-1,1>::Constant(Q,
+          std::numeric_limits<double>::quiet_NaN());
       current_statement__ = 1;
-      gamma = in__.template read<std::vector<local_scalar_t__>>(Q);
+      gamma = in__.template read<Eigen::Matrix<local_scalar_t__,-1,1>>(Q);
       out__.write(gamma);
       if (stan::math::logical_negation(
             (stan::math::primitive_value(emit_transformed_parameters__) ||
@@ -700,10 +549,11 @@ public:
     try {
       int pos__ = std::numeric_limits<int>::min();
       pos__ = 1;
-      std::vector<local_scalar_t__> gamma =
-        std::vector<local_scalar_t__>(Q, DUMMY_VAR__);
+      Eigen::Matrix<local_scalar_t__,-1,1> gamma =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(Q, DUMMY_VAR__);
       current_statement__ = 1;
-      stan::model::assign(gamma, in__.read<std::vector<local_scalar_t__>>(Q),
+      stan::model::assign(gamma,
+        in__.read<Eigen::Matrix<local_scalar_t__,-1,1>>(Q),
         "assigning variable gamma");
       out__.write(gamma);
     } catch (const std::exception& e) {
@@ -726,10 +576,23 @@ public:
         std::vector<size_t>{static_cast<size_t>(Q)});
       int pos__ = std::numeric_limits<int>::min();
       pos__ = 1;
-      std::vector<local_scalar_t__> gamma =
-        std::vector<local_scalar_t__>(Q, DUMMY_VAR__);
-      current_statement__ = 1;
-      gamma = context__.vals_r("gamma");
+      Eigen::Matrix<local_scalar_t__,-1,1> gamma =
+        Eigen::Matrix<local_scalar_t__,-1,1>::Constant(Q, DUMMY_VAR__);
+      {
+        std::vector<local_scalar_t__> gamma_flat__;
+        current_statement__ = 1;
+        gamma_flat__ = context__.vals_r("gamma");
+        current_statement__ = 1;
+        pos__ = 1;
+        current_statement__ = 1;
+        for (int sym1__ = 1; sym1__ <= Q; ++sym1__) {
+          current_statement__ = 1;
+          stan::model::assign(gamma, gamma_flat__[(pos__ - 1)],
+            "assigning variable gamma", stan::model::index_uni(sym1__));
+          current_statement__ = 1;
+          pos__ = (pos__ + 1);
+        }
+      }
       out__.write(gamma);
     } catch (const std::exception& e) {
       stan::lang::rethrow_located(e, locations_array__[current_statement__]);
@@ -775,10 +638,10 @@ public:
     if (emit_generated_quantities__) {}
   }
   inline std::string get_constrained_sizedtypes() const {
-    return std::string("[{\"name\":\"gamma\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(Q) + ",\"element_type\":{\"name\":\"real\"}},\"block\":\"parameters\"}]");
+    return std::string("[{\"name\":\"gamma\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(Q) + "},\"block\":\"parameters\"}]");
   }
   inline std::string get_unconstrained_sizedtypes() const {
-    return std::string("[{\"name\":\"gamma\",\"type\":{\"name\":\"array\",\"length\":" + std::to_string(Q) + ",\"element_type\":{\"name\":\"real\"}},\"block\":\"parameters\"}]");
+    return std::string("[{\"name\":\"gamma\",\"type\":{\"name\":\"vector\",\"length\":" + std::to_string(Q) + "},\"block\":\"parameters\"}]");
   }
   // Begin method overload boilerplate
   template <typename RNG> inline void
