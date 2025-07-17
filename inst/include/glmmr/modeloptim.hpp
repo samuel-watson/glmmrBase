@@ -612,6 +612,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& be
   fn_counter.first += re.scaled_u_.cols();
   if(control.saem)
   {
+    ll = log_likelihood();
     int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
     double  gamma = pow(1.0/iteration,control.alpha);
     double  ll_t = 0;
