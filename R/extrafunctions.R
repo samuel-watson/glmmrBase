@@ -53,6 +53,35 @@ progress_bar <- function(i,n,len=30){
   return(msg)
 }
 
+#' Rescales data to [-1,1] 
+#' 
+#' Rescales data to [-1,1] for HSGP model fitting
+#' 
+#' @details 
+#' The HSGP covariance function requires that all dimensions are scaled to 
+#' [-1,1] as conversion is not automatic. This function will rescale the D
+#' covariance variables to [-1,1]^D while preserving their size relative to 
+#' one another.
+#' @param data A data frame
+#' @param columns Vector of integers. The indexes of the columns to be rescaled.
+#' @return A copy of the input data frame with rescaled columns
+#' @examples 
+#' df <- data.frame(x = runif(100,0,2), y = runif(100, -2,2))
+#' df <- hsgp_rescale(df, 1:2)
+#' @export
+hsgp_rescale <- function(data, columns){
+  # scale to -1,1 in all dimensions
+  ranges <- data.frame(lower = rep(NA,length(columns)), upper = rep(NA, length(columns)))
+  for(i in 1:length(columns)){
+    ranges[i,] <- range(data[,columns[i]])
+  }
+  scale_f <- max(ranges$upper - ranges$lower)
+  for(i in 1:length(columns)){
+    data[,columns[i]] <- -1 + 2*(data[,columns[i]] - ranges$lower[i])/scale_f
+  }
+  return(data)  
+}
+
 
 #' Returns the file name and type for MCNR function
 #' 
