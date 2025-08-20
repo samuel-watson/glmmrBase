@@ -33,7 +33,10 @@ inline bool check_data(str& formula,
   if(colidx != colnames.end()){
     variable_in_data = true;
     // token is the name of a variable
-    if(push) calc.instructions.push_back(Do::PushData);
+    if(push){
+      calc.instructions.push_back(Do::PushData);
+      calc.template push_back_function<Do::PushData>();
+    }
     auto dataidx = std::find(calc.data_names.begin(),calc.data_names.end(),formula);
     // check if the data has already been added to Xdata
     if(dataidx != calc.data_names.end()){
@@ -64,6 +67,7 @@ inline bool check_parameter(str& token_as_str,
   // interpret any other string as the name of a parameter
   // check if the parameter already exists
   calc.instructions.push_back(Do::PushParameter);
+  calc.template push_back_function<Do::PushParameter>();
   auto find_parameter = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),token_as_str);
   if(find_parameter != calc.parameter_names.end()){
     int param_position = find_parameter - calc.parameter_names.begin();
@@ -93,10 +97,10 @@ inline bool check_number(str& token_as_str,
     #if defined(ENABLE_DEBUG) && defined(R_BUILD)
     Rcpp::Rcout << " double = " << a << " push index = " << instruction_str.at(static_cast<Do>(calc.user_number_count));
     #endif
-    
-    if(calc.user_number_count >=20)throw std::runtime_error("Only ten user numbers currently permitted.");
+    if(calc.user_number_count >=19)throw std::runtime_error("Only 20 user numbers currently permitted.");
     
     calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+    calc.push_user_number();
     calc.numbers[calc.user_number_count] = a;
     calc.user_number_count++;
   }
@@ -123,8 +127,12 @@ inline void add_factor(std::vector<char>& s2,
       auto findintercept = std::find(calc.parameter_names.begin(),calc.parameter_names.end(),"b_intercept");
       int factorrange = findintercept == calc.parameter_names.end() ? unique_values.size() : unique_values.size()-1;
       for(int i = 0; i < factorrange; i++){
-        if(i < (factorrange - 1))calc.instructions.push_back(Do::Add);
+        if(i < (factorrange - 1)){
+          calc.instructions.push_back(Do::Add);
+          calc.template push_back_function<Do::Add>();
+        }
         calc.instructions.push_back(Do::Multiply);
+        calc.template push_back_function<Do::Multiply>();
         if(Xdata.cols()<=calc.data_count)Xdata.conservativeResize(NoChange,calc.data_count+1);
         for(int j = 0; j < data.rows(); j++){
           Xdata(j,calc.data_count) = data(j,column_index)==unique_values[i] ? 1.0 : 0.0;
@@ -132,8 +140,10 @@ inline void add_factor(std::vector<char>& s2,
         calc.indexes.push_back(calc.data_count);
         calc.data_count++;
         calc.instructions.push_back(Do::PushData);
+        calc.template push_back_function<Do::PushData>();
         // parameter
         calc.instructions.push_back(Do::PushParameter);
+        calc.template push_back_function<Do::PushParameter>();
         str dataname = token_as_str2 + "_" + std::to_string(unique_values[i])[0];
         str parname = "b_" + dataname;
         calc.parameter_names.push_back(parname);
@@ -160,8 +170,10 @@ inline void sign_fn(std::vector<char>& formula,
   str token_as_str(formula.begin(),formula.end());
   if(type == 0){
     calc.instructions.push_back(Do::SignNoZero);
+    calc.template push_back_function<Do::SignNoZero>();
   } else {
     calc.instructions.push_back(Do::Sign);
+    calc.template push_back_function<Do::Sign>();
   }
   bool variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata,false,add_data);
   if(!variable_in_data){
@@ -224,64 +236,92 @@ inline void two_way_fn(std::vector<char>& formula,
   
   // needs to all be in reverse ;-(
   calc.instructions.push_back(Do::Multiply);
+  calc.template push_back_function<Do::Multiply>();
   add_check = check_parameter(par4,calc,true);
   calc.instructions.push_back(Do::Power);
+  calc.template push_back_function<Do::Power>();
   calc.instructions.push_back(Do::Subtract);
+  calc.template push_back_function<Do::Subtract>();
   calc.instructions.push_back(Do::Int1);
+  calc.template push_back_function<Do::Int1>();
   calc.instructions.push_back(Do::Power);
+  calc.template push_back_function<Do::Power>();
   calc.instructions.push_back(Do::Multiply);
+  calc.template push_back_function<Do::Multiply>();
   calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+  calc.push_user_number();
   calc.numbers[calc.user_number_count] = -1.0 / l;
   calc.user_number_count++;
   if(type > 0){
     calc.instructions.push_back(Do::Multiply);
+    calc.template push_back_function<Do::Multiply>();
     sign_fn(f_s2,calc,data,colnames,Xdata,0);
   }
   calc.instructions.push_back(Do::Log);
+  calc.template push_back_function<Do::Log>();
   calc.instructions.push_back(Do::Add);
+  calc.template push_back_function<Do::Add>();
   calc.instructions.push_back(Do::Exp);
+  calc.template push_back_function<Do::Exp>();
   calc.instructions.push_back(Do::Multiply);
+  calc.template push_back_function<Do::Multiply>();
   calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+  calc.push_user_number();
   if(type == 0){
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Divide);
+    calc.template push_back_function<Do::Divide>();
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata,true,add_data);
     add_check = check_parameter(par3,calc,true);
   } else if(type == 1) {
     calc.numbers[calc.user_number_count] = -0.5 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Multiply);
+    calc.template push_back_function<Do::Multiply>();
     sign_fn(f_s2,calc,data,colnames,Xdata,0,add_data);
     calc.instructions.push_back(Do::Add);
+    calc.template push_back_function<Do::Add>();
     calc.instructions.push_back(Do::Divide);
+    calc.template push_back_function<Do::Divide>();
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata,true,add_data);
     add_check = check_parameter(par3,calc,true);
     calc.instructions.push_back(Do::Int1);
+    calc.template push_back_function<Do::Int1>();
   } else if(type == 2) {
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Multiply);
+    calc.template push_back_function<Do::Multiply>();
     sign_fn(f_s2,calc,data,colnames,Xdata,0,add_data);
     calc.instructions.push_back(Do::Divide);
+    calc.template push_back_function<Do::Divide>();
     calc.instructions.push_back(Do::Add);
+    calc.template push_back_function<Do::Add>();
     variable_in_data = check_data(token_as_str,calc,data,colnames,Xdata,true,add_data);
     add_check = check_parameter(par2,calc,true);
     calc.instructions.push_back(Do::Add);
+    calc.template push_back_function<Do::Add>();
     add_check = check_parameter(par3,calc,true);
     add_check = check_parameter(par2,calc,true);
   }
   calc.instructions.push_back(Do::Exp);
+  calc.template push_back_function<Do::Exp>();
   if(type > 0){
     calc.instructions.push_back(Do::Multiply);
+    calc.template push_back_function<Do::Multiply>();
     calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+    calc.push_user_number();
     calc.numbers[calc.user_number_count] = -0.5 * l;
     calc.user_number_count++;
     calc.instructions.push_back(Do::Add);
+    calc.template push_back_function<Do::Add>();
     sign_fn(f_s2,calc,data,colnames,Xdata,0,add_data);
     calc.instructions.push_back(Do::Int1);
+    calc.template push_back_function<Do::Int1>();
   } else {
     calc.instructions.push_back(static_cast<Do>(calc.user_number_count));
+    calc.push_user_number();
     calc.numbers[calc.user_number_count] = -1.0 * l;
     calc.user_number_count++;
   }
@@ -342,8 +382,10 @@ inline bool parse_formula(std::vector<char>& formula,
     // split at +/-
     if(formula[cursor]=='+'){
       calc.instructions.push_back(Do::Add);
+      calc.template push_back_function<Do::Add>();
     } else if(formula[cursor]=='-'){
       calc.instructions.push_back(Do::Subtract);
+      calc.template push_back_function<Do::Subtract>();
     } else {
       throw std::runtime_error("Oops, something has gone wrong (f1)");
     }
@@ -394,8 +436,10 @@ inline bool parse_formula(std::vector<char>& formula,
       // split at *//
       if(formula[cursor]=='*'){
         calc.instructions.push_back(Do::Multiply);
+        calc.template push_back_function<Do::Multiply>();
       } else if(formula[cursor]=='/'){
         calc.instructions.push_back(Do::Divide);
+        calc.template push_back_function<Do::Divide>();
       } else {
         throw std::runtime_error("Oops, something has gone wrong (f2)");
       }
@@ -435,6 +479,7 @@ inline bool parse_formula(std::vector<char>& formula,
         #endif
         if(formula[cursor]=='^'){
           calc.instructions.push_back(Do::Power);
+          calc.template push_back_function<Do::Power>();
         } else {
           throw std::runtime_error("Oops, something has gone wrong (f3)");
         }
@@ -486,16 +531,22 @@ inline bool parse_formula(std::vector<char>& formula,
               bool check_fn_arg = true;
               if(token_as_str == "exp"){
                 calc.instructions.push_back(Do::Exp);
+                calc.template push_back_function<Do::Exp>();
               } else if(token_as_str == "log"){
                 calc.instructions.push_back(Do::Log);
+                calc.template push_back_function<Do::Log>();
               } else if(token_as_str == "sqrt"){
                 calc.instructions.push_back(Do::Sqrt);
+                calc.template push_back_function<Do::Sqrt>();
               } else if(token_as_str == "sin"){
                 calc.instructions.push_back(Do::Sin);
+                calc.template push_back_function<Do::Sin>();
               } else if(token_as_str == "cos"){
                 calc.instructions.push_back(Do::Cos);
+                calc.template push_back_function<Do::Cos>();
               } else if(token_as_str == "erf"){
                 calc.instructions.push_back(Do::ErrorFunc);
+                calc.template push_back_function<Do::ErrorFunc>();
               } else if(token_as_str == "sign"){
                 sign_fn(s2,calc,data,colnames,Xdata,1,add_data);
                 check_fn_arg = false;

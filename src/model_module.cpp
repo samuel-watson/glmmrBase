@@ -2202,8 +2202,7 @@ SEXP hessian_from_formula(SEXP form_,
                                       colnames,
                                       calc.data);
  (void)outparse;
- std::reverse(calc.instructions.begin(),calc.instructions.end());
- std::reverse(calc.indexes.begin(),calc.indexes.end());
+ calc.reverse_vectors();
  if(calc.parameter_names.size() != parameters.size())throw std::runtime_error("Wrong number of parameters");
  calc.parameters = parameters;
  VectorMatrix result = calc.jacobian_and_hessian();

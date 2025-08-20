@@ -104,12 +104,14 @@ const std::map<CovFunc, int> covfunc_to_nvar = {
   {CovFunc::dist, 0}
 };
 
-inline std::vector<Do> interpret_re(const CovFunc& fn){
+inline std::vector<Do> interpret_re(const CovFunc& fn){ //, glmmr::calculator& calc){
+  // TO DO update this function
   using instructs = std::vector<Do>;
   instructs B;
   switch(fn){
   case CovFunc::gr:
     B = {Do::PushParameter}; 
+    //calc.push_back_function<Do::PushParameter>();
     break;
   case CovFunc::ar:
     B.push_back(Do::PushParameter);
@@ -117,6 +119,11 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
     B.push_back(Do::PushParameter);
     B.push_back(Do::Power);
     B.push_back(Do::Multiply);
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Multiply>();
     break;
   case CovFunc::fexp0:
      {
@@ -124,6 +131,11 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
       B.push_back(Do::PushParameter);
       B.push_back(Do::PushCovData);
       B.insert(B.end(), C.begin(), C.end());
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::PushCovData>();
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Negate>();
+      // calc.push_back_function<Do::Exp>();
       break;
      }
   case CovFunc::fexp:
@@ -132,6 +144,13 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
        B.push_back(Do::PushParameter);
        B.push_back(Do::PushCovData);
        B.insert(B.end(), C.begin(), C.end());
+       // calc.push_back_function<Do::PushParameter>();
+       // calc.push_back_function<Do::PushCovData>();
+       // calc.push_back_function<Do::Divide>();
+       // calc.push_back_function<Do::Negate>();
+       // calc.push_back_function<Do::Exp>();
+       // calc.push_back_function<Do::PushParameter>();
+       // calc.push_back_function<Do::Multiply>();
        break;
     }
   case CovFunc::sqexp0:
@@ -139,6 +158,14 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
       const instructs C1 = {Do::PushParameter,Do::Square,Do::PushCovData,
                             Do::Square,Do::Divide,Do::Negate,Do::Exp};
       B.insert(B.end(), C1.begin(), C1.end());
+      
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Square>();
+      // calc.push_back_function<Do::PushCovData>();
+      // calc.push_back_function<Do::Square>();
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Negate>();
+      // calc.push_back_function<Do::Exp>();
       break;
     }
   case CovFunc::sqexp:
@@ -148,6 +175,16 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
                             Do::PushParameter,Do::Multiply};
       B.insert(B.end(), C1.begin(), C1.end());
       B.insert(B.end(), C2.begin(), C2.end());
+      
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Square>();
+      // calc.push_back_function<Do::PushCovData>();
+      // calc.push_back_function<Do::Square>();
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Negate>();
+      // calc.push_back_function<Do::Exp>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Multiply>();
       break;
     }
   case CovFunc::bessel:
@@ -156,6 +193,11 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
       B.push_back(Do::PushParameter);
       B.push_back(Do::PushCovData);
       B.insert(B.end(), C.begin(), C.end());
+      
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::PushCovData>();
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Bessel>();
       break;
     }
   case CovFunc::matern:
@@ -172,77 +214,224 @@ inline std::vector<Do> interpret_re(const CovFunc& fn){
       B.insert(B.end(), C2.begin(), C2.end());
       B.push_back(Do::PushCovData);
       B.insert(B.end(), C3.begin(), C3.end());
+      
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Gamma>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Int1>();
+      // calc.push_back_function<Do::Subtract>();
+      // calc.push_back_function<Do::Int2>();
+      // calc.push_back_function<Do::Power>();
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Int2>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Multiply>();
+      // calc.push_back_function<Do::Sqrt>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::PushCovData>();
+      // 
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Multiply>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Power>();
+      // calc.push_back_function<Do::Multiply>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Int2>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Multiply>();
+      // calc.push_back_function<Do::Sqrt>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::PushCovData>();
+      // 
+      // calc.push_back_function<Do::Divide>();
+      // calc.push_back_function<Do::Multiply>();
+      // calc.push_back_function<Do::BesselK>();
+      // calc.push_back_function<Do::Multiply>();
       break;
     }
   case CovFunc::truncpow2:
     {
-      const instructs C = {Do::PushParameter,Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+      const instructs C = {Do::PushParameter,Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,
+                           Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
       B.insert(B.end(), C.begin(), C.end());
+      
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::Int2>();
+      // calc.push_back_function<Do::PushParameter>();
+      // calc.push_back_function<Do::PushCovData>();
+      // calc.push_back_function<Do::Power>();
+      // calc.push_back_function<Do::Int1>();
+      // calc.push_back_function<Do::Subtract>();
+      // calc.push_back_function<Do::Power>();
+      // calc.push_back_function<Do::Multiply>();
       break;
     }
   case CovFunc::truncpow3:
   {
-    const instructs C = {Do::PushParameter,Do::Int3,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+    const instructs C = {Do::PushParameter,Do::Int3,Do::PushParameter,Do::PushCovData,
+                         Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Int3>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Subtract>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Multiply>();
     break;
   }
   case CovFunc::truncpow4:
   {
-    const instructs C = {Do::PushParameter,Do::Int4,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
+    const instructs C = {Do::PushParameter,Do::Int4,Do::PushParameter,Do::PushCovData,
+                         Do::Power,Do::Int1,Do::Subtract,Do::Power,Do::Multiply};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Int4>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Subtract>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Multiply>();
     break;
   }
   case CovFunc::cauchy3:
   {
-    const instructs C = {Do::PushParameter,Do::Int3,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Add,Do::Power,Do::Multiply};
+    const instructs C = {Do::PushParameter,Do::Int3,Do::Negate,Do::PushParameter,
+                         Do::PushCovData,Do::Power,Do::Int1,Do::Add,Do::Power,Do::Multiply};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Int3>();
+    // calc.push_back_function<Do::Negate>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Add>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Multiply>();
     break;
   }
   case CovFunc::cauchy:
   {
-    const instructs C = {Do::PushParameter,Do::PushParameter,Do::PushParameter,Do::Divide,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,
-                         Do::Int1,Do::Add,Do::Power,Do::Multiply};
+    const instructs C = {Do::PushParameter,Do::PushParameter,Do::PushParameter,
+                         Do::Divide,Do::Negate,Do::PushParameter,Do::PushCovData,
+                         Do::Power,Do::Int1,Do::Add,Do::Power,Do::Multiply};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Divide>();
+    // calc.push_back_function<Do::Negate>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Add>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Multiply>();
     break;
   }
   case CovFunc::truncpow20:
   {
-    const instructs C = {Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    const instructs C = {Do::Int2,Do::PushParameter,Do::PushCovData,Do::Power,
+                         Do::Int1,Do::Subtract,Do::Power};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::Int2>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Subtract>();
+    // calc.push_back_function<Do::Power>();
     break;
   }
   case CovFunc::truncpow30:
   {
-    const instructs C = {Do::Int3,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    const instructs C = {Do::Int3,Do::PushParameter,Do::PushCovData,Do::Power,
+                         Do::Int1,Do::Subtract,Do::Power};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::Int3>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Subtract>();
+    // calc.push_back_function<Do::Power>();
     break;
   }
   case CovFunc::truncpow40:
   {
-    const instructs C = {Do::Int4,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Subtract,Do::Power};
+    const instructs C = {Do::Int4,Do::PushParameter,Do::PushCovData,Do::Power,
+                         Do::Int1,Do::Subtract,Do::Power};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::Int4>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Subtract>();
+    // calc.push_back_function<Do::Power>();
     break;
   }
   case CovFunc::cauchy30:
   {
-    const instructs C = {Do::Int3,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,Do::Int1,Do::Add,Do::Power};
+    const instructs C = {Do::Int3,Do::Negate,Do::PushParameter,Do::PushCovData,
+                         Do::Power,Do::Int1,Do::Add,Do::Power};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::Int3>();
+    // calc.push_back_function<Do::Negate>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Add>();
+    // calc.push_back_function<Do::Power>();
     break;
   }
   case CovFunc::cauchy0:
   {
-    const instructs C = {Do::PushParameter,Do::PushParameter,Do::Divide,Do::Negate,Do::PushParameter,Do::PushCovData,Do::Power,
+    const instructs C = {Do::PushParameter,Do::PushParameter,Do::Divide,Do::Negate,
+                         Do::PushParameter,Do::PushCovData,Do::Power,
                          Do::Int1,Do::Add,Do::Power};
     B.insert(B.end(), C.begin(), C.end());
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::Divide>();
+    // calc.push_back_function<Do::Negate>();
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
+    // calc.push_back_function<Do::Int1>();
+    // calc.push_back_function<Do::Add>();
+    // calc.push_back_function<Do::Power>();
     break;
   }
   case CovFunc::ar1: case CovFunc::ar0:
     B.push_back(Do::PushCovData);
     B.push_back(Do::PushParameter);
     B.push_back(Do::Power);
+    
+    // calc.push_back_function<Do::PushParameter>();
+    // calc.push_back_function<Do::PushCovData>();
+    // calc.push_back_function<Do::Power>();
     break;
   case CovFunc::dist:
     B.push_back(Do::PushCovData);
+    
+    // calc.push_back_function<Do::PushCovData>();
     break;
   }
   return B;

@@ -433,7 +433,7 @@ inline int glmmr::Covariance::parse(){
           }
         }
       }
-      std::vector<Do> B = glmmr::interpret_re(fn_[i][j]);
+      std::vector<Do> B = glmmr::interpret_re(fn_[i][j]);//, calc_[i]
       intvec re_par_less_min_ = re_pars_[i][j];
       for(int k = 0; k < re_pars_[i][j].size(); k++)re_par_less_min_[k] -= minvalue;
       intvec Bpar = glmmr::interpret_re_par(fn_[i][j],j,re_par_less_min_);
@@ -442,7 +442,9 @@ inline int glmmr::Covariance::parse(){
     }
     if(fn_[i].size() > 1){
       for(int j = 0; j < (fn_[i].size()-1); j++){
+        // TO DO update this
         fn_instruct.push_back(Do::Multiply);
+        //calc_[i].push_back_function<Do::Multiply>();
       }
     }
     calc_[i].instructions = fn_instruct;
