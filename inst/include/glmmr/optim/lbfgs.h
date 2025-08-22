@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define R_BUILD
+
 #ifdef R_BUILD
 #include <RcppEigen.h>
 #else
@@ -95,7 +97,7 @@ public:
         m_gnorm = m_grad.norm();
         if (fpast > 0)
             m_fx[0] = fx;
-
+        Rcpp::Rcout << "\nx0 = " << x.transpose();
         // std::cout << "x0 = " << x.transpose() << std::endl;
         // std::cout << "f(x0) = " << fx << ", ||grad|| = " << m_gnorm << std::endl << std::endl;
 
@@ -197,6 +199,17 @@ public:
     /// Returning the Euclidean norm of the final gradient.
     ///
     Scalar final_grad_norm() const { return m_gnorm; }
+
+    ///
+    /// Returning the approximate Hessian matrix on the last iterate.
+    ///
+    Matrix final_approx_hessian() const { return m_bfgs.get_Bmat(); }
+
+    ///
+    /// Returning the approximate inverse Hessian matrix on the last iterate.
+    ///
+    Matrix final_approx_inverse_hessian() const { return m_bfgs.get_Hmat(); }
 };
 
 }  // namespace LBFGSpp
+

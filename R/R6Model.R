@@ -960,7 +960,7 @@ Model <- R6::R6Class("Model",
                        #'}
                        #'@md
                        MCML = function(y = NULL,
-                                       method = "saem",
+                                       method = "mcnr",
                                        tol = 1e-2,
                                        max.iter = 50,
                                        se = "gls",
@@ -1031,7 +1031,10 @@ Model <- R6::R6Class("Model",
                          Model__reset_fn_counter(private$ptr,private$model_type())
                          # set up all the required vectors and data to monitor the algorithm
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
-                         if(method == "saem") balgo <- 0
+                         if(method == "saem" & balgo == 2) {
+                           message("saem does not work well with L-BFGS, switching optimiser")
+                           balgo <- 0
+                         } 
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
@@ -1101,7 +1104,7 @@ Model <- R6::R6Class("Model",
                          Model__update_u(private$ptr,matrix(0,nrow = Model__Q(private$ptr,private$model_type()),ncol=1),FALSE,private$model_type())
                          if(private$trace >= 1)cat("\nIter: 0\n")
                          Model__set_sml_parameters(private$ptr, FALSE, self$mcmc_options$samps, alpha, pr.average, private$model_type())
-                         Model__ml_beta(private$ptr,0,private$model_type())
+                         Model__ml_beta(private$ptr,2,private$model_type())
                          beta <- Model__get_beta(private$ptr,private$model_type())
                          var_par <- Model__get_var_par(private$ptr,private$model_type())
                          all_pars <- c(beta,theta)
@@ -1861,7 +1864,7 @@ Model <- R6::R6Class("Model",
                        #'  * `refresh` How frequently to print to console MCMC progress if displaying verbose output.
                        #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
                        mcmc_options = list(warmup = 100,
-                                           samps = 25,
+                                           samps = 250,
                                            chains = 1,
                                            lambda = 1,
                                            refresh = 500,

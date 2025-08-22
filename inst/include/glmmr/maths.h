@@ -304,108 +304,6 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
   return wdiag;
 }
 
-// inline double log_likelihood_derivative(const double mu, 
-//                                         const double y,
-//                                         int order, 
-//                                         const Fam family,
-//                                         double var_par = 1.0)
-// {
-//   if(order < 1 || order > 2)throw std::runtime_error("Only orders 1 and 2 supported for derivatives");
-//   double result;
-//   
-//   if(order == 1){
-//     switch (family) {
-//     case Fam::gaussian:
-//       result = (y - mu)/var_par;
-//       break;
-//     case Fam::bernoulli: 
-//       result = y/mu - (1-y)/(1-mu);
-//       break;
-//     case Fam::binomial:
-//       result = y/mu - (var_par-y)/(1-mu);
-//       break;
-//     case Fam::poisson:
-//       result = y/mu - 1;
-//       break;
-//     case Fam::gamma:
-//       result = 0;
-//       break;
-//     case Fam::beta:
-//       result = 0;
-//       break;
-//     }
-//   } else {
-//     switch (family) {
-//     case Fam::gaussian:
-//       result = -1.0/var_par;
-//       break;
-//     case Fam::bernoulli: 
-//       result = -1.0*y/(mu*mu) - (1-y)/((1-mu)*(1-mu));
-//       break;
-//     case Fam::binomial:
-//       result = -1.0*y/(mu*mu) - (var_par-y)/((1-mu)*(1-mu));
-//       break;
-//     case Fam::poisson:
-//       result = -1.0*y/(mu*mu);
-//       break;
-//     case Fam::gamma:
-//       result = 0;
-//       break;
-//     case Fam::beta:
-//       result = 0;
-//       break;
-//     }
-//   }
-//   return result;
-// }
-// 
-// inline double link_derivative(const double eta, 
-//                               int order, 
-//                               const Link link)
-// {
-//   if(order < 1 || order > 2)throw std::runtime_error("Only orders 1 and 2 supported for derivatives");
-//   double result;
-//   
-//   if(order == 1){
-//     switch (link) {
-//     case Link::identity:
-//       result = 1.0;
-//       break;
-//     case Link::loglink:
-//       result = exp(eta);
-//       break;
-//     case Link::logit:
-//       {
-//         double exp_eta = exp(eta);
-//         result = exp_eta/((1+exp_eta)*(1+exp_eta));
-//         break;
-//       }
-//     default:
-//       result = 0;
-//       break;
-//     }
-//   } else {
-//     switch (link) {
-//     case Link::identity:
-//       result = 0.0;
-//       break;
-//     case Link::loglink:
-//       result = exp(eta);
-//       break;
-//     case Link::logit:
-//     {
-//       double exp_eta = exp(eta);
-//       result = exp_eta*(1+exp_eta)/((1+exp_eta)*(1+exp_eta)*(1+exp_eta));
-//       break;
-//     }
-//     default:
-//       result = 0;
-//       break;
-//     }
-//   }
-//   return result;
-// }
-
 inline double normalCDF(double value)
 {
     return 0.5 * erfc(-value * sqrt(0.5));
@@ -490,6 +388,7 @@ inline double log_likelihood(const double y,
                              const double mu,
                              const double var_par,
                              const glmmr::Family& family) {
+  static const double LOG_2PI = log(2*M_PI);
   double logl = 0;
   switch(family.family){
   case Fam::poisson:
@@ -592,13 +491,11 @@ inline double log_likelihood(const double y,
   {
     switch(family.link){
   case Link::loglink:
-    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
-      0.5*(log(y) - mu)*(log(y) - mu)/var_par;
+    logl = -0.5*(log(var_par) + LOG_2PI + (log(y) - mu)*(log(y) - mu)/var_par);
     break;
   default:
     //identity
-    logl = -0.5*log(var_par) -0.5*log(2*3.141593) -
-      0.5*(y - mu)*(y - mu)/var_par;
+    logl = -0.5*(log(var_par) + LOG_2PI + (y - mu)*(y - mu)/var_par);
     break;
   }
     break;
