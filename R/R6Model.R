@@ -881,6 +881,8 @@ Model <- R6::R6Class("Model",
                        #'4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - `convergence.prob`
                        #'@param skip.theta Logical. If TRUE then the covariance parameter estimation step is skipped. This option is mainly used for testing, but may be useful
                        #'if covariance parameters are known.
+                       #'@param constr.zero Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
+                       #'may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.
                        #'@return A `mcml` object
                        #'@seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
                        #'@examples
@@ -977,7 +979,8 @@ Model <- R6::R6Class("Model",
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
                                        conv.criterion = 2,
-                                       skip.theta = FALSE){
+                                       skip.theta = FALSE,
+                                       constr.zero = 1){
                          # Checks on options and data
                          if(is.null(y)){
                            if(!private$y_has_been_updated)stop("y not specified and not updated in Model object")
@@ -1070,7 +1073,8 @@ Model <- R6::R6Class("Model",
                            Q = Model__Q(private$ptr,private$model_type()),
                            Xb = Model__xb(private$ptr,private$model_type()),
                            Z = Model__ZL(private$ptr,private$model_type()),
-                           type=as.numeric(file_type$type)
+                           type=as.numeric(file_type$type),
+                           constr_zero = constr.zero
                          )
                          if(self$family[[1]]%in%c("gaussian","beta","Gamma","quantile","quantile_scaled"))data <- append(data,list(N_cont = self$n(),
                                                                                   N_int = 1,

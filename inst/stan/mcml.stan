@@ -20,12 +20,14 @@ data {
   array[N_binom] int n;
   real<lower = 0, upper = 1> q;
   int type;
+  real constr_zero;
 }
 parameters {
   vector[Q] gamma;
 }
 model {
   gamma ~ std_normal();
+  sum(gamma) ~ normal(0, constr_zero*Q);
   vector[N_cont > N_int ? N_cont : N_int] mu = Xb + Z*gamma;
   if(type == 1) to_vector(ycont) ~ normal(mu, sqrt(sigma));
   if(type == 2) to_vector(log(ycont)) ~ normal(mu, sqrt(sigma));
