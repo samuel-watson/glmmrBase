@@ -949,9 +949,7 @@ inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& t
     } else {
       ll = ll_t;
     }
-  } else {
-    ll = log_likelihood(false);
-  }
+  } 
   return -1*ll;
 }
 
