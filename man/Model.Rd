@@ -989,7 +989,7 @@ Stochastic Maximum Likelihood model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
   y = NULL,
-  method = "saem",
+  method = "mcnr",
   tol = 0.01,
   max.iter = 50,
   se = "gls",
@@ -1006,7 +1006,8 @@ Stochastic Maximum Likelihood model fitting
   convergence.prob = 0.95,
   pr.average = FALSE,
   conv.criterion = 2,
-  skip.theta = FALSE
+  skip.theta = FALSE,
+  constr.zero = 1
 )}\if{html}{\out{</div>}}
 }
 
@@ -1070,6 +1071,9 @@ will result in lower bias but slower convergence, values closer to 1 will result
 
 \item{\code{skip.theta}}{Logical. If TRUE then the covariance parameter estimation step is skipped. This option is mainly used for testing, but may be useful
 if covariance parameters are known.}
+
+\item{\code{constr.zero}}{Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
+may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1170,11 +1174,11 @@ Maximum Likelihood model fitting with Laplace Approximation
   method = "nr",
   se = "gls",
   oim = FALSE,
-  reml = TRUE,
+  reml = FALSE,
   max.iter = 40,
   tol = 1e-04,
   se.theta = TRUE,
-  algo = 2,
+  algo = 0,
   lower.bound = NULL,
   upper.bound = NULL,
   lower.bound.theta = NULL,
@@ -1282,16 +1286,18 @@ None, called for effects
 \subsection{Method \code{mcmc_sample()}}{
 Generate an MCMC sample of the random effects
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "rstan")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "rstan", scaled = TRUE, constr.zero = 1)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
-\code{hmc} to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number
-of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
-so may not currently be an option for some users.}
+\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}) or \code{rstan} to use rstan sampler (the default)}
+
+\item{\code{scaled}}{Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.}
+
+\item{\code{constr.zero}}{Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
+may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.}
 }
 \if{html}{\out{</div>}}
 }

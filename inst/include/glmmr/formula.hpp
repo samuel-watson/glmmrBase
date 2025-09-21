@@ -158,8 +158,7 @@ inline void glmmr::Formula::calculate_linear_predictor(glmmr::calculator& calcul
                                        colnames,
                                        Xdata);
   (void)outparse;
-  std::reverse(calculator.instructions.begin(),calculator.instructions.end());
-  std::reverse(calculator.indexes.begin(),calculator.indexes.end());
+  calculator.reverse_vectors();
 }
 
 inline strvec glmmr::Formula::re() const{

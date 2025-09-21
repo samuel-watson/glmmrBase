@@ -3,6 +3,8 @@
 
 #pragma once
 
+#define R_BUILD
+
 #include <stdexcept>  // std::invalid_argument
 #include <vector>
 #ifdef R_BUILD

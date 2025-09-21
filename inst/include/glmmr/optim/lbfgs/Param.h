@@ -172,12 +172,12 @@ public:
     {
         // clang-format off
         m              = 6;
-        epsilon        = Scalar(1e-3);
-        epsilon_rel    = Scalar(1e-3);
+        epsilon        = Scalar(1e-5);
+        epsilon_rel    = Scalar(1e-5);
         past           = 0;
         delta          = Scalar(0);
         max_iterations = 0;
-        linesearch     = LBFGS_LINESEARCH_BACKTRACKING_ARMIJO;
+        linesearch     = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
         max_linesearch = 20;
         min_step       = Scalar(1e-20);
         max_step       = Scalar(1e+20);
@@ -331,10 +331,10 @@ public:
     {
         // clang-format off
         m              = 6;
-        epsilon        = Scalar(1e-3);
-        epsilon_rel    = Scalar(1e-3);
+        epsilon        = Scalar(1e-5);
+        epsilon_rel    = Scalar(1e-5);
         past           = 1;
-        delta          = Scalar(1e-5);
+        delta          = Scalar(1e-10);
         max_iterations = 0;
         max_submin     = 10;
         max_linesearch = 20;

@@ -349,12 +349,13 @@ inline int glmmr::hsgpCovariance::Q() const{
 }
 
 inline double glmmr::hsgpCovariance::log_likelihood(const VectorXd &u){
+  if(u.size() != L.rows())throw std::runtime_error("hsgp problem u dim wrong");
+  static const double LOG_2PI = log(2*M_PI);
   double ll = 0;
   double logdet = log_determinant();
   VectorXd uquad = u * L;
-  ll += 0.5*hsgp_data.rows() * log(2*M_PI) + 0.5*uquad.transpose()*uquad;
-  ll += 0.5*logdet;
-  return -1.0*ll;
+  ll += -0.5*hsgp_data.rows() * LOG_2PI - 0.5*uquad.transpose()*uquad - 0.5*logdet;
+  return ll;
 }
 
 inline double glmmr::hsgpCovariance::log_determinant(){

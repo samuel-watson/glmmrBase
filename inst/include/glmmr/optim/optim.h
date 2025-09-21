@@ -374,10 +374,10 @@ class optim<double(const VectorXd&, VectorXd&),LBFGS> {
   using func = double(*)(void*, const VectorXd&, VectorXd&); 
 public:
   struct optimControl {
-    double g_epsilon = 1.0e-8;
-    double past = 3;
-    double delta = 1.0e-8;
-    int max_linesearch = 64;
+    double g_epsilon = 1.0e-5;
+    double past = 0;
+    double delta = 0;
+    int max_linesearch = 20;
     int trace = 0;
   } control;
   
