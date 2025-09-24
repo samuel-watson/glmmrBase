@@ -1256,8 +1256,8 @@ Model <- R6::R6Class("Model",
                              cat("\nMax. difference : ", round(max(abs(all_pars-all_pars_new)),5))
                              cat("\nLog-likelihoods: beta ", round(llvals$first,5)," theta ",round(llvals$second,5))
                              cat("\nFn evaluations: beta ",fn_counter$first," theta ",fn_counter$second)
+                             if(adaptive)cat("\nMCMC sample size (adaptive): ",n_mcmc_sampling)
                              if(iter>1){
-                               if(adaptive)cat("\nMCMC sample size (adaptive): ",n_mcmc_sampling)
                                cat("\nLog-lik diff values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," overall: ", round(Reduce(sum,udiagnostic), 5))
                                cat("\nLog-lik variance: ", round(llvar,5))
                                if(conv.criterion >= 2)cat(" convergence criterion:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob.: ",round(prob.converged,3))
