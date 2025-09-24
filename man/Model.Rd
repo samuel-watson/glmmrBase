@@ -1018,8 +1018,9 @@ Stochastic Maximum Likelihood model fitting
 initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
 
 \item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt} and \code{mcnr.adapt} will use adaptive
-MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which results in faster convergence. \code{saem} uses a
-stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration.}
+MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which may result in faster convergence. \code{saem} uses a
+stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. The
+qualifier \code{.dual} can also be added (e.g. \code{saem.dual}), which combines the fixed and covariance parameter estimation steps.}
 
 \item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
 between iterations at which to stop the algorithm. If two values are provided then different tolerances will be
