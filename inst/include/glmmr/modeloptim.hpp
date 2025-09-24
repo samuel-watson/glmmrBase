@@ -279,37 +279,53 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   calculate_var_par();
 }
 
-// THIS FUNCTION BELOW NEEDS UPDATING - IT IS NOT CURRENTLY USED AND LACKS FUNCTIONALITY
-// FOR U DIAGNOSTICS 
 template<typename modeltype>
 template<class algo, typename>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
-  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
-  re.scaled_u_ = model.covariance.Lu(re.u_);
-  dblvec start = get_start_values(true,true,false);
-  optim<double(const std::vector<double>&),algo> op(start);
-  if constexpr (std::is_same_v<algo,DIRECT>) {
-    op.set_bounds(start,dblvec(start.size(),control.direct_range_beta),true);
-    set_direct_control(op);
-  } else if constexpr (std::is_same_v<algo,BOBYQA>) {
-    set_bobyqa_control(op);
-  } else if constexpr (std::is_same_v<algo,NEWUOA>) {
-    set_newuoa_control(op);
-  } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    throw std::runtime_error("L-BFGS not available for beta & theta optimisation");
-  }
+  if(model.covariance.parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot calculate log likelihood");
+  dblvec start = get_start_values(true,true,false);  
   dblvec lower = get_lower_values(true,true,false);
   dblvec upper = get_upper_values(true,true,false);
-  op.set_bounds(lower,upper);
-  if constexpr (std::is_same_v<modeltype,bits>)
-  {
-    op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_all, glmmr::ModelOptim<bits> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-    op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_all, glmmr::ModelOptim<bits_nngp> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-    op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_all, glmmr::ModelOptim<bits_hsgp> >(this);
+  // store previous log likelihood values for convergence calculations
+  previous_ll_values.second = current_ll_values.second;
+  previous_ll_var.second = current_ll_var.second;
+  previous_ll_values.first = previous_ll_values.second;
+  previous_ll_var.first = previous_ll_var.second;
+  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
+  re.scaled_u_ = model.covariance.Lu(re.u_);  
+  if(control.reml) generate_czz();
+  // optimisation
+  if constexpr (std::is_same_v<algo,LBFGS>){
+    throw std::runtime_error("LBFGS not available with joint beta-theta optimisation");
+  } else {
+    optim<double(const std::vector<double>&),algo> op(start);
+    if constexpr (std::is_same_v<algo,DIRECT>) {      
+      dblvec upper2(lower.size());
+      std::fill(upper2.begin(),upper2.end(),1.0);
+      op.set_bounds(lower,upper2,false);
+      set_direct_control(op);
+    } else if constexpr (std::is_same_v<algo,BOBYQA>) {
+      set_bobyqa_control(op);
+      op.set_bounds(lower,upper);
+    } else if constexpr (std::is_same_v<algo,NEWUOA>) {
+      set_newuoa_control(op);
+      op.set_bounds(lower,upper);
+    }
+    if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_all, glmmr::ModelOptim<bits> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_all, glmmr::ModelOptim<bits_nngp> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_all, glmmr::ModelOptim<bits_hsgp> >(this);
+    }
+    op.minimise();
   }
-  op.minimise();
+  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
+  current_ll_values.second = ll_current.col(1).tail(eval_size).mean();
+  current_ll_var.second = (ll_current.col(1).tail(eval_size) - ll_current.col(1).tail(eval_size).mean()).square().sum() / (eval_size - 1);
+  current_ll_values.first = current_ll_values.second;
+  current_ll_var.first = current_ll_var.second;
   calculate_var_par();
 }
 
@@ -520,16 +536,60 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par
   dblvec beta(first,last1);
   dblvec theta(last1,last2);
   model.linear_predictor.update_parameters(beta);
-  update_theta(theta);
-  if(model.family.family==Fam::gaussian || model.family.family==Fam::gamma || model.family.family==Fam::beta)update_var_par(par[P()+G]);
-  double ll = full_log_likelihood();
-  return -1.0*ll;
-  // need to fix importance sampling - this isn't right
-  // if(importance){
-  //   return -1.0 * log(exp(ll)/ exp(denomD));
-  // } else {
-  //   return -1.0*ll;
-  // }
+  model.covariance.update_parameters(theta);
+  re.zu_ = model.covariance.ZLu(re.u_);
+  fn_counter.second += re.scaled_u_.cols();
+  
+  double ll = log_likelihood();
+  if(control.reml){
+    // REML correction to the log-likelihood
+    MatrixXd D = model.covariance.D().llt().solve(MatrixXd::Identity(Q(),Q()));
+    double trCZZ = 0;
+    for(int i = 0; i < Q(); i++){
+      for(int j = 0; j < Q(); j++){
+        trCZZ += D(i,j)*CZZ(j,i);
+      }
+    }
+    ll_current.col(0).array() += -0.5*trCZZ;
+  }
+  
+  if(control.saem)
+  {
+    int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
+    double  gamma = pow(1.0/iteration,control.alpha);
+    double  ll_t = 0;
+    double  ll_pr = 0;
+    for(int i = 0; i < iteration; i++){
+      int lower_range = i * re.mcmc_block_size;
+      int upper_range = (i + 1) * re.mcmc_block_size;
+      if(i == (iteration - 1) && iteration > 1){
+        double ll_t_c = ll_t;
+        double ll_pr_c = ll_pr;
+        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+        if(control.pr_average) ll_pr += ll_t;
+        for(int j = lower_range; j < upper_range; j++)
+        {
+          ll_current(j,0) = ll_t_c + gamma*(ll_current(j,0) - ll_t_c);
+          if(control.pr_average) ll_current(j,0) = (ll_current(j,0) + ll_pr_c)/((double)iteration);
+        }
+      } else {
+        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+        if(control.pr_average) ll_pr += ll_t;
+      }
+    }
+    if(control.pr_average){
+      ll = ll_pr / (double)iteration;
+    } else {
+      ll = ll_t;
+    }
+  } else {
+    ll = ll_current.col(0).mean();
+  }
+  
+  ll_current.col(1) = ll_current.col(0);
+  
+  return -1*ll;
+  
 }
 
 

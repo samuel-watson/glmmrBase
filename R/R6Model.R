@@ -845,8 +845,9 @@ Model <- R6::R6Class("Model",
                        #'@param y Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when 
                        #' initialising the Model object, or the outcome data has been updated using member function `update_y()`
                        #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, or `saem` see Details. Default is `saem`. `mcem.adapt` and `mcnr.adapt` will use adaptive 
-                       #'MCMC sample sizes starting small and increasing to the the maximum value specified in `mcmc_options$sampling`, which results in faster convergence. `saem` uses a
-                       #'stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. 
+                       #'MCMC sample sizes starting small and increasing to the the maximum value specified in `mcmc_options$sampling`, which may result in faster convergence. `saem` uses a
+                       #'stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. The
+                       #'qualifier `.dual` can also be added (e.g. `saem.dual`), which combines the fixed and covariance parameter estimation steps.
                        #'@param tol Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
                        #'between iterations at which to stop the algorithm. If two values are provided then different tolerances will be 
                        #'applied to the fixed effect and covariance parameters.
@@ -995,6 +996,13 @@ Model <- R6::R6Class("Model",
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(grepl(".dual",method)){
+                           if(method == "mcnr.dual")stop("MCNR does not have a dual optimisation strategy.")
+                           dual <- TRUE
+                           method <- gsub(".dual","",method)
+                         } else {
+                           dual <- FALSE
+                         }
                          if(!method %in% c("mcem", "mcnr", "saem", "mcem.adapt", "mcnr.adapt"))stop("method must be either mcem, mcnr, saem, mcem.adapt, mcnr.adapt")
                          if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "mcnr")stop("MCNR with quantile currently disabled, please use SAEM or MCEM with MCML")
                          append_u <- FALSE
@@ -1182,22 +1190,27 @@ Model <- R6::R6Class("Model",
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
-                           if(method=="mcem" | method=="saem"){
-                             Model__ml_beta(private$ptr,balgo,private$model_type())
+                           if(dual){
+                             Model__ml_all(private$ptr,balgo,private$model_type())
                            } else {
-                             Model__nr_beta(private$ptr,private$model_type())
-                           }
-                           if(!skip.theta){
-                             if(algo == 3){ #& !self$mean$any_nonlinear()
-                               tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
-                                        error = function(e) {
-                                          if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
-                                          Model__ml_theta(private$ptr,0,private$model_type());
-                                        })
+                             if(method=="mcem" | method=="saem"){
+                               Model__ml_beta(private$ptr,balgo,private$model_type())
                              } else {
-                               Model__ml_theta(private$ptr,0,private$model_type())
+                               Model__nr_beta(private$ptr,private$model_type())
+                             }
+                             if(!skip.theta){
+                               if(algo == 3){ #& !self$mean$any_nonlinear()
+                                 tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
+                                          error = function(e) {
+                                            if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
+                                            Model__ml_theta(private$ptr,0,private$model_type());
+                                          })
+                               } else {
+                                 Model__ml_theta(private$ptr,0,private$model_type())
+                               }
                              }
                            }
+                           
                            # set up the vectors needed 
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
@@ -1216,16 +1229,18 @@ Model <- R6::R6Class("Model",
                              llvar <- Model__ll_diff_variance(private$ptr, TRUE, conv.criterion==2, private$model_type())
                              if(adaptive) n_mcmc_sampling <- max(n_mcmc_sampling, min(self$mcmc_options$samps, ceiling(llvar * (qnorm(convergence.prob) + qnorm(0.8))^2)/uval^2))
                              if(conv.criterion %in% c(2,3)){
-                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
-                               prob.converged <- pnorm(-uval/sqrt(llvar/n_mcmc_sampling))
+                               nmult <- ifelse(method == "saem", iter^alpha, 1)
+                               conv.criterion.value <- uval + qnorm(convergence.prob)*sqrt(llvar/(n_mcmc_sampling*nmult))
+                               prob.converged <- pnorm(-uval/sqrt(llvar/(n_mcmc_sampling*nmult)))
                                converged <- conv.criterion.value < 0
                              } 
                              if(conv.criterion == 4){
+                               nmult <- ifelse(method == "saem", iter^alpha, 1)
                                llvart <- Model__ll_diff_variance(private$ptr, FALSE, TRUE, private$model_type())
-                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar/n_mcmc_sampling)
-                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar/n_mcmc_sampling))
-                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart/n_mcmc_sampling)
-                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/n_mcmc_sampling))
+                               conv.criterion.value <- udiagnostic$first + qnorm(convergence.prob)*sqrt(llvar/(n_mcmc_sampling*nmult))
+                               prob.converged <- pnorm(-udiagnostic$first/sqrt(llvar/(n_mcmc_sampling*nmult)))
+                               conv.criterion.valuet <- udiagnostic$second + qnorm(convergence.prob)*sqrt(llvart/(n_mcmc_sampling*nmult))
+                               prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/(n_mcmc_sampling*nmult)))
                                converged <- conv.criterion.value < 0 & conv.criterion.valuet < 0
                              }
                            }
