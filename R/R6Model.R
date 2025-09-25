@@ -1116,7 +1116,7 @@ Model <- R6::R6Class("Model",
                          Model__update_u(private$ptr,matrix(0,nrow = Model__Q(private$ptr,private$model_type()),ncol=1),FALSE,private$model_type())
                          if(private$trace >= 1)cat("\nIter: 0\n")
                          Model__set_sml_parameters(private$ptr, FALSE, self$mcmc_options$samps, alpha, pr.average, private$model_type())
-                         Model__ml_beta(private$ptr,2,private$model_type())
+                         Model__ml_beta(private$ptr,0,private$model_type())
                          beta <- Model__get_beta(private$ptr,private$model_type())
                          var_par <- Model__get_var_par(private$ptr,private$model_type())
                          all_pars <- c(beta,theta)
