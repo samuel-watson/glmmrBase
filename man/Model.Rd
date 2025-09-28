@@ -994,7 +994,7 @@ Stochastic Maximum Likelihood model fitting
   max.iter = 50,
   se = "gls",
   oim = FALSE,
-  reml = TRUE,
+  reml = FALSE,
   mcmc.pkg = "rstan",
   se.theta = TRUE,
   algo = 2,

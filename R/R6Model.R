@@ -85,6 +85,7 @@ Model <- R6::R6Class("Model",
                          if(private$attenuate_parameters != curr_state){
                            private$genW()
                          }
+                         return(invisible(self))
                        },
                        #' @description
                        #' Return fitted values. Does not account for the random effects. For simulated values based
@@ -476,6 +477,7 @@ Model <- R6::R6Class("Model",
                          self$mean$subset_rows(index)
                          self$covariance$subset(index)
                          private$update_ptr(TRUE)
+                         return(invisible(self))
                        },
                        #'@description
                        #'Generates a realisation of the design
@@ -633,6 +635,7 @@ Model <- R6::R6Class("Model",
                              Model__set_var_par(private$ptr,var.par,private$model_type())
                            }
                          }
+                         return(invisible(self))
                        },
                        #' @description
                        #' Generates the information matrix of the mixed model GLS estimator (X'S^-1X). The inverse of this matrix is an 
@@ -963,7 +966,7 @@ Model <- R6::R6Class("Model",
                        #'}
                        #'@md
                        MCML = function(y = NULL,
-                                       method = "mcnr",
+                                       method = "saem",
                                        tol = 1e-2,
                                        max.iter = 50,
                                        se = "gls",
@@ -1697,7 +1700,8 @@ Model <- R6::R6Class("Model",
                              self$covariance$sparse(sparse,amd)
                            }
                            private$useSparse = sparse
-                         } 
+                         }
+                         return(invisible(self))
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
@@ -1904,7 +1908,7 @@ Model <- R6::R6Class("Model",
                        #'  * `refresh` How frequently to print to console MCMC progress if displaying verbose output.
                        #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
                        mcmc_options = list(warmup = 100,
-                                           samps = 250,
+                                           samps = 50,
                                            chains = 1,
                                            lambda = 1,
                                            refresh = 500,
@@ -1921,6 +1925,7 @@ Model <- R6::R6Class("Model",
                        calculator_instructions = function(){
                          Model__print_names(private$ptr,TRUE, TRUE, private$model_type())
                          Model__print_instructions(private$ptr,private$model_type())
+                         return(invisible(self))
                        },
                        #' @description
                        #' Calculates the marginal effect of variable x. There are several options for 
@@ -1989,6 +1994,7 @@ Model <- R6::R6Class("Model",
                        update_y = function(y){
                          private$verify_data(y)
                          private$set_y(y)
+                         return(invisible(self))
                        },
                        #' @description
                        #' Controls the information printed to the console for other functions. 
@@ -1998,6 +2004,7 @@ Model <- R6::R6Class("Model",
                          if(!trace%in%c(0,1,2))stop("trace must be 0, 1, or 2")
                          private$trace <- trace
                          Model__set_trace(private$ptr,trace, private$model_type())
+                         return(invisible(self))
                        }
                      ),
                      private = list(
