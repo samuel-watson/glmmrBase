@@ -132,6 +132,8 @@ private:
   // used for REML
   void        generate_czz();
   MatrixXd    CZZ = MatrixXd::Zero(1,1);
+  double      saem_average(const int col);
+  void        add_reml_corr(const int col);
 };
 
 }
@@ -279,37 +281,53 @@ inline void glmmr::ModelOptim<modeltype>::ml_theta(){
   calculate_var_par();
 }
 
-// THIS FUNCTION BELOW NEEDS UPDATING - IT IS NOT CURRENTLY USED AND LACKS FUNCTIONALITY
-// FOR U DIAGNOSTICS 
 template<typename modeltype>
 template<class algo, typename>
 inline void glmmr::ModelOptim<modeltype>::ml_all(){
-  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
-  re.scaled_u_ = model.covariance.Lu(re.u_);
-  dblvec start = get_start_values(true,true,false);
-  optim<double(const std::vector<double>&),algo> op(start);
-  if constexpr (std::is_same_v<algo,DIRECT>) {
-    op.set_bounds(start,dblvec(start.size(),control.direct_range_beta),true);
-    set_direct_control(op);
-  } else if constexpr (std::is_same_v<algo,BOBYQA>) {
-    set_bobyqa_control(op);
-  } else if constexpr (std::is_same_v<algo,NEWUOA>) {
-    set_newuoa_control(op);
-  } else if constexpr (std::is_same_v<algo,LBFGS>) {
-    throw std::runtime_error("L-BFGS not available for beta & theta optimisation");
-  }
+  if(model.covariance.parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot calculate log likelihood");
+  dblvec start = get_start_values(true,true,false);  
   dblvec lower = get_lower_values(true,true,false);
   dblvec upper = get_upper_values(true,true,false);
-  op.set_bounds(lower,upper);
-  if constexpr (std::is_same_v<modeltype,bits>)
-  {
-    op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_all, glmmr::ModelOptim<bits> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
-    op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_all, glmmr::ModelOptim<bits_nngp> >(this);
-  } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
-    op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_all, glmmr::ModelOptim<bits_hsgp> >(this);
+  // store previous log likelihood values for convergence calculations
+  previous_ll_values.second = current_ll_values.second;
+  previous_ll_var.second = current_ll_var.second;
+  previous_ll_values.first = previous_ll_values.second;
+  previous_ll_var.first = previous_ll_var.second;
+  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
+  re.scaled_u_ = model.covariance.Lu(re.u_);  
+  if(control.reml) generate_czz();
+  // optimisation
+  if constexpr (std::is_same_v<algo,LBFGS>){
+    throw std::runtime_error("LBFGS not available with joint beta-theta optimisation");
+  } else {
+    optim<double(const std::vector<double>&),algo> op(start);
+    if constexpr (std::is_same_v<algo,DIRECT>) {      
+      dblvec upper2(lower.size());
+      std::fill(upper2.begin(),upper2.end(),1.0);
+      op.set_bounds(lower,upper2,false);
+      set_direct_control(op);
+    } else if constexpr (std::is_same_v<algo,BOBYQA>) {
+      set_bobyqa_control(op);
+      op.set_bounds(lower,upper);
+    } else if constexpr (std::is_same_v<algo,NEWUOA>) {
+      set_newuoa_control(op);
+      op.set_bounds(lower,upper);
+    }
+    if constexpr (std::is_same_v<modeltype,bits>)
+    {
+      op.template fn<&glmmr::ModelOptim<bits>::log_likelihood_all, glmmr::ModelOptim<bits> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_nngp>) {
+      op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_all, glmmr::ModelOptim<bits_nngp> >(this);
+    } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+      op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_all, glmmr::ModelOptim<bits_hsgp> >(this);
+    }
+    op.minimise();
   }
-  op.minimise();
+  int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();
+  current_ll_values.second = ll_current.col(1).tail(eval_size).mean();
+  current_ll_var.second = (ll_current.col(1).tail(eval_size) - ll_current.col(1).tail(eval_size).mean()).square().sum() / (eval_size - 1);
+  current_ll_values.first = current_ll_values.second;
+  current_ll_var.first = current_ll_var.second;
   calculate_var_par();
 }
 
@@ -511,6 +529,52 @@ inline void glmmr::ModelOptim<modeltype>::set_lbfgs_control(double g_epsilon, in
 }
 
 template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::saem_average(const int col){
+  double  ll = 0;
+  int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
+  double  gamma = pow(1.0/iteration,control.alpha);
+  double  ll_t = 0;
+  double  ll_pr = 0;
+  for(int i = 0; i < iteration; i++){
+    int lower_range = i * re.mcmc_block_size;
+    int upper_range = (i + 1) * re.mcmc_block_size;
+    if(i == (iteration - 1) && iteration > 1){
+      double ll_t_c = ll_t;
+      double ll_pr_c = ll_pr;
+      ll_t = ll_t + gamma*(ll_current.col(col).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+      if(control.pr_average) ll_pr += ll_t;
+      for(int j = lower_range; j < upper_range; j++)
+      {
+        ll_current(j,col) = ll_t_c + gamma*(ll_current(j,col) - ll_t_c);
+        if(control.pr_average) ll_current(j,col) = (ll_current(j,col) + ll_pr_c)/((double)iteration);
+      }
+    } else {
+      ll_t = ll_t + gamma*(ll_current.col(col).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
+      if(control.pr_average) ll_pr += ll_t;
+    }
+  }
+  if(control.pr_average){
+    ll = ll_pr / (double)iteration;
+  } else {
+    ll = ll_t;
+  }
+  return ll;
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::add_reml_corr(const int col){
+  // REML correction to the log-likelihood
+  MatrixXd D = model.covariance.D().llt().solve(MatrixXd::Identity(Q(),Q()));
+  double trCZZ = 0;
+  for(int i = 0; i < Q(); i++){
+    for(int j = 0; j < Q(); j++){
+      trCZZ += D(i,j)*CZZ(j,i);
+    }
+  }
+  ll_current.col(col).array() += -0.5*trCZZ;
+}
+
+template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par)
 {
   int G = model.covariance.npar();
@@ -520,16 +584,14 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par
   dblvec beta(first,last1);
   dblvec theta(last1,last2);
   model.linear_predictor.update_parameters(beta);
-  update_theta(theta);
-  if(model.family.family==Fam::gaussian || model.family.family==Fam::gamma || model.family.family==Fam::beta)update_var_par(par[P()+G]);
-  double ll = full_log_likelihood();
-  return -1.0*ll;
-  // need to fix importance sampling - this isn't right
-  // if(importance){
-  //   return -1.0 * log(exp(ll)/ exp(denomD));
-  // } else {
-  //   return -1.0*ll;
-  // }
+  model.covariance.update_parameters(theta);
+  re.zu_ = model.covariance.ZLu(re.u_);
+  fn_counter.second += re.scaled_u_.cols();
+  double ll = log_likelihood();
+  if(control.reml)add_reml_corr(0);
+  if(control.saem) ll = saem_average(0);
+  ll_current.col(1) = ll_current.col(0);
+  return -1*ll;
 }
 
 
@@ -574,11 +636,6 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const d
   MatrixXd LZWZL = model.covariance.LZWZL(matrix.W.W());
   double LZWdet = glmmr::maths::logdet(LZWZL);
   ll += -0.5*LZWdet;
-  
-  // model.covariance.update_parameters(par);
-  // double ll =  model.covariance.log_likelihood(re.scaled_u_.col(0));
-  // //glmmr::print_vec_1d<dblvec>(par);
-  // // REML correction to the log-likelihood
   if(control.reml){
     MatrixXd D = model.covariance.D();
     if (model.covariance.all_group_re()) {
@@ -598,8 +655,6 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_theta(const d
   
   return -1.0*ll;
 }
-
-
 
 template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_laplace_beta_theta(const dblvec &par)
@@ -623,41 +678,9 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& beta)
 {
   model.linear_predictor.update_parameters(beta);
-  double ll = 0.0;
+  double ll = log_likelihood();
   fn_counter.first += re.scaled_u_.cols();
-  if(control.saem)
-  {
-    ll = log_likelihood();
-    int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
-    double  gamma = pow(1.0/iteration,control.alpha);
-    double  ll_t = 0;
-    double  ll_pr = 0;
-    for(int i = 0; i < iteration; i++){
-      int lower_range = i * re.mcmc_block_size;
-      int upper_range = (i + 1) * re.mcmc_block_size;
-      if(i == (iteration - 1) && iteration > 1){
-        double ll_t_c = ll_t;
-        double ll_pr_c = ll_pr;
-        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-        for(int j = lower_range; j < upper_range; j++)
-        {
-          ll_current(j,0) = ll_t_c + gamma*(ll_current(j,0) - ll_t_c);
-          if(control.pr_average) ll_current(j,0) = (ll_current(j,0) + ll_pr_c)/((double)iteration);
-        }
-      } else {
-        ll_t = ll_t + gamma*(ll_current.col(0).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-      }
-    }
-    if(control.pr_average){
-      ll = ll_pr / (double)iteration;
-    } else {
-      ll = ll_t;
-    }
-  } else {
-    ll = log_likelihood();
-  }
+  if(control.saem)ll = saem_average(0);
   return -1*ll;
 }
 
@@ -721,56 +744,18 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 {
   model.covariance.update_parameters(theta);
   fn_counter.second += re.scaled_u_.cols();
-#pragma omp parallel
+#pragma omp parallel if(re.scaled_u_.cols() > 300)
   for(int i = 0; i < re.scaled_u_.cols(); i++)
   {
     ll_current(i,1) = model.covariance.log_likelihood(re.scaled_u_.col(i));
   }
-  if(control.reml){
-    // REML correction to the log-likelihood
-    MatrixXd D = model.covariance.D().llt().solve(MatrixXd::Identity(Q(),Q()));
-    double trCZZ = 0;
-    for(int i = 0; i < Q(); i++){
-      for(int j = 0; j < Q(); j++){
-        trCZZ += D(i,j)*CZZ(j,i);
-      }
-    }
-    ll_current.col(1).array() += -0.5*trCZZ;
-  }
+  if(control.reml) add_reml_corr(1);
   double ll = 0;
-  if(control.saem)
-  {
-    int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
-    double  gamma = pow(1.0/iteration,control.alpha);
-    double  ll_t = 0;
-    double  ll_pr = 0;
-    for(int i = 0; i < iteration; i++){
-      int lower_range = i * re.mcmc_block_size;
-      int upper_range = (i + 1) * re.mcmc_block_size;
-      if(i == (iteration - 1) && iteration > 1){
-        double ll_t_c = ll_t;
-        double ll_pr_c = ll_pr;
-        ll_t = ll_t + gamma*(ll_current.col(1).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-        for(int j = lower_range; j < upper_range; j++)
-        {
-          ll_current(j,1) = ll_t_c + gamma*(ll_current(j,1) - ll_t_c);
-          if(control.pr_average) ll_current(j,1) = (ll_current(j,1) + ll_pr_c)/((double)iteration);
-        }
-      } else {
-        ll_t = ll_t + gamma*(ll_current.col(1).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-      }
-    }
-    if(control.pr_average){
-      ll = ll_pr / (double)iteration;
-    } else {
-      ll = ll_t;
-    }
+  if(control.saem){
+    ll = saem_average(1);
   } else {
     ll = ll_current.col(1).mean();
   }
-  
   return -1*ll;
 }
 
@@ -893,24 +878,6 @@ inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta_with_gradient(c
 {
 // THIS NEEDS REWORKING - L-BFGS-B THETA IS NOT INCLUDED IN v0.6.1
 throw std::runtime_error("No L-BFGS-B with HSGP");
-//   model.covariance.update_parameters(theta.array());
-//   double ll = log_likelihood();
-//   ArrayXd xb = model.xb();
-//   MatrixXd grad(2,re.u_.cols());
-//   MatrixXd ZLd0 = model.covariance.ZL_deriv(0);
-//   MatrixXd ZLd1 = model.covariance.ZL_deriv(1);
-//   int niter = re.u_.cols();
-// #pragma omp parallel for if(niter > 30)
-//   for(int i = 0; i < niter; i++)
-//   { 
-//     ArrayXd mu = xb + re.zu_.col(i).array();
-//     mu = mu.exp();    
-//     grad(0,i) = ( (model.data.y-mu.matrix()) * (re.u_.col(i).transpose()) * ZLd0.transpose()).trace();
-//     grad(1,i) = ( (model.data.y-mu.matrix()) * (re.u_.col(i).transpose()) * ZLd1.transpose()).trace();
-//   }  
-//   g = grad.rowwise().mean();
-//   g.array() *= -1.0;
-//   return -1.0*ll;
 }
 
 template<>
@@ -920,36 +887,7 @@ inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& t
   re.zu_ = model.covariance.ZLu(re.u_);
   double ll = log_likelihood(false);
   fn_counter.first += re.scaled_u_.cols();
-  if(control.saem)
-  {
-    int     iteration = std::max((int)re.zu_.cols() / re.mcmc_block_size, 1);
-    double  gamma = pow(1.0/iteration,control.alpha);
-    double  ll_t = 0;
-    double  ll_pr = 0;
-    for(int i = 0; i < iteration; i++){
-      int lower_range = i * re.mcmc_block_size;
-      int upper_range = (i + 1) * re.mcmc_block_size;
-      if(i == (iteration - 1) && iteration > 1){
-        double ll_t_c = ll_t;
-        double ll_pr_c = ll_pr;
-        ll_t = ll_t + gamma*(ll_current.col(1).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-        for(int j = lower_range; j < upper_range; j++)
-        {
-          ll_current(j,1) = ll_t_c + gamma*(ll_current(j,1) - ll_t_c);
-          if(control.pr_average) ll_current(j,1) = (ll_current(j,1) + ll_pr_c)/((double)iteration);
-        }
-      } else {
-        ll_t = ll_t + gamma*(ll_current.col(1).segment(lower_range, re.mcmc_block_size).mean() - ll_t);
-        if(control.pr_average) ll_pr += ll_t;
-      }
-    }
-    if(control.pr_average){
-      ll = ll_pr / (double)iteration;
-    } else {
-      ll = ll_t;
-    }
-  } 
+  if(control.saem)ll = saem_average(1);
   return -1*ll;
 }
 
@@ -1242,9 +1180,15 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool the
   } 
   if(theta)
   {
+    bool all_log = model.covariance.all_log_re();
+    if(model.covariance.any_log_re() && !all_log) throw std::runtime_error("Requires all covariance functions to be on log scale");
     if(lower_bound_theta.size()==0)
     {
-      for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+      if(all_log){
+        for(int i=0; i< model.covariance.npar(); i++)lower.push_back(R_NegInf);
+      } else {
+        for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+      }
     } else {
       for(const auto& par: lower_bound_theta)lower.push_back(par);
     }
@@ -1298,8 +1242,6 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   // save the old likelihood values
   previous_ll_values.first = current_ll_values.first;
   previous_ll_var.first = current_ll_var.first;
-  // if(ll_previous.rows() != ll_current.rows()) ll_previous.resize(ll_current.rows(),NoChange);
-  // ll_previous.col(0) = ll_current.col(0);
   
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
@@ -1328,30 +1270,74 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     nvar_par.setConstant(1.0);
   }
   
-#pragma omp parallel for
-  for(int i = 0; i < niter; ++i){
-    VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
-    w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
-    ArrayXd resid(model.n());
-    matrix.gradient_eta(re.u_.col(i),resid);
-    XtXW.block(P()*i, 0, P(), P()) = X.transpose() * w.asDiagonal() * X;
-    w = w.cwiseProduct(resid.matrix());
-    Wu.col(i) = w;
+  // ----------------- accumulators -----------------
+  MatrixXd XtWXm = MatrixXd::Zero(P(), P());
+  
+  // preallocate temporary buffers
+  VectorXd w(model.n());
+  ArrayXd resid(model.n());
+  
+  #pragma omp parallel
+  {
+    MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
+    VectorXd w_local(model.n());
+    ArrayXd resid_local(model.n());
+    
+  #pragma omp for nowait
+    for(int i = 0; i < niter; ++i){
+      // compute weights
+      w_local = glmmr::maths::dhdmu(zd.col(i), model.family);
+      w_local = ((w_local.array() * nvar_par).inverse() * model.data.weights).matrix();
+      
+      // gradient residuals
+      matrix.gradient_eta(re.u_.col(i), resid_local);
+      
+      // efficient Xᵀ * W * X without diag(w)
+      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * w_local.array()).matrix();
+      
+      // compute Wu(:,i)
+      Wu.col(i) = w_local.cwiseProduct(resid_local.matrix());
+    }
+    
+  #pragma omp critical
+    XtWXm += XtWXm_private;
   }
-  XtXW *= (double)1.0/niter;
-  MatrixXd XtWXm = XtXW.block(0,0,P(),P());
-  for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
-  XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
-  // if(model.linear_predictor.calc.any_nonlinear)
-  // {
-  //   MatrixXd A = matrix.hessian_nonlinear_correction();
-  //   glmmr::Eigen_ext::near_semi_pd(A);
-  //   XtWXm += A;
-  // }
+  
+  // average over iterations
+  XtWXm *= (1.0 / niter);
+  
+  // ----------------- factorization -----------------
+  // better than computing full inverse
+  Eigen::LLT<MatrixXd> llt(XtWXm);
+  MatrixXd XtWXm_inv = llt.solve(MatrixXd::Identity(P(), P()));
+  
+  // mean of Wu
   VectorXd Wum = Wu.rowwise().mean();
-  VectorXd bincr = XtWXm * X.transpose() * Wum;
+  
+  // compute increment
+  VectorXd bincr = XtWXm_inv * X.transpose() * Wum;
+  
+  // update beta
   update_beta(model.linear_predictor.parameter_vector() + bincr);
-  //calculate_var_par();
+  
+// #pragma omp parallel for if(niter > 250)
+//   for(int i = 0; i < niter; ++i){
+//     VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
+//     w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
+//     ArrayXd resid(model.n());
+//     matrix.gradient_eta(re.u_.col(i),resid);
+//     XtXW.block(P()*i, 0, P(), P()) = X.transpose() * (X.array().colwise() * w.array()).matrix();
+//     Wu.col(i) = w.cwiseProduct(resid.matrix());
+//   }
+//   
+//   XtXW *= (double)1.0/niter;
+//   MatrixXd XtWXm = XtXW.block(0,0,P(),P());
+//   
+//   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
+//   XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
+//   VectorXd Wum = Wu.rowwise().mean();
+//   VectorXd bincr = XtWXm * X.transpose() * Wum;
+//   update_beta(model.linear_predictor.parameter_vector() + bincr);
   
   // repopulate loglikelihood history - assumes NR can 
   // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
