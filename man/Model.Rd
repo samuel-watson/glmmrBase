@@ -989,7 +989,7 @@ Stochastic Maximum Likelihood model fitting
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
   y = NULL,
-  method = "mcnr",
+  method = "saem",
   tol = 0.01,
   max.iter = 50,
   se = "gls",
@@ -998,6 +998,9 @@ Stochastic Maximum Likelihood model fitting
   mcmc.pkg = "rstan",
   se.theta = TRUE,
   algo = 2,
+  iter.warmup = NULL,
+  iter.sampling = NULL,
+  chains = NULL,
   lower.bound = NULL,
   upper.bound = NULL,
   lower.bound.theta = NULL,
@@ -1049,6 +1052,14 @@ of the calculation, so can be disabled if required in larger models. Has no effe
 
 \item{\code{algo}}{Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm
 may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.}
+
+\item{\code{iter.warmup}}{Integer. The number of warmup iterations for each MCMC run on each iteration of the algorithm. If this value is left as NULL then the value stored in self$mcmc_options$warmup will be used.}
+
+\item{\code{iter.sampling}}{Integer. The number of sampling iterations for each MCMC run on each iteration of the algorithm. The default values have been selected to provide
+relatively good convergence for the default SAEM algorithm, but may need to be increased for MCEM and MCNR. If an adaptive algorithm is used, then this is the maximum
+number of iterations per MCMC run. If this value is left as NULL then the value stored in self$mcmc_options$samps will be used.}
+
+\item{\code{chains}}{Integer. The number of MCMC chains to run in parallel. The default is one, which generally provides good results. If this value is left as NULL then the value stored in self$mcmc_options$chains will be used.}
 
 \item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.}
 

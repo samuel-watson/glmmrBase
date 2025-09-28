@@ -871,6 +871,11 @@ Model <- R6::R6Class("Model",
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
                        #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
                        #'may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.
+                       #'@param iter.warmup Integer. The number of warmup iterations for each MCMC run on each iteration of the algorithm. If this value is left as NULL then the value stored in self$mcmc_options$warmup will be used.
+                       #'@param iter.sampling Integer. The number of sampling iterations for each MCMC run on each iteration of the algorithm. The default values have been selected to provide 
+                       #'relatively good convergence for the default SAEM algorithm, but may need to be increased for MCEM and MCNR. If an adaptive algorithm is used, then this is the maximum 
+                       #'number of iterations per MCMC run. If this value is left as NULL then the value stored in self$mcmc_options$samps will be used.
+                       #'@param chains Integer. The number of MCMC chains to run in parallel. The default is one, which generally provides good results. If this value is left as NULL then the value stored in self$mcmc_options$chains will be used.
                        #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.
                        #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)
@@ -975,6 +980,9 @@ Model <- R6::R6Class("Model",
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = 2,
+                                       iter.warmup = NULL,
+                                       iter.sampling = NULL,
+                                       chains = NULL,
                                        lower.bound = NULL,
                                        upper.bound = NULL,
                                        lower.bound.theta = NULL,
@@ -1043,6 +1051,9 @@ Model <- R6::R6Class("Model",
                          }
                          Model__use_reml(private$ptr,reml,private$model_type())
                          Model__reset_fn_counter(private$ptr,private$model_type())
+                         if(!is.null(iter.sampling))self$mcmc_options$samps <- iter.sampling
+                         if(!is.null(iter.warmup))self$mcmc_options$warmup <- iter.warmup
+                         if(!is.null(iter.warmup))self$mcmc_options$chains <- chains
                          # set up all the required vectors and data to monitor the algorithm
                          balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
                          if(method == "saem" & balgo == 2) {
