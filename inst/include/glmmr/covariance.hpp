@@ -31,6 +31,12 @@ struct ZNonZero {
   int     xcol;
 };
 
+template<typename T, typename ... Vals>
+inline bool any_match(T t, Vals ...vals)
+{
+  return (... || (t == vals));
+}
+
 class Covariance {
 public:
   // objects
@@ -73,6 +79,8 @@ public:
   virtual void      set_sparse(bool sparse, bool amd = true);
   bool              any_group_re() const;
   bool              all_group_re() const;
+  bool              all_log_re() const;
+  bool              any_log_re() const;
   intvec            parameter_fn_index() const;
   virtual intvec    re_count() const;
   virtual sparse    ZL_sparse();
@@ -251,7 +259,9 @@ inline int glmmr::Covariance::parse(){
     }
     
     // if any of the functions are group, then use block functions
-    auto idxgr = std::find(fn.begin(),fn.end(),"gr");
+    strvec grfn {"gr", "grlog"};
+    //auto idxgr = std::find(fn.begin(),fn.end(),"gr");
+    auto idxgr = std::find_first_of(fn.begin(),fn.end(),grfn.begin(),grfn.end());
     dblvec2d groups;
     dblvec vals;
     bool isgr;
@@ -414,7 +424,7 @@ inline int glmmr::Covariance::parse(){
       if(*min_value_iterator < minvalue) minvalue = *min_value_iterator;
     }
     for(int j = 0; j<fn_[i].size();j++){
-      if(fn_[i][j]!=CovFunc::gr){
+      if(fn_[i][j]!=CovFunc::gr && fn_[i][j]!=CovFunc::grlog ){
         nvarfn = re_cols_[i][j].size();
         double dist_val;
         double dist_ab;
@@ -1023,13 +1033,18 @@ inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
 
 inline bool glmmr::Covariance::any_group_re() const{
   bool gr = false;
+  const static std::vector<CovFunc> grfns{CovFunc::gr, CovFunc::grlog};
   for(int i = 0; i < fn_.size(); i++){
-    for(int j = 0; j < fn_[i].size(); j++){
-      if(fn_[i][j]==CovFunc::gr){
-        gr = true;
-        break;
-      }
-    }
+    auto idxgr = std::find_first_of(fn_[i].begin(), fn_[i].end(),grfns.begin(),grfns.end());
+    if(idxgr != fn_[i].end());
+    gr = true;
+    break;
+    // for(int j = 0; j < fn_[i].size(); j++){
+    //   if(fn_[i][j]==CovFunc::gr || fn_[i][j]==CovFunc::grlog){
+    //     gr = true;
+    //     break;
+    //   }
+    // }
     if(gr)break;
   }
   return gr;
@@ -1038,11 +1053,44 @@ inline bool glmmr::Covariance::any_group_re() const{
 inline bool glmmr::Covariance::all_group_re() const {
     bool gr = true;
     for (int i = 0; i < fn_.size(); i++) {
-        for (int j = 0; j < fn_[i].size(); j++) {
-            gr = gr && (fn_[i][j] == CovFunc::gr);
-        }
+      for (int j = 0; j < fn_[i].size(); j++) {
+        bool isgr = any_match(fn_[i][j], CovFunc::gr, CovFunc::grlog);
+        gr = gr && isgr;
+      }
     }
     return gr;
+}
+
+inline bool glmmr::Covariance::all_log_re() const {
+  bool logre = true;
+  for (int i = 0; i < fn_.size(); i++) {
+    for (int j = 0; j < fn_[i].size(); j++) {
+      bool anylog = any_match(fn_[i][j], CovFunc::grlog, CovFunc::arlog, CovFunc::ar0log, CovFunc::fexplog);// (fn_[i][j] == CovFunc::grlog || fn_[i][j] == CovFunc::arlog || fn_[i][j] == CovFunc::fexplog || fn_[i][j] == CovFunc::ar0log);
+      logre = logre && anylog;
+    }
+  }
+  return logre;
+}
+
+inline bool glmmr::Covariance::any_log_re() const{
+  bool gr = false;
+  const static std::vector<CovFunc> logfns {CovFunc::grlog, CovFunc::arlog, CovFunc::fexplog, CovFunc::ar0log};
+  
+  for(int i = 0; i < fn_.size(); i++){
+    auto idxgr = std::find_first_of(fn_[i].begin(), fn_[i].end(),logfns.begin(),logfns.end());
+    if(idxgr != fn_[i].end()){
+      gr = true;
+      break;
+    }
+    // for(int j = 0; j < fn_[i].size(); j++){
+    //   if(fn_[i][j] == CovFunc::grlog || fn_[i][j] == CovFunc::arlog || fn_[i][j] == CovFunc::fexplog || fn_[i][j] == CovFunc::ar0log){
+    //     gr = true;
+    //     break;
+    //   }
+    // }
+    if(gr)break;
+  }
+  return gr;
 }
 
 inline strvec glmmr::Covariance::parameter_names(){

@@ -830,7 +830,6 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
   } else {
     ll = ll_current.col(1).mean();
   }
-  
   return -1*ll;
 }
 
@@ -1302,9 +1301,15 @@ inline dblvec glmmr::ModelOptim<modeltype>::get_lower_values(bool beta, bool the
   } 
   if(theta)
   {
+    bool all_log = model.covariance.all_log_re();
+    if(model.covariance.any_log_re() && !all_log) throw std::runtime_error("Requires all covariance functions to be on log scale");
     if(lower_bound_theta.size()==0)
     {
-      for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+      if(all_log){
+        for(int i=0; i< model.covariance.npar(); i++)lower.push_back(R_NegInf);
+      } else {
+        for(int i=0; i< model.covariance.npar(); i++)lower.push_back(1e-6);
+      }
     } else {
       for(const auto& par: lower_bound_theta)lower.push_back(par);
     }

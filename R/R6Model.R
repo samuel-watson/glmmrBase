@@ -968,7 +968,7 @@ Model <- R6::R6Class("Model",
                                        max.iter = 50,
                                        se = "gls",
                                        oim = FALSE,
-                                       reml = TRUE,
+                                       reml = FALSE,
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
                                        algo = 2,
@@ -1027,7 +1027,7 @@ Model <- R6::R6Class("Model",
                            Model__set_bound(private$ptr,upper.bound,TRUE,FALSE,private$model_type())
                          }
                          if(!is.null(lower.bound.theta)){
-                           if(any(lower.bound.theta < 0))stop("Theta lower bound cannot be negative")
+                           if(any(lower.bound.theta < 0) & !Model__log_re(private$ptr,private$model_type()))stop("Theta lower bound cannot be negative with non-log functions")
                            Model__set_bound(private$ptr,lower.bound.theta,FALSE,TRUE,private$model_type())
                          }
                          if(!is.null(upper.bound.theta)){
@@ -1140,7 +1140,7 @@ Model <- R6::R6Class("Model",
                            if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                              data$Xb <-  Model__xb(private$ptr,private$model_type())
                              data$Z <- Model__ZL(private$ptr,private$model_type())
-                             if(self$family[[1]]=="gaussian")data$sigma = var_par_new/self$weights
+                             if(self$family[[1]]=="gaussian")data$sigma = sqrt(var_par_new/self$weights)
                              if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
                              if(private$trace <= 1){
                                if(mcmc.pkg == "cmdstan"){

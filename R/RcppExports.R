@@ -321,6 +321,10 @@ Model__D <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__D`, xp, type)
 }
 
+Model__log_re <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__log_re`, xp, type)
+}
+
 Model__D_chol <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__D_chol`, xp, type)
 }

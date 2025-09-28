@@ -1011,6 +1011,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__log_re
+SEXP Model__log_re(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__log_re(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__log_re(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__D_chol
 SEXP Model__D_chol(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__D_chol(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1884,6 +1896,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
     {"_glmmrBase_Model__D", (DL_FUNC) &_glmmrBase_Model__D, 2},
+    {"_glmmrBase_Model__log_re", (DL_FUNC) &_glmmrBase_Model__log_re, 2},
     {"_glmmrBase_Model__D_chol", (DL_FUNC) &_glmmrBase_Model__D_chol, 2},
     {"_glmmrBase_Model__u_log_likelihood", (DL_FUNC) &_glmmrBase_Model__u_log_likelihood, 3},
     {"_glmmrBase_Model__simulate_re", (DL_FUNC) &_glmmrBase_Model__simulate_re, 2},

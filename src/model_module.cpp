@@ -1400,6 +1400,17 @@ SEXP Model__D(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__log_re(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->model.covariance.all_log_re());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<bool>(S));
+}
+
+// [[Rcpp::export]]
 SEXP Model__D_chol(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
