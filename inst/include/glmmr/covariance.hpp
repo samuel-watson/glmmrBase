@@ -1036,9 +1036,10 @@ inline bool glmmr::Covariance::any_group_re() const{
   const static std::vector<CovFunc> grfns{CovFunc::gr, CovFunc::grlog};
   for(int i = 0; i < fn_.size(); i++){
     auto idxgr = std::find_first_of(fn_[i].begin(), fn_[i].end(),grfns.begin(),grfns.end());
-    if(idxgr != fn_[i].end());
-    gr = true;
-    break;
+    if(idxgr != fn_[i].end()){
+      gr = true;
+      break;
+    }
     // for(int j = 0; j < fn_[i].size(); j++){
     //   if(fn_[i][j]==CovFunc::gr || fn_[i][j]==CovFunc::grlog){
     //     gr = true;
