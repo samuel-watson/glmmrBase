@@ -498,7 +498,8 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
         if constexpr (imtype == IM::OIM){
           oim_adj = (resid.transpose() * SPS * Ssub2 * SigmaInv * resid)(0);
         }
-        M_theta(i,j) = 0;
+        // M_theta(i,j) = 0.5*(SPS*Ssub2).trace();
+        // if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
         for(int k = 0; k < model.n(); k++){
           for(int l = 0; l <  model.n(); l++){
             M_theta(i,j) += 0.5*SPS(k,l)*Ssub2(l,k);

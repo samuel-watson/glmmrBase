@@ -301,6 +301,10 @@ Model__nr_beta <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__nr_beta`, xp, type))
 }
 
+Model__nr_theta <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, type))
+}
+
 Model__laplace_nr_beta_u <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__laplace_nr_beta_u`, xp, type))
 }
@@ -331,6 +335,10 @@ Model__D_chol <- function(xp, type = 0L) {
 
 Model__u_log_likelihood <- function(xp, u_, type = 0L) {
     .Call(`_glmmrBase_Model__u_log_likelihood`, xp, u_, type)
+}
+
+Model__u_gradient <- function(xp, u_, type = 0L) {
+    .Call(`_glmmrBase_Model__u_gradient`, xp, u_, type)
 }
 
 Model__simulate_re <- function(xp, type = 0L) {

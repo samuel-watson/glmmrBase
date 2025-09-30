@@ -66,6 +66,7 @@ public:
   virtual double  log_likelihood();
   virtual double  full_log_likelihood();
   virtual void    nr_beta();
+  virtual void    nr_theta();
   virtual void    laplace_nr_beta_u();
   void            laplace_beta_u();
   virtual void    update_var_par(const double& v);
@@ -1270,10 +1271,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     nvar_par.setConstant(1.0);
   }
   
-  // ----------------- accumulators -----------------
   MatrixXd XtWXm = MatrixXd::Zero(P(), P());
-  
-  // preallocate temporary buffers
   VectorXd w(model.n());
   ArrayXd resid(model.n());
   
@@ -1285,64 +1283,46 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     
   #pragma omp for nowait
     for(int i = 0; i < niter; ++i){
-      // compute weights
       w_local = glmmr::maths::dhdmu(zd.col(i), model.family);
       w_local = ((w_local.array() * nvar_par).inverse() * model.data.weights).matrix();
       
-      // gradient residuals
       matrix.gradient_eta(re.u_.col(i), resid_local);
-      
-      // efficient Xᵀ * W * X without diag(w)
       XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * w_local.array()).matrix();
-      
-      // compute Wu(:,i)
       Wu.col(i) = w_local.cwiseProduct(resid_local.matrix());
     }
     
   #pragma omp critical
     XtWXm += XtWXm_private;
   }
-  
-  // average over iterations
   XtWXm *= (1.0 / niter);
   
-  // ----------------- factorization -----------------
-  // better than computing full inverse
   Eigen::LLT<MatrixXd> llt(XtWXm);
   MatrixXd XtWXm_inv = llt.solve(MatrixXd::Identity(P(), P()));
   
-  // mean of Wu
   VectorXd Wum = Wu.rowwise().mean();
-  
-  // compute increment
   VectorXd bincr = XtWXm_inv * X.transpose() * Wum;
-  
-  // update beta
   update_beta(model.linear_predictor.parameter_vector() + bincr);
-  
-// #pragma omp parallel for if(niter > 250)
-//   for(int i = 0; i < niter; ++i){
-//     VectorXd w = glmmr::maths::dhdmu(zd.col(i),model.family);
-//     w = ((w.array() *nvar_par).inverse() * model.data.weights).matrix();
-//     ArrayXd resid(model.n());
-//     matrix.gradient_eta(re.u_.col(i),resid);
-//     XtXW.block(P()*i, 0, P(), P()) = X.transpose() * (X.array().colwise() * w.array()).matrix();
-//     Wu.col(i) = w.cwiseProduct(resid.matrix());
-//   }
-//   
-//   XtXW *= (double)1.0/niter;
-//   MatrixXd XtWXm = XtXW.block(0,0,P(),P());
-//   
-//   for(int i = 1; i<niter; i++) XtWXm += XtXW.block(P()*i,0,P(),P());
-//   XtWXm = XtWXm.llt().solve(MatrixXd::Identity(P(),P()));
-//   VectorXd Wum = Wu.rowwise().mean();
-//   VectorXd bincr = XtWXm * X.transpose() * Wum;
-//   update_beta(model.linear_predictor.parameter_vector() + bincr);
   
   // repopulate loglikelihood history - assumes NR can 
   // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
   current_ll_values.first = log_likelihood();
   current_ll_var.first = (ll_current.col(0) - ll_current.col(0).mean()).square().sum() / (ll_current.col(0).size() - 1);
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::nr_theta(){
+  if(control.reml)throw std::runtime_error("Newton-Raphson not compatible with REML for covariance parameters");
+  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
+  previous_ll_values.second = current_ll_values.second;
+  previous_ll_var.second = current_ll_var.second;
+  
+  re.scaled_u_ = model.covariance.Lu(re.u_);  
+  ArrayXd  tmp(ll_current.rows());
+  model.covariance.nr_step(re.scaled_u_, tmp);
+  ll_current.col(1) = tmp;
+  current_ll_values.second = ll_current.col(1).mean();
+  current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
+  calculate_var_par();
 }
 
 template<typename modeltype>

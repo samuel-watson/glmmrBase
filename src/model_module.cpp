@@ -1347,6 +1347,16 @@ void Model__nr_beta(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__nr_theta(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [](auto ptr){ptr->optim.nr_theta();}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
 void Model__laplace_nr_beta_u(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
@@ -1431,6 +1441,19 @@ SEXP Model__u_log_likelihood(SEXP xp, SEXP u_, int type = 0){
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<double>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__u_gradient(SEXP xp, SEXP u_, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  Eigen::MatrixXd u = as<Eigen::MatrixXd>(u_);
+  double ll = 0;
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->model.covariance.log_gradient(u,ll));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::VectorXd>(S));
 }
 
 // [[Rcpp::export]]

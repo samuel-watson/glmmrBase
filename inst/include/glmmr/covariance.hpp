@@ -8,6 +8,7 @@
 #include "sparse.h"
 #include "calculator.hpp"
 #include "linearpredictor.hpp"
+#include "matrixfield.h"
 
 using namespace Eigen;
 
@@ -89,6 +90,7 @@ public:
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
   virtual VectorXd  log_gradient(const MatrixXd &umat, double& logl);
   virtual MatrixXd  log_gradient(const MatrixXd &umat, VectorXd& logl);
+  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
  
 protected:
@@ -1190,7 +1192,7 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
       {
         MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
         MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
-        grad(i) += detmat2.trace();
+        grad(i) += -0.5* detmat2.trace();
       }
     logl += -0.5*(Q_ * LOG_2PI + logdet_val);
     double qf = 0;
@@ -1205,14 +1207,15 @@ inline VectorXd glmmr::Covariance::log_gradient(const MatrixXd &umat, double& lo
       qf += glmmr::algo::inner_sum(&v_buffer[0],&v_buffer[0],Q_);    
       VectorXd vvec = Map<VectorXd>(v_buffer.data(), v_buffer.size());
       VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
+      MatrixXd zzquadquad = zzquad * zzquad.transpose();
       for(int j = 0; j < npars; j++)
       {
-        dqf[j] += (zzquad.transpose() * derivs[j+1] * zzquad)(0);
+        dqf[j] += (zzquadquad * derivs[j+1] ).trace();
       }
     }
     for(int j = 0; j < npars; j++)
     {
-      grad(j) += -0.5* dqf[j] / (double) niter;
+      grad(j) += 0.5* dqf[j] / (double) niter;
     } 
     logl += -0.5 * qf / (double) niter;
   }
@@ -1233,7 +1236,7 @@ inline MatrixXd glmmr::Covariance::log_gradient(const MatrixXd &umat, VectorXd& 
   derivatives(derivs,1);
   int npars = derivs.size()-1;
   int niter = umat.cols();
-  MatrixXd grad(npars, umat.cols());
+  VectorXd grad(npars);
   grad.setZero();
   
   double logdet_val=0.0;
@@ -1309,9 +1312,10 @@ inline MatrixXd glmmr::Covariance::log_gradient(const MatrixXd &umat, VectorXd& 
       logl(i) += -0.5*(glmmr::algo::inner_sum(&v_buffer[0],&v_buffer[0],Q_));    
       VectorXd vvec = Map<VectorXd>(v_buffer.data(), v_buffer.size());
       VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
+      MatrixXd zzquadquad = zzquad * zzquad.transpose();
       for(int j = 0; j < npars; j++)
       {
-        grad(j,i) += -0.5*(zzquad.transpose() * derivs[j+1] * zzquad)(0);
+        grad(j,i) += (zzquadquad * derivs[j+1] ).trace();
       }
     }
   }
@@ -1324,6 +1328,83 @@ inline MatrixXd glmmr::Covariance::log_gradient(const MatrixXd &umat, VectorXd& 
 #endif 
   
   return grad;
+}
+
+inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl){
+  //#pragma omp declare reduction(vec_dbl_plus : std::vector<double> :                                                       \
+  //                   std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
+  //                  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+  
+  static const double LOG_2PI = log(2*M_PI);
+  std::vector<MatrixXd> derivs;
+  derivatives(derivs,1);
+  int npars = derivs.size()-1;
+  int niter = umat.cols();
+  VectorXd grad(npars);
+  grad.setZero();
+  
+  double logdet_val=0.0;
+  logl = 0.0;
+  dblvec dlogdet_vals(npars);
+  std::fill(dlogdet_vals.begin(), dlogdet_vals.end(), 0.0);
+  int obs_counter=0;
+  ArrayXd size_B_array(B_);
+  dblvec dqf(npars);
+  std::fill(dqf.begin(), dqf.end(), 0.0);
+  logl.setZero();
+  
+  if(!isSparse)
+  {
+    throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
+  } else {
+    for (const auto& k : spchol.D) logdet_val += log(k);
+    MatrixXd Lmat = sparse_to_dense(matL);
+    MatrixXd LmatT = Lmat.transpose();
+    glmmr::MatrixField<MatrixXd> S;
+    for(int i = 0; i < npars; i++)
+    {
+      MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
+      MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
+      S.add(detmat2);
+      grad(i) += -0.5* detmat2.trace();
+    }
+    logl.array() += -0.5*(Q_ * LOG_2PI + logdet_val);
+    double qf = 0;
+    // #pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
+    static thread_local dblvec v_buffer;
+    for(int i = 0; i < niter; i++)
+    {
+      VectorXd ucol = umat.col(i);
+      v_buffer.assign(ucol.data(),ucol.data()+ucol.size());     
+      spchol.ldl_lsolve(&v_buffer[0]);
+      spchol.ldl_d2solve(&v_buffer[0]);      
+      logl(i) += -0.5* glmmr::algo::inner_sum(&v_buffer[0],&v_buffer[0],Q_);    
+      VectorXd vvec = Map<VectorXd>(v_buffer.data(), v_buffer.size());
+      VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
+      MatrixXd zzquadquad = zzquad * zzquad.transpose();
+      for(int j = 0; j < npars; j++)
+      {
+        dqf[j] += (zzquadquad * derivs[j+1] ).trace();
+      }
+    }
+    for(int j = 0; j < npars; j++)
+    {
+      grad(j) += 0.5* dqf[j] / (double) niter;
+    } 
+    
+    MatrixXd M(npars,npars);
+    for(int j = 0; j < npars; j++){
+      for(int k = j; k < npars; k++){
+        M(j,k) = (S(j) * S(k)).trace();
+        if(j != k)M(k,j) = M(j,k);
+      }
+    }
+    M = M.llt().solve(MatrixXd::Identity(npars,npars));
+    VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+    theta_curr += M * grad;
+    update_parameters(theta_curr.array());
+  }
+  
 }
 
 inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,

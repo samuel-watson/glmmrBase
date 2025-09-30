@@ -847,7 +847,7 @@ Model <- R6::R6Class("Model",
                        #' 
                        #'@param y Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when 
                        #' initialising the Model object, or the outcome data has been updated using member function `update_y()`
-                       #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, or `saem` see Details. Default is `saem`. `mcem.adapt` and `mcnr.adapt` will use adaptive 
+                       #'@param method The MCML algorithm to use, either `mcem` or `mcnr`, `mcnr2`, or `saem` see Details. Default is `saem`. `mcem.adapt`, `mcnr2.adapt` and `mcnr.adapt` will use adaptive 
                        #'MCMC sample sizes starting small and increasing to the the maximum value specified in `mcmc_options$sampling`, which may result in faster convergence. `saem` uses a
                        #'stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. The
                        #'qualifier `.dual` can also be added (e.g. `saem.dual`), which combines the fixed and covariance parameter estimation steps.
@@ -1007,7 +1007,20 @@ Model <- R6::R6Class("Model",
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(grepl("mcnr2",method)){
+                           dbl_nr <- TRUE
+                           method <- gsub("2","",method)
+                         } else {
+                           dbl_nr <- FALSE
+                         }
                          if(grepl(".dual",method)){
+                           if(method == "mcnr.dual")stop("MCNR does not have a dual optimisation strategy.")
+                           dual <- TRUE
+                           method <- gsub(".dual","",method)
+                         } else {
+                           dual <- FALSE
+                         }
+                         if(grepl("mcnr2",method)){
                            if(method == "mcnr.dual")stop("MCNR does not have a dual optimisation strategy.")
                            dual <- TRUE
                            method <- gsub(".dual","",method)
@@ -1213,14 +1226,18 @@ Model <- R6::R6Class("Model",
                                Model__nr_beta(private$ptr,private$model_type())
                              }
                              if(!skip.theta){
-                               if(algo == 3){ #& !self$mean$any_nonlinear()
-                                 tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
-                                          error = function(e) {
-                                            if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
-                                            Model__ml_theta(private$ptr,0,private$model_type());
-                                          })
+                               if(dbl_nr){
+                                 Model__nr_theta(private$ptr,private$model_type())
                                } else {
-                                 Model__ml_theta(private$ptr,0,private$model_type())
+                                 if(algo == 3){ #& !self$mean$any_nonlinear()
+                                   tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
+                                            error = function(e) {
+                                              if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
+                                              Model__ml_theta(private$ptr,0,private$model_type());
+                                            })
+                                 } else {
+                                   Model__ml_theta(private$ptr,0,private$model_type())
+                                 }
                                }
                              }
                            }

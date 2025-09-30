@@ -952,6 +952,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// Model__nr_theta
+void Model__nr_theta(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__nr_theta(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__nr_theta(xp, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__laplace_nr_beta_u
 void Model__laplace_nr_beta_u(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__laplace_nr_beta_u(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1045,6 +1056,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type u_(u_SEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__u_log_likelihood(xp, u_, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__u_gradient
+SEXP Model__u_gradient(SEXP xp, SEXP u_, int type);
+RcppExport SEXP _glmmrBase_Model__u_gradient(SEXP xpSEXP, SEXP u_SEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type u_(u_SEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__u_gradient(xp, u_, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1891,6 +1915,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__laplace_ml_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_theta, 3},
     {"_glmmrBase_Model__laplace_ml_beta_theta", (DL_FUNC) &_glmmrBase_Model__laplace_ml_beta_theta, 3},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 2},
+    {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 2},
     {"_glmmrBase_Model__laplace_nr_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_nr_beta_u, 2},
     {"_glmmrBase_Model__laplace_beta_u", (DL_FUNC) &_glmmrBase_Model__laplace_beta_u, 2},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
@@ -1899,6 +1924,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__log_re", (DL_FUNC) &_glmmrBase_Model__log_re, 2},
     {"_glmmrBase_Model__D_chol", (DL_FUNC) &_glmmrBase_Model__D_chol, 2},
     {"_glmmrBase_Model__u_log_likelihood", (DL_FUNC) &_glmmrBase_Model__u_log_likelihood, 3},
+    {"_glmmrBase_Model__u_gradient", (DL_FUNC) &_glmmrBase_Model__u_gradient, 3},
     {"_glmmrBase_Model__simulate_re", (DL_FUNC) &_glmmrBase_Model__simulate_re, 2},
     {"_glmmrBase_Model__re_terms", (DL_FUNC) &_glmmrBase_Model__re_terms, 2},
     {"_glmmrBase_Model__re_count", (DL_FUNC) &_glmmrBase_Model__re_count, 2},
