@@ -21,7 +21,7 @@ public:
   hsgpCovariance(const glmmr::hsgpCovariance& cov);
   // functions
   double      spd_nD(int i);
-  double      d_spd_nD(int i, int par, bool sqrt_lambda = true);
+  dblvec      d_spd_nD(int i);
   ArrayXd     phi_nD(int i);
   MatrixXd    ZL() override;
   MatrixXd    ZL_deriv(int par);
@@ -193,6 +193,9 @@ inline void glmmr::hsgpCovariance::update_approx_parameters(){
 
 inline double glmmr::hsgpCovariance::spd_nD(int i){
   double wprod = 0;
+  const static double M_PI4 = 4 * M_PI;
+  const static double M_PI2 = 2 * M_PI;
+  const static double TGAM2 = tgamma(0.5);
   for(int d = 0; d < dim; d++) {
     double w = (indices(i,d)*M_PI)/(2*L_boundary(d));
     wprod += w*w;
@@ -200,47 +203,56 @@ inline double glmmr::hsgpCovariance::spd_nD(int i){
   double S;
   double phisq = parameters_[1] * parameters_[1];
   if(sq_exp){
-    S = parameters_[0] * pow(2 * M_PI, dim/2.0) * pow(parameters_[1],dim) * exp(-0.5 * phisq * wprod);
+    S = parameters_[0] * pow(M_PI2, dim/2.0) * pow(parameters_[1],dim) * exp(-0.5 * phisq * wprod);
   } else {
-    double S1 = parameters_[0] * pow(4 * M_PI, dim/2.0) * (tgamma(0.5*(dim+1))/(tgamma(0.5)*parameters_[1]));
+    double S1 = parameters_[0] * pow(M_PI4, dim/2.0) * (tgamma(0.5*(dim+1))/(TGAM2*parameters_[1]));
     double S2 = 1/phisq + wprod;
     S = S1 * pow(S2,-1*(dim+1)/2.0);
   }
   return S;
 }
 
-inline double glmmr::hsgpCovariance::d_spd_nD(int i, int par, bool sqrt_lambda)
+inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i)
 {
-  Array2d w;
-  w(0) = (indices(i,0)*M_PI)/(2*L_boundary(0));
-  w(1) = (indices(i,1)*M_PI)/(2*L_boundary(1));
-  w(0) = w(0)*w(0);
-  w(1) = w(1)*w(1);
-  double S;
-  double phisq = parameters_[1] * parameters_[1];
+  dblvec result(5);
   if(sq_exp){
-    if(par == 0){
-      S = 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
-    } else {
-      S = -1.0 * (w(0) + w(1)) * parameters_[0] * 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
-    }
+    throw std::runtime_error("HSGP derivatives only available for exponential covariance");
   } else {
-    double S2 = 1 + phisq * (w(0) + w(1));
-    if(par == 0){
-      S = 4 * M_PI * phisq * pow(S2,-1.5);
-    } else {
-      S = parameters_[0] * 4 * M_PI * (2 * parameters_[1] * pow(S2,-1.5) - 3 * (w(0) + w(1)) * phisq *  parameters_[1] * pow(S2,-2.5));
+    double wprod = 0;
+    const static double M_PI4 = 4 * M_PI;
+    const static double M_PI2 = 2 * M_PI;
+    const static double TGAM2 = tgamma(0.5);
+    
+    double c_val = -1*(dim+1)/4.0; // c/2
+    double a = pow(M_PI4, dim/2.0) * (tgamma(0.5*(dim+1))/TGAM2);
+    
+    for(int d = 0; d < dim; d++) {
+      double w = (indices(i,d)*M_PI)/(2*L_boundary(d));
+      wprod += w*w;
     }
+    
+    // this is on the log scale
+    double log_par0 = log(parameters_[0]);
+    double log_par1 = log(parameters_[1]);
+    double exp1_w = (exp(-2.0 * log_par1) + wprod);
+    double exp1_pow = pow(exp1_w,c_val);
+    double b = a * exp(-0.5*log_par1) * exp1_pow;
+    result[0] = 0.5* exp(0.5 * log_par0)* b;
+    result[2] = 0.5* exp(0.5 * log_par0)* b;
+    double d_inter = exp1_pow * ((-2.0 * c_val * exp(-2.5 * log_par1))/exp1_w - 0.5*exp(-0.5*log_par1));
+    result[1] = exp(0.5 * log_par0) * a * d_inter;
+    result[4] = 0.5 * exp(0.5 * log_par0) * a * d_inter;
+    double d2_inter = (6.0 * c_val + 0.5) * wprod * exp(4.5 * log_par1);
+    double d3_inter = 4 * (c_val + 0.25) * (c_val + 0.25) * exp(2.5 * log_par1);
+    double d4_inter = 0.25 * wprod * wprod * exp(6.5 * log_par1);
+    double d5_inter = wprod * exp(2.0 * log_par1 + 1);
+    double d_inter_sum = d2_inter + d3_inter + d4_inter;
+    result[3] = exp(0.5 * log_par0) * a * (exp(-3.0 * log_par1) * exp1_pow * d_inter_sum)/(d5_inter * d5_inter);
+    
   }
-
-  if(sqrt_lambda)
-  {
-    double SS = spd_nD(i);
-    S *= 0.5 / sqrt(SS);
-  }
-
-  return S;
+  return result;
 }
+
 
 inline ArrayXd glmmr::hsgpCovariance::phi_nD(int i){
   ArrayXd fi1(hsgp_data.rows());
@@ -311,14 +323,15 @@ inline MatrixXd glmmr::hsgpCovariance::ZL(){
 
 inline MatrixXd glmmr::hsgpCovariance::ZL_deriv(int par)
 {
-  ArrayXd Lambda_deriv(Lambda.size());
-  #pragma omp parallel for
-    for(int i = 0; i < total_m; i++)
-    {
-      Lambda_deriv(i) = d_spd_nD(i,par,true);
-    }
+  throw std::runtime_error("ZL deriv (HSGP) has been disabled");
+  // ArrayXd Lambda_deriv(Lambda.size());
+  // #pragma omp parallel for
+  //   for(int i = 0; i < total_m; i++)
+  //   {
+  //     Lambda_deriv(i) = d_spd_nD(i,par);
+  //   }
     MatrixXd pnew = Phi;
-    pnew *= Lambda_deriv.matrix().asDiagonal();
+    //pnew *= Lambda_deriv.matrix().asDiagonal();
     return pnew; 
 }
 
