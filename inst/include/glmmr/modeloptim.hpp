@@ -1405,8 +1405,8 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     hess(1, 0) += addv;
   }
   
-  Rcpp::Rcout << "\nHess: \n" << hess;
-  Rcpp::Rcout << "\nGrad: " << grad.transpose();
+  // Rcpp::Rcout << "\nHess: \n" << hess;
+  // Rcpp::Rcout << "\nGrad: " << grad.transpose();
   
   // Apply scaling
   hess *= inv_n_iter;
@@ -1417,10 +1417,10 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   VectorXd logpars(2);
   logpars(0) = log(model.covariance.parameters_[0]);
   logpars(1) = log(model.covariance.parameters_[1]);
-  Rcpp::Rcout << "\nOld pars: " << logpars.transpose();
+  // Rcpp::Rcout << "\nOld pars: " << logpars.transpose();
   logpars += hess * grad;
   
-  Rcpp::Rcout << "\nNew pars: " << logpars.transpose();
+  //Rcpp::Rcout << "\nNew pars: " << logpars.transpose();
   model.covariance.update_parameters(logpars.array().exp());
   current_ll_values.second = log_likelihood(false);
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
