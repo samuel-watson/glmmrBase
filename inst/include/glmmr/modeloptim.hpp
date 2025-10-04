@@ -1332,6 +1332,12 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
   
+  // Pre-cache frequently accessed members
+  const int n_iter = re.u_.cols();
+  const int resid_size = model.data.y.size();
+  const double inv_n_iter = 1.0 / static_cast<double>(n_iter);
+  
+  // Pre-allocate arrays outside loop
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
   case Fam::gaussian:
@@ -1341,7 +1347,7 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     nvar_par = model.data.variance.inverse();
     break;
   case Fam::beta:
-    nvar_par = (1+model.data.variance);
+    nvar_par = (1 + model.data.variance);
     break;
   case Fam::binomial:
     nvar_par = model.data.variance.inverse();
@@ -1350,60 +1356,69 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     nvar_par.setConstant(1.0);
   }
   
+  MatrixXd Phi = model.covariance.PhiSPD(false, false);
+  VectorXd grad = VectorXd::Zero(2);
+  MatrixXd hess = MatrixXd::Zero(2, 2);
   
-  
-  MatrixXd Phi = model.covariance.PhiSPD(false,false);
-  VectorXd grad(2);
-  MatrixXd hess(2,2);
-  ArrayXXd lambda_deriv(model.covariance.Q(),5);
+  // Pre-compute lambda derivatives
+  ArrayXXd lambda_deriv(model.covariance.Q(), 5);
   for(int i = 0; i < model.covariance.Q(); i++){
     dblvec deriv = model.covariance.d_spd_nD(i);
-    for(int j = 0; j < 5; j++) lambda_deriv(i,j) = deriv[j];
+    for(int j = 0; j < 5; j++) lambda_deriv(i, j) = deriv[j];
   }
   
   MatrixXd zd = matrix.linpred();
+  
+  // Pre-compute Phi products (these are constant across iterations)
   MatrixXd Phi_d0 = Phi * lambda_deriv.matrix().col(0).asDiagonal();
   MatrixXd Phi_d1 = Phi * lambda_deriv.matrix().col(1).asDiagonal();
   MatrixXd Phi_d200 = Phi * lambda_deriv.matrix().col(2).asDiagonal();
   MatrixXd Phi_d211 = Phi * lambda_deriv.matrix().col(3).asDiagonal();
   MatrixXd Phi_d201 = Phi * lambda_deriv.matrix().col(4).asDiagonal();
   
-  grad.setZero();
-  hess.setZero();
-  int n_iter = re.u_.cols();
-  
   for(int i = 0; i < n_iter; i++){
     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
     VectorXd w = glmmr::maths::dhdmu(zd.col(i), model.family);
     w = ((w.array() * nvar_par).inverse() * model.data.weights).matrix();
-    VectorXd resid = (model.data.y.matrix() - zdu);
-    VectorXd d0prod = Phi_d0 * re.u_.col(i);
-    VectorXd d1prod = Phi_d1 * re.u_.col(i);
-    VectorXd d2prod = Phi_d200 * re.u_.col(i);
-    VectorXd d3prod = Phi_d211 * re.u_.col(i);
-    VectorXd d4prod = Phi_d201 * re.u_.col(i);
-    for(int j = 0; j < resid.size(); j++){
-      grad(0) += d0prod(j) * resid(j) * w(j);
-      grad(1) += d1prod(j) * resid(j) * w(j);
-      hess(0,0) += d0prod(j) * d0prod(j) * w(j) - d2prod(j) * resid(j)  * w(j);
-      hess(1,1) += d1prod(j) * d1prod(j) * w(j) - d4prod(j) * resid(j) * w(j);
-      double addv = d0prod(j) * d1prod(j) * w(j) - d3prod(j) * resid(j) * w(j);
-      hess(0,1) += addv;
-      hess(1,0) += addv;
-    }
+    
+    ArrayXd resid = (model.data.y.matrix() - zdu).array();
+    ArrayXd w_arr = w.array();
+    
+    // Vectorized products
+    ArrayXd d0prod = (Phi_d0 * re.u_.col(i)).array();
+    ArrayXd d1prod = (Phi_d1 * re.u_.col(i)).array();
+    ArrayXd d2prod = (Phi_d200 * re.u_.col(i)).array();
+    ArrayXd d3prod = (Phi_d211 * re.u_.col(i)).array();
+    ArrayXd d4prod = (Phi_d201 * re.u_.col(i)).array();
+    
+    // Vectorized accumulation - replaces entire inner loop!
+    ArrayXd resid_w = resid * w_arr;
+    
+    grad(0) += (d0prod * resid_w).sum();
+    grad(1) += (d1prod * resid_w).sum();
+    
+    hess(0, 0) += (d0prod * d0prod * w_arr - d2prod * resid_w).sum();
+    hess(1, 1) += (d1prod * d1prod * w_arr - d4prod * resid_w).sum();
+    
+    double addv = (d0prod * d1prod * w_arr - d3prod * resid_w).sum();
+    hess(0, 1) += addv;
+    hess(1, 0) += addv;
   }
   
   Rcpp::Rcout << "\nHess: \n" << hess;
   Rcpp::Rcout << "\nGrad: " << grad.transpose();
-  hess = hess * (1.0/(double)n_iter);
-  grad = grad * (1.0/(double)n_iter);
   
-  hess = hess.llt().solve(MatrixXd::Identity(2,2));
+  // Apply scaling
+  hess *= inv_n_iter;
+  grad *= inv_n_iter;
+  
+  hess = hess.llt().solve(MatrixXd::Identity(2, 2));
+  
   VectorXd logpars(2);
   logpars(0) = log(model.covariance.parameters_[0]);
   logpars(1) = log(model.covariance.parameters_[1]);
   Rcpp::Rcout << "\nOld pars: " << logpars.transpose();
-  logpars += hess*grad;
+  logpars += hess * grad;
   
   Rcpp::Rcout << "\nNew pars: " << logpars.transpose();
   model.covariance.update_parameters(logpars.array().exp());
