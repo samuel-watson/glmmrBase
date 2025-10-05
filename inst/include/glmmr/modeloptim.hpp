@@ -1397,10 +1397,10 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     grad(0) += (d0prod * resid_w).sum();
     grad(1) += (d1prod * resid_w).sum();
     
-    hess(0, 0) += (d0prod * d0prod * w_arr - d2prod * resid_w).sum();
-    hess(1, 1) += (d1prod * d1prod * w_arr - d4prod * resid_w).sum();
+    hess(0, 0) += (d0prod * d0prod * w_arr).sum();// - d2prod * resid_w).sum();
+    hess(1, 1) += (d1prod * d1prod * w_arr).sum();//  - d4prod * resid_w).sum();
     
-    double addv = (d0prod * d1prod * w_arr - d3prod * resid_w).sum();
+    double addv = (d0prod * d1prod * w_arr).sum();//  - d3prod * resid_w).sum();
     hess(0, 1) += addv;
     hess(1, 0) += addv;
   }
