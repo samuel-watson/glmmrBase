@@ -4,7 +4,6 @@
 #include "modelbits.hpp"
 #include "randomeffects.hpp"
 #include "modelmatrix.hpp"
-#include "modelmcmc.hpp"
 #include "modeloptim.hpp"
 
 namespace glmmr {
@@ -31,7 +30,6 @@ public:
   glmmr::RandomEffects<modeltype> re;
   glmmr::ModelMatrix<modeltype>   matrix;
   glmmr::ModelOptim<modeltype>    optim;
-  glmmr::ModelMCMC<modeltype>     mcmc;
   // constructor
   Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
   //functions
@@ -67,7 +65,7 @@ inline glmmr::Model<modeltype>::Model(const std::string& formula_,
       std::string link_) : model(formula_,data_,colnames_,family_,link_), 
       re(model), 
       matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
-      optim(model,matrix,re), mcmc(model,matrix,re) {};
+      optim(model,matrix,re) {};
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
@@ -124,6 +122,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   int currcolsize = re.u_.cols();
   // check if the existing samples are a single column of zeros - if so remove them
   if(append && re.u_.cols() == 1 && re.u_.col(0).isZero()) action_append = false;
+  
   if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
@@ -146,13 +145,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_trace(int trace_){
   optim.trace = trace_;
-  mcmc.trace = trace_;
   model.trace = trace_;
-  if(trace_ > 0){
-    mcmc.verbose = true;
-  } else {
-    mcmc.verbose = false;
-  }
 }
 
 // marginal effects:

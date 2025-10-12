@@ -826,12 +826,15 @@ Model <- R6::R6Class("Model",
                        #'The option `alpha` determines the rate at which succesive iterations "forget" the past and must be between 0.5 and 1. Higher values
                        #'will result in lower Monte Carlo error but slower convergence. The options `mcem.adapt` and `mcnr.adapt` will modify the number of MCMC samples during each step of model fitting 
                        #'using the suggested values in Caffo, Jank, and Jones (2006)<doi:10.1111/j.1467-9868.2005.00499.x> 
-                       #'as the estimates converge. 
+                       #'as the estimates converge. A Newton-Raphson step can be used for both fixed effect and covariance parameters with `mcnr2`.
                        #'
                        #'The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
                        #'tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error. However,
-                       #'the SAEM approach does overcome reduce the required samples, especially with R-P averaging. As such a lower number (20-50)
+                       #'the SAEM approach does overcome reduce the required samples. As such a lower number (20-50)
                        #'samples per iteration is normally sufficient to get convergence. 
+                       #'
+                       #'The default method uses MCMC sampling to generate samples of the random effects. As an alternative, samples can be 
+                       #'generated using a normal approximation with posterior mean and variance calculated directly by setting `mcmc.pkg = "analytic"`.
                        #'
                        #'There are several stopping rules for the algorithm. Either the algorithm will terminate when succesive parameter estimates are
                        #'all within a specified tolerance of each other (`conv.criterion = 1`), or when there is a high probability that the estimated 
@@ -839,8 +842,7 @@ Model <- R6::R6Class("Model",
                        #'the likelihood just for the fixed effects (`conv.criterion = 3`), or both the likelihoods for the fixed effects and covariance parameters 
                        #'(`conv.criterion = 4`; default).
                        #'
-                       #' Options for the MCMC sampler are set by changing the values in `self$mcmc_options`. The information printed to the console
-                       #' during model fitting can be controlled with the `self$set_trace()` function.
+                       #' The information printed to the console during model fitting can be controlled with the `self$set_trace()` function.
                        #' 
                        #' To provide weights for the model fitting, store them in self$weights. To set the number of 
                        #' trials for binomial models, set self$trials.
@@ -864,8 +866,7 @@ Model <- R6::R6Class("Model",
                        #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
                        #'@param reml Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters
                        #'@param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
-                       #'`hmc` to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number 
-                       #' of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
+                       #'`analytic` to use a Normal approximation to the posterior with direct estimates of the posterior mean and variance. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
                        #' so may not currently be an option for some users.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
@@ -1006,7 +1007,7 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
-                         if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(!mcmc.pkg %in% c("cmdstan","rstan","analytic"))stop("mcmc.pkg must be one of cmdstan, rstan, or analytic")
                          if(grepl("mcnr2",method)){
                            dbl_nr <- TRUE
                            method <- gsub("2","",method)
@@ -1030,7 +1031,6 @@ Model <- R6::R6Class("Model",
                          if(!method %in% c("mcem", "mcnr", "saem", "mcem.adapt", "mcnr.adapt"))stop("method must be either mcem, mcnr, saem, mcem.adapt, mcnr.adapt")
                          if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "mcnr")stop("MCNR with quantile currently disabled, please use SAEM or MCEM with MCML")
                          append_u <- FALSE
-                         if(mcmc.pkg == "hmc" & method == "saem")stop("saem and hmc options not currently compatible")
                          adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
                          if(!conv.criterion %in% 1:4)stop("Convergence criterion must be 1, 2, or 3")
                          if(alpha < 0.5 | alpha >= 1)stop("alpha must be in [0.5, 1)")
@@ -1038,11 +1038,6 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]%in%c("quantile","quantile_scaled")){
                            Model__set_quantile(private$ptr,self$family$q,private$model_type())
                            message("Quantile regression is EXPERIMENTAL.")
-                         }
-                         if(!mcmc.pkg == "hmc"){
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,private$model_type())
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,private$model_type())
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,private$model_type())
                          }
                          if(!is.null(lower.bound)){
                            Model__set_bound(private$ptr,lower.bound,TRUE,TRUE,private$model_type())
@@ -1104,35 +1099,38 @@ Model <- R6::R6Class("Model",
                            }
                          }
                          # SET UP MCMC DATA STRUCTURE
-                         data <- list(
-                           Q = Model__Q(private$ptr,private$model_type()),
-                           Xb = Model__xb(private$ptr,private$model_type()),
-                           Z = Model__ZL(private$ptr,private$model_type()),
-                           type=as.numeric(file_type$type),
-                           constr_zero = constr.zero
-                         )
-                         if(self$family[[1]]%in%c("gaussian","beta","Gamma","quantile","quantile_scaled"))data <- append(data,list(N_cont = self$n(),
-                                                                                  N_int = 1,
-                                                                                  N_binom = 1,
-                                                                                  sigma = rep(self$var_par/self$weights, self$n()),
-                                                                                  ycont = Model__y(private$ptr,private$model_type()),
-                                                                                  yint = array(0,dim = 1),
-                                                                                  q = 0,
-                                                                                  n = array(0,dim = 1)))
-                         if(self$family[[1]]%in%c("binomial","bernoulli","poisson"))data <- append(data,list(N_int = self$n(),
-                                                                                                      N_cont = 1,
-                                                                                                      N_binom = 1,
-                                                                                                      sigma = array(0,dim = 1),
-                                                                                                      yint = Model__y(private$ptr,private$model_type()),
-                                                                                                      ycont = array(0,dim = 1),
-                                                                                                      q = 0,
-                                                                                                      n = array(0,dim = 1)))
-                         if(self$family[[1]]=="binomial"){
-                           data$N_binom = self$n()
-                           data$n = self$trials
+                         if(mcmc.pkg != "analytic"){
+                           data <- list(
+                             Q = Model__Q(private$ptr,private$model_type()),
+                             Xb = Model__xb(private$ptr,private$model_type()),
+                             Z = Model__ZL(private$ptr,private$model_type()),
+                             type=as.numeric(file_type$type),
+                             constr_zero = constr.zero
+                           )
+                           if(self$family[[1]]%in%c("gaussian","beta","Gamma","quantile","quantile_scaled"))data <- append(data,list(N_cont = self$n(),
+                                                                                                                                     N_int = 1,
+                                                                                                                                     N_binom = 1,
+                                                                                                                                     sigma = rep(self$var_par/self$weights, self$n()),
+                                                                                                                                     ycont = Model__y(private$ptr,private$model_type()),
+                                                                                                                                     yint = array(0,dim = 1),
+                                                                                                                                     q = 0,
+                                                                                                                                     n = array(0,dim = 1)))
+                           if(self$family[[1]]%in%c("binomial","bernoulli","poisson"))data <- append(data,list(N_int = self$n(),
+                                                                                                               N_cont = 1,
+                                                                                                               N_binom = 1,
+                                                                                                               sigma = array(0,dim = 1),
+                                                                                                               yint = Model__y(private$ptr,private$model_type()),
+                                                                                                               ycont = array(0,dim = 1),
+                                                                                                               q = 0,
+                                                                                                               n = array(0,dim = 1)))
+                           if(self$family[[1]]=="binomial"){
+                             data$N_binom = self$n()
+                             data$n = self$trials
+                           }
+                           if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
+                           if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
                          }
-                         if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
-                         if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
+                         
                          iter <- 0
                          n_mcmc_sampling <- ifelse(adaptive, 20, self$mcmc_options$samps)
                          beta_diff <- 1
@@ -1213,7 +1211,7 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__mcmc_sample(private$ptr, self$mcmc_options$warmup, n_mcmc_sampling, self$mcmc_options$adapt, private$model_type())
+                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
@@ -1429,284 +1427,15 @@ Model <- R6::R6Class("Model",
                          return(out)
                        },
                        #'@description
-                       #'Maximum Likelihood model fitting with Laplace Approximation
-                       #'
-                       #'@details
-                       #'**Laplace approximation**
-                       #'Fits generalised linear mixed models using Laplace approximation to the log likelihood. For non-Gaussian models
-                       #'the covariance matrix is approximated using the first order approximation based on the marginal
-                       #'quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
-                       #'can be further adjusted following the proposal of Zeger et al (1988), use the member function `use_attenuated()` in this
-                       #'class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To 
-                       #'set the number of trials for binomial models, set self$trials. To control the information printed to the console 
-                       #' during model fitting use the `self$set_trace()` function.
-                       #'
-                       #'@param y Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when 
-                       #' initialising the Model object, or the outcome data has been updated using member function `update_y()`
-                       #'@param start Optional. A numeric vector indicating starting values for the model parameters.
-                       #'@param method String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm
-                       #'@param se String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
-                       #' "robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors, 
-                       #' "kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same 
-                       #' degrees of freedom correction as Kenward-Roger, but with GLS standard errors)"box" to use a modified Box correction (does not return confidence intervals),
-                       #' "bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust 
-                       #' standard errors with between-within correction to the degrees of freedom. 
-                       #' Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.
-                       #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
-                       #'@param reml Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters
-                       #'@param max.iter Maximum number of algorithm iterations, default 20.
-                       #'@param tol Maximum difference between successive iterations at which to terminate the algorithm
-                       #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
-                       #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
-                       #'@param algo Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both.
-                       #'@param lower.bound Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.
-                       #'@param upper.bound Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.
-                       #'@param lower.bound.theta Optional. Vector of lower bounds for the covariance parameters. 
-                       #'@param upper.bound.theta Optional. Vector of upper bounds for the covariance parameters. 
-                       #'@return A `mcml` object
-                       #' @seealso \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
-                       #'@examples
-                       #' \dontshow{
-                       #' setParallel(FALSE) # for the CRAN check
-                       #' }
-                       #' #create example data with six clusters, five time periods, and five people per cluster-period
-                       #' df <- nelder(~(cl(6)*t(5)) > ind(5))
-                       #' # parallel trial design intervention indicator
-                       #' df$int <- 0
-                       #' df[df$cl > 3, 'int'] <- 1 
-                       #' # specify parameter values in the call for the data simulation below
-                       #' des <- Model$new(
-                       #'   formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-                       #'   covariance = c(0.05,0.7),
-                       #'   mean = c(rep(0,5),-0.2),
-                       #'   data = df,
-                       #'   family = stats::binomial()
-                       #' )
-                       #' ysim <- des$sim_data() # simulate some data from the model
-                       #' fit1 <- des$LA(y = ysim)
+                       #' Previous implementation of Laplace Approximation
+                       #' 
+                       #' This function has been deprecated, as it provides inferior capability to other packages
+                       #' for this method, and is typically slower than the MCMC-ML.
+                       #' @param ... Previous arguments
+                       #' @return Nothing. Will be removed in future updates
                        #'@md
-                       LA = function(y = NULL,
-                                     start,
-                                     method = "nr",
-                                     se = "gls",
-                                     oim = FALSE,
-                                     reml = FALSE,
-                                     max.iter = 40,
-                                     tol = 1e-4,
-                                     se.theta = TRUE,
-                                     algo = 0,
-                                     lower.bound = NULL,
-                                     upper.bound = NULL,
-                                     lower.bound.theta = NULL,
-                                     upper.bound.theta = NULL){
-                         
-                         if(is.null(y)){
-                           if(!private$y_has_been_updated)stop("y not specified and not updated in Model object")
-                         } else {
-                           private$verify_data(y)
-                           private$set_y(y)
-                         }
-                         if(private$model_type() > 0 & reml == TRUE) stop("REML not available with HSGP/NNGP approximations, please set reml=FALSE")
-                         Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
-                         if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
-                         if(self$family[[1]]%in%c("Gamma","beta") & (se == "kr"||se == "kr2"||se == "sat"))stop("KR standard errors are not currently available with gamma or beta families")
-                         if(!method%in%c("nloptim","nr"))stop("method should be either nr or nloptim")
-                         if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "nr")stop("nr with quantile currently disabled, please use nloptim with LA")
-                         if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
-                         if(!is.null(lower.bound)){
-                           Model__set_bound(private$ptr,lower.bound,TRUE,TRUE,private$model_type())
-                         }
-                         if(!is.null(upper.bound)){
-                           Model__set_bound(private$ptr,upper.bound,TRUE,FALSE,private$model_type())
-                         }
-                         if(!is.null(lower.bound.theta)){
-                           if(any(lower.bound.theta < 0))stop("Theta lower bound cannot be negative")
-                           Model__set_bound(private$ptr,lower.bound.theta,FALSE,TRUE,private$model_type())
-                         }
-                         if(!is.null(upper.bound.theta)){
-                           Model__set_bound(private$ptr,upper.bound.theta,FALSE,FALSE,private$model_type())
-                         }
-                         Model__use_reml(private$ptr,reml,private$model_type())
-                         var_par_family <- I(self$family[[1]]%in%c("gaussian","Gamma","beta","quantile_scaled"))
-                         beta <- self$mean$parameters
-                         theta <- self$covariance$parameters
-                         ncovpar <- ifelse(var_par_family,length(theta)+1,length(theta))
-                         var_par <- self$var_par
-                         all_pars <- c(beta,theta)
-                         if(var_par_family)all_pars <- c(all_pars,var_par)
-                         all_pars_new <- rep(1,length(all_pars))
-                         iter <- 0
-                         while(any(abs(all_pars-all_pars_new)>tol)&iter < max.iter){
-                           all_pars <- all_pars_new
-                           iter <- iter + 1
-                           if(private$trace >= 1)cat("\nIter: ",iter,"\n",Reduce(paste0,rep("-",40)))
-                           if(method=="nr"){
-                             Model__laplace_beta_u(private$ptr,private$model_type())
-                           } else {
-                             if(algo %in% c(1,3)){
-                               tryCatch(Model__laplace_ml_beta_u(private$ptr,2,private$model_type()),
-                                        error = function(e) {
-                                          if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
-                                          Model__laplace_ml_beta_u(private$ptr,0,private$model_type());
-                                        })
-                             } else {
-                               Model__laplace_ml_beta_u(private$ptr,0,private$model_type())
-                             }
-                           }
-                           if(algo == 3){
-                             tryCatch(Model__laplace_ml_theta(private$ptr,2,private$model_type()),
-                                      error = function(e) {
-                                        if(private$trace >= 1)cat("\nL-BFGS failed, switching to BOBYQA");
-                                        Model__laplace_ml_theta(private$ptr,0,private$model_type());
-                                      })
-                           } else {
-                             Model__laplace_ml_theta(private$ptr,0,private$model_type())
-                           }
-                           beta_new <- Model__get_beta(private$ptr,private$model_type())
-                           theta_new <- Model__get_theta(private$ptr,private$model_type())
-                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
-                           all_pars_new <- c(beta_new,theta_new)
-                           if(var_par_family)all_pars_new <- c(all_pars_new,var_par)
-                           if(private$trace >= 1){
-                             cat("\nBeta: ", beta_new)
-                             cat("\nTheta: ", theta_new)
-                             if(var_par_family)cat("\nSigma: ",var_par_new)
-                             cat("\nMax. diff: ", round(max(abs(all_pars-all_pars_new)),5))
-                             cat("\n",Reduce(paste0,rep("-",40)))
-                           }
-                         }
-                         not_conv <- iter > max.iter|any(abs(all_pars-all_pars_new)>tol)
-                         if(not_conv)message(paste0("algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))
-                         #Model__laplace_ml_beta_theta(private$ptr,0,private$model_type())
-                         beta_new <- Model__get_beta(private$ptr,private$model_type())
-                         theta_new <- Model__get_theta(private$ptr,private$model_type())
-                         var_par_new <- Model__get_var_par(private$ptr,private$model_type())
-                         all_pars_new <- c(beta_new,theta_new)
-                         if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
-                         self$update_parameters(mean.pars = beta_new,
-                                                cov.pars = theta_new)
-                         self$var_par <- var_par_new
-                         u <- Model__u(private$ptr,TRUE,private$model_type())
-                         if(private$trace >= 1)cat("\n\nCalculating standard errors...\n")
-                         if(private$model_type()==0){
-                           if(se == "gls" || se == "bw" || se == "box"){
-                             M <- self$information_matrix() #Matrix::solve(Model__obs_information_matrix(private$ptr,private$model_type()))[1:length(beta),1:length(beta)]
-                             M <- solve(M)
-                             if(se.theta){
-                               SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpar))
-                             } else {
-                               SE_theta <- rep(NA, ncovpar)
-                             }
-                           } else if(se == "robust" || se == "bwrobust"){
-                             M <- Model__sandwich(private$ptr,private$model_type())
-                             if(se.theta){
-                               SE_theta <- tryCatch(sqrt(diag(Model__infomat_theta(private$ptr,private$model_type()))), error = rep(NA, ncovpar))
-                             } else {
-                               SE_theta <- rep(NA, ncovpar)
-                             }
-                           } else if(se == "kr" || se == "kr2" || se == "sat"){
-                             ss_type <- ifelse(se=="kr",1,ifelse(se=="kr2",4,5))
-                             Mout <- Model__small_sample_correction(private$ptr,ss_type,oim,private$model_type())
-                             M <- Mout[[1]]
-                             SE_theta <- sqrt(diag(Mout[[2]]))
-                           } 
-                         } else {
-                           # crudely calculate the information matrix for GP approximations - this will be integrated into the main
-                           # library in future versions, but can cause error/crash with the above methods
-                           M <- self$information_matrix()#Model__information_matrix_crude(private$ptr,private$model_type())
-                           nB <- nrow(M)
-                           M <- tryCatch(solve(M), error = matrix(NA,nrow = nB,ncol=nB))
-                           SE_theta <- rep(NA, ncovpar)
-                         }
-                         SE <- sqrt(diag(M))
-                         repar_table <- self$covariance$parameter_table()
-                         beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
-                         theta_names <- repar_table$term
-                         if(self$family[[1]]%in%c("Gamma","beta","quantile_scaled")){
-                           mf_pars_names <- c(beta_names,theta_names,"sigma")
-                           SE <- c(SE,rep(NA,length(theta_new)+1))
-                         } else {
-                           mf_pars_names <- c(beta_names,theta_names)
-                           if(self$family[[1]]=="gaussian") mf_pars_names <- c(mf_pars_names,"sigma")
-                           SE <- c(SE,SE_theta)
-                         }
-                         res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
-                                           est = c(all_pars_new,rowMeans(u)),
-                                           SE=c(SE,rep(NA,nrow(u))),
-                                           t = NA,
-                                           p = NA,
-                                           lower = NA,
-                                           upper = NA)
-                         
-                         dof <- rep(self$n(),length(beta))
-                         if(se == "kr" || se == "kr2" || se == "sat"){
-                           for(i in 1:length(beta)){
-                             if(!is.na(res$SE[i])){
-                               res$t[i] <- (res$est[i]/res$SE[i])#*sqrt(lambda)
-                               res$p[i] <- 2*(1-stats::pt(abs(res$t[i]),Mout$dof[i],lower.tail=TRUE))
-                               res$lower[i] <- res$est[i] - stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
-                               res$upper[i] <- res$est[i] + stats::qt(0.975,Mout$dof[i],lower.tail=TRUE)*res$SE[i]
-                             }
-                             dof[i] <- Mout$dof[i]
-                           }
-                         } else if(se=="bw" || se == "bwrobust" ){
-                           res$t <- res$est/res$SE
-                           bwdof <- sum(repar_table$count) - length(beta)
-                           res$p <- 2*(1-stats::pt(abs(res$t),bwdof,lower.tail=TRUE))
-                           res$lower <- res$est - qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
-                           res$upper <- res$est + qt(1-0.05/2,bwdof,lower.tail=TRUE)*res$SE
-                           dof <- rep(bwdof,length(beta))
-                         } else if (se == "box") {
-                           box_result <- Model__box(private$ptr,private$model_type())
-                           res$t <- box_result$test_stat
-                           res$p <- box_result$p_value
-                           dof <- data.frame(dof = box_result$dof, scale = box_result$scale)
-                         } else {
-                           res$t <- res$est/res$SE
-                           res$p <- 2*(1-stats::pnorm(abs(res$t)))
-                           res$lower <- res$est - qnorm(1-0.05/2)*res$SE
-                           res$upper <- res$est + qnorm(1-0.05/2)*res$SE
-                         }
-                         repar_table <- repar_table[!duplicated(repar_table$id),]
-                         rownames(u) <- rep(repar_table$term,repar_table$count)
-                         aic <- ifelse(private$model_type()==0 , Model__aic(private$ptr,private$model_type()),NA)
-                         xb <- Model__xb(private$ptr,private$model_type())
-                         zd <- self$covariance$Z %*% u
-                         wdiag <- Matrix::diag(self$w_matrix())
-                         total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
-                         condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
-                         margR2 <- var(Matrix::drop(xb))/total_var
-                         out <- list(coefficients = res,
-                                     converged = !not_conv,
-                                     method = method,
-                                     m = dim(u)[2],
-                                     tol = tol,
-                                     sim_lik = FALSE,
-                                     aic = aic,
-                                     se =se ,
-                                     vcov = M,
-                                     Rsq = c(cond = condR2,marg=margR2),
-                                     mean_form = self$mean$formula,
-                                     cov_form = self$covariance$formula,
-                                     logl = Model__log_likelihood(private$ptr,private$model_type()),
-                                     family = self$family[[1]],
-                                     link = self$family[[2]],
-                                     re.samps = u,
-                                     iter = iter,
-                                     dof = dof,
-                                     reml = reml,
-                                     P = length(self$mean$parameters),
-                                     Q = length(self$covariance$parameters),
-                                     var_par_family = var_par_family,
-                                     model_data = list(
-                                       y = Model__y(private$ptr,private$model_type()),
-                                       data = private$model_data_frame(),
-                                       trials = self$trials,
-                                       offset = self$mean$offset,
-                                       weights = self$weights
-                                     ))
-                         class(out) <- "mcml"
-                         return(out)
+                       LA = function(...){
+                         stop("This function has been deprecated")
                        },
                        #' @description 
                        #' Set whether to use sparse matrix methods for model calculations and fitting.
@@ -1733,7 +1462,8 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
-                       #' @param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`) or `rstan` to use rstan sampler (the default)
+                       #' @param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler (the default), or `analytic` for an approximation 
+                       #' based on the estimated posterior mean and variance.
                        #' @param scaled Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.
                        #' @param constr.zero Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
                        #' may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.
@@ -1741,7 +1471,7 @@ Model <- R6::R6Class("Model",
                        mcmc_sample = function(mcmc.pkg = "rstan",
                                               scaled = TRUE,
                                               constr.zero = 1){
-                         if(!mcmc.pkg %in% c("cmdstan","rstan","hmc"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(!mcmc.pkg %in% c("cmdstan","rstan"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
                          if(!private$y_has_been_updated) stop("No y data has been added")
                          if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                            file_type <- mcnr_family(self$family,mcmc.pkg == "cmdstan")
@@ -1787,7 +1517,9 @@ Model <- R6::R6Class("Model",
                            }
                            if(self$family[[1]]%in%c("beta","Gamma","quantile","quantile_scaled"))data$sigma = rep(self$var_par,self$n())
                            if(self$family[[1]]%in%c("quantile","quantile_scaled"))data$q = self$family$q
-                           
+                           var_par_new <- Model__get_var_par(private$ptr,private$model_type())
+                           if(self$family[[1]]=="gaussian")data$sigma = sqrt(var_par_new/self$weights)
+                           if(self$family[[1]]%in%c("beta","Gamma"))data$var_par = var_par_new
                            if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                              data$Xb <-  Model__xb(private$ptr,private$model_type())
                              data$Z <- Model__ZL(private$ptr,private$model_type())
@@ -1833,18 +1565,15 @@ Model <- R6::R6Class("Model",
                                dsamps <- rstan::extract(fit,pars = "gamma",permuted = FALSE)
                                dsamps <- as.matrix(dsamps[,1,])
                              }
-                             Model__update_u(private$ptr,t(dsamps),FALSE,private$model_type())
+                             dsamps <- t(dsamps)
+                             Model__update_u(private$ptr,dsamps,FALSE,private$model_type())
                            }
-                           if(scaled)dsamps <- Model__ZL(private$ptr, private$model_type()) %*% t(dsamps) 
-                         } else {
-                           Model__use_attenuation(private$ptr,private$attenuate_parameters, private$model_type())
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda, private$model_type())
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps, private$model_type())
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh, private$model_type())
-                           Model__mcmc_sample(private$ptr,self$mcmc_options$warmup,self$mcmc_options$samps,self$mcmc_options$adapt, private$model_type())
-                           dsamps <- Model__u(private$ptr,TRUE, private$model_type())
-                           if(scaled)dsamps <- Matrix::Matrix(Model__L(private$ptr, private$model_type()) %*% dsamps)
+                           
+                         }else {
+                           Model__posterior_u_sample(private$ptr,self$mcmc_options$samps, 1e-6, FALSE, private$model_type())
+                           dsamps <- Model__u(private$ptr,FALSE,private$model_type())
                          }
+                         if(scaled)dsamps <- Model__ZL(private$ptr, private$model_type()) %*% dsamps
                          return(invisible(dsamps))
                        },
                        #' @description 
@@ -1920,7 +1649,8 @@ Model <- R6::R6Class("Model",
                          if(!missing(u)) Model__update_u(private$ptr,u, private$model_type())
                          return(Model__log_likelihood(private$ptr, private$model_type()))
                        },
-                       #' @field mcmc_options There are five options for MCMC sampling that are specified in this list:
+                       #' @field mcmc_options There are three options for MCMC sampling that are specified in this list. Note that these 
+                       #' will be moved to arguments to the relevant function, and so are obsolete.
                        #' * `warmup` The number of warmup iterations. Note that if using the internal HMC
                        #' sampler, this only applies to the first iteration of the MCML algorithm, as the
                        #' values from the previous iteration are carried over.
@@ -1930,19 +1660,10 @@ Model <- R6::R6Class("Model",
                        #' the samples generally exhibit higher autocorrealtion, especially for more complex
                        #' covariance structures. For SAEM a small number is recommended as all samples are stored and used 
                        #' from every iteration.
-                       #' * `lambda` (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
-                       #'  (equal to number of steps times the step length). Larger values result in lower correlation in samples, but
-                       #'  require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
-                       #'  * `refresh` How frequently to print to console MCMC progress if displaying verbose output.
-                       #'  * `maxsteps` (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
+                       #' `chains` The number of MCMC chains for the Stan sampler.
                        mcmc_options = list(warmup = 100,
                                            samps = 50,
-                                           chains = 1,
-                                           lambda = 1,
-                                           refresh = 500,
-                                           maxsteps = 100,
-                                           target_accept = 0.95,
-                                           adapt = 50),
+                                           chains = 1),
                        #' @description
                        #' Prints the internal instructions and data used to calculate the linear predictor. 
                        #' Internally the class uses a reverse polish notation to store and 
@@ -2146,10 +1867,6 @@ Model <- R6::R6Class("Model",
                            if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials,type)
                            if(self$family[[1]] %in% c("quantile","quantile_scaled")) Model__set_quantile(private$ptr,self$family$q,type)
                            Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type) # initialise random effects to random
-                           Model__mcmc_set_lambda(private$ptr,self$mcmc_options$lambda,type)
-                           Model__mcmc_set_max_steps(private$ptr,self$mcmc_options$maxsteps,type)
-                           Model__mcmc_set_refresh(private$ptr,self$mcmc_options$refresh,type)
-                           Model__mcmc_set_target_accept(private$ptr,self$mcmc_options$target_accept,type)
                            if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)
                            # set covariance pointer
                            self$covariance$.__enclos_env__$private$model_ptr <- private$ptr

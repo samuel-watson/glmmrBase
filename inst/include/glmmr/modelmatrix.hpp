@@ -108,6 +108,7 @@ public:
   int                     P() const;
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
+  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false);                  
   
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -1234,6 +1235,151 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   }
   }
   return betapars ? size_p_array.matrix() : size_q_array.matrix();
+}
+
+template<typename modeltype>
+inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
+                                                               const double tol, 
+                                                               const bool append)
+{
+  if constexpr (std::is_same_v<modeltype,bits_hsgp>){
+    if(model.covariance.Q() != re.u_.rows()){
+      re.u_.resize(model.covariance.Q(),1);
+      re.u_.setZero();
+    }
+  }
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  // re.zu_ = model.covariance.ZLu(re.u_);
+  ArrayXd eta = xb; //+ re.zu_.rowwise().mean().array();
+  ArrayXd ymod(eta.size());
+  VectorXd W_(eta.size());
+  
+  switch(model.family.family){
+  case Fam::gaussian: 
+    if(model.family.link == Link::identity){
+      W_ = (model.data.variance.inverse() *  model.data.weights).matrix();
+    } else {
+      throw std::runtime_error("Analtyic posterior only available with canonical link");
+    }
+    break;
+  case Fam::binomial: case Fam::bernoulli:
+    if(model.family.link == Link::logit){
+      ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
+      W_ = (model.data.variance * logitp * (1- logitp)).matrix();
+      ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
+      
+    } else {
+      throw std::runtime_error("Analtyic posterior only available with canonical link");
+    }
+    break;
+  case Fam::poisson:
+    if(model.family.link == Link::loglink){
+      W_ = eta.exp().matrix();
+      ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
+    } else {
+      throw std::runtime_error("Analtyic posterior only available with canonical link");
+    }
+    break;
+  default:
+    throw std::runtime_error("Analtyic posterior only available with Gaussian, Poisson, and Binomial");
+    break;
+  }
+  
+  MatrixXd ZL = model.covariance.ZL();
+  VectorXd Mb(ZL.cols());
+  MatrixXd Vb = MatrixXd::Identity(ZL.cols(),ZL.cols());
+  
+  if(model.family.family == Fam::gaussian){
+    MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+    MatrixXd Pb = ZL.transpose() * WZL;
+    Pb.diagonal().array() += 1.0;
+    Pb = Pb.llt().solve(MatrixXd::Identity(Pb.rows(),Pb.cols()));
+    Mb = Pb * WZL.transpose() * (model.data.y - xb.matrix());
+    Vb = Pb;
+  } else {
+    MatrixXd WZL = W_.asDiagonal() * ZL;
+    MatrixXd LWL = ZL.transpose() * WZL;
+    LWL.diagonal().array() += 1.0;
+    LWL = LWL.llt().solve(MatrixXd::Identity(LWL.rows(),LWL.cols()));
+    VectorXd b = LWL * WZL.transpose() * (ymod - xb).matrix();
+    VectorXd bnew(b);
+    double diff = 1;
+    int itero = 0;
+    while(diff > tol && itero < 10){
+      eta = xb + (ZL*b).array();
+      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli){
+        ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
+        W_ = (model.data.variance * logitp * (1- logitp)).matrix();
+        ymod = eta + (model.data.y.array() - logitp) * W_.array().inverse();
+      } else if(model.family.family == Fam::poisson){
+        W_ = eta.exp().matrix();
+        ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
+      }
+      WZL = W_.asDiagonal() * ZL;
+      LWL = ZL.transpose() * WZL;
+      LWL.diagonal().array() += 1.0;
+      LWL = LWL.llt().solve(MatrixXd::Identity(LWL.rows(),LWL.cols()));
+      bnew = LWL * WZL.transpose() * (ymod - xb).matrix();
+      diff = (b.array() - bnew.array()).abs().matrix().maxCoeff();
+      itero++;
+      b = bnew;
+    }
+    Mb = b;
+    Vb = LWL;
+    
+    // MatrixXd SL = ZL * ZL.transpose();
+    // MatrixXd S = SL;
+    // S.diagonal() += W_;
+    // S = S.llt().solve(MatrixXd::Identity(S.rows(),S.cols()));
+    // Mb = ZL.transpose() * S * (ymod - xb).matrix();
+    // 
+    // // iterate a couple times
+    // for(int j = 0; j < reps; j++){
+    //   eta = xb + Mb.array();
+    //   if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli){
+    //     ArrayXd logitp = glmmr::maths::mod_inv_func(eta,Link::logit);
+    //     W_ = (model.data.variance * logitp * (1- logitp)).inverse().matrix();
+    //     ymod = eta + (model.data.y.array() - eta.exp()) * eta.exp().inverse();
+    //   } else {
+    //     W_ = eta.exp().inverse();
+    //     ymod = eta + (model.data.y.array() - eta.exp()) * eta.exp().inverse();
+    //   }
+    //   S.noalias() = SL;
+    //   S.diagonal() += W_;
+    //   S = S.llt().solve(MatrixXd::Identity(S.rows(),S.cols()));
+    //   Mb = ZL.transpose() * S * (ymod - xb).matrix();
+    // }
+    // Vb -= ZL.transpose() * S * ZL;
+  }
+  
+  
+  
+  std::random_device rd{};
+  std::mt19937 gen{ rd() };
+  std::normal_distribution d{ 0.0, 1.0 };
+  auto random_norm = [&d, &gen] { return d(gen); };
+  MatrixXd unew = MatrixXd::NullaryExpr(re.u_.rows(),niter,random_norm);
+  LLT<Eigen::MatrixXd> llt(Vb);
+  MatrixXd LVb = llt.matrixL();  
+  
+  bool action_append = append;
+  if(append && re.u_.cols() == 1)action_append = false;
+  if(action_append){
+    int currcolsize = re.u_.cols();
+    unew = LVb * unew;
+    unew.colwise() += Mb;
+    re.u_.conservativeResize(NoChange,currcolsize + niter);
+    re.zu_.conservativeResize(NoChange,currcolsize + niter);
+    re.u_.rightCols(niter).noalias() = unew;
+  } else {
+    if(re.u_.cols() != niter){
+      re.u_.resize(NoChange, niter);
+      re.zu_.resize(NoChange, niter);
+    }
+    re.u_.noalias() = LVb * unew;
+    re.u_.colwise() += Mb;
+  }
+  re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 // when there are non-linear functions of parameters, we need a correction to the Hessian matrix
