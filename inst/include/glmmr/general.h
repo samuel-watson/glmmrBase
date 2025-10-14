@@ -101,17 +101,6 @@ inline void print_sparse(const sparse& A){
 
 #endif
 
-// inline bool isalnum_or_uscore(const char& s)
-// {
-//   return (isalnum(s) || s=='_');
-// }
-// 
-// template<typename T>
-// inline bool expect_number_of_unique_elements(const std::vector<T> vec,
-//                                              int n){
-//   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
-//   return vec_size==n;
-// }
 
 }
 

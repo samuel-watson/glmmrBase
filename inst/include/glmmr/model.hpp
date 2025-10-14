@@ -108,7 +108,6 @@ inline void glmmr::Model<modeltype>::reset_u(){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   if(u_.rows()!=model.covariance.Q())throw std::runtime_error(std::to_string(u_.rows())+" rows provided, "+std::to_string(model.covariance.Q())+" expected");
-  
   bool action_append = append;
   // if HSGP then check and update the size of u is m has changed
   if constexpr (std::is_same_v<modeltype,bits_hsgp>){
@@ -139,6 +138,8 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
     re.u_ = u_;
     if(re.u_.cols() != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
   }
+  MatrixXd ZL = model.covariance.ZL();
+  if(re.zu_.rows() != model.n())re.zu_.resize(model.n(),NoChange);
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 

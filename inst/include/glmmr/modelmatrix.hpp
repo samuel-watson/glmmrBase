@@ -125,6 +125,9 @@ private:
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
 
+// template<>
+// inline glmmr::ModelMatrix<bits_hsgp>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) {};
+
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
 
@@ -1310,7 +1313,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli){
         ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
         W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-        ymod = eta + (model.data.y.array() - logitp) * W_.array().inverse();
+        ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
       } else if(model.family.family == Fam::poisson){
         W_ = eta.exp().matrix();
         ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();

@@ -1134,10 +1134,10 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   MatrixXd hess = MatrixXd::Zero(2, 2);
   
   // Pre-compute lambda derivatives
-  ArrayXXd lambda_deriv(model.covariance.Q(), 5);
+  ArrayXXd lambda_deriv(model.covariance.Q(), 2);
   for(int i = 0; i < model.covariance.Q(); i++){
     dblvec deriv = model.covariance.d_spd_nD(i);
-    for(int j = 0; j < 5; j++) lambda_deriv(i, j) = deriv[j];
+    for(int j = 0; j < 2; j++) lambda_deriv(i, j) = deriv[j];
   }
   
   MatrixXd zd = matrix.linpred();
@@ -1145,9 +1145,9 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   // Pre-compute Phi products (these are constant across iterations)
   MatrixXd Phi_d0 = Phi * lambda_deriv.matrix().col(0).asDiagonal();
   MatrixXd Phi_d1 = Phi * lambda_deriv.matrix().col(1).asDiagonal();
-  MatrixXd Phi_d200 = Phi * lambda_deriv.matrix().col(2).asDiagonal();
-  MatrixXd Phi_d211 = Phi * lambda_deriv.matrix().col(3).asDiagonal();
-  MatrixXd Phi_d201 = Phi * lambda_deriv.matrix().col(4).asDiagonal();
+  // MatrixXd Phi_d200 = Phi * lambda_deriv.matrix().col(2).asDiagonal();
+  // MatrixXd Phi_d211 = Phi * lambda_deriv.matrix().col(3).asDiagonal();
+  // MatrixXd Phi_d201 = Phi * lambda_deriv.matrix().col(4).asDiagonal();
   
   for(int i = 0; i < n_iter; i++){
     VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
@@ -1160,9 +1160,9 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     // Vectorized products
     ArrayXd d0prod = (Phi_d0 * re.u_.col(i)).array();
     ArrayXd d1prod = (Phi_d1 * re.u_.col(i)).array();
-    ArrayXd d2prod = (Phi_d200 * re.u_.col(i)).array();
-    ArrayXd d3prod = (Phi_d211 * re.u_.col(i)).array();
-    ArrayXd d4prod = (Phi_d201 * re.u_.col(i)).array();
+    // ArrayXd d2prod = (Phi_d200 * re.u_.col(i)).array();
+    // ArrayXd d3prod = (Phi_d211 * re.u_.col(i)).array();
+    // ArrayXd d4prod = (Phi_d201 * re.u_.col(i)).array();
     
     // Vectorized accumulation - replaces entire inner loop!
     ArrayXd resid_w = resid * w_arr;
