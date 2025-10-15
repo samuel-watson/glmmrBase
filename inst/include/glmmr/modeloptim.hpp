@@ -1109,25 +1109,9 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   const int n_iter = re.u_.cols();
   const int resid_size = model.data.y.size();
   const double inv_n_iter = 1.0 / static_cast<double>(n_iter);
-  
-  // Pre-allocate arrays outside loop
-  ArrayXd nvar_par(model.n());
-  switch(model.family.family){
-  case Fam::gaussian:
-    nvar_par = model.data.variance;
-    break;
-  case Fam::gamma:
-    nvar_par = model.data.variance.inverse();
-    break;
-  case Fam::beta:
-    nvar_par = (1 + model.data.variance);
-    break;
-  case Fam::binomial:
-    nvar_par = model.data.variance.inverse();
-    break;
-  default:
-    nvar_par.setConstant(1.0);
-  }
+  ArrayXd eta(model.n());
+  VectorXd W_(eta.size());
+  ArrayXd resid(eta.size());
   
   MatrixXd Phi = model.covariance.PhiSPD(false, false);
   VectorXd grad = VectorXd::Zero(2);
@@ -1150,12 +1134,41 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   // MatrixXd Phi_d201 = Phi * lambda_deriv.matrix().col(4).asDiagonal();
   
   for(int i = 0; i < n_iter; i++){
-    VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-    VectorXd w = glmmr::maths::dhdmu(zd.col(i), model.family);
-    w = ((w.array() * nvar_par).inverse() * model.data.weights).matrix();
+    eta = zd.col(i).array();
+    switch(model.family.family){
+    case Fam::gaussian: 
+      if(model.family.link == Link::identity){
+        W_ = (model.data.variance.inverse() *  model.data.weights).matrix();
+        resid = model.data.y.array() - eta;
+      } else {
+        throw std::runtime_error("NR2 only available with canonical link");
+      }
+      break;
+    case Fam::binomial: case Fam::bernoulli:
+      if(model.family.link == Link::logit){
+        ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
+        resid = model.data.y.array() - model.data.variance * logitp;
+        W_ = (model.data.variance * logitp * (1- logitp)).matrix();
+        
+      } else {
+        throw std::runtime_error("NR2 posterior only available with canonical link");
+      }
+      break;
+    case Fam::poisson:
+      if(model.family.link == Link::loglink){
+        resid = model.data.y.array() - eta.exp();
+        W_ = eta.exp().matrix();
+      } else {
+        throw std::runtime_error("NR2 posterior only available with canonical link");
+      }
+      break;
+    default:
+      throw std::runtime_error("NR2 posterior only available with Gaussian, Poisson, and Binomial");
+    break;
+    }
     
-    ArrayXd resid = (model.data.y.matrix() - zdu).array();
-    ArrayXd w_arr = w.array();
+    // ArrayXd resid = (model.data.y.matrix() - zdu).array();
+    ArrayXd w_arr = W_.array();
     
     // Vectorized products
     ArrayXd d0prod = (Phi_d0 * re.u_.col(i)).array();
