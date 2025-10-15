@@ -1331,79 +1331,170 @@ inline MatrixXd glmmr::Covariance::log_gradient(const MatrixXd &umat, VectorXd& 
 }
 
 inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl){
-  //#pragma omp declare reduction(vec_dbl_plus : std::vector<double> :                                                       \
-  //                   std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-  //                  initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+  
+  // static const double LOG_2PI = log(2*M_PI);
+  // std::vector<MatrixXd> derivs;
+  // derivatives(derivs,1);
+  // int npars = derivs.size()-1;
+  // int niter = umat.cols();
+  // VectorXd grad(npars);
+  // grad.setZero();
+  // 
+  // double logdet_val=0.0;
+  // logl = 0.0;
+  // dblvec dqf(npars);
+  // std::fill(dqf.begin(), dqf.end(), 0.0);
+  // logl.setZero();
+  // 
+  // if(!isSparse)
+  // {
+  //   throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
+  // } else {
+  //   for (const auto& k : spchol.D) logdet_val += log(k);
+  //   MatrixXd Lmat = sparse_to_dense(matL);
+  //   MatrixXd LmatT = Lmat.transpose();
+  //   glmmr::MatrixField<MatrixXd> S;
+  //   for(int i = 0; i < npars; i++)
+  //   {
+  //     MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
+  //     MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
+  //     S.add(detmat2);
+  //     grad(i) += -0.5* detmat2.trace();
+  //   }
+  //   logl.array() += -0.5*(Q_ * LOG_2PI + logdet_val);
+  //   static thread_local dblvec v_buffer;
+  //   for(int i = 0; i < niter; i++)
+  //   {
+  //     VectorXd ucol = umat.col(i);
+  //     v_buffer.assign(ucol.data(),ucol.data()+ucol.size());     
+  //     spchol.ldl_lsolve(&v_buffer[0]);
+  //     spchol.ldl_d2solve(&v_buffer[0]);      
+  //     logl(i) += -0.5* glmmr::algo::inner_sum(&v_buffer[0],&v_buffer[0],Q_);    
+  //     VectorXd vvec = Map<VectorXd>(v_buffer.data(), v_buffer.size());
+  //     VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
+  //     MatrixXd zzquadquad = zzquad * zzquad.transpose();
+  //     for(int j = 0; j < npars; j++)
+  //     {
+  //       dqf[j] += (zzquadquad * derivs[j+1] ).trace();
+  //     }
+  //   }
+  //   for(int j = 0; j < npars; j++)
+  //   {
+  //     grad(j) += 0.5* dqf[j] / (double) niter;
+  //   } 
+  //   
+  //   MatrixXd M(npars,npars);
+  //   for(int j = 0; j < npars; j++){
+  //     for(int k = j; k < npars; k++){
+  //       M(j,k) = (S(j) * S(k)).trace();
+  //       if(j != k)M(k,j) = M(j,k);
+  //     }
+  //   }
+  //   M = M.llt().solve(MatrixXd::Identity(npars,npars));
+  //   VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+  //   theta_curr += M * grad;
+  //   update_parameters(theta_curr.array());
+  // }
   
   static const double LOG_2PI = log(2*M_PI);
+  static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
+  
   std::vector<MatrixXd> derivs;
-  derivatives(derivs,1);
-  int npars = derivs.size()-1;
+  derivatives(derivs, 1);
+  int npars = derivs.size() - 1;
   int niter = umat.cols();
   VectorXd grad(npars);
   grad.setZero();
   
-  double logdet_val=0.0;
-  logl = 0.0;
-  dblvec dlogdet_vals(npars);
-  std::fill(dlogdet_vals.begin(), dlogdet_vals.end(), 0.0);
-  int obs_counter=0;
-  ArrayXd size_B_array(B_);
-  dblvec dqf(npars);
-  std::fill(dqf.begin(), dqf.end(), 0.0);
+  double logdet_val = 0.0;
+  dblvec dqf(npars, 0.0);
   logl.setZero();
   
   if(!isSparse)
   {
     throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
-  } else {
-    for (const auto& k : spchol.D) logdet_val += log(k);
-    MatrixXd Lmat = sparse_to_dense(matL);
-    MatrixXd LmatT = Lmat.transpose();
-    glmmr::MatrixField<MatrixXd> S;
-    for(int i = 0; i < npars; i++)
-    {
-      MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
-      MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
-      S.add(detmat2);
-      grad(i) += -0.5* detmat2.trace();
-    }
-    logl.array() += -0.5*(Q_ * LOG_2PI + logdet_val);
-    double qf = 0;
-    // #pragma omp parallel for reduction(+:qf) reduction(vec_dbl_plus : dqf)
-    static thread_local dblvec v_buffer;
+  }
+  
+  // Compute log determinant
+  for (const auto& k : spchol.D) logdet_val += log(k);
+  
+  // Convert to dense once
+  MatrixXd Lmat = sparse_to_dense(matL);
+  const MatrixXd LmatT = Lmat.transpose();
+  
+  // Precompute S matrices and initial gradient
+  glmmr::MatrixField<MatrixXd> S;
+  for(int i = 0; i < npars; i++)
+  {
+    MatrixXd detmat = Lmat.triangularView<Lower>().solve(derivs[i+1]);
+    MatrixXd detmat2 = LmatT.triangularView<Upper>().solve(detmat);
+    grad(i) = -0.5 * detmat2.trace();
+    S.add(detmat2);
+  }
+  
+  // Update logl with constant terms
+  logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
+  
+  // Main iteration loop - OPTIMIZED
+  //#pragma omp parallel if(niter > 20)
+  {
+    dblvec dqf_local(npars, 0.0);
+    dblvec v_buffer_local(Q_);
+    
+  //#pragma omp for
     for(int i = 0; i < niter; i++)
     {
       VectorXd ucol = umat.col(i);
-      v_buffer.assign(ucol.data(),ucol.data()+ucol.size());     
-      spchol.ldl_lsolve(&v_buffer[0]);
-      spchol.ldl_d2solve(&v_buffer[0]);      
-      logl(i) += -0.5* glmmr::algo::inner_sum(&v_buffer[0],&v_buffer[0],Q_);    
-      VectorXd vvec = Map<VectorXd>(v_buffer.data(), v_buffer.size());
-      VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec); 
-      MatrixXd zzquadquad = zzquad * zzquad.transpose();
+      v_buffer_local.assign(ucol.data(), ucol.data() + ucol.size());
+      
+      spchol.ldl_lsolve(&v_buffer_local[0]);
+      spchol.ldl_d2solve(&v_buffer_local[0]);
+      
+      double qf = glmmr::algo::inner_sum(&v_buffer_local[0], &v_buffer_local[0], Q_);
+      
+  //#pragma omp atomic
+      logl(i) += -0.5 * qf;
+      
+      VectorXd vvec = Map<VectorXd>(v_buffer_local.data(), v_buffer_local.size());
+      VectorXd zzquad = LmatT.triangularView<Upper>().solve(vvec);
+      
+      // CRITICAL OPTIMIZATION: Avoid outer product!
+      // trace(v*v^T * A) = v^T * A * v
       for(int j = 0; j < npars; j++)
       {
-        dqf[j] += (zzquadquad * derivs[j+1] ).trace();
+        dqf_local[j] += zzquad.dot(derivs[j+1] * zzquad);
       }
     }
-    for(int j = 0; j < npars; j++)
-    {
-      grad(j) += 0.5* dqf[j] / (double) niter;
-    } 
     
-    MatrixXd M(npars,npars);
-    for(int j = 0; j < npars; j++){
-      for(int k = j; k < npars; k++){
-        M(j,k) = (S(j) * S(k)).trace();
-        if(j != k)M(k,j) = M(j,k);
-      }
+    // Accumulate thread-local results
+  //#pragma omp critical
+    for(int j = 0; j < npars; j++) {
+      dqf[j] += dqf_local[j];
     }
-    M = M.llt().solve(MatrixXd::Identity(npars,npars));
-    VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
-    theta_curr += M * grad;
-    update_parameters(theta_curr.array());
   }
+  
+  // Accumulate gradient contributions
+  double niter_inv = 1.0 / (double)niter;
+  for(int j = 0; j < npars; j++)
+  {
+    grad(j) += 0.5 * dqf[j] * niter_inv;
+  }
+  
+  // Compute Hessian approximation
+  MatrixXd M(npars, npars);
+  for(int j = 0; j < npars; j++) {
+    for(int k = j; k < npars; k++) {
+      double val = (S(j) * S(k)).trace();
+      M(j, k) = val;
+      if(j != k) M(k, j) = val;
+    }
+  }
+  
+  // Newton-Raphson update
+  M = M.llt().solve(MatrixXd::Identity(npars, npars));
+  VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+  theta_curr += M * grad;
+  update_parameters(theta_curr.array());
   
 }
 
@@ -1433,7 +1524,7 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
 #endif
     //added conditional parallelisation for large blocks
     dblvec out(matrix_n);
-#pragma omp parallel for if(block_dimension > 50) private(out)
+//#pragma omp parallel for if(block_dimension > 50) private(out)
     for(int i = 0; i < block_dimension; i++){
       for(int j = i; j < block_dimension; j++){
         if(order == 1){

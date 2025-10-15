@@ -522,7 +522,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
 {
   model.covariance.update_parameters(theta);
   fn_counter.second += re.scaled_u_.cols();
-#pragma omp parallel if(re.scaled_u_.cols() > 300)
+//#pragma omp parallel if(re.scaled_u_.cols() > 300)
   for(int i = 0; i < re.scaled_u_.cols(); i++)
   {
     ll_current(i,1) = model.covariance.log_likelihood(re.scaled_u_.col(i));
@@ -778,7 +778,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   
   if(model.weighted){
     if(model.family.family==Fam::gaussian){
-#pragma omp parallel for if(re.zu_.cols() > 50)
+//#pragma omp parallel for if(re.zu_.cols() > 50)
       for(int j= 0; j< re.zu_.cols() ; j++){
         ll_current(j,llcol ) = glmmr::maths::log_likelihood(model.data.y.array(),xb + re.zu_.col(j).array(),
                    model.data.variance * model.data.weights.inverse(),
@@ -791,7 +791,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
         // }
       }
     } else {
-#pragma omp parallel for if(re.zu_.cols() > 50)
+//#pragma omp parallel for if(re.zu_.cols() > 50)
       for(int j=0; j< re.zu_.cols() ; j++){
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
@@ -801,7 +801,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
       ll_current.col(llcol) *= model.data.weights.sum()/model.n();
     }
   } else {
-#pragma omp parallel for if(re.zu_.cols() > 50)
+//#pragma omp parallel for if(re.zu_.cols() > 50)
     for(int j= 0; j< re.zu_.cols() ; j++){
       ll_current(j,llcol) = glmmr::maths::log_likelihood(model.data.y.array(),xb + re.zu_.col(j).array(),
                  model.data.variance,model.family);
@@ -1043,13 +1043,13 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   VectorXd w(model.n());
   ArrayXd resid(model.n());
   
-  #pragma omp parallel
+  //#pragma omp parallel
   {
     MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
     VectorXd w_local(model.n());
     ArrayXd resid_local(model.n());
     
-  #pragma omp for nowait
+  //#pragma omp for nowait
     for(int i = 0; i < niter; ++i){
       w_local = glmmr::maths::dhdmu(zd.col(i), model.family);
       w_local = ((w_local.array() * nvar_par).inverse() * model.data.weights).matrix();
@@ -1063,7 +1063,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
       }
     }
     
-  #pragma omp critical
+  //#pragma omp critical
     XtWXm += XtWXm_private;
   }
   XtWXm *= (1.0 / niter);

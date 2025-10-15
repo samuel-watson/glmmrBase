@@ -40,6 +40,7 @@ public:
   void          parse_grid_data(const ArrayXXd &data);
   void          gen_AD_derivatives(glmmr::MatrixField<VectorXd>& dD, glmmr::MatrixField<MatrixXd>& dA); 
   VectorXd      log_gradient(const MatrixXd& u, double& ll) override;
+  void          nr_step(const MatrixXd &umat, ArrayXd& logl) override;
 };
 
 }
@@ -172,7 +173,7 @@ inline void glmmr::nngpCovariance::gen_AD()
   double val = Covariance::get_val(0,0,0);
   Dvec(0) = val;
   
-#pragma omp parallel for
+//#pragma omp parallel for
   for(int i = 1; i < grid.N; i++){
     int idxlim = i <= m ? i : m;
     MatrixXd S(idxlim,idxlim);
@@ -278,7 +279,7 @@ inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A,
   int m = A.rows();
   MatrixXd y = MatrixXd::Zero(n,n);
   ArrayXd dsqrt = Dvec.array().sqrt();
-#pragma omp parallel for  
+//#pragma omp parallel for  
   for(int k=0; k<n; k++){
     int idxlim;
     for (int i = 0; i < n; i++) {
@@ -291,6 +292,184 @@ inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A,
     }
   }
   return y * dsqrt.matrix().asDiagonal();
+}
+
+inline void glmmr::nngpCovariance::nr_step(const MatrixXd &umat, ArrayXd& logl){
+
+  static const double LOG_2PI = log(2*M_PI);
+  static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
+  
+  std::vector<MatrixXd> derivs;
+  derivatives(derivs, 1);
+  int npars = derivs.size() - 1;
+  int niter = umat.cols();
+  VectorXd grad(npars);
+  grad.setZero();
+  double logdet_val = 0.0;
+  logl.setZero();
+  dblvec dqf(npars, 0.0);
+  int m = A.rows();
+  sparse IA(umat.rows(),umat.rows(),true);
+  
+  int idxlim;
+  for (int i = 0; i < umat.rows(); i++) {
+    idxlim = i<=m ? i : m;
+    for (int j = 0; j < idxlim; j++) {
+      if(grid.NN(j,i)==i){
+        IA.insert(grid.NN(j,i),i,1.0 - A(j,i));
+      } else {
+        IA.insert(grid.NN(j,i),i,-1.0 * A(j,i));
+      }
+    }
+  }
+  
+  sparse IAt = IA;
+  IAt.transpose();
+  sparse IAD = IAt % Dvec;
+  logdet_val = log_determinant();
+  // Precompute S matrices and gradient
+  glmmr::MatrixField<MatrixXd> S;
+  for(int i = 0; i < npars; i++)
+  {
+    MatrixXd detmat2 = SparseOperators::operator*(
+      SparseOperators::operator*(IAt, derivs[i+1]), 
+      IAD
+    );
+    grad(i) = -0.5 * detmat2.trace();
+    S.add(detmat2);
+  }
+  
+  // Update logl with constant terms
+  logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
+  // Main iteration loop - OPTIMIZED
+  //#pragma omp parallel if(niter > 20)
+  {
+    dblvec dqf_local(npars, 0.0);
+
+  //#pragma omp for
+    for(int i = 0; i < niter; i++)
+    {
+      VectorXd IAu = IA * umat.col(i);
+      VectorXd IAuD = (IAu.array() * Dvec.array()).matrix();
+      // Quadratic form
+      double qf = IAuD.dot(IAu);
+  //#pragma omp atomic
+      logl(i) += -0.5 * qf;
+
+      // Gradient contribution - MUCH faster than outer product
+      for(int j = 0; j < npars; j++)
+      {
+        dqf_local[j] += (S(j) * IAuD).dot(IAu);
+      }
+    }
+
+    // Accumulate thread-local results
+  //#pragma omp critical
+    for(int j = 0; j < npars; j++) {
+      dqf[j] += dqf_local[j];
+    }
+  }
+
+  double niter_inv = 1.0 / (double)niter;
+  for(int j = 0; j < npars; j++)
+  {
+    grad(j) += 0.5 * dqf[j] * niter_inv;
+  }
+
+  // Hessian computation
+  MatrixXd M(npars, npars);
+  for(int j = 0; j < npars; j++) {
+    for(int k = j; k < npars; k++) {
+      double val = (S(j) * S(k)).trace();
+      M(j, k) = val;
+      if(j != k) M(k, j) = val;
+    }
+  }
+  // Newton-Raphson update
+  M = M.llt().solve(MatrixXd::Identity(npars, npars));
+  VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+  theta_curr += M * grad;
+  update_parameters(theta_curr.array());
+
+
+//   
+//   static const double LOG_2PI = log(2*M_PI);
+//   std::vector<MatrixXd> derivs;
+//   derivatives(derivs,1);
+//   int npars = derivs.size()-1;
+//   int niter = umat.cols();
+//   VectorXd grad(npars);
+//   grad.setZero();
+// 
+//   double logdet_val=0.0;
+//   logl = 0.0;
+//   dblvec dqf(npars);
+//   std::fill(dqf.begin(), dqf.end(), 0.0);
+//   logl.setZero();
+// 
+//   // create sparse IA
+//   sparse IA(umat.rows(),umat.rows(),true);
+// 
+//   int n = A.cols();
+//   int m = A.rows();
+//   double aval;
+//   for(int k=0; k<n; k++){
+//     int idxlim;
+//     for (int i = 0; i < n; i++) {
+//       idxlim = i<=m ? i : m;
+//       double lsum = 0;
+//       for (int j = 0; j < idxlim; j++) {
+//         lsum += A(j,i) * IA(grid.NN(j,i),k);
+//       }
+//       aval = i==k ? (1+lsum) : lsum ;
+//       IA.insert(i,k,aval);
+//     }
+//   }
+// 
+//   sparse IAt = IA;
+//   IAt.transpose();
+//   sparse IAD = IAt % Dvec;
+// 
+//   logdet_val = log_determinant();
+//   glmmr::MatrixField<MatrixXd> S;
+//   for(int i = 0; i < npars; i++)
+//   {
+//     MatrixXd detmat = SparseOperators::operator*(IAt, derivs[i+1]);
+//     MatrixXd detmat2 = SparseOperators::operator*(detmat, IAD);
+//     S.add(detmat2);
+//     grad(i) += -0.5* detmat2.trace();
+//   }
+//   logl.array() += -0.5*(Q_ * LOG_2PI + logdet_val);
+//   double qf = 0;
+//   for(int i = 0; i < niter; i++)
+//   {
+//     VectorXd ucol = umat.col(i);
+//     VectorXd IAu = IA * ucol;
+//     VectorXd IAuD = (IAu.array() * Dvec.array()).matrix();
+//     logl(i) += -0.5* IAuD.transpose() * IAu;
+//     MatrixXd zzquadquad = IAu * IAu.transpose();
+//     zzquadquad *= Dvec.asDiagonal();
+//     for(int j = 0; j < npars; j++)
+//     {
+//       dqf[j] += (zzquadquad * S(j)).trace();
+//     }
+//   }
+//   for(int j = 0; j < npars; j++)
+//   {
+//     grad(j) += 0.5* dqf[j] / (double) niter;
+//   }
+// 
+//   MatrixXd M(npars,npars);
+//   for(int j = 0; j < npars; j++){
+//     for(int k = j; k < npars; k++){
+//       M(j,k) = (S(j) * S(k)).trace();
+//       if(j != k)M(k,j) = M(j,k);
+//     }
+//   }
+//   M = M.llt().solve(MatrixXd::Identity(npars,npars));
+//   VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+//   theta_curr += M * grad;
+//   update_parameters(theta_curr.array());
 }
 
 inline void glmmr::nngpCovariance::gen_AD_derivatives(glmmr::MatrixField<VectorXd>& dD, glmmr::MatrixField<MatrixXd>& dA)

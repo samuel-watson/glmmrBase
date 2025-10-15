@@ -172,7 +172,7 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
   for(int b = 0; b < model.covariance.B(); b++){
     block_size = model.covariance.block_dim(b);
     for(i = 0; i < block_size; i++){
-#pragma omp parallel for shared(it_begin, i)
+//#pragma omp parallel for shared(it_begin, i)
       for(j = 0; j < model.n(); j++){
         auto it = std::find(it_begin + Z.Ap[j], it_begin + Z.Ap[j+1], (i+block_counter));
         if(it != (it_begin + Z.Ap[j+1])){
