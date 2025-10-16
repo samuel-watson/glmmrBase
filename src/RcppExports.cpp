@@ -142,19 +142,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Covariance__LZWZL
-SEXP Covariance__LZWZL(SEXP xp, SEXP w_, int type_);
-RcppExport SEXP _glmmrBase_Covariance__LZWZL(SEXP xpSEXP, SEXP w_SEXP, SEXP type_SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type w_(w_SEXP);
-    Rcpp::traits::input_parameter< int >::type type_(type_SEXP);
-    rcpp_result_gen = Rcpp::wrap(Covariance__LZWZL(xp, w_, type_));
-    return rcpp_result_gen;
-END_RCPP
-}
 // Covariance__Update_parameters
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type_);
 RcppExport SEXP _glmmrBase_Covariance__Update_parameters(SEXP xpSEXP, SEXP parameters_SEXP, SEXP type_SEXP) {
@@ -653,40 +640,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// Model__set_direct_control
-void Model__set_direct_control(SEXP xp, bool direct, double direct_range_beta, int max_iter, double epsilon, bool select_one, bool trisect_once, int max_eval, bool mrdirect, int type);
-RcppExport SEXP _glmmrBase_Model__set_direct_control(SEXP xpSEXP, SEXP directSEXP, SEXP direct_range_betaSEXP, SEXP max_iterSEXP, SEXP epsilonSEXP, SEXP select_oneSEXP, SEXP trisect_onceSEXP, SEXP max_evalSEXP, SEXP mrdirectSEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type direct(directSEXP);
-    Rcpp::traits::input_parameter< double >::type direct_range_beta(direct_range_betaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
-    Rcpp::traits::input_parameter< double >::type epsilon(epsilonSEXP);
-    Rcpp::traits::input_parameter< bool >::type select_one(select_oneSEXP);
-    Rcpp::traits::input_parameter< bool >::type trisect_once(trisect_onceSEXP);
-    Rcpp::traits::input_parameter< int >::type max_eval(max_evalSEXP);
-    Rcpp::traits::input_parameter< bool >::type mrdirect(mrdirectSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__set_direct_control(xp, direct, direct_range_beta, max_iter, epsilon, select_one, trisect_once, max_eval, mrdirect, type);
-    return R_NilValue;
-END_RCPP
-}
-// Model__set_lbfgs_control
-void Model__set_lbfgs_control(SEXP xp, double g_epsilon, int past, double delta, int max_linesearch, int type);
-RcppExport SEXP _glmmrBase_Model__set_lbfgs_control(SEXP xpSEXP, SEXP g_epsilonSEXP, SEXP pastSEXP, SEXP deltaSEXP, SEXP max_linesearchSEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< double >::type g_epsilon(g_epsilonSEXP);
-    Rcpp::traits::input_parameter< int >::type past(pastSEXP);
-    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    Rcpp::traits::input_parameter< int >::type max_linesearch(max_linesearchSEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__set_lbfgs_control(xp, g_epsilon, past, delta, max_linesearch, type);
-    return R_NilValue;
-END_RCPP
-}
 // Model__use_reml
 void Model__use_reml(SEXP xp, bool reml, int type);
 RcppExport SEXP _glmmrBase_Model__use_reml(SEXP xpSEXP, SEXP remlSEXP, SEXP typeSEXP) {
@@ -823,28 +776,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// Model__test_lbfgs
-void Model__test_lbfgs(SEXP xp, SEXP x);
-RcppExport SEXP _glmmrBase_Model__test_lbfgs(SEXP xpSEXP, SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
-    Model__test_lbfgs(xp, x);
-    return R_NilValue;
-END_RCPP
-}
-// Model__test_lbfgs_theta
-void Model__test_lbfgs_theta(SEXP xp, SEXP x);
-RcppExport SEXP _glmmrBase_Model__test_lbfgs_theta(SEXP xpSEXP, SEXP xSEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
-    Model__test_lbfgs_theta(xp, x);
-    return R_NilValue;
-END_RCPP
-}
 // Model__ml_beta
 void Model__ml_beta(SEXP xp, int algo, int type);
 RcppExport SEXP _glmmrBase_Model__ml_beta(SEXP xpSEXP, SEXP algoSEXP, SEXP typeSEXP) {
@@ -974,19 +905,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type u_(u_SEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__u_log_likelihood(xp, u_, type));
-    return rcpp_result_gen;
-END_RCPP
-}
-// Model__u_gradient
-SEXP Model__u_gradient(SEXP xp, SEXP u_, int type);
-RcppExport SEXP _glmmrBase_Model__u_gradient(SEXP xpSEXP, SEXP u_SEXP, SEXP typeSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type u_(u_SEXP);
-    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__u_gradient(xp, u_, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1721,7 +1639,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance_hsgp__new", (DL_FUNC) &_glmmrBase_Covariance_hsgp__new, 3},
     {"_glmmrBase_Covariance__Z", (DL_FUNC) &_glmmrBase_Covariance__Z, 2},
     {"_glmmrBase_Covariance__ZL", (DL_FUNC) &_glmmrBase_Covariance__ZL, 2},
-    {"_glmmrBase_Covariance__LZWZL", (DL_FUNC) &_glmmrBase_Covariance__LZWZL, 3},
     {"_glmmrBase_Covariance__Update_parameters", (DL_FUNC) &_glmmrBase_Covariance__Update_parameters, 3},
     {"_glmmrBase_Covariance__D", (DL_FUNC) &_glmmrBase_Covariance__D, 2},
     {"_glmmrBase_Covariance__D_chol", (DL_FUNC) &_glmmrBase_Covariance__D_chol, 2},
@@ -1761,8 +1678,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
-    {"_glmmrBase_Model__set_direct_control", (DL_FUNC) &_glmmrBase_Model__set_direct_control, 10},
-    {"_glmmrBase_Model__set_lbfgs_control", (DL_FUNC) &_glmmrBase_Model__set_lbfgs_control, 6},
     {"_glmmrBase_Model__use_reml", (DL_FUNC) &_glmmrBase_Model__use_reml, 3},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 2},
@@ -1774,8 +1689,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__Z", (DL_FUNC) &_glmmrBase_Model__Z, 2},
     {"_glmmrBase_Model__Z_needs_updating", (DL_FUNC) &_glmmrBase_Model__Z_needs_updating, 2},
     {"_glmmrBase_Model__cov_set_nn", (DL_FUNC) &_glmmrBase_Model__cov_set_nn, 2},
-    {"_glmmrBase_Model__test_lbfgs", (DL_FUNC) &_glmmrBase_Model__test_lbfgs, 2},
-    {"_glmmrBase_Model__test_lbfgs_theta", (DL_FUNC) &_glmmrBase_Model__test_lbfgs_theta, 2},
     {"_glmmrBase_Model__ml_beta", (DL_FUNC) &_glmmrBase_Model__ml_beta, 3},
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 3},
     {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 3},
@@ -1787,7 +1700,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__log_re", (DL_FUNC) &_glmmrBase_Model__log_re, 2},
     {"_glmmrBase_Model__D_chol", (DL_FUNC) &_glmmrBase_Model__D_chol, 2},
     {"_glmmrBase_Model__u_log_likelihood", (DL_FUNC) &_glmmrBase_Model__u_log_likelihood, 3},
-    {"_glmmrBase_Model__u_gradient", (DL_FUNC) &_glmmrBase_Model__u_gradient, 3},
     {"_glmmrBase_Model__simulate_re", (DL_FUNC) &_glmmrBase_Model__simulate_re, 2},
     {"_glmmrBase_Model__re_terms", (DL_FUNC) &_glmmrBase_Model__re_terms, 2},
     {"_glmmrBase_Model__re_count", (DL_FUNC) &_glmmrBase_Model__re_count, 2},

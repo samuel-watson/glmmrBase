@@ -45,10 +45,6 @@ Covariance__ZL <- function(xp, type_ = 0L) {
     .Call(`_glmmrBase_Covariance__ZL`, xp, type_)
 }
 
-Covariance__LZWZL <- function(xp, w_, type_ = 0L) {
-    .Call(`_glmmrBase_Covariance__LZWZL`, xp, w_, type_)
-}
-
 Covariance__Update_parameters <- function(xp, parameters_, type_ = 0L) {
     invisible(.Call(`_glmmrBase_Covariance__Update_parameters`, xp, parameters_, type_))
 }
@@ -205,14 +201,6 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
-Model__set_direct_control <- function(xp, direct = FALSE, direct_range_beta = 3.0, max_iter = 100L, epsilon = 1e-4, select_one = TRUE, trisect_once = FALSE, max_eval = 0L, mrdirect = FALSE, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__set_direct_control`, xp, direct, direct_range_beta, max_iter, epsilon, select_one, trisect_once, max_eval, mrdirect, type))
-}
-
-Model__set_lbfgs_control <- function(xp, g_epsilon = 1e-8, past = 3L, delta = 1e-8, max_linesearch = 64L, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__set_lbfgs_control`, xp, g_epsilon, past, delta, max_linesearch, type))
-}
-
 Model__use_reml <- function(xp, reml = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__use_reml`, xp, reml, type))
 }
@@ -257,14 +245,6 @@ Model__cov_set_nn <- function(xp, nn) {
     invisible(.Call(`_glmmrBase_Model__cov_set_nn`, xp, nn))
 }
 
-Model__test_lbfgs <- function(xp, x) {
-    invisible(.Call(`_glmmrBase_Model__test_lbfgs`, xp, x))
-}
-
-Model__test_lbfgs_theta <- function(xp, x) {
-    invisible(.Call(`_glmmrBase_Model__test_lbfgs_theta`, xp, x))
-}
-
 Model__ml_beta <- function(xp, algo = 0L, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__ml_beta`, xp, algo, type))
 }
@@ -307,10 +287,6 @@ Model__D_chol <- function(xp, type = 0L) {
 
 Model__u_log_likelihood <- function(xp, u_, type = 0L) {
     .Call(`_glmmrBase_Model__u_log_likelihood`, xp, u_, type)
-}
-
-Model__u_gradient <- function(xp, u_, type = 0L) {
-    .Call(`_glmmrBase_Model__u_gradient`, xp, u_, type)
 }
 
 Model__simulate_re <- function(xp, type = 0L) {

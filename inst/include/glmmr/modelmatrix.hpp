@@ -1288,82 +1288,103 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     break;
   }
   
-  MatrixXd ZL = model.covariance.ZL();
-  VectorXd Mb(ZL.cols());
-  MatrixXd Vb = MatrixXd::Identity(ZL.cols(),ZL.cols());
   
-  if(model.family.family == Fam::gaussian){
+  MatrixXd ZL = model.covariance.ZL();
+  const int n_cols = ZL.cols();
+  VectorXd Mb(n_cols);
+  MatrixXd Vb(n_cols, n_cols);
+  Vb.setIdentity();
+  
+  if(model.family.family == Fam::gaussian) {
+    // Use colwise multiplication (faster than diagonal matrix)
     MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
     MatrixXd Pb = ZL.transpose() * WZL;
     Pb.diagonal().array() += 1.0;
-    Pb = Pb.llt().solve(MatrixXd::Identity(Pb.rows(),Pb.cols()));
-    Mb = Pb * WZL.transpose() * (model.data.y - xb.matrix());
-    Vb = Pb;
+    VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
+    // Reuse Cholesky decomposition
+    LLT<MatrixXd> llt_Pb(Pb);
+    Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+    // Solve for inverse in-place
+    llt_Pb.solveInPlace(Vb);
+    
   } else {
-    MatrixXd WZL = W_.asDiagonal() * ZL;
-    MatrixXd LWL = ZL.transpose() * WZL;
-    LWL.diagonal().array() += 1.0;
-    LWL = LWL.llt().solve(MatrixXd::Identity(LWL.rows(),LWL.cols()));
-    VectorXd b = LWL * WZL.transpose() * (ymod - xb).matrix();
+    // // Initial setup
+    // MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+    // MatrixXd LWL = ZL.transpose() * WZL;
+    // LWL.diagonal().array() += 1.0;
+    // 
+    // LLT<MatrixXd> llt_LWL(LWL);
+    VectorXd b = re.u_.rowwise().mean(); //llt_LWL.solve(WZL.transpose() * (ymod - xb).matrix());
     VectorXd bnew(b);
-    double diff = 1;
+    MatrixXd WZL(W_.size(),n_cols);
+    MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
+    //LLT<MatrixXd> llt_LWL(LWL);
+    VectorXd yb(b.size());
+    double diff = 1.0;
     int itero = 0;
-    while(diff > tol && itero < 10){
-      eta = xb + (ZL*b).array();
-      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli){
-        ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
-        W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-        ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
-      } else if(model.family.family == Fam::poisson){
-        W_ = eta.exp().matrix();
-        ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
+    
+    while(diff > tol && itero < 10) {
+      eta = xb + (ZL * b).array();
+      
+      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
+        // Numerically stable sigmoid computation
+        ArrayXd exp_neg_eta = (-eta).exp();
+        ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
+        ArrayXd var_p = model.data.variance * logitp;
+        W_ = (var_p * (1.0 - logitp)).matrix();
+        ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
+        
+      } else if(model.family.family == Fam::poisson) {
+        ArrayXd exp_eta = eta.exp();
+        W_ = exp_eta.matrix();
+        ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
-      WZL = W_.asDiagonal() * ZL;
+      
+      // Recompute with updated weights
+      WZL = (ZL.array().colwise() * W_.array()).matrix();
       LWL = ZL.transpose() * WZL;
       LWL.diagonal().array() += 1.0;
-      LWL = LWL.llt().solve(MatrixXd::Identity(LWL.rows(),LWL.cols()));
-      bnew = LWL * WZL.transpose() * (ymod - xb).matrix();
-      diff = (b.array() - bnew.array()).abs().matrix().maxCoeff();
+      yb = WZL.transpose() * (ymod - xb).matrix();
+      
+      if(n_cols > 1000){
+        ConjugateGradient<MatrixXd, Lower|Upper> cg;
+        cg.compute(LWL);
+        bnew = cg.solve(yb);
+      } else {
+        LLT<MatrixXd> llt_LWL(LWL);
+        bnew = llt_LWL.solve(WZL.transpose() * (ymod - xb).matrix());
+      }
+      diff = (b - bnew).array().abs().maxCoeff();
       itero++;
       b = bnew;
     }
-    Mb = b;
-    Vb = LWL;
     
-    // MatrixXd SL = ZL * ZL.transpose();
-    // MatrixXd S = SL;
-    // S.diagonal() += W_;
-    // S = S.llt().solve(MatrixXd::Identity(S.rows(),S.cols()));
-    // Mb = ZL.transpose() * S * (ymod - xb).matrix();
-    // 
-    // // iterate a couple times
-    // for(int j = 0; j < reps; j++){
-    //   eta = xb + Mb.array();
-    //   if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli){
-    //     ArrayXd logitp = glmmr::maths::mod_inv_func(eta,Link::logit);
-    //     W_ = (model.data.variance * logitp * (1- logitp)).inverse().matrix();
-    //     ymod = eta + (model.data.y.array() - eta.exp()) * eta.exp().inverse();
-    //   } else {
-    //     W_ = eta.exp().inverse();
-    //     ymod = eta + (model.data.y.array() - eta.exp()) * eta.exp().inverse();
-    //   }
-    //   S.noalias() = SL;
-    //   S.diagonal() += W_;
-    //   S = S.llt().solve(MatrixXd::Identity(S.rows(),S.cols()));
-    //   Mb = ZL.transpose() * S * (ymod - xb).matrix();
-    // }
-    // Vb -= ZL.transpose() * S * ZL;
+    Mb = b;
+    if(n_cols <= 1000){
+      LLT<MatrixXd> llt_LWL(LWL);
+      llt_LWL.solveInPlace(Vb);
+    } else {
+      ConjugateGradient<MatrixXd, Lower|Upper> cg;
+      cg.compute(LWL);
+      Vb = cg.solve(Vb);
+    }
   }
   
+  // Optimized random number generation
+  MatrixXd unew(re.u_.rows(), niter);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> d(0.0, 1.0);
   
+  // Fill matrix efficiently
+  double* data = unew.data();
+  for(int i = 0; i < unew.size(); ++i) {
+    data[i] = d(gen);
+  }
   
-  std::random_device rd{};
-  std::mt19937 gen{ rd() };
-  std::normal_distribution d{ 0.0, 1.0 };
-  auto random_norm = [&d, &gen] { return d(gen); };
-  MatrixXd unew = MatrixXd::NullaryExpr(re.u_.rows(),niter,random_norm);
-  LLT<Eigen::MatrixXd> llt(Vb);
-  MatrixXd LVb = llt.matrixL();  
+  // Extract lower triangular for random effect simulation
+  LLT<MatrixXd> llt(Vb);
+  MatrixXd LVb = llt.matrixL();
   
   bool action_append = append;
   if(append && re.u_.cols() == 1)action_append = false;

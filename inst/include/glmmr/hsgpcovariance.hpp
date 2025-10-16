@@ -27,7 +27,6 @@ public:
   MatrixXd    ZL() override;
   MatrixXd    ZL_deriv(int par);
   MatrixXd    D(bool chol = true, bool upper = false) override;
-  MatrixXd    LZWZL(const VectorXd& w) override;
   MatrixXd    ZLu(const MatrixXd& u) override;
   MatrixXd    Lu(const MatrixXd& u) override;
   VectorXd    sim_re() override;
@@ -347,13 +346,6 @@ inline MatrixXd glmmr::hsgpCovariance::ZL_deriv(int par)
     MatrixXd pnew = Phi;
     //pnew *= Lambda_deriv.matrix().asDiagonal();
     return pnew; 
-}
-
-inline MatrixXd glmmr::hsgpCovariance::LZWZL(const VectorXd& w){
-  MatrixXd ZL = glmmr::hsgpCovariance::ZL();
-  MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
-  LZWZL += MatrixXd::Identity(LZWZL.rows(), LZWZL.cols());
-  return LZWZL;
 }
 
 inline MatrixXd glmmr::hsgpCovariance::ZLu(const MatrixXd& u){

@@ -870,8 +870,6 @@ Model <- R6::R6Class("Model",
                        #' so may not currently be an option for some users.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
                        #' of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.
-                       #'@param algo Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm 
-                       #'may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.
                        #'@param iter.warmup Integer. The number of warmup iterations for each MCMC run on each iteration of the algorithm. If this value is left as NULL then the value stored in self$mcmc_options$warmup will be used.
                        #'@param iter.sampling Integer. The number of sampling iterations for each MCMC run on each iteration of the algorithm. The default values have been selected to provide 
                        #'relatively good convergence for the default SAEM algorithm, but may need to be increased for MCEM and MCNR. If an adaptive algorithm is used, then this is the maximum 
@@ -980,7 +978,6 @@ Model <- R6::R6Class("Model",
                                        reml = FALSE,
                                        mcmc.pkg = "rstan",
                                        se.theta = TRUE,
-                                       algo = 2,
                                        iter.warmup = NULL,
                                        iter.sampling = NULL,
                                        chains = NULL,
@@ -1063,11 +1060,6 @@ Model <- R6::R6Class("Model",
                          if(!is.null(iter.warmup))self$mcmc_options$warmup <- iter.warmup
                          if(!is.null(iter.warmup))self$mcmc_options$chains <- chains
                          # set up all the required vectors and data to monitor the algorithm
-                         balgo <- ifelse(algo %in% c(1,3) ,2,0) # & !self$mean$any_nonlinear()
-                         if(method == "saem" & balgo == 2) {
-                           message("saem does not work well with L-BFGS, switching optimiser")
-                           balgo <- 0
-                         } 
                          beta <- self$mean$parameters
                          theta <- self$covariance$parameters
                          var_par <- self$var_par
@@ -1216,10 +1208,10 @@ Model <- R6::R6Class("Model",
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            if(dual){
-                             Model__ml_all(private$ptr,balgo,private$model_type())
+                             Model__ml_all(private$ptr,0,private$model_type())
                            } else {
                              if(method=="mcem" | method=="saem"){
-                               Model__ml_beta(private$ptr,balgo,private$model_type())
+                               Model__ml_beta(private$ptr,0,private$model_type())
                              } else {
                                Model__nr_beta(private$ptr,private$model_type())
                              }
@@ -1227,15 +1219,7 @@ Model <- R6::R6Class("Model",
                                if(dbl_nr){
                                  Model__nr_theta(private$ptr,private$model_type())
                                } else {
-                                 if(algo == 3){ #& !self$mean$any_nonlinear()
-                                   tryCatch(Model__ml_theta(private$ptr,2,private$model_type()),
-                                            error = function(e) {
-                                              if(private$trace >= 1)cat("\nL-BFGS failed for theta, switching to BOBYQA");
-                                              Model__ml_theta(private$ptr,0,private$model_type());
-                                            })
-                                 } else {
-                                   Model__ml_theta(private$ptr,0,private$model_type())
-                                 }
+                                 Model__ml_theta(private$ptr,0,private$model_type())
                                }
                              }
                            }
