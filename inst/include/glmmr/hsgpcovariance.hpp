@@ -30,7 +30,7 @@ public:
   MatrixXd    ZLu(const MatrixXd& u) override;
   MatrixXd    Lu(const MatrixXd& u) override;
   VectorXd    sim_re() override;
-  sparse      ZL_sparse() override;
+  SparseMatrix<double>   ZL_sparse() override;
   int         Q() const override;
   double      log_likelihood(const VectorXd &u) override;
   double      log_determinant() override;
@@ -66,12 +66,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                const strvec& colnames) : Covariance(formula, data, colnames),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(this->matZ.m,dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(this->matZ.m,1), 
+               L(this->matZ.cols(),1), 
                Lambda(1), 
                indices(1,dim), 
-               Phi(this->matZ.m,1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -85,12 +85,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                const strvec& colnames) : Covariance(formula, data, colnames),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(this->matZ.m,dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(this->matZ.m,1), 
+               L(this->matZ.cols(),1), 
                Lambda(1), 
                indices(1,dim), 
-               Phi(this->matZ.m,1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -105,12 +105,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(this->matZ.m,dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(this->matZ.m,1), 
+               L(this->matZ.cols(),1), 
                Lambda(1),
                indices(1,dim), 
-               Phi(this->matZ.m,1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -126,12 +126,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(this->matZ.m,dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(this->matZ.m,1), 
+               L(this->matZ.cols(),1), 
                Lambda(1),
                indices(1,dim), 
-               Phi(this->matZ.m,1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -151,14 +151,26 @@ indices(cov.indices), Phi(cov.Phi), PhiT(cov.PhiT) {
 inline void glmmr::hsgpCovariance::parse_hsgp_data(){
   std::unordered_set<int> uz;
   hsgp_data.setZero();
-  for(int j = 0; j < this->matZ.Ai.size(); j++){
-    if(uz.find(this->matZ.Ai[j]) == uz.end()){
-      for(int i = 0; i < dim; i++){
-        hsgp_data(this->matZ.Ai[j],i) = this->data_(j,this->re_cols_data_[0][0][i]);
+  for (int k=0; k<matD.outerSize(); ++k)
+    for (SparseMatrix<double>::InnerIterator it(this->matZ,k); it; ++it)
+    {
+      if(uz.find(it.col()) == uz.end()){
+        for(int i = 0; i < dim; i++){
+          hsgp_data(it.col(),i) = this->data_(it.row(),this->re_cols_data_[0][0][i]);
+        }
+        uz.insert(it.col());
       }
-      uz.insert(this->matZ.Ai[j]);
-    } 
-  }
+    }
+  // 
+  // 
+  // for(int j = 0; j < this->matZ.Ai.size(); j++){
+  //   if(uz.find(this->matZ.Ai[j]) == uz.end()){
+  //     for(int i = 0; i < dim; i++){
+  //       hsgp_data(this->matZ.Ai[j],i) = this->data_(j,this->re_cols_data_[0][0][i]);
+  //     }
+  //     uz.insert(this->matZ.Ai[j]);
+  //   } 
+  // }
   
     
   auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovFunc::sqexp);
@@ -358,9 +370,9 @@ inline MatrixXd glmmr::hsgpCovariance::Lu(const MatrixXd& u){
   return ZLu;
 }
 
-inline sparse glmmr::hsgpCovariance::ZL_sparse(){
+inline SparseMatrix<double> glmmr::hsgpCovariance::ZL_sparse(){
   MatrixXd ZLmat = this->ZL();
-  return SparseOperators::dense_to_sparse(ZLmat);
+  return ZLmat.sparseView();
 }
 
 inline int glmmr::hsgpCovariance::Q() const{

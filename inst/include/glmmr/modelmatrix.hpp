@@ -108,7 +108,7 @@ public:
   int                     P() const;
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
-  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false);                  
+  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false, const bool cg = false);                  
   
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -166,16 +166,13 @@ inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
   int block_counter = 0;
   intvec2d block_ids(model.n());
   int block_size;
-  sparse Z = model.covariance.Z_sparse();
+  SparseMatrix<double> Z = model.covariance.Z_sparse();
   int i,j,k;
-  auto it_begin = Z.Ai.begin();
   for(int b = 0; b < model.covariance.B(); b++){
     block_size = model.covariance.block_dim(b);
     for(i = 0; i < block_size; i++){
-//#pragma omp parallel for shared(it_begin, i)
       for(j = 0; j < model.n(); j++){
-        auto it = std::find(it_begin + Z.Ap[j], it_begin + Z.Ap[j+1], (i+block_counter));
-        if(it != (it_begin + Z.Ap[j+1])){
+        if(Z.coeff(j,i+block_counter)!=0){
           block_ids[j].push_back(b);
         }
       }
@@ -250,8 +247,9 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
   if(b >= sigma_blocks.size())Rcpp::stop("Index out of range");
 #endif
   // UPDATE THIS TO NOT USE SPARSE IF DESIRED
-  sparse ZLs = submat_sparse(model.covariance.ZL_sparse(),sigma_blocks[b].RowIndexes);
-  MatrixXd ZL = sparse_to_dense(ZLs,false);
+  MatrixXd ZLs = model.covariance.ZL();
+  ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
+  MatrixXd ZL = glmmr::Eigen_ext::submat(ZLs,rows,ArrayXi::LinSpaced(Q(),0,Q()-1));//sparse_to_dense(ZLs,false);
   MatrixXd S = ZL * ZL.transpose();
   for(int i = 0; i < S.rows(); i++){
     S(i,i)+= 1/W.W()(sigma_blocks[b].RowIndexes[i]);
@@ -959,8 +957,8 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   
   if(size_n_array.size() != model.n())throw std::runtime_error("Size n array != n");
   size_n_array = model.xb();
-  sparse ZL = model.covariance.ZL_sparse();
-  size_n_array += (SparseOperators::operator*(ZL,v)).array();
+  SparseMatrix<double> ZL = model.covariance.ZL_sparse();
+  size_n_array += (ZL * v).array();
   
   switch(model.family.family){
   case Fam::poisson:
@@ -1172,7 +1170,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   gradient_eta(v,size_n_array);
   ArrayXd size_q_array = ArrayXd::Zero(Q());
   ArrayXd size_p_array = ArrayXd::Zero(P());
-  sparse ZLt = model.covariance.ZL_sparse();
+  SparseMatrix<double> ZLt = model.covariance.ZL_sparse();
   ZLt.transpose();
   
   switch(model.family.family){
@@ -1181,7 +1179,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     if(betapars){
     size_p_array =  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
   } else {
-    size_q_array =  SparseOperators::operator*(ZLt, size_n_array.matrix()).array()-v.array();
+    size_q_array =  (ZLt * size_n_array.matrix()).array()-v.array();
   }
   break;
   }
@@ -1190,7 +1188,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     if(betapars){
     size_p_array += ((1.0/(model.data.var_par))*(model.linear_predictor.X().transpose()*size_n_array.matrix())).array();
   } else {
-    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array = (ZLt * size_n_array.matrix()).array();
     size_q_array *= 1.0/(model.data.var_par);
     size_q_array -= v.array();
   }
@@ -1204,7 +1202,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     if(betapars){
     size_p_array += (model.linear_predictor.X().transpose()*(size_n_array.matrix()-model.data.y)*model.data.var_par).array();
   } else {
-    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array = (ZLt * size_n_array.matrix()).array();
     size_q_array *= model.data.var_par;
     size_q_array -= v.array();
   }
@@ -1215,7 +1213,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     if(betapars){
     size_p_array += (model.linear_predictor.X().transpose()*((model.data.y.array()*size_n_array*size_n_array).matrix() - size_n_array.matrix())*model.data.var_par).array();
   } else {
-    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array = (ZLt * size_n_array.matrix()).array();
     size_q_array *= model.data.var_par;
     size_q_array -= v.array();
   }
@@ -1227,7 +1225,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
     if(betapars){
     size_p_array += (model.linear_predictor.X().transpose()*(model.data.y.array()*size_n_array-1).matrix()*model.data.var_par).array();
   } else {
-    size_q_array = SparseOperators::operator*(ZLt, size_n_array.matrix()).array();
+    size_q_array = (ZLt * size_n_array.matrix()).array();
     size_q_array *= model.data.var_par;
     size_q_array -= v.array();
   }
@@ -1243,7 +1241,8 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
                                                                const double tol, 
-                                                               const bool append)
+                                                               const bool append,
+                                                               const bool cg)
 {
   if constexpr (std::is_same_v<modeltype,bits_hsgp>){
     if(model.covariance.Q() != re.u_.rows()){
@@ -1294,6 +1293,8 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   VectorXd Mb(n_cols);
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
+  ConjugateGradient<MatrixXd, Lower|Upper> cong;
+  LLT<MatrixXd> llt_Pb;
   
   if(model.family.family == Fam::gaussian) {
     // Use colwise multiplication (faster than diagonal matrix)
@@ -1302,18 +1303,17 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     Pb.diagonal().array() += 1.0;
     VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
     // Reuse Cholesky decomposition
-    LLT<MatrixXd> llt_Pb(Pb);
-    Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-    // Solve for inverse in-place
-    llt_Pb.solveInPlace(Vb);
-    
+    if(cg){
+      cong.compute(Pb);
+      Mb = cong.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+      Vb = cong.solve(Vb);
+    } else {
+      llt_Pb.compute(Pb);
+      Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+      llt_Pb.solveInPlace(Vb);
+    }
   } else {
     // // Initial setup
-    // MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-    // MatrixXd LWL = ZL.transpose() * WZL;
-    // LWL.diagonal().array() += 1.0;
-    // 
-    // LLT<MatrixXd> llt_LWL(LWL);
     VectorXd b = re.u_.rowwise().mean(); //llt_LWL.solve(WZL.transpose() * (ymod - xb).matrix());
     VectorXd bnew(b);
     MatrixXd WZL(W_.size(),n_cols);
@@ -1346,13 +1346,16 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       LWL.diagonal().array() += 1.0;
       yb = WZL.transpose() * (ymod - xb).matrix();
       
-      if(n_cols > 1000){
-        ConjugateGradient<MatrixXd, Lower|Upper> cg;
-        cg.compute(LWL);
-        bnew = cg.solve(yb);
+      if(cg){
+        cong.compute(LWL);
+        if(re.u_.cols() == 1 && itero == 0){
+          bnew = cong.solve(yb);
+        } else {
+          bnew = cong.solveWithGuess(yb,b);
+        }
       } else {
-        LLT<MatrixXd> llt_LWL(LWL);
-        bnew = llt_LWL.solve(WZL.transpose() * (ymod - xb).matrix());
+        llt_Pb.compute(LWL);
+        bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
       }
       diff = (b - bnew).array().abs().maxCoeff();
       itero++;
@@ -1360,13 +1363,10 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     }
     
     Mb = b;
-    if(n_cols <= 1000){
-      LLT<MatrixXd> llt_LWL(LWL);
-      llt_LWL.solveInPlace(Vb);
+    if(!cg){
+      llt_Pb.solveInPlace(Vb);
     } else {
-      ConjugateGradient<MatrixXd, Lower|Upper> cg;
-      cg.compute(LWL);
-      Vb = cg.solve(Vb);
+      Vb = cong.solve(Vb);
     }
   }
   

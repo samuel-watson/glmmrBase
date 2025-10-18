@@ -81,8 +81,8 @@ Covariance__simulate_re <- function(xp, type_ = 0L) {
     .Call(`_glmmrBase_Covariance__simulate_re`, xp, type_)
 }
 
-Covariance__make_sparse <- function(xp, amd = TRUE, type_ = 0L) {
-    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, amd, type_))
+Covariance__make_sparse <- function(xp, type_ = 0L) {
+    invisible(.Call(`_glmmrBase_Covariance__make_sparse`, xp, type_))
 }
 
 Covariance__make_dense <- function(xp, type_ = 0L) {
@@ -261,8 +261,8 @@ Model__nr_beta <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__nr_beta`, xp, type))
 }
 
-Model__nr_theta <- function(xp, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, type))
+Model__nr_theta <- function(xp, tr_approx, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, tr_approx, type))
 }
 
 Model__Sigma <- function(xp, inverse, type = 0L) {
@@ -401,8 +401,8 @@ Model__residuals <- function(xp, rtype = 2L, conditional = TRUE, type = 0L) {
     .Call(`_glmmrBase_Model__residuals`, xp, rtype, conditional, type)
 }
 
-Model__posterior_u_sample <- function(xp, niter, tol, append, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, tol, append, type))
+Model__posterior_u_sample <- function(xp, niter, tol, append, cg, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, tol, append, cg, type))
 }
 
 Model__get_log_likelihood_values <- function(xp, type = 0L) {
@@ -437,8 +437,8 @@ Model__ll_diff_variance <- function(xp, beta, theta, type = 0L) {
     .Call(`_glmmrBase_Model__ll_diff_variance`, xp, beta, theta, type)
 }
 
-Model__make_sparse <- function(xp, amd = TRUE, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__make_sparse`, xp, amd, type))
+Model__make_sparse <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__make_sparse`, xp, type))
 }
 
 Model__make_dense <- function(xp, type = 0L) {

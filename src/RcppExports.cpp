@@ -252,14 +252,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // Covariance__make_sparse
-void Covariance__make_sparse(SEXP xp, bool amd, int type_);
-RcppExport SEXP _glmmrBase_Covariance__make_sparse(SEXP xpSEXP, SEXP amdSEXP, SEXP type_SEXP) {
+void Covariance__make_sparse(SEXP xp, int type_);
+RcppExport SEXP _glmmrBase_Covariance__make_sparse(SEXP xpSEXP, SEXP type_SEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type amd(amdSEXP);
     Rcpp::traits::input_parameter< int >::type type_(type_SEXP);
-    Covariance__make_sparse(xp, amd, type_);
+    Covariance__make_sparse(xp, type_);
     return R_NilValue;
 END_RCPP
 }
@@ -824,13 +823,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__nr_theta
-void Model__nr_theta(SEXP xp, int type);
-RcppExport SEXP _glmmrBase_Model__nr_theta(SEXP xpSEXP, SEXP typeSEXP) {
+void Model__nr_theta(SEXP xp, bool tr_approx, int type);
+RcppExport SEXP _glmmrBase_Model__nr_theta(SEXP xpSEXP, SEXP tr_approxSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< bool >::type tr_approx(tr_approxSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__nr_theta(xp, type);
+    Model__nr_theta(xp, tr_approx, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1246,16 +1246,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__posterior_u_sample
-void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, int type);
-RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP tolSEXP, SEXP appendSEXP, SEXP typeSEXP) {
+void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, bool cg, int type);
+RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP tolSEXP, SEXP appendSEXP, SEXP cgSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< bool >::type append(appendSEXP);
+    Rcpp::traits::input_parameter< bool >::type cg(cgSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__posterior_u_sample(xp, niter, tol, append, type);
+    Model__posterior_u_sample(xp, niter, tol, append, cg, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1373,14 +1374,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__make_sparse
-void Model__make_sparse(SEXP xp, bool amd, int type);
-RcppExport SEXP _glmmrBase_Model__make_sparse(SEXP xpSEXP, SEXP amdSEXP, SEXP typeSEXP) {
+void Model__make_sparse(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__make_sparse(SEXP xpSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type amd(amdSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__make_sparse(xp, amd, type);
+    Model__make_sparse(xp, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1648,7 +1648,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__log_determinant", (DL_FUNC) &_glmmrBase_Covariance__log_determinant, 2},
     {"_glmmrBase_Covariance__n_cov_pars", (DL_FUNC) &_glmmrBase_Covariance__n_cov_pars, 2},
     {"_glmmrBase_Covariance__simulate_re", (DL_FUNC) &_glmmrBase_Covariance__simulate_re, 2},
-    {"_glmmrBase_Covariance__make_sparse", (DL_FUNC) &_glmmrBase_Covariance__make_sparse, 3},
+    {"_glmmrBase_Covariance__make_sparse", (DL_FUNC) &_glmmrBase_Covariance__make_sparse, 2},
     {"_glmmrBase_Covariance__make_dense", (DL_FUNC) &_glmmrBase_Covariance__make_dense, 2},
     {"_glmmrBase_Covariance__set_nn", (DL_FUNC) &_glmmrBase_Covariance__set_nn, 2},
     {"_glmmrBase_Covariance__any_gr", (DL_FUNC) &_glmmrBase_Covariance__any_gr, 2},
@@ -1693,7 +1693,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 3},
     {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 3},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 2},
-    {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 2},
+    {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 3},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
     {"_glmmrBase_Model__D", (DL_FUNC) &_glmmrBase_Model__D, 2},
@@ -1728,7 +1728,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
     {"_glmmrBase_Model__residuals", (DL_FUNC) &_glmmrBase_Model__residuals, 4},
-    {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 5},
+    {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 6},
     {"_glmmrBase_Model__get_log_likelihood_values", (DL_FUNC) &_glmmrBase_Model__get_log_likelihood_values, 2},
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
     {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 14},
@@ -1737,7 +1737,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__print_names", (DL_FUNC) &_glmmrBase_Model__print_names, 4},
     {"_glmmrBase_Model__set_sml_parameters", (DL_FUNC) &_glmmrBase_Model__set_sml_parameters, 6},
     {"_glmmrBase_Model__ll_diff_variance", (DL_FUNC) &_glmmrBase_Model__ll_diff_variance, 4},
-    {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 3},
+    {"_glmmrBase_Model__make_sparse", (DL_FUNC) &_glmmrBase_Model__make_sparse, 2},
     {"_glmmrBase_Model__make_dense", (DL_FUNC) &_glmmrBase_Model__make_dense, 2},
     {"_glmmrBase_Model__beta_parameter_names", (DL_FUNC) &_glmmrBase_Model__beta_parameter_names, 2},
     {"_glmmrBase_Model__theta_parameter_names", (DL_FUNC) &_glmmrBase_Model__theta_parameter_names, 2},

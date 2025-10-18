@@ -472,25 +472,25 @@ SEXP Covariance__simulate_re(SEXP xp, int type_ = 0){
 }
 
 // [[Rcpp::export]]
-void Covariance__make_sparse(SEXP xp, bool amd = true, int type_ = 0){
+void Covariance__make_sparse(SEXP xp, int type_ = 0){
   Type type = static_cast<Type>(type_);
   switch(type){
   case Type::GLMM:
   {
     XPtr<covariance> ptr(xp);
-    ptr->set_sparse(true, amd);
+    ptr->set_sparse(true);
     break;
   }
   case Type::GLMM_NNGP:
   {
     XPtr<nngp> ptr(xp);
-    ptr->set_sparse(true, amd);
+    ptr->set_sparse(true);
     break;
   }
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
-    ptr->set_sparse(true, amd);
+    ptr->set_sparse(true);
     break;
   }
   }
@@ -1137,11 +1137,11 @@ void Model__nr_beta(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__nr_theta(SEXP xp, int type = 0){
+void Model__nr_theta(SEXP xp, bool tr_approx, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->optim.nr_theta();}
+    [&tr_approx](auto ptr){ptr->optim.nr_theta(tr_approx);}
   };
   std::visit(functor,model.ptr);
 }
@@ -1517,11 +1517,11 @@ SEXP Model__residuals(SEXP xp, int rtype = 2, bool conditional = true, int type 
 }
 
 // [[Rcpp::export]]
-void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, int type = 0){
+void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, bool cg, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, tol, append);}
+    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, tol, append, cg);}
   };
   std::visit(functor,model.ptr);
 }
@@ -1658,11 +1658,11 @@ SEXP Model__ll_diff_variance(SEXP xp, bool beta, bool theta, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__make_sparse(SEXP xp, bool amd = true, int type = 0){
+void Model__make_sparse(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->model.make_covariance_sparse(amd);}
+    [&](auto ptr){ptr->model.make_covariance_sparse();}
   };
   std::visit(functor,model.ptr);
 }

@@ -70,12 +70,15 @@ the likelihood and requires fewer MCMC samples and may have lower Monte Carlo er
 The option \code{alpha} determines the rate at which succesive iterations "forget" the past and must be between 0.5 and 1. Higher values
 will result in lower Monte Carlo error but slower convergence. The options \code{mcem.adapt} and \code{mcnr.adapt} will modify the number of MCMC samples during each step of model fitting
 using the suggested values in Caffo, Jank, and Jones (2006)\url{doi:10.1111/j.1467-9868.2005.00499.x}
-as the estimates converge.
+as the estimates converge. A Newton-Raphson step can be used for both fixed effect and covariance parameters with \code{mcnr2}.
 
 The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
 tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error. However,
-the SAEM approach does overcome reduce the required samples, especially with R-P averaging. As such a lower number (20-50)
+the SAEM approach does overcome reduce the required samples. As such a lower number (20-50)
 samples per iteration is normally sufficient to get convergence.
+
+The default method uses MCMC sampling to generate samples of the random effects. As an alternative, samples can be
+generated using a normal approximation with posterior mean and variance calculated directly by setting \code{mcmc.pkg = "analytic"}.
 
 There are several stopping rules for the algorithm. Either the algorithm will terminate when succesive parameter estimates are
 all within a specified tolerance of each other (\code{conv.criterion = 1}), or when there is a high probability that the estimated
@@ -83,20 +86,10 @@ log-likelihood has not been improved. This latter criterion can be applied to ei
 the likelihood just for the fixed effects (\code{conv.criterion = 3}), or both the likelihoods for the fixed effects and covariance parameters
 (\code{conv.criterion = 4}; default).
 
-Options for the MCMC sampler are set by changing the values in \code{self$mcmc_options}. The information printed to the console
-during model fitting can be controlled with the \code{self$set_trace()} function.
+The information printed to the console during model fitting can be controlled with the \code{self$set_trace()} function.
 
 To provide weights for the model fitting, store them in self$weights. To set the number of
 trials for binomial models, set self$trials.
-
-\strong{Laplace approximation}
-Fits generalised linear mixed models using Laplace approximation to the log likelihood. For non-Gaussian models
-the covariance matrix is approximated using the first order approximation based on the marginal
-quasilikelihood proposed by Breslow and Clayton (1993). The marginal mean in this approximation
-can be further adjusted following the proposal of Zeger et al (1988), use the member function \code{use_attenuated()} in this
-class, see \link[glmmrBase]{Model}. To provide weights for the model fitting, store them in self$weights. To
-set the number of trials for binomial models, set self$trials. To control the information printed to the console
-during model fitting use the \code{self$set_trace()} function.
 }
 \examples{
 
@@ -292,29 +285,6 @@ summary(nm1)
 
 
 }
-
-## ------------------------------------------------
-## Method `Model$LA`
-## ------------------------------------------------
-
-\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-#create example data with six clusters, five time periods, and five people per cluster-period
-df <- nelder(~(cl(6)*t(5)) > ind(5))
-# parallel trial design intervention indicator
-df$int <- 0
-df[df$cl > 3, 'int'] <- 1 
-# specify parameter values in the call for the data simulation below
-des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = c(0.05,0.7),
-  mean = c(rep(0,5),-0.2),
-  data = df,
-  family = stats::binomial()
-)
-ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$LA(y = ysim)
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
@@ -330,8 +300,6 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 }
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
-
-\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
 
 \link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
 }
@@ -352,7 +320,8 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
 
-\item{\code{mcmc_options}}{There are five options for MCMC sampling that are specified in this list:
+\item{\code{mcmc_options}}{There are three options for MCMC sampling that are specified in this list. Note that these
+will be moved to arguments to the relevant function, and so are obsolete.
 \itemize{
 \item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
 sampler, this only applies to the first iteration of the MCML algorithm, as the
@@ -363,11 +332,7 @@ HMC sampler, larger numbers of samples are generally required than if using Stan
 the samples generally exhibit higher autocorrealtion, especially for more complex
 covariance structures. For SAEM a small number is recommended as all samples are stored and used
 from every iteration.
-\item \code{lambda} (Only relevant for the internal HMC sampler) Value of the trajectory length of the leapfrog integrator in Hamiltonian Monte Carlo
-(equal to number of steps times the step length). Larger values result in lower correlation in samples, but
-require larger numbers of steps and so is slower. Smaller numbers are likely required for non-linear GLMMs.
-\item \code{refresh} How frequently to print to console MCMC progress if displaying verbose output.
-\item \code{maxsteps} (Only relevant for the internal HMC sampler) Integer. The maximum number of steps of the leapfrom integrator
+\code{chains} The number of MCMC chains for the Stan sampler.
 }}
 }
 \if{html}{\out{</div>}}
@@ -997,7 +962,6 @@ Stochastic Maximum Likelihood model fitting
   reml = FALSE,
   mcmc.pkg = "rstan",
   se.theta = TRUE,
-  algo = 2,
   iter.warmup = NULL,
   iter.sampling = NULL,
   chains = NULL,
@@ -1008,6 +972,8 @@ Stochastic Maximum Likelihood model fitting
   alpha = 0.8,
   convergence.prob = 0.95,
   pr.average = FALSE,
+  tr.approx = FALSE,
+  cg = FALSE,
   conv.criterion = 2,
   skip.theta = FALSE,
   constr.zero = 1
@@ -1020,7 +986,7 @@ Stochastic Maximum Likelihood model fitting
 \item{\code{y}}{Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when
 initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
 
-\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt} and \code{mcnr.adapt} will use adaptive
+\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, \code{mcnr2}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt}, \code{mcnr2.adapt} and \code{mcnr.adapt} will use adaptive
 MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which may result in faster convergence. \code{saem} uses a
 stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. The
 qualifier \code{.dual} can also be added (e.g. \code{saem.dual}), which combines the fixed and covariance parameter estimation steps.}
@@ -1043,15 +1009,11 @@ standard errors with between-within correction to the degrees of freedom.}
 \item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
 
 \item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
-\code{hmc} to use a cruder Hamiltonian Monte Carlo sampler. cmdstan is recommended as it has by far the best number
-of effective samples per unit time. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
+\code{analytic} to use a Normal approximation to the posterior with direct estimates of the posterior mean and variance. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
 so may not currently be an option for some users.}
 
 \item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
 of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
-
-\item{\code{algo}}{Integer. 1 = L-BFGS for beta and BOBYQA for theta, 2 = BOBYQA for both, 3 = L-BFGS for both (default). The L-BFGS algorithm
-may perform poorly with some covariance structures, in this case select 1 or 2, or apply an upper bound.}
 
 \item{\code{iter.warmup}}{Integer. The number of warmup iterations for each MCMC run on each iteration of the algorithm. If this value is left as NULL then the value stored in self$mcmc_options$warmup will be used.}
 
@@ -1075,6 +1037,11 @@ will result in lower bias but slower convergence, values closer to 1 will result
 \item{\code{convergence.prob}}{Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.}
 
 \item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)}
+
+\item{\code{tr.approx}}{Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta}
+
+\item{\code{cg}}{Logical indicating whether to use a conjugate gradient descent algorithm if using analytic random effect sampling, may give a
+performance improvement at large samples, particularly if the covariance matrix is sparse.}
 
 \item{\code{conv.criterion}}{Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by \code{tol},
 2 = The probability of improvement in the overall log-likelihood is less than 1 - \code{convergence.prob}
@@ -1178,95 +1145,24 @@ summary(nm1)
 \if{html}{\out{<a id="method-Model-LA"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-LA}{}}}
 \subsection{Method \code{LA()}}{
-Maximum Likelihood model fitting with Laplace Approximation
+Previous implementation of Laplace Approximation
+
+This function has been deprecated, as it provides inferior capability to other packages
+for this method, and is typically slower than the MCMC-ML.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$LA(
-  y = NULL,
-  start,
-  method = "nr",
-  se = "gls",
-  oim = FALSE,
-  reml = FALSE,
-  max.iter = 40,
-  tol = 1e-04,
-  se.theta = TRUE,
-  algo = 0,
-  lower.bound = NULL,
-  upper.bound = NULL,
-  lower.bound.theta = NULL,
-  upper.bound.theta = NULL
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$LA(...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{y}}{Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when
-initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
-
-\item{\code{start}}{Optional. A numeric vector indicating starting values for the model parameters.}
-
-\item{\code{method}}{String. Either "nloptim" for non-linear optimisation, or "nr" for Newton-Raphson (default) algorithm}
-
-\item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
-"robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
-"kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same
-degrees of freedom correction as Kenward-Roger, but with GLS standard errors)"box" to use a modified Box correction (does not return confidence intervals),
-"bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
-standard errors with between-within correction to the degrees of freedom.
-Note that Kenward-Roger assumes REML estimates, which are not currently provided by this function.}
-
-\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.}
-
-\item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
-
-\item{\code{max.iter}}{Maximum number of algorithm iterations, default 20.}
-
-\item{\code{tol}}{Maximum difference between successive iterations at which to terminate the algorithm}
-
-\item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
-of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
-
-\item{\code{algo}}{Integer. 1 = L-BFGS for beta-u and BOBYQA for theta (default), 2 = BOBYQA for both.}
-
-\item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use nloptim.}
-
-\item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use nloptim.}
-
-\item{\code{lower.bound.theta}}{Optional. Vector of lower bounds for the covariance parameters.}
-
-\item{\code{upper.bound.theta}}{Optional. Vector of upper bounds for the covariance parameters.}
+\item{\code{...}}{Previous arguments}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A \code{mcml} object
+Nothing. Will be removed in future updates
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontshow{
-setParallel(FALSE) # for the CRAN check
-}
-#create example data with six clusters, five time periods, and five people per cluster-period
-df <- nelder(~(cl(6)*t(5)) > ind(5))
-# parallel trial design intervention indicator
-df$int <- 0
-df[df$cl > 3, 'int'] <- 1 
-# specify parameter values in the call for the data simulation below
-des <- Model$new(
-  formula = ~ factor(t) + int - 1 + (1|gr(cl)*ar0(t)),
-  covariance = c(0.05,0.7),
-  mean = c(rep(0,5),-0.2),
-  data = df,
-  family = stats::binomial()
-)
-ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$LA(y = ysim)
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-sparse"></a>}}
@@ -1275,16 +1171,13 @@ fit1 <- des$LA(y = ysim)
 Set whether to use sparse matrix methods for model calculations and fitting.
 By default the model does not use sparse matrix methods.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE, amd = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sparse}}{Logical indicating whether to use sparse matrix methods}
-
-\item{\code{amd}}{Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so
-that the Cholesky decomposition of PAP^T is calculated rather than A.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1304,7 +1197,8 @@ Generate an MCMC sample of the random effects
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}) or \code{rstan} to use rstan sampler (the default)}
+\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler (the default), or \code{analytic} for an approximation
+based on the estimated posterior mean and variance.}
 
 \item{\code{scaled}}{Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.}
 

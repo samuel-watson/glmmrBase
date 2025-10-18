@@ -883,6 +883,9 @@ Model <- R6::R6Class("Model",
                        #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
                        #'@param convergence.prob Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.
                        #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)
+                       #'@param tr.approx Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta
+                       #'@param cg Logical indicating whether to use a conjugate gradient descent algorithm if using analytic random effect sampling, may give a 
+                       #'performance improvement at large samples, particularly if the covariance matrix is sparse.
                        #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
                        #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
                        #'3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - `convergence.prob`
@@ -988,6 +991,8 @@ Model <- R6::R6Class("Model",
                                        alpha = 0.8,
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
+                                       tr.approx = FALSE,
+                                       cg = FALSE,
                                        conv.criterion = 2,
                                        skip.theta = FALSE,
                                        constr.zero = 1){
@@ -1203,25 +1208,31 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, private$model_type())
+                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, cg, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
                            if(dual){
                              Model__ml_all(private$ptr,0,private$model_type())
+                             if(private$trace==2)t3 <- Sys.time()
+                             if(private$trace==2)cat("\nBeta and theta fitting took: ",t3-t2,"s")
                            } else {
                              if(method=="mcem" | method=="saem"){
                                Model__ml_beta(private$ptr,0,private$model_type())
                              } else {
                                Model__nr_beta(private$ptr,private$model_type())
                              }
+                             if(private$trace==2)t3 <- Sys.time()
+                             if(private$trace==2)cat("\nBeta fitting took: ",t3-t2,"s")
                              if(!skip.theta){
                                if(dbl_nr){
-                                 Model__nr_theta(private$ptr,private$model_type())
+                                 Model__nr_theta(private$ptr,tr.approx,private$model_type())
                                } else {
                                  Model__ml_theta(private$ptr,0,private$model_type())
                                }
                              }
+                             if(private$trace==2)t4 <- Sys.time()
+                             if(private$trace==2)cat("\nTheta fitting took: ",t4-t3,"s")
                            }
                            
                            # set up the vectors needed 
@@ -1258,8 +1269,7 @@ Model <- R6::R6Class("Model",
                              }
                            }
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
-                           if(private$trace==2)t3 <- Sys.time()
-                           if(private$trace==2)cat("\nModel fitting took: ",t3-t2,"s")
+                           
                            if(private$trace >= 1){
                              cat("\nBeta: ", round(beta_new,5))
                              cat("\nMax beta difference: ", round(beta_diff,5))
@@ -1425,20 +1435,18 @@ Model <- R6::R6Class("Model",
                        #' Set whether to use sparse matrix methods for model calculations and fitting.
                        #' By default the model does not use sparse matrix methods.
                        #' @param sparse Logical indicating whether to use sparse matrix methods
-                       #' @param amd Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
-                       #' that the Cholesky decomposition of PAP^T is calculated rather than A.
                        #' @return None, called for effects
-                       sparse = function(sparse = TRUE, amd = TRUE){
+                       sparse = function(sparse = TRUE){
                          if(!is.null(private$ptr)){
                            if(private$model_type() == 1){
                              message("Sparse has no effect with NNGP models")
                            } else {
                              if(sparse){
-                               Model__make_sparse(private$ptr,amd,private$model_type())
+                               Model__make_sparse(private$ptr,private$model_type())
                              } else {
                                Model__make_dense(private$ptr,private$model_type())
                              }
-                             self$covariance$sparse(sparse,amd)
+                             self$covariance$sparse(sparse)
                            }
                            private$useSparse = sparse
                          }
