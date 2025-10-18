@@ -865,7 +865,7 @@ Model <- R6::R6Class("Model",
                        #' standard errors with between-within correction to the degrees of freedom.
                        #'@param oim Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.
                        #'@param reml Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters
-                       #'@param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler, or
+                       #'@param mcmc.pkg String. Either `rstan` to use rstan sampler, or
                        #'`analytic` to use a Normal approximation to the posterior with direct estimates of the posterior mean and variance. cmdstanr will compile the MCMC programs to the library folder the first time they are run, 
                        #' so may not currently be an option for some users.
                        #'@param se.theta Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
@@ -882,7 +882,7 @@ Model <- R6::R6Class("Model",
                        #'@param alpha If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5 
                        #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
                        #'@param convergence.prob Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.
-                       #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)
+                       #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)
                        #'@param tr.approx Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta
                        #'@param cg Logical indicating whether to use a conjugate gradient descent algorithm if using analytic random effect sampling, may give a 
                        #'performance improvement at large samples, particularly if the covariance matrix is sparse.
@@ -915,10 +915,18 @@ Model <- R6::R6Class("Model",
                        #'   family = binomial()
                        #' )
                        #' 
-                       #' # we will try MCEM with 500 MCMC iterations
-                       #' model$mcmc_options$samps <- 500
-                       #' # view the grouping structure 
-                       #' glm2 <- model$MCML(method = "mcem")
+                       #' # use MCEM + REML with 500 sampling iterations
+                       #' glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
+                       #' 
+                       #' # as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
+                       #' # we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+                       #' # the maximum number of iterations is increased as it takes 100-110 in this example
+                       #' # we can also chain together the functions
+                       #' glm3 <- Model$new(
+                       #'   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+                       #'   data = Salamanders,
+                       #'   family = binomial()
+                       #' )$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
                        #'
                        #' # Example using simulated data
                        #' #create example data with six clusters, five time periods, and five people per cluster-period
@@ -935,9 +943,9 @@ Model <- R6::R6Class("Model",
                        #'   family = gaussian()
                        #' )
                        #' ysim <- des$sim_data() # simulate some data from the model
-                       #' fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
-                       #' # use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
-                       #' fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
+                       #' fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
+                       #' # use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
+                       #' fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
                        #' 
                        #' # Non-linear model fitting example using the example provided by nlmer in lme4
                        #' data(Orange, package = "lme4")
@@ -963,8 +971,7 @@ Model <- R6::R6Class("Model",
                        #' 
                        #' # for this example, we will use MCEM with adaptive MCMC sample sizes
                        #' 
-                       #' model$mcmc_options$samps <- 1000
-                       #' nfit <- model$MCML(method = "mcem.adapt")
+                       #' nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
                        #' 
                        #' summary(nfit)
                        #' summary(nm1)
@@ -1287,6 +1294,10 @@ Model <- R6::R6Class("Model",
                                if(conv.criterion == 4)cat(" (theta) ", round(conv.criterion.valuet,5)," Prob.: ",round(prob.convergedt,3))
                              }
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")
+                           }
+                           if(converged){
+                             if(udiagnostic$first > 0) beta <- beta_new
+                             if(udiagnostic$second > 0) theta <- theta_new
                            }
                          }
                          if(!converged)message(paste0("Algorithm not converged. Max. difference between iterations :",round(max(abs(all_pars-all_pars_new)),4)))

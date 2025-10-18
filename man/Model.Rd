@@ -229,10 +229,18 @@ model <- Model$new(
   family = binomial()
 )
 
-# we will try MCEM with 500 MCMC iterations
-model$mcmc_options$samps <- 500
-# view the grouping structure 
-glm2 <- model$MCML(method = "mcem")
+# use MCEM + REML with 500 sampling iterations
+glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
+
+# as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
+# we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+# the maximum number of iterations is increased as it takes 100-110 in this example
+# we can also chain together the functions
+glm3 <- Model$new(
+  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+  data = Salamanders,
+  family = binomial()
+)$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
@@ -249,9 +257,9 @@ des <- Model$new(
   family = gaussian()
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
-# use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
-fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
+fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
+# use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
+fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
 
 # Non-linear model fitting example using the example provided by nlmer in lme4
 data(Orange, package = "lme4")
@@ -277,8 +285,7 @@ model <- Model$new(
 
 # for this example, we will use MCEM with adaptive MCMC sample sizes
 
-model$mcmc_options$samps <- 1000
-nfit <- model$MCML(method = "mcem.adapt")
+nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
 
 summary(nfit)
 summary(nm1)
@@ -1008,7 +1015,7 @@ standard errors with between-within correction to the degrees of freedom.}
 
 \item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
 
-\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler, or
+\item{\code{mcmc.pkg}}{String. Either \code{rstan} to use rstan sampler, or
 \code{analytic} to use a Normal approximation to the posterior with direct estimates of the posterior mean and variance. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
 so may not currently be an option for some users.}
 
@@ -1036,7 +1043,7 @@ will result in lower bias but slower convergence, values closer to 1 will result
 
 \item{\code{convergence.prob}}{Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.}
 
-\item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is TRUE)}
+\item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)}
 
 \item{\code{tr.approx}}{Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta}
 
@@ -1079,10 +1086,18 @@ model <- Model$new(
   family = binomial()
 )
 
-# we will try MCEM with 500 MCMC iterations
-model$mcmc_options$samps <- 500
-# view the grouping structure 
-glm2 <- model$MCML(method = "mcem")
+# use MCEM + REML with 500 sampling iterations
+glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
+
+# as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
+# we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+# the maximum number of iterations is increased as it takes 100-110 in this example
+# we can also chain together the functions
+glm3 <- Model$new(
+  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+  data = Salamanders,
+  family = binomial()
+)$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
@@ -1099,9 +1114,9 @@ des <- Model$new(
   family = gaussian()
 )
 ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM-PR
-# use MCEM instead and stop when parameter values are within 1e-2 on successive iterations
-fit2 <- des$MCML(y = ysim, method="mcem",tol=1e-2,conv.criterion = 1)
+fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
+# use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
+fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
 
 # Non-linear model fitting example using the example provided by nlmer in lme4
 data(Orange, package = "lme4")
@@ -1127,8 +1142,7 @@ model <- Model$new(
 
 # for this example, we will use MCEM with adaptive MCMC sample sizes
 
-model$mcmc_options$samps <- 1000
-nfit <- model$MCML(method = "mcem.adapt")
+nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
 
 summary(nfit)
 summary(nm1)

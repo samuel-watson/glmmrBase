@@ -1306,7 +1306,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     if(cg){
       cong.compute(Pb);
       Mb = cong.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-      Vb = cong.solve(Vb);
+      Vb = cong.solve(MatrixXd::Identity(Vb.rows(),Vb.cols()));
     } else {
       llt_Pb.compute(Pb);
       Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
@@ -1314,11 +1314,10 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     }
   } else {
     // // Initial setup
-    VectorXd b = re.u_.rowwise().mean(); //llt_LWL.solve(WZL.transpose() * (ymod - xb).matrix());
+    VectorXd b = re.u_.rowwise().mean(); 
     VectorXd bnew(b);
     MatrixXd WZL(W_.size(),n_cols);
     MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-    //LLT<MatrixXd> llt_LWL(LWL);
     VectorXd yb(b.size());
     double diff = 1.0;
     int itero = 0;
@@ -1339,13 +1338,11 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         W_ = exp_eta.matrix();
         ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
-      
       // Recompute with updated weights
       WZL = (ZL.array().colwise() * W_.array()).matrix();
       LWL = ZL.transpose() * WZL;
       LWL.diagonal().array() += 1.0;
       yb = WZL.transpose() * (ymod - xb).matrix();
-      
       if(cg){
         cong.compute(LWL);
         if(re.u_.cols() == 1 && itero == 0){
@@ -1366,7 +1363,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     if(!cg){
       llt_Pb.solveInPlace(Vb);
     } else {
-      Vb = cong.solve(Vb);
+      Vb = cong.solve(MatrixXd::Identity(Vb.rows(),Vb.cols()));
     }
   }
   

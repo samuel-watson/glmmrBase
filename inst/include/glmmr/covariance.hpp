@@ -1175,22 +1175,17 @@ inline bool glmmr::Covariance::any_log_re() const{
 inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool tr_approx){
   static const double LOG_2PI = log(2*M_PI);
   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
-  
   std::vector<MatrixXd> derivs;
   derivatives(derivs, 1);
   const int npars = derivs.size() - 1;
   const int niter = umat.cols();
   VectorXd grad(npars);
   grad.setZero();
-  
   double logdet_val = 0.0;
   dblvec dqf(npars, 0.0);
   logl.setZero();
   
-  if(!isSparse)
-  {
-    throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
-  }
+  if(!isSparse)throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
   
   // Compute log determinant
   logdet_val = log_determinant();
@@ -1199,7 +1194,6 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
   
   if(tr_approx){
     TraceEstimator trace;
-    
     for(int i = 0; i < npars; i++)
     {
       double tr = trace.hutchinsonSPD(matL, derivs[i+1]);
@@ -1268,11 +1262,6 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
     theta_curr +=  M.llt().solve(grad);
     update_parameters(theta_curr.array());
   }
-  
-  
-  
-  
-  
 }
 
 inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
