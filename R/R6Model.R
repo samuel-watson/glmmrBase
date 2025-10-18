@@ -1443,7 +1443,7 @@ Model <- R6::R6Class("Model",
                          args <- list(...)
                          return(do.call(self$MCML,append(list(method = "mcnr2",reml= FALSE, iter.sampling = 50, 
                                                               mcmc.pkg="analytic",tr.approx = self$n() > 500,
-                                                              gc = self$n() > 1000),args)))
+                                                              cg = self$n() > 1000),args)))
                        },
                        #'@description
                        #' Previous implementation of Laplace Approximation
