@@ -1432,10 +1432,24 @@ Model <- R6::R6Class("Model",
                          return(out)
                        },
                        #'@description
+                       #'MCML model fitting with the fastest options
+                       #'
+                       #' Uses double Newton-Raphson method without REML, 50 samples per iteration, Normal approximation 
+                       #' posteriors for the random effects, and trace approximations for larger samples.
+                       #' @param ... Additional arguments passed to MCML. For examples, see MCML.
+                       #' @return A `mcml` model fit object
+                       #' @md
+                       fit_fast = function(...){
+                         args <- list(...)
+                         return(do.call(self$MCML,append(list(method = "mcnr2",reml= FALSE, iter.sampling = 50, 
+                                                              mcmc.pkg="analytic",tr.approx = self$n() > 500,
+                                                              gc = self$n() > 1000),args)))
+                       },
+                       #'@description
                        #' Previous implementation of Laplace Approximation
                        #' 
                        #' This function has been deprecated, as it provides inferior capability to other packages
-                       #' for this method, and is typically slower than the MCMC-ML.
+                       #' for this method, and this implementation was typically slower than the MCMC-ML.
                        #' @param ... Previous arguments
                        #' @return Nothing. Will be removed in future updates
                        #'@md

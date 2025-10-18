@@ -366,6 +366,7 @@ from every iteration.
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
 \item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
 \item \href{#method-Model-MCML}{\code{Model$MCML()}}
+\item \href{#method-Model-fit_fast}{\code{Model$fit_fast()}}
 \item \href{#method-Model-LA}{\code{Model$LA()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
@@ -1156,13 +1157,36 @@ summary(nm1)
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-fit_fast"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-fit_fast}{}}}
+\subsection{Method \code{fit_fast()}}{
+MCML model fitting with the fastest options
+
+Uses double Newton-Raphson method without REML, 50 samples per iteration, Normal approximation
+posteriors for the random effects, and trace approximations for larger samples.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$fit_fast(...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{Additional arguments passed to MCML. For examples, see MCML.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A \code{mcml} model fit object
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-LA"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-LA}{}}}
 \subsection{Method \code{LA()}}{
 Previous implementation of Laplace Approximation
 
 This function has been deprecated, as it provides inferior capability to other packages
-for this method, and is typically slower than the MCMC-ML.
+for this method, and this implementation was typically slower than the MCMC-ML.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$LA(...)}\if{html}{\out{</div>}}
 }
