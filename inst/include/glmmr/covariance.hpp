@@ -1185,7 +1185,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
   dblvec dqf(npars, 0.0);
   logl.setZero();
   
-  if(!isSparse)throw std::runtime_error("Theta NR step currently only setup for sparse mode.");
+  if(!isSparse)make_sparse();
   
   // Compute log determinant
   logdet_val = log_determinant();
@@ -1234,6 +1234,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
       grad(i) = -0.5 * detmat2.trace();
       S.push_back(detmat2);
     }
+    Rcpp::Rcout << "\nS0:\n" << S[0].topLeftCorner(10,10);
     dblvec dqf_local(npars, 0.0);
     dblvec v_buffer_local(Q_);
     for(int i = 0; i < niter; i++)
@@ -1248,6 +1249,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
     for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
     // Accumulate gradient contributions
     double niter_inv = 1.0 / (double)niter;
+    Rcpp::Rcout << "\ndqf: " << dqf[0] << " " << dqf[1];
     for(int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
     // Compute Hessian approximation
     MatrixXd M(npars, npars);
@@ -1258,6 +1260,8 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
         if(j != k) M(k, j) = val;
       }
     }
+    Rcpp::Rcout << "\ngrad: " << grad.transpose();
+    Rcpp::Rcout << "\nM:\n" << M;
     VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
     theta_curr +=  M.llt().solve(grad);
     update_parameters(theta_curr.array());
