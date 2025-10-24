@@ -884,8 +884,6 @@ Model <- R6::R6Class("Model",
                        #'@param convergence.prob Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.
                        #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)
                        #'@param tr.approx Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta
-                       #'@param cg Logical indicating whether to use a conjugate gradient descent algorithm if using analytic random effect sampling, may give a 
-                       #'performance improvement at large samples, particularly if the covariance matrix is sparse.
                        #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
                        #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
                        #'3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - `convergence.prob`
@@ -926,7 +924,7 @@ Model <- R6::R6Class("Model",
                        #'   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
                        #'   data = Salamanders,
                        #'   family = binomial()
-                       #' )$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
+                       #' )$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
                        #'
                        #' # Example using simulated data
                        #' #create example data with six clusters, five time periods, and five people per cluster-period
@@ -999,7 +997,6 @@ Model <- R6::R6Class("Model",
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
                                        tr.approx = FALSE,
-                                       cg = FALSE,
                                        conv.criterion = 2,
                                        skip.theta = FALSE,
                                        constr.zero = 1){
@@ -1215,7 +1212,7 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, cg, private$model_type())
+                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")
@@ -1442,8 +1439,7 @@ Model <- R6::R6Class("Model",
                        fit_fast = function(...){
                          args <- list(...)
                          return(do.call(self$MCML,append(list(method = "mcnr2",reml= FALSE, iter.sampling = 50, 
-                                                              mcmc.pkg="analytic",tr.approx = self$n() > 500,
-                                                              cg = self$n() > 1000),args)))
+                                                              mcmc.pkg="analytic",tr.approx = self$n() > 2000),args)))
                        },
                        #'@description
                        #' Previous implementation of Laplace Approximation

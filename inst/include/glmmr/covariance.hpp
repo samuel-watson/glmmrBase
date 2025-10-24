@@ -1247,15 +1247,15 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
     }
     for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
     // Accumulate gradient contributions
-    double niter_inv = 1.0 / (double)niter;
+    const double niter_inv = 1.0 / (double)niter;
     for(int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
     // Compute Hessian approximation
     MatrixXd M(npars, npars);
     for(int j = 0; j < npars; j++) {
       for(int k = j; k < npars; k++) {
         double val = (S[j].array() * S[k].array()).sum();
-        M(j, k) = val;
-        if(j != k) M(k, j) = val;
+        M(j, k) = 0.5*val;
+        if(j != k) M(k, j) = 0.5*val;
       }
     }
     VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());

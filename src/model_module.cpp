@@ -1138,6 +1138,7 @@ void Model__nr_beta(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 void Model__nr_theta(SEXP xp, bool tr_approx, int type = 0){
+  if(type != 0)Rcpp::stop("MCNR2 Only currently available for standard covariance functions");
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
@@ -1517,11 +1518,11 @@ SEXP Model__residuals(SEXP xp, int rtype = 2, bool conditional = true, int type 
 }
 
 // [[Rcpp::export]]
-void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, bool cg, int type = 0){
+void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, tol, append, cg);}
+    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, tol, append);}
   };
   std::visit(functor,model.ptr);
 }

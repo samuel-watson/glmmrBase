@@ -100,7 +100,6 @@ public:
   MatrixXd                linpred();
   VectorMatrix            b_score();
   VectorMatrix            re_score();
-  MatrixXd                hessian_nonlinear_correction();
   VectorXd                log_gradient(const VectorXd &v,bool beta = false);
   void                    gradient_eta(const VectorXd &v,ArrayXd& size_n_array);
   std::vector<glmmr::SigmaBlock> get_sigma_blocks();
@@ -108,7 +107,7 @@ public:
   int                     P() const;
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
-  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false, const bool cg = false);                  
+  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false);                  
   
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -1241,8 +1240,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
                                                                const double tol, 
-                                                               const bool append,
-                                                               const bool cg)
+                                                               const bool append)
 {
   if constexpr (std::is_same_v<modeltype,bits_hsgp>){
     if(model.covariance.Q() != re.u_.rows()){
@@ -1293,7 +1291,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   VectorXd Mb(n_cols);
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
-  ConjugateGradient<MatrixXd, Lower|Upper> cong;
   LLT<MatrixXd> llt_Pb;
   
   if(model.family.family == Fam::gaussian) {
@@ -1303,15 +1300,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     Pb.diagonal().array() += 1.0;
     VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
     // Reuse Cholesky decomposition
-    if(cg){
-      cong.compute(Pb);
-      Mb = cong.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-      Vb = cong.solve(MatrixXd::Identity(Vb.rows(),Vb.cols()));
-    } else {
-      llt_Pb.compute(Pb);
-      Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-      llt_Pb.solveInPlace(Vb);
-    }
+    llt_Pb.compute(Pb);
+    Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+    llt_Pb.solveInPlace(Vb);
   } else {
     // // Initial setup
     VectorXd b = re.u_.rowwise().mean(); 
@@ -1343,28 +1334,15 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       LWL = ZL.transpose() * WZL;
       LWL.diagonal().array() += 1.0;
       yb = WZL.transpose() * (ymod - xb).matrix();
-      if(cg){
-        cong.compute(LWL);
-        if(re.u_.cols() == 1 && itero == 0){
-          bnew = cong.solve(yb);
-        } else {
-          bnew = cong.solveWithGuess(yb,b);
-        }
-      } else {
-        llt_Pb.compute(LWL);
-        bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
-      }
+      llt_Pb.compute(LWL);
+      bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
       diff = (b - bnew).array().abs().maxCoeff();
       itero++;
       b = bnew;
     }
     
     Mb = b;
-    if(!cg){
-      llt_Pb.solveInPlace(Vb);
-    } else {
-      Vb = cong.solve(MatrixXd::Identity(Vb.rows(),Vb.cols()));
-    }
+    llt_Pb.solveInPlace(Vb);
   }
   
   // Optimized random number generation
@@ -1403,224 +1381,3 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   re.zu_ = model.covariance.ZLu(re.u_);
 }
 
-// when there are non-linear functions of parameters, we need a correction to the Hessian matrix
-template<typename modeltype>
-inline MatrixXd glmmr::ModelMatrix<modeltype>::hessian_nonlinear_correction(){
-  int iter = re.zu_.cols();
-  int n2d = model.linear_predictor.calc.parameter_count*(model.linear_predictor.calc.parameter_count + 1)/2;
-  int n = model.n();
-  MatrixXd H = MatrixXd::Zero(n2d,n);
-  ArrayXXd linpred = re.zu_.array();
-  ArrayXd xb = model.xb();
-  linpred.colwise() += xb + model.data.offset.array();
-#pragma omp parallel for 
-  for(int i = 0; i<n ; i++){
-    double dfdmu;
-    ArrayXd xb_ind = linpred.row(i).transpose();
-    switch(model.family.family){
-    case Fam::poisson:
-    {
-      switch(model.family.link){
-    case Link::identity:
-    {
-      xb_ind = xb_ind.inverse();
-      xb_ind = model.data.y(i)*xb_ind;
-      xb_ind -= 1.0;
-      break;
-    }
-    default:
-    {
-      xb_ind = xb_ind.exp();
-      xb_ind = model.data.y(i) - xb_ind;
-      break;
-    }
-    }
-      break;
-    }
-    case Fam::bernoulli: case Fam::binomial:
-    {
-      switch(model.family.link){
-    case Link::loglink:
-    {
-      ArrayXd logitxb = 1.0 - xb_ind.exp();
-      logitxb = logitxb.inverse();
-      logitxb *= xb_ind.exp();
-      xb_ind = (model.data.y(i) - model.data.variance(i))*logitxb;
-      xb_ind += model.data.y(i);
-      break;
-    }
-    case Link::identity:
-    {
-      ArrayXd n_array2 = 1.0 - xb_ind;
-      n_array2 = n_array2.inverse();
-      n_array2 *= (model.data.variance(i) - model.data.y(i));
-      xb_ind = xb_ind.inverse();
-      xb_ind *= model.data.y(i);
-      xb_ind -= n_array2;
-      break;
-    }
-    case Link::probit:
-    {
-      ArrayXd n_array2(xb_ind.size());
-      for (int i = 0; i < xb_ind.size(); i++) {
-        xb_ind(i) = glmmr::maths::gaussian_pdf(xb_ind(i)) / (glmmr::maths::gaussian_cdf(xb_ind(i)));
-        n_array2(i) = -1.0 * glmmr::maths::gaussian_pdf(xb_ind(i)) / (1 - glmmr::maths::gaussian_cdf(xb_ind(i)));
-      }
-      xb_ind = model.data.y(i) * xb_ind + (model.data.variance(i) - model.data.y(i)) * n_array2;
-      break;
-    }
-    default:
-      //logit
-    {
-      ArrayXd logitxb = xb_ind.exp();
-      logitxb += 1.0;
-      logitxb = logitxb.inverse();
-      logitxb *= xb_ind.exp();
-      xb_ind = model.data.y(i)*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance(i) - model.data.y(i))*logitxb;
-      break;
-    }
-    }
-      break;
-    }
-    case Fam::gaussian:
-    {
-      switch(model.family.link){
-    case Link::loglink:
-    {
-      xb_ind = (model.data.y(i) - xb_ind)*model.data.weights(i)*xb_ind.exp();
-      xb_ind *= 1.0/(model.data.var_par);
-      break;
-    }
-    default:
-    {
-      xb_ind = model.data.y(i) - xb_ind;
-      xb_ind *= model.data.weights(i)/(model.data.var_par);
-      break;
-    }
-    }
-      break;
-    }
-    case Fam::gamma:
-    {
-      switch(model.family.link){
-    case Link::inverse:
-    {
-      xb_ind = xb_ind.inverse();
-      xb_ind -= model.data.y(i);
-      xb_ind = xb_ind - model.data.y(i);
-      xb_ind *= 1.0/(model.data.var_par);
-      xb_ind -= model.data.y(i);
-      xb_ind *= model.data.var_par;
-      break;
-    }
-    case Link::identity:
-    {
-      xb_ind = xb_ind.inverse();
-      xb_ind *= (model.data.y.array()*xb_ind - ArrayXd::Ones(model.n()));
-      xb_ind = xb_ind*xb_ind*model.data.y(i) - xb_ind;
-      xb_ind *= model.data.var_par;
-      break;
-    }
-    default:
-      //log
-    {
-      xb_ind *= -1.0;
-      xb_ind = xb_ind.exp();
-      xb_ind *= model.data.y(i)*model.data.y(i);
-      xb_ind -= 1.0;
-      xb_ind *= model.data.var_par;
-      break;
-    }
-    }
-      break;
-    }
-    case Fam::beta:
-    {
-      for(int i = 0; i < xb_ind.size(); i++){
-      xb_ind(i) = exp(xb_ind(i))/(exp(xb_ind(i))+1);
-      xb_ind(i) = (xb_ind(i)/(1+exp(xb_ind(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(xb_ind(i)*model.data.var_par) + boost::math::digamma((1-xb_ind(i))*model.data.var_par));
-    }
-      break;
-    }
-    case Fam::quantile: case Fam::quantile_scaled:
-    {
-          switch(model.family.link){
-        case Link::identity:
-          xb_ind = (model.data.y.array() - xb_ind);
-          if(model.family.family == Fam::quantile_scaled) xb_ind *= model.data.var_par;
-          for(int i = 0; i < model.n(); i++){
-            xb_ind(i) = 0.5*xb_ind(i)/abs(xb_ind(i)) - 0.5*(2*model.family.quantile - 1);
-          }
-          break;
-        case Link::loglink:
-        {
-          ArrayXd resid = (model.data.y.array() - xb_ind.exp());
-          if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
-          for(int i = 0; i < model.n(); i++){
-            xb_ind(i) = 0.5*resid(i)*exp(xb_ind(i))/abs(resid(i)) - 0.5*(2*model.family.quantile - 1)*exp(xb_ind(i));
-          }
-          break;
-        }
-        case Link::logit:
-        {
-          ArrayXd logitxb = xb_ind.exp();
-          logitxb += 1.0;
-          logitxb = logitxb.inverse();
-          logitxb *= xb_ind.exp();
-          ArrayXd resid = (model.data.y.array() - logitxb);
-          logitxb *= (1+xb_ind.exp()).inverse();
-          if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
-          for(int i = 0; i < model.n(); i++){
-            xb_ind(i) = 0.5*logitxb(i)*(resid(i)/abs(resid(i)) - (2*model.family.quantile - 1));
-          }
-          break;
-        }
-        case Link::probit:
-        {
-          ArrayXd n_array2(model.n());
-          for (int i = 0; i < model.n(); i++) {
-            n_array2(i) = glmmr::maths::gaussian_pdf(xb_ind(i)) / (glmmr::maths::gaussian_cdf(xb_ind(i)));
-            xb_ind(i) = model.data.y(i) - (glmmr::maths::gaussian_cdf(xb_ind(i)));
-            xb_ind(i) = 0.5*n_array2(i)*(xb_ind(i)/abs(xb_ind(i)) - (2*model.family.quantile - 1));
-          }
-          break;
-        }
-        case Link::inverse:
-        {
-          ArrayXd logitxb = xb_ind.inverse();
-          ArrayXd resid = (model.data.y.array() - logitxb);
-          logitxb *= xb_ind.inverse();
-          if(model.family.family == Fam::quantile_scaled) resid *= model.data.var_par;
-          for(int i = 0; i < model.n(); i++){
-            xb_ind(i) = 0.5*logitxb(i)*(resid(i)/abs(resid(i)) - (2*model.family.quantile - 1));
-          }
-          break;
-        }
-        }
-      break;
-    }
-    }
-    
-    dfdmu = xb_ind.mean();
-    
-    for(int k = 0; k < iter; k++){
-      dblvec out = model.linear_predictor.calc.template calculate<CalcDyDx::BetaSecond>(i,0,0,re.zu_(i,k));
-      for(int j = 0; j < n2d; j++){
-        H(j,i) += dfdmu*out[model.linear_predictor.calc.parameter_count + 1 + j]/(double)iter;
-      }
-    }
-  }
-  
-  VectorXd Hmean = H.rowwise().sum();
-  MatrixXd H0 = MatrixXd::Zero(model.linear_predictor.calc.parameter_count, model.linear_predictor.calc.parameter_count);
-  int index_count = 0;
-  for(int j = 0; j < model.linear_predictor.calc.parameter_count; j++){
-    for(int k = j; k < model.linear_predictor.calc.parameter_count; k++){
-      H0(k,j) = Hmean[index_count];
-      if(j != k) H0(j,k) = H0(k,j);
-      index_count++;
-    }
-  }
-  
-  return H0;
-}
