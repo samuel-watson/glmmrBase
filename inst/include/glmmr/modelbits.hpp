@@ -28,7 +28,7 @@ public:
   //functions
   virtual int       n() const {return linear_predictor.n();};
   virtual ArrayXd   xb() {return linear_predictor.xb().array() + data.offset.array();};
-  virtual void      make_covariance_sparse(bool amd = true);
+  virtual void      make_covariance_sparse();
   virtual void      make_covariance_dense();
 };
 
@@ -73,8 +73,8 @@ inline glmmr::ModelBits<glmmr::hsgpCovariance, glmmr::LinearPredictor>::ModelBit
   family(family_,link_) {};
 
 template<typename cov, typename linpred>
-inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(bool amd){
-  covariance.set_sparse(true,amd);
+inline void glmmr::ModelBits<cov, linpred>::make_covariance_sparse(){
+  covariance.set_sparse(true);
 }
 
 template<typename cov, typename linpred>

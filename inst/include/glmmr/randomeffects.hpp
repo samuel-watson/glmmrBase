@@ -1,11 +1,7 @@
 #pragma once
 
-#include "general.h"
 #include "covariance.hpp"
 #include "modelbits.hpp"
-#include "maths.h"
-#include "sparse.h"
-#include "calculator.hpp"
 
 namespace glmmr {
 

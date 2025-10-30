@@ -1,15 +1,14 @@
 Package: glmmrBase
 Type: Package
 Title: Generalised Linear Mixed Models in R
-Version: 1.1.0
-Date: 2025-09-25
+Version: 1.2.0
+Date: 2025-10-18
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 
-  Includes Markov Chain Monte Carlo Maximum likelihood and Laplace approximation model fitting for a range of models, 
+  Includes Markov Chain Monte Carlo Maximum likelihood model fitting for a range of models, 
   non-linear fixed effect specifications, a wide range of flexible covariance functions that can be combined arbitrarily,
   robust and bias-corrected standard error estimation, power calculation, data simulation, and more. 
-  See <https://samuel-watson.github.io/glmmr-web/> for a detailed manual.
 License: GPL (>= 2)
 Imports: 
     methods,
@@ -20,7 +19,6 @@ Imports:
 LinkingTo: 
     Rcpp (>= 1.0.11),
     RcppEigen,
-    SparseChol (>= 0.3.2),
     BH,
     RcppParallel (>= 5.0.1),
     rstan (>= 2.32.1),

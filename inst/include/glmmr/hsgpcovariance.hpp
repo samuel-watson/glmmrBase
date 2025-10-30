@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_set>
 #include "covariance.hpp"
 
 namespace glmmr {
@@ -21,16 +22,15 @@ public:
   hsgpCovariance(const glmmr::hsgpCovariance& cov);
   // functions
   double      spd_nD(int i);
-  double      d_spd_nD(int i, int par, bool sqrt_lambda = true);
+  dblvec      d_spd_nD(int i);
   ArrayXd     phi_nD(int i);
   MatrixXd    ZL() override;
   MatrixXd    ZL_deriv(int par);
   MatrixXd    D(bool chol = true, bool upper = false) override;
-  MatrixXd    LZWZL(const VectorXd& w) override;
   MatrixXd    ZLu(const MatrixXd& u) override;
   MatrixXd    Lu(const MatrixXd& u) override;
   VectorXd    sim_re() override;
-  sparse      ZL_sparse() override;
+  SparseMatrix<double>   ZL_sparse() override;
   int         Q() const override;
   double      log_likelihood(const VectorXd &u) override;
   double      log_determinant() override;
@@ -66,12 +66,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                const strvec& colnames) : Covariance(formula, data, colnames),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(data.rows(),dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(data.rows(),1), 
+               L(this->matZ.cols(),1), 
                Lambda(1), 
                indices(1,dim), 
-               Phi(data.rows(),1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -85,12 +85,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                const strvec& colnames) : Covariance(formula, data, colnames),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(data.rows(),dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(data.rows(),1), 
+               L(this->matZ.cols(),1), 
                Lambda(1), 
                indices(1,dim), 
-               Phi(data.rows(),1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -105,12 +105,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(data.rows(),dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(data.rows(),1), 
+               L(this->matZ.cols(),1), 
                Lambda(1),
                indices(1,dim), 
-               Phi(data.rows(),1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -126,12 +126,12 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                const dblvec& parameters) : Covariance(formula, data, colnames, parameters),
                dim(this->re_cols_data_[0][0].size()),
                m(dim),
-               hsgp_data(data.rows(),dim),
+               hsgp_data(this->matZ.cols(),dim),
                L_boundary(dim),
-               L(data.rows(),1), 
+               L(this->matZ.cols(),1), 
                Lambda(1),
                indices(1,dim), 
-               Phi(data.rows(),1), 
+               Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
   for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
@@ -149,9 +149,30 @@ indices(cov.indices), Phi(cov.Phi), PhiT(cov.PhiT) {
 };
 
 inline void glmmr::hsgpCovariance::parse_hsgp_data(){
-  for(int i = 0; i < dim; i++){
-    hsgp_data.col(i) = this->data_.col(this->re_cols_data_[0][0][i]);
-  }
+  std::unordered_set<int> uz;
+  hsgp_data.setZero();
+  for (int k=0; k<matD.outerSize(); ++k)
+    for (SparseMatrix<double>::InnerIterator it(this->matZ,k); it; ++it)
+    {
+      if(uz.find(it.col()) == uz.end()){
+        for(int i = 0; i < dim; i++){
+          hsgp_data(it.col(),i) = this->data_(it.row(),this->re_cols_data_[0][0][i]);
+        }
+        uz.insert(it.col());
+      }
+    }
+  // 
+  // 
+  // for(int j = 0; j < this->matZ.Ai.size(); j++){
+  //   if(uz.find(this->matZ.Ai[j]) == uz.end()){
+  //     for(int i = 0; i < dim; i++){
+  //       hsgp_data(this->matZ.Ai[j],i) = this->data_(j,this->re_cols_data_[0][0][i]);
+  //     }
+  //     uz.insert(this->matZ.Ai[j]);
+  //   } 
+  // }
+  
+    
   auto sqexpidx = std::find(this->fn_[0].begin(),this->fn_[0].end(),CovFunc::sqexp);
   if(!(sqexpidx == this->fn_[0].end())){
     sq_exp = true;
@@ -170,11 +191,11 @@ inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, ArrayXd L
   L_boundary = L_;
   total_m = glmmr::algo::prod_vec(m);
   this->Q_ = total_m;
-  indices.conservativeResize(total_m,NoChange);
-  Phi.conservativeResize(NoChange,total_m);
-  PhiT.conservativeResize(total_m,total_m);
-  Lambda.conservativeResize(total_m);
-  L.conservativeResize(NoChange,total_m);
+  indices.resize(total_m,NoChange);
+  Phi.resize(NoChange,total_m);
+  PhiT.resize(total_m,total_m);
+  Lambda.resize(total_m);
+  L.resize(NoChange,total_m);
   gen_indices();
   gen_phi_prod();
 }
@@ -182,17 +203,20 @@ inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, ArrayXd L
 inline void glmmr::hsgpCovariance::update_approx_parameters(){
   total_m = glmmr::algo::prod_vec(m);
   this->Q_ = total_m;
-  indices.conservativeResize(total_m,NoChange);
-  Phi.conservativeResize(NoChange,total_m);
-  PhiT.conservativeResize(total_m,total_m);
-  Lambda.conservativeResize(total_m);
-  L.conservativeResize(NoChange,total_m);
+  indices.resize(total_m,NoChange);
+  Phi.resize(NoChange,total_m);
+  PhiT.resize(total_m,total_m);
+  Lambda.resize(total_m);
+  L.resize(NoChange,total_m);
   gen_indices();
   gen_phi_prod();
 }
 
 inline double glmmr::hsgpCovariance::spd_nD(int i){
   double wprod = 0;
+  const static double M_PI4 = 4 * M_PI;
+  const static double M_PI2 = 2 * M_PI;
+  const static double TGAM2 = tgamma(0.5);
   for(int d = 0; d < dim; d++) {
     double w = (indices(i,d)*M_PI)/(2*L_boundary(d));
     wprod += w*w;
@@ -200,51 +224,61 @@ inline double glmmr::hsgpCovariance::spd_nD(int i){
   double S;
   double phisq = parameters_[1] * parameters_[1];
   if(sq_exp){
-    S = parameters_[0] * pow(2 * M_PI, dim/2.0) * pow(parameters_[1],dim) * exp(-0.5 * phisq * wprod);
+    S = parameters_[0] * pow(M_PI2, dim/2.0) * pow(parameters_[1],dim) * exp(-0.5 * phisq * wprod);
   } else {
-    double S1 = parameters_[0] * pow(4 * M_PI, dim/2.0) * (tgamma(0.5*(dim+1))/(tgamma(0.5)*parameters_[1]));
+    double S1 = parameters_[0] * pow(M_PI4, dim/2.0) * (tgamma(0.5*(dim+1))/(TGAM2*parameters_[1]));
     double S2 = 1/phisq + wprod;
     S = S1 * pow(S2,-1*(dim+1)/2.0);
   }
   return S;
 }
 
-inline double glmmr::hsgpCovariance::d_spd_nD(int i, int par, bool sqrt_lambda)
+inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i)
 {
-  Array2d w;
-  w(0) = (indices(i,0)*M_PI)/(2*L_boundary(0));
-  w(1) = (indices(i,1)*M_PI)/(2*L_boundary(1));
-  w(0) = w(0)*w(0);
-  w(1) = w(1)*w(1);
-  double S;
-  double phisq = parameters_[1] * parameters_[1];
+  dblvec result(2);
   if(sq_exp){
-    if(par == 0){
-      S = 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
-    } else {
-      S = -1.0 * (w(0) + w(1)) * parameters_[0] * 2 * M_PI * phisq * exp(-0.5 * phisq * (w(0) + w(1)));
-    }
+    throw std::runtime_error("HSGP derivatives only available for exponential covariance");
   } else {
-    double S2 = 1 + phisq * (w(0) + w(1));
-    if(par == 0){
-      S = 4 * M_PI * phisq * pow(S2,-1.5);
-    } else {
-      S = parameters_[0] * 4 * M_PI * (2 * parameters_[1] * pow(S2,-1.5) - 3 * (w(0) + w(1)) * phisq *  parameters_[1] * pow(S2,-2.5));
+    double wprod = 0;
+    const static double M_PI4 = 4 * M_PI;
+    const static double M_PI2 = 2 * M_PI;
+    const static double TGAM2 = tgamma(0.5);
+    
+    double c_val = -1*(dim+1)/4.0; // c/2
+    double a = pow(M_PI4, dim/2.0) * (tgamma(0.5*(dim+1))/TGAM2);
+    
+    for(int d = 0; d < dim; d++) {
+      double w = (indices(i,d)*M_PI)/(2*L_boundary(d));
+      wprod += w*w;
     }
+    
+    // this is on the log scale
+    double log_par0 = log(parameters_[0]);
+    double log_par1 = log(parameters_[1]);
+    double exp1_w = (exp(-2.0 * log_par1) + wprod);
+    double exp1_pow = pow(exp1_w,c_val);
+    double b = a * exp(-0.5*log_par1) * exp1_pow;
+    result[0] = 0.5* exp(0.5 * log_par0)* b;
+    //result[2] = 0.5* exp(0.5 * log_par0)* b;
+    double d_inter = exp1_pow * ((-2.0 * c_val * exp(-2.5 * log_par1))/exp1_w - 0.5*exp(-0.5*log_par1));
+    result[1] = exp(0.5 * log_par0) * a * d_inter;
+    //result[4] = 0.5 * exp(0.5 * log_par0) * a * d_inter;
+    // double d2_inter = (6.0 * c_val + 0.5) * wprod * exp(4.5 * log_par1);
+    // double d3_inter = 4 * (c_val + 0.25) * (c_val + 0.25) * exp(2.5 * log_par1);
+    // double d4_inter = 0.25 * wprod * wprod * exp(6.5 * log_par1);
+    // double d5_inter = wprod * exp(2.0 * log_par1 + 1);
+    // double d_inter_sum = d2_inter + d3_inter + d4_inter;
+    // result[3] = exp(0.5 * log_par0) * a * (exp(-3.0 * log_par1) * exp1_pow * d_inter_sum)/(d5_inter * d5_inter);
+    // 
   }
-
-  if(sqrt_lambda)
-  {
-    double SS = spd_nD(i);
-    S *= 0.5 / sqrt(SS);
-  }
-
-  return S;
+  return result;
 }
+
 
 inline ArrayXd glmmr::hsgpCovariance::phi_nD(int i){
   ArrayXd fi1(hsgp_data.rows());
   ArrayXd fi2(hsgp_data.rows());
+  
   fi1 = (1/sqrt(L_boundary(0))) * sin(indices(i,0)*M_PI*(hsgp_data.col(0)+L_boundary(0))/(2*L_boundary(0)));
   if(dim > 1){
     for(int d = 1; d < dim; d++){
@@ -256,7 +290,8 @@ inline ArrayXd glmmr::hsgpCovariance::phi_nD(int i){
 }
 
 inline MatrixXd glmmr::hsgpCovariance::D(bool chol, bool upper){
-  MatrixXd As = glmmr::hsgpCovariance::ZL();
+  MatrixXd As = PhiSPD();
+ 
   if(chol){
     if(upper){
       return As.transpose();
@@ -305,43 +340,39 @@ inline void glmmr::hsgpCovariance::update_parameters(const ArrayXd& parameters){
 };
 
 inline MatrixXd glmmr::hsgpCovariance::ZL(){
-  MatrixXd ZL = PhiSPD();
+  MatrixXd Z = this->Z();
+  MatrixXd P = PhiSPD();
+  MatrixXd ZL = Z * P;
   return ZL;
 }
 
 inline MatrixXd glmmr::hsgpCovariance::ZL_deriv(int par)
 {
-  ArrayXd Lambda_deriv(Lambda.size());
-  #pragma omp parallel for
-    for(int i = 0; i < total_m; i++)
-    {
-      Lambda_deriv(i) = d_spd_nD(i,par,true);
-    }
+  throw std::runtime_error("ZL deriv (HSGP) has been disabled");
+  // ArrayXd Lambda_deriv(Lambda.size());
+  // #pragma omp parallel for
+  //   for(int i = 0; i < total_m; i++)
+  //   {
+  //     Lambda_deriv(i) = d_spd_nD(i,par);
+  //   }
     MatrixXd pnew = Phi;
-    pnew *= Lambda_deriv.matrix().asDiagonal();
+    //pnew *= Lambda_deriv.matrix().asDiagonal();
     return pnew; 
 }
 
-inline MatrixXd glmmr::hsgpCovariance::LZWZL(const VectorXd& w){
-  MatrixXd ZL = glmmr::hsgpCovariance::ZL();
-  MatrixXd LZWZL = ZL.transpose() * w.asDiagonal() * ZL;
-  LZWZL += MatrixXd::Identity(LZWZL.rows(), LZWZL.cols());
-  return LZWZL;
-}
-
 inline MatrixXd glmmr::hsgpCovariance::ZLu(const MatrixXd& u){
-  MatrixXd ZLu = glmmr::hsgpCovariance::ZL() * u;
-  return ZLu;
+  MatrixXd ZL = glmmr::hsgpCovariance::ZL();
+  return ZL * u;
 }
 
 inline MatrixXd glmmr::hsgpCovariance::Lu(const MatrixXd& u){
-  MatrixXd ZLu = glmmr::hsgpCovariance::ZL() * u;
+  MatrixXd ZLu = L * u;
   return ZLu;
 }
 
-inline sparse glmmr::hsgpCovariance::ZL_sparse(){
+inline SparseMatrix<double> glmmr::hsgpCovariance::ZL_sparse(){
   MatrixXd ZLmat = this->ZL();
-  return SparseOperators::dense_to_sparse(ZLmat);
+  return ZLmat.sparseView();
 }
 
 inline int glmmr::hsgpCovariance::Q() const{

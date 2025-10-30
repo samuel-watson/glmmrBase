@@ -12,7 +12,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/LU>
+#include <Eigen/Sparse>
 #endif
+
 
 #ifdef __clang__
 #define EIGEN_HAS_STD_RESULT_OF 0 // This has no effect with RcppEigen as it has Eigen <0.3.4
@@ -37,11 +39,10 @@
 #include <set>
 #include <map>
 #include <unordered_map>
-#include <SparseChol.h>
+//#include <SparseChol.h>
 
 
 using namespace Eigen;
-using namespace SparseOperators;
 
 typedef std::string str;
 typedef std::vector<str> strvec;
@@ -90,28 +91,8 @@ inline void print_vec_3d(const T& vec){
   }
 }
 
-inline void print_sparse(const sparse& A){
-  Rcpp::Rcout << "\nmatL Ap: ";
-  for(auto i: A.Ap)Rcpp::Rcout << " " << i;
-  Rcpp::Rcout << "\nmatL Ai: ";
-  for(auto i: A.Ai)Rcpp::Rcout << " " << i;
-  Rcpp::Rcout << "\nmatL Ax: ";
-  for(auto i: A.Ax)Rcpp::Rcout << " " << i;
-}
-
 #endif
 
-// inline bool isalnum_or_uscore(const char& s)
-// {
-//   return (isalnum(s) || s=='_');
-// }
-// 
-// template<typename T>
-// inline bool expect_number_of_unique_elements(const std::vector<T> vec,
-//                                              int n){
-//   int vec_size = std::set<T>(vec.begin(),vec.end()).size();
-//   return vec_size==n;
-// }
 
 }
 

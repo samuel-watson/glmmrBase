@@ -1,9 +1,6 @@
 #pragma once
 
-#include "general.h"
 #include "modelbits.hpp"
-#include "openmpheader.h"
-#include "maths.h"
 
 namespace glmmr {
 
