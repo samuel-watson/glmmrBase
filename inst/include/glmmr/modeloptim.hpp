@@ -774,18 +774,14 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   W = (W.array().colwise() * nvar_par).inverse();
   W.array().colwise() *= model.data.weights;
   MatrixXd resid = matrix.gradient_eta(re.u_);
-  
-  Rcpp::Rcout << "\nW:\n" << W.topLeftCorner(10,10);
-  Rcpp::Rcout << "\nresid:\n" << resid.topLeftCorner(10,10);
-  Rcpp::Rcout << "\nsums: " << W.leftCols(10).colwise().sum().transpose() << " " << resid.leftCols(10).colwise().sum().transpose();
-  
-//#pragma omp parallel
+
+  #pragma omp parallel
   {
-    MatrixXd XtWXm_private(P(), P());
+    MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
     
-  //#pragma omp for nowait
+  #pragma omp for nowait
     for(int i = 0; i < niter; ++i){
-      XtWXm_private.noalias() = X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
+      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
       if(model.family.family == Fam::poisson){
         Wu.col(i) = resid.col(i);
       } else {
@@ -793,22 +789,15 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
       }
     }
     
-  //#pragma omp critical
+  #pragma omp critical
     XtWXm += XtWXm_private;
   }
   XtWXm *= (1.0 / niter);
   
-  Rcpp::Rcout << "\nXtWXm:\n" << XtWXm;
-  
   Eigen::LLT<MatrixXd> llt(XtWXm);
-  
   VectorXd Wum = Wu.rowwise().mean();
-  Rcpp::Rcout << "\nWum sum:\n" << Wum.sum();
   VectorXd bincr = llt.solve(X.transpose() * Wum);
   update_beta(model.linear_predictor.parameter_vector() + bincr);
-  
-  // repopulate loglikelihood history - assumes NR can 
-  // only be used with MCEM for the theta parameters - TO DO: allow NR for beta and SAEM for theta
   current_ll_values.first = log_likelihood();
   current_ll_var.first = (ll_current.col(0) - ll_current.col(0).mean()).square().sum() / (ll_current.col(0).size() - 1);
 }
