@@ -1028,7 +1028,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
     logitxb *= -1.0;
     logitxb += 1.0;
     logitxb.colwise() *= model.data.y.array();
-    size_n_array += logitxb;
+    size_n_array = logitxb - size_n_array;
     break;
   }
   }
