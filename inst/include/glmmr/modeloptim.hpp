@@ -775,11 +775,14 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   W.array().colwise() *= model.data.weights;
   MatrixXd resid = matrix.gradient_eta(re.u_);
   
-#pragma omp parallel
+  Rcpp::Rcout << "\nW:\n" << W.topLeftCorner(10,10);
+  Rcpp::Rcout << "\nresid:\n" << resid.topLeftCorner(10,10);
+  
+//#pragma omp parallel
   {
     MatrixXd XtWXm_private(P(), P());
     
-  #pragma omp for nowait
+  //#pragma omp for nowait
     for(int i = 0; i < niter; ++i){
       XtWXm_private.noalias() = X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
       if(model.family.family == Fam::poisson){
@@ -789,10 +792,12 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
       }
     }
     
-  #pragma omp critical
+  //#pragma omp critical
     XtWXm += XtWXm_private;
   }
   XtWXm *= (1.0 / niter);
+  
+  Rcpp::Rcout << "\nXtWXm:\n" << XtWXm;
   
   Eigen::LLT<MatrixXd> llt(XtWXm);
   
