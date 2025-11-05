@@ -1236,14 +1236,13 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
     }
     dblvec dqf_local(npars, 0.0);
     dblvec v_buffer_local(Q_);
+    MatrixXd vmat = matL.solve(umat);
+    
     for(int i = 0; i < niter; i++)
     {
-      VectorXd ucol = umat.col(i);
-      VectorXd v = matL.solve(ucol);
-      double qf = v.dot(ucol);
+      double qf = vmat.col(i).dot(umat.col(i));
       logl(i) += -0.5 * qf;
-      // trace(v*v^T * A) = v^T * A * v
-      for(int j = 0; j < npars; j++) dqf_local[j] +=  ucol.dot(S[j] * v);// zzquad.dot(derivs[j+1] * zzquad);
+      for(int j = 0; j < npars; j++) dqf_local[j] +=  umat.col(i).dot(S[j] * vmat.col(i));
     }
     for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
     // Accumulate gradient contributions

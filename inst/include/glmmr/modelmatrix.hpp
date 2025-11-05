@@ -101,7 +101,7 @@ public:
   VectorMatrix            b_score();
   VectorMatrix            re_score();
   VectorXd                log_gradient(const VectorXd &v,bool beta = false);
-  void                    gradient_eta(const VectorXd &v,ArrayXd& size_n_array);
+  MatrixXd                gradient_eta(const MatrixXd &v);
   std::vector<glmmr::SigmaBlock> get_sigma_blocks();
   BoxResults              box();
   int                     P() const;
@@ -951,11 +951,12 @@ inline BoxResults glmmr::ModelMatrix<modeltype>::box(){
 }
 
 template<typename modeltype>
-inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
-                                                        ArrayXd& size_n_array){
+inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
   
-  if(size_n_array.size() != model.n())throw std::runtime_error("Size n array != n");
-  size_n_array = model.xb();
+  ArrayXXd size_n_array(v.rows(), v.cols());
+  size_n_array.setZero();
+  if(size_n_array.rows() != model.n())throw std::runtime_error("Size n array != n");
+  size_n_array.colwise() += model.xb();
   SparseMatrix<double> ZL = model.covariance.ZL_sparse();
   size_n_array += (ZL * v).array();
   
@@ -966,8 +967,8 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   case Link::identity:
   {
     size_n_array = size_n_array.inverse();
-    size_n_array = model.data.y.array()*size_n_array;
-    size_n_array -= ArrayXd::Ones(model.n());
+    size_n_array = size_n_array.colwise() * model.data.y.array();
+    size_n_array -= 1.0;
     break;
   }
   default:
@@ -984,42 +985,50 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
     switch(model.family.link){
   case Link::loglink:
   {
-    ArrayXd logitxb = 1.0 - size_n_array.exp();
+    ArrayXXd logitxb = 1.0 - size_n_array.exp();
     logitxb = logitxb.inverse();
     logitxb *= size_n_array.exp();
-    size_n_array = (model.data.y.array() - model.data.variance)*logitxb;
-    size_n_array += model.data.y.array();
+    size_n_array = logitxb.colwise() * (model.data.y.array() - model.data.variance);
+    size_n_array.colwise() += model.data.y.array();
     break;
   }
   case Link::identity:
   {
-    ArrayXd n_array2 = 1.0 - size_n_array;
+    ArrayXXd n_array2 = 1.0 - size_n_array;
     n_array2 = n_array2.inverse();
-    n_array2 *= (model.data.variance - model.data.y.array());
+    n_array2.colwise() *= (model.data.variance - model.data.y.array());
     size_n_array = size_n_array.inverse();
-    size_n_array *= model.data.y.array();
+    size_n_array.colwise() *= model.data.y.array();
     size_n_array -= n_array2;
     break;
   }
   case Link::probit:
   {
-    ArrayXd n_array2(model.n());
-#pragma omp parallel for    
-    for (int i = 0; i < model.n(); i++) {
-      size_n_array(i) = glmmr::maths::gaussian_pdf(size_n_array(i)) / glmmr::maths::gaussian_cdf(size_n_array(i));
-      n_array2(i) = -1.0 * glmmr::maths::gaussian_pdf(size_n_array(i)) / (1 - glmmr::maths::gaussian_cdf(size_n_array(i)));
-    }
-    size_n_array = model.data.y.array() * size_n_array + (model.data.variance - model.data.y.array()) * n_array2;
+    ArrayXXd n_array2(size_n_array.rows(), size_n_array.cols());
+    ArrayXXd cdf(size_n_array);
+    ArrayXXd pdf(size_n_array);
+    cdf.unaryExpr(&glmmr::maths::gaussian_cdf);
+    pdf.unaryExpr(&glmmr::maths::gaussian_pdf);
+    size_n_array = pdf / cdf;
+    n_array2 = -1.0 * (pdf / (1.0 - cdf));
+    size_n_array.colwise() *= model.data.y.array();
+    n_array2.colwise() *= (model.data.variance - model.data.y.array());
+    size_n_array += n_array2;
     break;
   }
   default:
     //logit
   {
-    ArrayXd logitxb = size_n_array.exp();
+    ArrayXXd logitxb = size_n_array.exp();
     logitxb += 1.0;
     logitxb = logitxb.inverse();
     logitxb *= size_n_array.exp();
-    size_n_array = model.data.y.array()*(ArrayXd::Constant(model.n(),1) - logitxb) - (model.data.variance - model.data.y.array())*logitxb;
+    size_n_array = logitxb;
+    size_n_array.colwise() *= (model.data.variance - model.data.y.array());
+    logitxb *= -1.0;
+    logitxb += 1.0;
+    logitxb.colwise() *= model.data.y.array();
+    size_n_array += logitxb;
     break;
   }
   }
@@ -1030,13 +1039,18 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
     switch(model.family.link){
   case Link::loglink:
   {
-    size_n_array = (model.data.y.array() - size_n_array)*model.data.weights*size_n_array.exp();
+    ArrayXXd narray2 = size_n_array.exp();
+    narray2.colwise() *= model.data.weights;
+    size_n_array *= -1.0;
+    size_n_array.colwise() += model.data.y.array();
+    size_n_array *= narray2;
     break;
   }
   default:
   {
-    size_n_array = model.data.y.array() - size_n_array;
-    size_n_array *= model.data.weights/model.data.var_par;
+    size_n_array *= -1.0;
+    size_n_array.colwise() += model.data.y.array();
+    size_n_array.colwise() *= model.data.weights/model.data.var_par;
     break;
   }
   }
@@ -1048,13 +1062,14 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   case Link::inverse:
   {
     size_n_array = size_n_array.inverse();
-    size_n_array -= model.data.y.array();
+    size_n_array.colwise() -= model.data.y.array();
     break;
   }
   case Link::identity:
   {
     size_n_array = size_n_array.inverse();
-    size_n_array *= (model.data.y.array()*size_n_array - ArrayXd::Ones(model.n()));
+    size_n_array.colwise() *= model.data.y.array();
+    size_n_array -= 1.0;
     break;
   }
   default:
@@ -1062,7 +1077,7 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   {
     size_n_array *= -1.0;
     size_n_array = size_n_array.exp();
-    size_n_array *= model.data.y.array();
+    size_n_array.colwise() *= model.data.y.array();
     break;
   }
   }
@@ -1070,103 +1085,30 @@ inline void glmmr::ModelMatrix<modeltype>::gradient_eta(const VectorXd &v,
   }
   case Fam::beta:
   {
-#pragma omp parallel for 
-    for(int i = 0; i < model.n(); i++){
-      size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
-      size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
-    }
-    break;
+    throw std::runtime_error("Beta is currently disabled");
+    /*#pragma omp parallel for 
+     for(int i = 0; i < model.n(); i++){
+     size_n_array(i) = exp(size_n_array(i))/(exp(size_n_array(i))+1);
+     size_n_array(i) = (size_n_array(i)/(1+exp(size_n_array(i)))) * model.data.var_par * (log(model.data.y(i)) - log(1- model.data.y(i)) - boost::math::digamma(size_n_array(i)*model.data.var_par) + boost::math::digamma((1-size_n_array(i))*model.data.var_par));
+     }
+     break;*/
   }
   case Fam::quantile: case Fam::quantile_scaled: 
-    {
-    switch(model.family.link){
-      case Link::identity:
-        // size_n_array = (model.data.y.array() - size_n_array);
-        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-        for(int i = 0; i < model.n(); i++){
-          if(size_n_array(i) <= 0){
-            size_n_array(i) *= model.family.quantile - 1;
-          } else {
-            size_n_array(i) *= model.family.quantile;
-          }
-        }
-        break;
-    case Link::loglink:
-      {
-        // ArrayXd resid = (model.data.y.array() - size_n_array.exp());
-        size_n_array = size_n_array.exp();
-        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-        for(int i = 0; i < model.n(); i++){
-          if(size_n_array(i) <= 0){
-            size_n_array(i) *= model.family.quantile - 1;
-          } else {
-            size_n_array(i) *= model.family.quantile;
-          }
-        }
-        break;
-      }
-    case Link::logit:
-    {
-      ArrayXd logitxb = size_n_array.exp();
-      logitxb += 1.0;
-      logitxb = logitxb.inverse();
-      logitxb *= size_n_array.exp();
-      //ArrayXd resid = (model.data.y.array() - logitxb);
-      logitxb *= (1+size_n_array.exp()).inverse();
-      if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-      for(int i = 0; i < model.n(); i++){
-        if(size_n_array(i) <= 0){
-          size_n_array(i) = model.family.quantile - 1;
-        } else {
-          size_n_array(i) = model.family.quantile;
-        }
-        size_n_array(i) *= logitxb(i);
-      }
-      
-      break;
-    }
-    case Link::probit:
-      {
-      ArrayXd n_array2(model.n());
-      if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-      for (int i = 0; i < model.n(); i++) {
-        n_array2(i) = glmmr::maths::gaussian_pdf(size_n_array(i)) / (glmmr::maths::gaussian_cdf(size_n_array(i)));
-        if(size_n_array(i) <= 0){
-          size_n_array(i) = model.family.quantile - 1;
-        } else {
-          size_n_array(i) = model.family.quantile;
-        }
-        size_n_array(i) *= n_array2(i);
-      }
-      break;
-      }
-    case Link::inverse:
-      {
-        ArrayXd logitxb = size_n_array.inverse();
-        logitxb *= size_n_array.inverse();
-        if(model.family.family == Fam::quantile_scaled) size_n_array *= 1.0/model.data.var_par;
-        for(int i = 0; i < model.n(); i++){
-          if(size_n_array(i) <= 0){
-            size_n_array(i) = model.family.quantile - 1;
-          } else {
-            size_n_array(i) = model.family.quantile;
-          }
-          size_n_array(i) *= logitxb(i);
-        }
-        
-        break;
-      }
-    }
+  {
+    throw std::runtime_error("Quantile is currently disabled");
     break;
-    }
   }
+  }
+  return size_n_array.matrix();
 }
 
 template<typename modeltype>
 inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
                                                             bool betapars){
+  MatrixXd vm(v.size(), 1);
+  vm.col(0) = v;
   ArrayXd size_n_array(model.n());
-  gradient_eta(v,size_n_array);
+  size_n_array = (gradient_eta(vm)).col(0).array();
   ArrayXd size_q_array = ArrayXd::Zero(Q());
   ArrayXd size_p_array = ArrayXd::Zero(P());
   SparseMatrix<double> ZLt = model.covariance.ZL_sparse();

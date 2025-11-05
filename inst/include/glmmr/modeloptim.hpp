@@ -748,9 +748,6 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   ArrayXd sigmas(niter);
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  Rcpp::Rcout << "\nNR Beta: XtWX";
-#endif
   MatrixXd XtXW = MatrixXd::Zero(P()*niter,P());
   MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
   MatrixXd X = model.linear_predictor.X();
@@ -773,39 +770,34 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   }
   
   MatrixXd XtWXm = MatrixXd::Zero(P(), P());
-  VectorXd w(model.n());
-  ArrayXd resid(model.n());
+  MatrixXd W = glmmr::maths::dhdmu(zd, model.family);
+  W = (W.array().colwise() * nvar_par).inverse();
+  W.array().colwise() *= model.data.weights;
+  MatrixXd resid = matrix.gradient_eta(re.u_);
   
-  //#pragma omp parallel
+#pragma omp parallel
   {
-    MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
-    VectorXd w_local(model.n());
-    ArrayXd resid_local(model.n());
+    MatrixXd XtWXm_private(P(), P());
     
-  //#pragma omp for nowait
+  #pragma omp for nowait
     for(int i = 0; i < niter; ++i){
-      w_local = glmmr::maths::dhdmu(zd.col(i), model.family);
-      w_local = ((w_local.array() * nvar_par).inverse() * model.data.weights).matrix();
-      
-      matrix.gradient_eta(re.u_.col(i), resid_local);
-      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * w_local.array()).matrix();
+      XtWXm_private.noalias() = X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
       if(model.family.family == Fam::poisson){
-        Wu.col(i) = resid_local.matrix();
+        Wu.col(i) = resid.col(i);
       } else {
-        Wu.col(i) =  w_local.cwiseProduct(resid_local.matrix());
+        Wu.col(i) =  W.col(i).cwiseProduct(resid.col(i));
       }
     }
     
-  //#pragma omp critical
+  #pragma omp critical
     XtWXm += XtWXm_private;
   }
   XtWXm *= (1.0 / niter);
   
   Eigen::LLT<MatrixXd> llt(XtWXm);
-  //MatrixXd XtWXm_inv = llt.solve(MatrixXd::Identity(P(), P()));
   
   VectorXd Wum = Wu.rowwise().mean();
-  VectorXd bincr = llt.solve(X.transpose() * Wum);// XtWXm_inv * X.transpose() * Wum;
+  VectorXd bincr = llt.solve(X.transpose() * Wum);
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   
   // repopulate loglikelihood history - assumes NR can 
@@ -990,23 +982,12 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
       ArrayXd sigmas(niter);
       sigmas.setZero();
       MatrixXd zd = matrix.linpred();
+      MatrixXd zdu = glmmr::maths::mod_inv_func(zd, model.family.link);
 //#pragma omp parallel for if(niter > 50)
       for(int i = 0; i < niter; ++i){
-        VectorXd zdu = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-        ArrayXd resid = (model.data.y - zdu);
+        ArrayXd resid = (model.data.y - zdu.col(i));
         resid *= model.data.weights.sqrt();
-        if(model.family.family==Fam::gaussian){
-          sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1.0);
-        } else {
-          for(int j = 0; j < resid.size(); j++){
-            if(resid(j) < 0){
-              sigmas(i) += resid(j)*(model.family.quantile - 1.0);
-            } else {
-              sigmas(i) += resid(j)*model.family.quantile;
-            }
-          }
-          sigmas(i) *= 1.0/resid.size();
-        }
+        sigmas(i) = (resid - resid.mean()).square().sum()/(resid.size()-1.0);
       }
       update_var_par(sigmas.mean());
     }
