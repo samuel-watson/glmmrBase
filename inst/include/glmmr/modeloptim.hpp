@@ -777,6 +777,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   
   Rcpp::Rcout << "\nW:\n" << W.topLeftCorner(10,10);
   Rcpp::Rcout << "\nresid:\n" << resid.topLeftCorner(10,10);
+  Rcpp::Rcout << "\nsums: " << W.leftCols(10).colwise().sum().transpose() << " " << resid.leftCols(10).colwise().sum().transpose();
   
 //#pragma omp parallel
   {
@@ -802,6 +803,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   Eigen::LLT<MatrixXd> llt(XtWXm);
   
   VectorXd Wum = Wu.rowwise().mean();
+  Rcpp::Rcout << "\nWum sum:\n" << Wum.sum();
   VectorXd bincr = llt.solve(X.transpose() * Wum);
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   
