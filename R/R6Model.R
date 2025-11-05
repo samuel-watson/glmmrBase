@@ -1436,10 +1436,10 @@ Model <- R6::R6Class("Model",
                        #' @param ... Additional arguments passed to MCML. For examples, see MCML.
                        #' @return A `mcml` model fit object
                        #' @md
-                       fit_fast = function(...){
+                       fit = function(...){
                          args <- list(...)
                          return(do.call(self$MCML,append(list(method = "mcnr2",reml= FALSE, iter.sampling = 50, 
-                                                              mcmc.pkg="analytic",tr.approx = self$n() > 2000),args)))
+                                                              mcmc.pkg="analytic"),args)))
                        },
                        #'@description
                        #' Previous implementation of Laplace Approximation
