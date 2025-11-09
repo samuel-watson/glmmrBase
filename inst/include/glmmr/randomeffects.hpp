@@ -70,15 +70,10 @@ inline VectorMatrix glmmr::RandomEffects<bits>::predict_re(const ArrayXXd& newda
                            mergedata,
                            model.covariance.colnames_);
   
-  Covariance covariancenewnew(model.covariance.form_,
-                              newdata_,
-                              model.covariance.colnames_);
-  
-  covariancenewnew.update_parameters(model.covariance.parameters_);
   covariancenew.update_parameters(model.covariance.parameters_);
   // //generate sigma
-  int newQ = covariancenewnew.Q();
-  VectorMatrix result(1);
+  int newQ = covariancenew.Q() - model.covariance.Q();
+  VectorMatrix result(newQ);
   result.vec.setZero();
   result.mat.setZero();
   MatrixXd D = covariancenew.D(false,false);
