@@ -12,9 +12,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/LU>
-#include <Eigen/Sparse>
 #endif
-
 
 #ifdef __clang__
 #define EIGEN_HAS_STD_RESULT_OF 0 // This has no effect with RcppEigen as it has Eigen <0.3.4
@@ -39,8 +37,6 @@
 #include <set>
 #include <map>
 #include <unordered_map>
-//#include <SparseChol.h>
-
 
 using namespace Eigen;
 
@@ -62,8 +58,6 @@ typedef std::pair<std::string, double> strdblpair;
 
 namespace glmmr {
 
-
-//const static intvec xvar_rpn = {0,1,4,17};
 #ifdef R_BUILD
 
 template<typename T>

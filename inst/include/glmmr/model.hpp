@@ -93,8 +93,13 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  re.zu_ = model.covariance.ZLu(re.u_);
-  // model.vcalc.data = model.covariance.ZL();
+  //MatrixXd Z = model.covariance.Z();
+  //Rcpp::Rcout << Z;
+  
+  // Rcpp::Rcout << ZL;
+  // Rcpp::Rcout << "\nu:\n" << re.u_;
+  //Rcpp::Rcout << "\nZL dim: " << Z.rows() << " " << Z.cols() << " u dim " << re.u_.rows() << " " << re.u_.cols();
+  //re.zu_ = model.covariance.ZLu(re.u_);
 }
 
 template<typename modeltype>

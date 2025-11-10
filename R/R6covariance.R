@@ -88,6 +88,8 @@ Covariance <- R6::R6Class("Covariance",
 
                           if(!is.null(parameters)){
                             self$parameters <- parameters
+                          } else {
+                            allset <- FALSE
                           }
                           if(allset) private$cov_form()
                         },

@@ -1839,11 +1839,13 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
-                             self$covariance$parameters <- runif(ncovpar)
+                             self$covariance$parameters <- runif(ncovpar,0,0.2)
                              re <- Model__re_terms(private$ptr,type)
                              paridx <- Model__parameter_fn_index(private$ptr,type)+1
                              names(self$covariance$parameters) <- re[paridx]
-                             Model__update_theta(private$ptr,self$covariance$parameters,type)
+                             self$covariance$.__enclos_env__$private$model_ptr <- private$ptr
+                             self$covariance$.__enclos_env__$private$ptr <- NULL
+                             self$covariance$.__enclos_env__$private$cov_form()
                            } else {
                              if(type == 0){
                                private$ptr <- Model__new_w_pars(form,

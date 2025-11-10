@@ -716,13 +716,6 @@ inline void glmmr::Covariance::Z_updater(){
 inline void glmmr::Covariance::update_parameters_in_calculators(){
   for(int i = 0; i < B_; i++){
     calc_[i].update_parameters(parameters_);
-    // dblvec par_for_calc;
-    // for(unsigned int j = 0; j < re_pars_[i].size(); j++){
-    //   for(unsigned int k = 0; k < re_pars_[i][j].size(); k++){
-    //     par_for_calc.push_back(parameters_[re_pars_[i][j][k]]);
-    //   }
-    // }
-    // calc_[i].parameters = par_for_calc;
   }
 }
 
@@ -980,9 +973,6 @@ inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
 }
 
 inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  Rcpp::Rcout << "\nLu() fn";
-#endif
   return matL.productL(u);
 }
 
@@ -1088,8 +1078,7 @@ inline void glmmr::Covariance::make_sparse(){
   }
   
   matD.setFromTriplets(tripletList.begin(), tripletList.end());
-  
-  
+  matL.compute(matD);
   sparse_initialised = true;
 };
 
