@@ -953,7 +953,7 @@ inline BoxResults glmmr::ModelMatrix<modeltype>::box(){
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
   
-  ArrayXXd size_n_array(v.rows(), v.cols());
+  ArrayXXd size_n_array(model.n(), v.cols());
   size_n_array.setZero();
   if(size_n_array.rows() != model.n())throw std::runtime_error("Size n array != n");
   size_n_array.colwise() += model.xb();
