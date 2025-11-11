@@ -774,7 +774,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   W = (W.array().colwise() * nvar_par).inverse();
   W.array().colwise() *= model.data.weights;
   MatrixXd resid = matrix.gradient_eta(re.u_);
-
+  
   #pragma omp parallel
   {
     MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
@@ -787,13 +787,13 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
       } else {
         Wu.col(i) =  W.col(i).cwiseProduct(resid.col(i));
       }
+      //Wu.col(i) =  W.col(i).cwiseProduct(resid.col(i));
     }
     
   #pragma omp critical
     XtWXm += XtWXm_private;
   }
   XtWXm *= (1.0 / niter);
-  
   Eigen::LLT<MatrixXd> llt(XtWXm);
   VectorXd Wum = Wu.rowwise().mean();
   VectorXd bincr = llt.solve(X.transpose() * Wum);

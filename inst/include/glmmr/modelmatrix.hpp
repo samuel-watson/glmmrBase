@@ -958,25 +958,27 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
   if(size_n_array.rows() != model.n())throw std::runtime_error("Size n array != n");
   size_n_array.colwise() += model.xb();
   SparseMatrix<double> ZL = model.covariance.ZL_sparse();
+  if(ZL.cols() != v.rows())throw std::runtime_error("ZL cols != v rows");
   size_n_array += (ZL * v).array();
   
   switch(model.family.family){
   case Fam::poisson:
   {
     switch(model.family.link){
-  case Link::identity:
-  {
-    size_n_array = size_n_array.inverse();
-    size_n_array = size_n_array.colwise() * model.data.y.array();
-    size_n_array -= 1.0;
-    break;
-  }
-  default:
-  {
-    size_n_array = size_n_array.exp();
-    size_n_array = model.data.y.array() - size_n_array;
-    break;
-  }
+      case Link::identity:
+      {
+        size_n_array = size_n_array.inverse();
+        size_n_array = size_n_array.colwise() * model.data.y.array();
+        size_n_array -= 1.0;
+        break;
+      }
+      default:
+      {
+        size_n_array = size_n_array.exp();
+        size_n_array.colwise() += -1.0 * model.data.y.array();
+        size_n_array *= -1.0;
+        break;
+      }
   }
     break;
   }
