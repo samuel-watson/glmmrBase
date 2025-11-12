@@ -787,7 +787,6 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
       } else {
         Wu.col(i) =  W.col(i).cwiseProduct(resid.col(i));
       }
-      //Wu.col(i) =  W.col(i).cwiseProduct(resid.col(i));
     }
     
   #pragma omp critical

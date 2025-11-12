@@ -41,107 +41,43 @@ inline bool any_match(T t, Vals ...vals)
 
 class CovarianceLLT {
 public:
-  SimplicialLLT<SparseMatrix<double> > matL;
-  LLT<MatrixXd>                        matLD;
+  LLT<MatrixXd>                        matL;
   
-  CovarianceLLT(const SparseMatrix<double>& matD){
+  CovarianceLLT(const MatrixXd& matD){
     compute(matD);
   }
   
   CovarianceLLT(){};
   
   VectorXd solve(const VectorXd& x) const {
-    if(sufficient_sparse){
-      return matL.solve(x);
-    } else {
-      return matLD.solve(x);
-    }
+    return matL.solve(x);
   }
   
   MatrixXd solve(const MatrixXd& x) const {
-    if(sufficient_sparse){
-      return matL.solve(x);
-    } else {
-      return matLD.solve(x);
-    }
+    return matL.solve(x);
   }
   
   MatrixXd matrixL() const {
-    if(sufficient_sparse){
-      return MatrixXd(matL.matrixL());
-    } else {
-      return MatrixXd(matLD.matrixL());
-    }
+    return matL.matrixL();
   }
   
   MatrixXd productR(const MatrixXd& Z) const {
-    if(sufficient_sparse){
-      return Z * matL.matrixL();
-    } else {
-      return Z * matLD.matrixL();
-    }
+    return Z * matL.matrixL();
   }
   
   MatrixXd productL(const MatrixXd& Z) const {
-    if(sufficient_sparse){
-      return matL.matrixL() * Z;
-    } else {
-      return matLD.matrixL() * Z;
-    }
+    return matL.matrixL() * Z;
   }
   
   SparseMatrix<double> productR(const SparseMatrix<double>& Z) const {
-    if(sufficient_sparse){
-      return Z * matL.matrixL();
-    } else {
-      MatrixXd L(matLD.matrixL()); 
-      SparseMatrix<double> LS = L.sparseView();
-      return Z * LS;
-    }
-  }
-  
-  void compute(const SparseMatrix<double>& matD){
-    if(!initialized){
-      int nnz = matD.nonZeros();
-      // if the nnz is high then just use the dense matrix methods!
-      if(nnz > 0.9 * matD.rows() * matD.cols()){
-        matLD.compute(MatrixXd(matD));
-        sufficient_sparse = false;
-      } else {
-        matL.compute(matD);
-        sufficient_sparse = true;
-      }
-    } else {
-      if(sufficient_sparse){
-        matL.compute(matD);
-      } else {
-        matLD.compute(MatrixXd(matD));
-      }
-    }
+    MatrixXd L = MatrixXd(matL.matrixL());
+    SparseMatrix<double> LS = L.sparseView();
+    return Z * LS;
   }
   
   void compute(const MatrixXd& matD){
-    if(!initialized){
-      int nnz = matD.nonZeros();
-      if(nnz > 0.9 * matD.rows() * matD.cols()){
-        matLD.compute(matD);
-        sufficient_sparse = false;
-      } else {
-        matL.compute(matD.sparseView());
-        sufficient_sparse = true;
-      }
-    } else {
-      if(sufficient_sparse){
-        matL.compute(matD.sparseView());
-      } else {
-        matLD.compute(matD);
-      }
-    }
+    matL.compute(matD);
   }
-  
-private:
-  bool sufficient_sparse;
-  bool initialized = false;
 };
 
 class TraceEstimator {
@@ -272,7 +208,7 @@ protected:
   intvec                              z_;
   int                                 Q_;
   SparseMatrix<double>                matZ;
-  SparseMatrix<double>                matD;
+  MatrixXd                            matD;
   int                                 n_;
   int                                 B_;
   int                                 npars_;
@@ -1045,8 +981,6 @@ inline void glmmr::Covariance::make_sparse(){
   double val;
   int col_counter=0;
   matD.setZero();
-  typedef Eigen::Triplet<double> T;
-  std::vector<T> tripletList;
   bool compact_fn;
   int compact_col;
   
@@ -1061,23 +995,30 @@ inline void glmmr::Covariance::make_sparse(){
       compact_col++;
     }
     dim = block_dim(b);
-    for(int i = 0; i < dim; i++){
-      for(int j = 0; j < (i+1); j++){
-        val = get_val(b,i,j);
-        if(compact_fn && i!=j){
-          double dist = calc_[b].get_covariance_data(i,j,compact_col);
-          if(dist >= 1)val = 0;
-        }
-        if(val!=0){
-          tripletList.push_back(T(col_counter+i,col_counter+j,val));
-          if(i != j) tripletList.push_back(T(col_counter+j,col_counter+i,val));
-        }
+    
+#pragma omp parallel for 
+    for (int idx = 1; idx <= dim * (dim + 1) / 2; idx++) {
+      double p = (sqrt(8.0 * idx + 1) - 1) / 2;
+      int i = (int)p;
+      int j;
+      if (i == p) {
+        i--;
+        j = i;
       }
+      else {
+        j = idx - i * (i + 1) / 2 - 1;
+      }
+      val = get_val(b, i, j);
+      if (compact_fn && i != j) {
+        double dist = calc_[b].get_covariance_data(i, j, compact_col);
+        if (dist >= 1)val = 0;
+      }
+      matD(col_counter + i, col_counter + j) = val;
+      if (i != j) matD(col_counter + j, col_counter + i) = val;
     }
+    
     col_counter += dim;
   }
-  
-  matD.setFromTriplets(tripletList.begin(), tripletList.end());
   matL.compute(matD);
   sparse_initialised = true;
 };
@@ -1089,22 +1030,16 @@ inline void glmmr::Covariance::set_sparse(bool sparse){
 }
 
 inline void glmmr::Covariance::update_ax(){
-  for (int k=0; k<matD.outerSize(); ++k)
-    for (SparseMatrix<double>::InnerIterator it(matD,k); it; ++it)
-    {
-      it.valueRef() = get_val(it.row(),it.col());
-    }
-    
-    matL.compute(matD);
+  make_sparse();
 };
 
 inline MatrixXd glmmr::Covariance::D_sparse_builder(bool chol,
                                                     bool upper){
   MatrixXd D = MatrixXd::Zero(Q_,Q_);
   if(!chol){
-    D = MatrixXd(matD);//sparse_to_dense(spchol.A_,true);
+    D = matD;//sparse_to_dense(spchol.A_,true);
   } else {
-    D = MatrixXd(matL.matrixL());//sparse_to_dense(matL,false);
+    D = matL.matrixL();//sparse_to_dense(matL,false);
   }
   return D;
 }
@@ -1219,24 +1154,35 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
     std::vector<MatrixXd> S;
     for(int i = 0; i < npars; i++)
     {
-      MatrixXd detmat2 = matL.solve(derivs[i+1]);
-      grad(i) = -0.5 * detmat2.trace();
-      S.push_back(detmat2);
+      S.emplace_back(derivs[i + 1].rows(), derivs[i + 1].cols());
+      S[i] = matL.solve(derivs[i+1]);
+      grad(i) = -0.5 * S[i].trace();
     }
-    dblvec dqf_local(npars, 0.0);
-    dblvec v_buffer_local(Q_);
-    MatrixXd vmat = matL.solve(umat);
     
-    for(int i = 0; i < niter; i++)
+    MatrixXd vmat = matL.solve(umat);
+    VectorXd dqf_global = VectorXd::Zero(npars);
+    
+#pragma omp parallel
     {
-      double qf = vmat.col(i).dot(umat.col(i));
-      logl(i) += -0.5 * qf;
-      for(int j = 0; j < npars; j++) dqf_local[j] +=  umat.col(i).dot(S[j] * vmat.col(i));
+      VectorXd dqf_thread = VectorXd::Zero(npars);
+  
+#pragma omp for 
+      for (int i = 0; i < niter; i++)
+      {
+        double qf = vmat.col(i).dot(umat.col(i));
+        logl(i) += -0.5 * qf;
+        for (int j = 0; j < npars; j++)
+          dqf_thread(j) += umat.col(i).dot(S[j] * vmat.col(i)); 
+      }
+  
+#pragma omp critical
+      dqf_global += dqf_thread;
     }
-    for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
-    // Accumulate gradient contributions
+
+
+    for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
     const double niter_inv = 1.0 / (double)niter;
-    for(int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
+    for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
     // Compute Hessian approximation
     MatrixXd M(npars, npars);
     for(int j = 0; j < npars; j++) {
@@ -1276,33 +1222,41 @@ inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,
     Rcpp::Rcout << "\nPar indexes: ";
     for(const auto& i: par_index)Rcpp::Rcout << i << " ";
 #endif
-    //added conditional parallelisation for large blocks
-    dblvec out(matrix_n);
-//#pragma omp parallel for if(block_dimension > 50) private(out)
-    for(int i = 0; i < block_dimension; i++){
-      for(int j = i; j < block_dimension; j++){
-        if(order == 1){
-          out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,j,0,0);
-        } else {
-          out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,j,0,0);
-        }
-        derivs[0](block_count+i,block_count+j) = out[0];
-        if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];
-        int index_count = R_block + 1;
-        for(int k = 0; k < R_block; k++){
-          derivs[par_index[k]+1](block_count+i,block_count+j) = out[k+1];
-          if(i!=j)derivs[par_index[k]+1](block_count+j,block_count+i) = out[k+1];
-          //second order derivatives
-          if(order >= 2){
-            for(int l=k; l < R_block; l++){
-              int second_pos = par_index[l]*(R-1) - par_index[l]*(par_index[l]-1)/2 + par_index[k];
-              derivs[R+1+second_pos](block_count+i,block_count+j) = out[index_count];
-              if(i!=j)derivs[R+1+second_pos](block_count+j,block_count+i) = out[index_count];
-              index_count++;
-            }
+#pragma omp parallel for 
+    for (int idx = 1; idx <= block_dimension * (block_dimension + 1) / 2; idx++) {
+      dblvec out(matrix_n);
+      double p = (sqrt(8.0 * idx + 1) - 1) / 2;
+      int i = (int)p;
+      int j;
+      if (i == p) {
+        i--;
+        j = i;
+      }
+      else {
+        j = idx - i * (i + 1) / 2 - 1;            
+      }
+      if(order == 1){
+        out = calc_[b].calculate<CalcDyDx::BetaFirst>(i,j,0,0);
+      } else {
+        out = calc_[b].calculate<CalcDyDx::BetaSecond>(i,j,0,0);
+      }
+      derivs[0](block_count+i,block_count+j) = out[0];
+      if(i!=j)derivs[0](block_count+j,block_count+i) = out[0];
+      int index_count = R_block + 1;
+      for(int k = 0; k < R_block; k++){
+        derivs[par_index[k]+1](block_count+i,block_count+j) = out[k+1];
+        if(i!=j)derivs[par_index[k]+1](block_count+j,block_count+i) = out[k+1];
+        //second order derivatives
+        if(order >= 2){
+          for(int l=k; l < R_block; l++){
+            int second_pos = par_index[l]*(R-1) - par_index[l]*(par_index[l]-1)/2 + par_index[k];
+            derivs[R+1+second_pos](block_count+i,block_count+j) = out[index_count];
+            if(i!=j)derivs[R+1+second_pos](block_count+j,block_count+i) = out[index_count];
+            index_count++;
           }
         }
       }
+      
     }
     block_count += block_dimension;
   }
