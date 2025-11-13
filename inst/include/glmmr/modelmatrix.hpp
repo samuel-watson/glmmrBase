@@ -975,8 +975,10 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
       default:
       {
         size_n_array = size_n_array.exp();
+        ArrayXXd expmu(size_n_array);
         size_n_array.colwise() += -1.0 * model.data.y.array();
         size_n_array *= -1.0;
+        size_n_array = size_n_array/expmu;
         break;
       }
   }
@@ -1021,10 +1023,11 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
   default:
     //logit
   {
-    ArrayXXd logitxb = size_n_array.exp();
-    logitxb += 1.0;
-    logitxb = logitxb.inverse();
-    logitxb *= size_n_array.exp();
+    ArrayXXd logitxb = (size_n_array.exp().inverse() + 1.0).inverse();
+    // size_n_array = logitxb;
+    // size_n_array.colwise() += model.data.variance * model.data.y.array();
+    // size_n_array *= -1.0;
+    // size_n_array = size_n_array / ()
     size_n_array = logitxb;
     size_n_array.colwise() *= (model.data.variance - model.data.y.array());
     logitxb *= -1.0;

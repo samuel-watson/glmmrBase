@@ -57,5 +57,9 @@ public:
     if(! (family == Fam::quantile || family == Fam::quantile_scaled)) throw std::runtime_error("Quantile only relevant for quantile family");
     quantile = q;
   }
+  
+  bool canonical() const {
+    return (family == Fam::gaussian && link == Link::identity) || (family == Fam::poisson && link == Link::loglink) || (family == Fam::bernoulli && link == Link::logit) || (family == Fam::binomial && link == Link::logit);
+  }
 };
 }

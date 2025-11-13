@@ -382,6 +382,34 @@ inline Eigen::VectorXd detadmu(const Eigen::VectorXd& xb,
   return wdiag;
 }
 
+inline Eigen::MatrixXd detadmu(const Eigen::MatrixXd& xb,
+                               const Link link) {
+  Eigen::MatrixXd wdiag(xb.rows(), xb.cols());
+  
+  switch (link) {
+  case Link::loglink:
+    wdiag = xb.inverse().matrix();
+    break;
+  case Link::identity:
+    wdiag.setConstant(1.0);
+    break;
+  case Link::logit:
+    wdiag = (xb.array() * (1.0 - xb.array())).inverse().matrix();
+    break;
+  case Link::probit:
+  {
+    wdiag = (xb.inverse()).matrix();
+    break;
+  }
+  case Link::inverse:
+    wdiag = xb.array().square().matrix();
+    wdiag *= -1.0;
+    break;
+    
+  }
+  return wdiag;
+}
+
 inline double normalCDF(double value)
 {
   return 0.5 * erfc(-value * sqrt(0.5));
