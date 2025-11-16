@@ -836,9 +836,9 @@ inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, co
   meang *= 1.0/gradient_history.size();
   double diff = quantile == 0 ? 10 : meang - quantile;
   
-  Rcpp::Rcout << "\nGradients: " << gradients.transpose() << " | ||G|| = " << gradients.matrix().norm();
+  if(trace > 0)Rcpp::Rcout << "\nGradients: " << gradients.transpose() << " | ||G|| = " << gradients.matrix().norm();
   //Rcpp::Rcout << "\nmeang: " << meang << " varg " << varg << " sdg: " << sdg << " cv: " << sdg/meang;
-  Rcpp::Rcout << "\nLog-likelihood running mean: " << meang << " (old " << quantile << ") diff: " << diff;
+  if(trace > 0)Rcpp::Rcout << "\nLog-likelihood running mean: " << meang << " (old " << quantile << ") diff: " << diff;
   quantile = meang;
   return diff < tol;
 }
