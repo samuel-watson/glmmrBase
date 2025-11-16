@@ -1840,6 +1840,8 @@ Model <- R6::R6Class("Model",
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
                              self$covariance$parameters <- runif(ncovpar,0,0.2)
+                             Model__update_theta(private$ptr,self$covariance$parameters,type)
+                             #Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type)
                              re <- Model__re_terms(private$ptr,type)
                              paridx <- Model__parameter_fn_index(private$ptr,type)+1
                              names(self$covariance$parameters) <- re[paridx]
@@ -1881,7 +1883,7 @@ Model <- R6::R6Class("Model",
                            Model__set_var_par(private$ptr,self$var_par,type)
                            if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials,type)
                            if(self$family[[1]] %in% c("quantile","quantile_scaled")) Model__set_quantile(private$ptr,self$family$q,type)
-                           Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type) # initialise random effects to random
+                           #Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type) # initialise random effects to random
                            if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)
                            # set covariance pointer
                            self$covariance$.__enclos_env__$private$model_ptr <- private$ptr

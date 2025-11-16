@@ -57,6 +57,10 @@ public:
     return matL.solve(x);
   }
   
+  void solveInPlace(MatrixXd& x) const {
+    matL.solveInPlace(x);
+  }
+  
   MatrixXd matrixL() const {
     return matL.matrixL();
   }
@@ -179,6 +183,7 @@ public:
   virtual MatrixXd  ZL();
   virtual MatrixXd  ZLu(const MatrixXd& u);
   virtual MatrixXd  Lu(const MatrixXd& u);
+  virtual MatrixXd  Zu(const MatrixXd& u);
   virtual void      set_sparse(bool sparse);
   bool              any_group_re() const;
   bool              all_group_re() const;
@@ -216,7 +221,6 @@ protected:
   VectorXd                            zquad;
   bool                                isSparse = true;
   CovarianceLLT                       matL;
-  //SparseChol                          spchol;
   
   // functions
   void                            update_parameters_in_calculators();
@@ -912,6 +916,10 @@ inline MatrixXd glmmr::Covariance::Lu(const MatrixXd& u){
   return matL.productL(u);
 }
 
+inline MatrixXd glmmr::Covariance::Zu(const MatrixXd& u){
+  return matL.productL(u);
+}
+
 inline double glmmr::Covariance::log_likelihood(const VectorXd &u){
   //if(parameters_.size()==0)throw std::runtime_error("no covariance parameters, cannot calculate log likelihood");
   double logdet_val=0.0;
@@ -1110,11 +1118,8 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
   logl.setZero();
   
   if(!isSparse)make_sparse();
-  
-  // Compute log determinant
   logdet_val = log_determinant();
   logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
-  // Convert to dense once
   
   if(tr_approx){
     TraceEstimator trace;
@@ -1131,14 +1136,11 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, bool
       VectorXd v = matL.solve(ucol);
       double qf = v.dot(ucol);
       logl(i) += -0.5 * qf;
-      // trace(v*v^T * A) = v^T * A * v
       for(int j = 0; j < npars; j++) dqf_local[j] +=  v.dot(derivs[j+1] * v);// zzquad.dot(derivs[j+1] * zzquad);
     }
     for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
-    // Accumulate gradient contributions
     double niter_inv = 1.0 / (double)niter;
     for(int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
-    // Compute Hessian approximation
     MatrixXd M(npars, npars);
     for(int j = 0; j < npars; j++) {
       for(int k = j; k < npars; k++) {

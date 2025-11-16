@@ -21,25 +21,26 @@ public:
   MatrixXd    u_;
   MatrixXd    scaled_u_;
   MatrixXd    zu_;
+  VectorXd    u_mean_;
   modeltype&  model;
   int         mcmc_block_size = 1; // for saem
   
   RandomEffects(modeltype& model_) : 
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     scaled_u_(MatrixXd::Zero(model_.covariance.Q(),1)),
-    zu_(model_.n(),1), model(model_) {};
+    zu_(model_.n(),1), u_mean_(VectorXd::Zero(model_.covariance.Q())), model(model_) {};
   
   RandomEffects(modeltype& model_, int n, int Q) : 
     u_(MatrixXd::Zero(Q,1)),
     scaled_u_(MatrixXd::Zero(Q,1)),
-    zu_(n,1), model(model_) {};
+    zu_(n,1), u_mean_(Q), model(model_) {};
   
-  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), zu_(re.zu_), model(re.model) {};
+  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), zu_(re.zu_), u_mean_(re.u_mean_), model(re.model) {};
   
   MatrixXd      Zu(){return zu_;};
   MatrixXd      u(bool scaled = true);
   VectorMatrix  predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
-  
+  void          update_zu();
 };
 
 }
@@ -51,6 +52,15 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
   } else {
     return u_;
   }
+}
+
+template<typename modeltype>
+inline void glmmr::RandomEffects<modeltype>::update_zu(){
+  scaled_u_ = model.covariance.Lu(u_);
+  VectorXd umat_means = scaled_u_.colwise().mean();
+  for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
+  MatrixXd Z = model.covariance.Z();
+  zu_ = Z * scaled_u_;
 }
 
 template<>
@@ -155,3 +165,4 @@ inline VectorMatrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd& 
   result.mat.array() *= (1/(double)iter);
   return result;
 }
+

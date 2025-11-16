@@ -745,128 +745,11 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   previous_ll_values.first = current_ll_values.first;
   previous_ll_var.first = current_ll_var.first;
   
-  // int niter = re.u(false).cols();
-  // MatrixXd zd = matrix.linpred();
-  // ArrayXXd ymod(zd.rows(),zd.cols());
-  // MatrixXd W_(zd.rows(),zd.cols());
-  // W_.setZero();
-  // 
-  // switch(model.family.family){
-  // case Fam::gaussian: 
-  //   if(model.family.link == Link::identity){
-  //     W_.colwise() += (model.data.variance.inverse() *  model.data.weights).matrix();
-  //   } else {
-  //     throw std::runtime_error("Analtyic posterior only available with canonical link");
-  //   }
-  //   break;
-  // case Fam::binomial: case Fam::bernoulli:
-  //   if(model.family.link == Link::logit){
-  //     ArrayXXd logitp = (zd.array().exp().inverse() + 1.0).inverse();
-  //     logitp.colwise() *= model.data.variance;
-  //     W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-  //     ymod.setZero();
-  //     ymod.colwise() += model.data.y.array();
-  //     ymod -= logitp;
-  //     ymod *= W_.array().inverse();
-  //     ymod += zd.array();
-  //     
-  //   } else {
-  //     throw std::runtime_error("Analtyic posterior only available with canonical link");
-  //   }
-  //   break;
-  // case Fam::poisson:
-  //   if(model.family.link == Link::loglink){
-  //     W_ = zd.array().exp().matrix();
-  //     ymod.setZero();
-  //     ymod.colwise() += model.data.y.array();
-  //     ymod -= zd.array().exp();
-  //     ymod *= W_.array().inverse();
-  //     ymod += zd.array();
-  //   } else {
-  //     throw std::runtime_error("Analtyic posterior only available with canonical link");
-  //   }
-  //   break;
-  // default:
-  //   throw std::runtime_error("Analtyic posterior only available with Gaussian, Poisson, and Binomial");
-  // break;
-  // }
-  // 
-  // 
-  // MatrixXd X = model.linear_predictor.X();
-  // const int n_cols = X.cols();
-  // VectorXd Mb(n_cols);
-  // LLT<MatrixXd> llt_Pb;
-  // 
-  // if(model.family.family == Fam::gaussian) {
-  //   // Use colwise multiplication (faster than diagonal matrix)
-  //   MatrixXd WX = (X.array().colwise() * W_.col(0).array()).matrix();
-  //   MatrixXd Pb = X.transpose() * WX;
-  //   VectorXd yb = WX.transpose() * (model.data.y - re.zu_.rowwise().mean());
-  //   llt_Pb.compute(Pb);
-  //   Mb = llt_Pb.solve(yb);
-  // } else {
-  //   // // Initial setup
-  //   VectorXd b = model.linear_predictor.parameter_vector(); 
-  //   VectorXd bnew(b);
-  //   MatrixXd LWL(n_cols,n_cols);
-  //   MatrixXd Wu = MatrixXd::Zero(model.n(),niter);
-  //   VectorXd yb(b.size());
-  //   double diff = 1.0;
-  //   int itero = 0;
-  //   
-  //   while(diff > 1e-6 && itero < 10) {
-  //     zd = re.zu_;
-  //     zd.colwise() += X * b;
-  //     LWL.setZero();
-  //     if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
-  //       ArrayXXd logitp = (zd.array().exp().inverse() + 1.0).inverse();
-  //       logitp.colwise() *= model.data.variance;
-  //       W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-  //       ymod.setZero();
-  //       ymod.colwise() += model.data.y.array();
-  //       ymod -= logitp;
-  //       ymod *= W_.array().inverse();
-  //       ymod += zd.array();
-  //       
-  //     } else if(model.family.family == Fam::poisson) {
-  //       W_ = zd.array().exp().matrix();
-  //       ymod.setZero();
-  //       ymod.colwise() += model.data.y.array();
-  //       ymod -= zd.array().exp();
-  //       ymod *= W_.array().inverse();
-  //       ymod += zd.array();
-  //     }
-  //     // Recompute with updated weights
-  //     #pragma omp parallel
-  //     {
-  //       MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
-  // 
-  //     #pragma omp for nowait
-  //       for(int i = 0; i < niter; ++i){
-  //         XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W_.col(i).array()).matrix();
-  //         Wu.col(i) =  W_.col(i).cwiseProduct(ymod.col(i).matrix() - re.zu_.col(i));
-  //       }
-  // 
-  //     #pragma omp critical
-  //       LWL += XtWXm_private;
-  //     }
-  //     LWL *= (1.0 / niter);
-  //     yb = X.transpose() * Wu.rowwise().mean();
-  //     llt_Pb.compute(LWL);
-  //     bnew = llt_Pb.solve(yb);
-  //     diff = (b - bnew).array().abs().maxCoeff();
-  //     itero++;
-  //     b = bnew;
-  //   }
-  //   
-  //   Mb = b;
-  // }
-  // update_beta(Mb);
-  
   int niter = re.u(false).cols();
-  MatrixXd zd = matrix.linpred();
-  ArrayXd sigmas(niter);
-  MatrixXd XtXW = MatrixXd::Zero(P()*niter,P());
+  //MatrixXd zd = matrix.linpred();
+  MatrixXd zd(model.n(),1);
+  zd.col(0) = model.linear_predictor.xb()+model.data.offset;
+  zd.col(0) += model.covariance.ZLu(re.u_mean_);
   MatrixXd X = model.linear_predictor.X();
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
@@ -906,21 +789,22 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     }
     resid *= (1.0 / niter);
   } else {
-    resid = model.data.y - zd.rowwise().mean();
+    resid = model.data.y - zd.col(0);//rowwise().mean();
   }
 
-  #pragma omp parallel
-  {
-    MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
-  #pragma omp for nowait
-    for(int i = 0; i < niter; ++i){
-      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
-    }
-  #pragma omp critical
-    XtWXm += XtWXm_private;
-  }
-  
-  XtWXm *= (1.0 / niter);
+  // #pragma omp parallel
+  // {
+  //   MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
+  // #pragma omp for nowait
+  //   for(int i = 0; i < niter; ++i){
+  //     XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
+  //   }
+  // #pragma omp critical
+  //   XtWXm += XtWXm_private;
+  // }
+  // 
+  // XtWXm *= (1.0 / niter);
+  XtWXm = X.transpose() * (X.array().colwise() * W.col(0).array()).matrix();
   Eigen::LLT<MatrixXd> llt(XtWXm);
   VectorXd bincr = llt.solve(X.transpose() * resid);
   update_beta(model.linear_predictor.parameter_vector() + bincr);
@@ -935,10 +819,9 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(bool tr_approx){
   if(ll_current.rows() != re.u_.cols())ll_current.resize(re.u_.cols(),NoChange);
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
-  
-  re.scaled_u_ = model.covariance.Lu(re.u_);  
   ArrayXd  tmp(ll_current.rows());
   model.covariance.nr_step(re.scaled_u_, tmp, tr_approx);
+  re.update_zu();
   ll_current.col(1) = tmp;
   current_ll_values.second = ll_current.col(1).mean();
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
@@ -1077,7 +960,6 @@ inline void glmmr::ModelOptim<modeltype>::calculate_var_par(){
     if(control.reml){
       // using Diffey 2017
       // generate_czz();
-      re.zu_ = model.covariance.ZLu(re.u_);
       VectorXd resid = (model.data.y - re.zu_.col(0));
       MatrixXd X = model.linear_predictor.X();
       MatrixXd XW = X;

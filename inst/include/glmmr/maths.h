@@ -125,29 +125,29 @@ inline Eigen::MatrixXd mod_inv_func(const Eigen::MatrixXd& muin,
   return mu;
 }
 
-inline Eigen::VectorXd mod_inv_func(const Eigen::VectorXd& muin,
-                                    Link link)
-{
-  Eigen::VectorXd mu(muin);
-  switch (link) {
-  case Link::logit:
-    mu = (mu.array().exp() / (1 + mu.array().exp())).matrix();
-    break;
-  case Link::loglink:
-    mu = mu.array().exp().matrix();
-    break;
-  case Link::probit:
-    mu.unaryExpr(&gaussian_cdf);
-    //mu = gaussian_cdf_vec(mu);
-    break;
-  case Link::identity:
-    break;
-  case Link::inverse:
-    mu = mu.array().inverse().matrix();
-    break;
-  }
-  return mu;
-}
+// inline Eigen::VectorXd mod_inv_func(const Eigen::VectorXd& muin,
+//                                     Link link)
+// {
+//   Eigen::VectorXd mu(muin);
+//   switch (link) {
+//   case Link::logit:
+//     mu = (mu.array().exp() / (1 + mu.array().exp())).matrix();
+//     break;
+//   case Link::loglink:
+//     mu = mu.array().exp().matrix();
+//     break;
+//   case Link::probit:
+//     mu.unaryExpr(&gaussian_cdf);
+//     //mu = gaussian_cdf_vec(mu);
+//     break;
+//   case Link::identity:
+//     break;
+//   case Link::inverse:
+//     mu = mu.array().inverse().matrix();
+//     break;
+//   }
+//   return mu;
+// }
 
 inline double mod_inv_func(const double& muin,
                            Link link)

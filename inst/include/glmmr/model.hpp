@@ -93,19 +93,15 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  //MatrixXd Z = model.covariance.Z();
-  //Rcpp::Rcout << Z;
-  
-  // Rcpp::Rcout << ZL;
-  // Rcpp::Rcout << "\nu:\n" << re.u_;
-  //Rcpp::Rcout << "\nZL dim: " << Z.rows() << " " << Z.cols() << " u dim " << re.u_.rows() << " " << re.u_.cols();
-  //re.zu_ = model.covariance.ZLu(re.u_);
+  re.update_zu();
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::reset_u(){
   re.u_.resize(model.covariance.Q(),1);
   re.u_.setZero();
+  re.scaled_u_.resize(model.covariance.Q(),1);
+  re.scaled_u_.setZero();
   re.zu_.resize(NoChange,1);
   re.zu_.setZero();
 }
@@ -130,6 +126,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.scaled_u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;
     optim.ll_current.resize(currcolsize + newcolsize,NoChange);
   } else {
@@ -139,13 +136,15 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
       #endif
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
+      re.scaled_u_.resize(NoChange,newcolsize);
     }
     re.u_ = u_;
     if(re.u_.cols() != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
   }
-  MatrixXd ZL = model.covariance.ZL();
+  MatrixXd Z = model.covariance.Z();
   if(re.zu_.rows() != model.n())re.zu_.resize(model.n(),NoChange);
-  re.zu_ = model.covariance.ZLu(re.u_);
+  if(re.scaled_u_.rows() != re.u_.rows())re.scaled_u_.resize(re.u_.rows(),NoChange);
+  re.update_zu();
 }
 
 template<typename modeltype>
