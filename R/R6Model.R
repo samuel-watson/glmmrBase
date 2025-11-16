@@ -997,6 +997,8 @@ Model <- R6::R6Class("Model",
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
                                        tr.approx = FALSE,
+                                       cv.tol = 0,
+                                       cv.hist = 10,
                                        conv.criterion = 2,
                                        skip.theta = FALSE,
                                        constr.zero = 1){
@@ -1038,7 +1040,7 @@ Model <- R6::R6Class("Model",
                          if(self$family[[1]]%in%c("quantile","quantile_scaled") & method == "mcnr")stop("MCNR with quantile currently disabled, please use SAEM or MCEM with MCML")
                          append_u <- FALSE
                          adaptive <- method %in% c("mcnr.adapt","mcem.adapt")
-                         if(!conv.criterion %in% 1:4)stop("Convergence criterion must be 1, 2, or 3")
+                         if(!conv.criterion %in% 1:5)stop("Convergence criterion must be 1-5")
                          if(alpha < 0.5 | alpha >= 1)stop("alpha must be in [0.5, 1)")
                          if(convergence.prob <= 0 | convergence.prob >= 1)stop("Convergence probability must be in (0, 1)")
                          if(self$family[[1]]%in%c("quantile","quantile_scaled")){
@@ -1271,6 +1273,10 @@ Model <- R6::R6Class("Model",
                                prob.convergedt <- pnorm(-udiagnostic$second/sqrt(llvart/(n_mcmc_sampling*nmult)))
                                converged <- conv.criterion.value < 0 & conv.criterion.valuet < 0
                              }
+                             if(conv.criterion == 5){
+                               conv.criterion.value <- 0
+                               converged <- Model__check_convergence(private$ptr, cv.tol, cv.hist, private$model_type())
+                             }
                            }
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
                            
@@ -1287,7 +1293,7 @@ Model <- R6::R6Class("Model",
                              if(iter>1){
                                cat("\nLog-lik diff values: ", round(udiagnostic$first,5),", ", round(udiagnostic$second,5)," overall: ", round(Reduce(sum,udiagnostic), 5))
                                cat("\nLog-lik variance: ", round(llvar,5))
-                               if(conv.criterion >= 2)cat(" convergence criterion:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob.: ",round(prob.converged,3))
+                               if(conv.criterion >= 2 & conv.criterion!=5)cat(" convergence criterion:", ifelse(conv.criterion == 4, " (beta) "," "), round(conv.criterion.value,5)," Prob.: ",round(prob.converged,3))
                                if(conv.criterion == 4)cat(" (theta) ", round(conv.criterion.valuet,5)," Prob.: ",round(prob.convergedt,3))
                              }
                              cat("\n",Reduce(paste0,rep("-",40)),"\n")

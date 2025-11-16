@@ -859,6 +859,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__check_convergence
+SEXP Model__check_convergence(SEXP xp, double tol, int hist, int type);
+RcppExport SEXP _glmmrBase_Model__check_convergence(SEXP xpSEXP, SEXP tolSEXP, SEXP histSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type hist(histSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__check_convergence(xp, tol, hist, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__D
 SEXP Model__D(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__D(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1695,6 +1709,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 3},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
+    {"_glmmrBase_Model__check_convergence", (DL_FUNC) &_glmmrBase_Model__check_convergence, 4},
     {"_glmmrBase_Model__D", (DL_FUNC) &_glmmrBase_Model__D, 2},
     {"_glmmrBase_Model__log_re", (DL_FUNC) &_glmmrBase_Model__log_re, 2},
     {"_glmmrBase_Model__D_chol", (DL_FUNC) &_glmmrBase_Model__D_chol, 2},

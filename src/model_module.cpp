@@ -1136,6 +1136,8 @@ void Model__nr_beta(SEXP xp, int type = 0){
   std::visit(functor,model.ptr);
 }
 
+
+
 // [[Rcpp::export]]
 void Model__nr_theta(SEXP xp, bool tr_approx, int type = 0){
   if(type != 0)Rcpp::stop("MCNR2 Only currently available for standard covariance functions");
@@ -1167,6 +1169,17 @@ SEXP Model__information_matrix(SEXP xp, int type = 0){
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__check_convergence(SEXP xp, double tol, int hist, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [&](auto ptr){return returnType(ptr->optim.check_convergence(tol, hist));}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<bool>(S));
 }
 
 // [[Rcpp::export]]

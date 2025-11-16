@@ -1239,72 +1239,73 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
-  VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
-  VectorXd resid = model.data.y - mu;
-
-  MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-  MatrixXd Pb = ZL.transpose() * WZL;
-  Pb.diagonal().array() += 1.0;
-  VectorXd yb = ZL.transpose() * resid - re.u_mean_;
-  llt_Pb.compute(Pb);
-  Mb = llt_Pb.solve(yb);
-  llt_Pb.solveInPlace(Vb);
-  re.u_mean_ += Mb;
+  // VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
+  // VectorXd resid = model.data.y - mu;
+  // 
+  // MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+  // MatrixXd Pb = ZL.transpose() * WZL;
+  // Pb.diagonal().array() += 1.0;
+  // VectorXd yb = ZL.transpose() * resid - re.u_mean_;
+  // llt_Pb.compute(Pb);
+  // Mb = llt_Pb.solve(yb);
+  // llt_Pb.solveInPlace(Vb);
+  // re.u_mean_ += Mb;
   
-  // if(model.family.family == Fam::gaussian) {
-  //   // Use colwise multiplication (faster than diagonal matrix)
-  //   MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-  //   MatrixXd Pb = ZL.transpose() * WZL;
-  //   Pb.diagonal().array() += 1.0;
-  //   VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
-  //   // Reuse Cholesky decomposition
-  //   llt_Pb.compute(Pb);
-  //   Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-  //   llt_Pb.solveInPlace(Vb);
-  // } else {
-  //   // // Initial setup
-  //   VectorXd b = re.u_.rowwise().mean();
-  //   VectorXd bnew(b);
-  //   MatrixXd WZL(W_.size(),n_cols);
-  //   MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-  //   VectorXd yb(b.size());
-  //   double diff = 1.0;
-  //   int itero = 0;
-  //   VectorXd u(b.size());
-  // 
-  //   while(diff > tol && itero < 10) {
-  //     u = ZL * b;
-  //     eta = xb + u.array();
-  //     eta += -1.0*u.mean();
-  // 
-  //     if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
-  //       // Numerically stable sigmoid computation
-  //       ArrayXd exp_neg_eta = (-eta).exp();
-  //       ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
-  //       ArrayXd var_p = model.data.variance * logitp;
-  //       W_ = (var_p * (1.0 - logitp)).matrix();
-  //       ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
-  // 
-  //     } else if(model.family.family == Fam::poisson) {
-  //       ArrayXd exp_eta = eta.exp();
-  //       W_ = exp_eta.matrix();
-  //       ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
-  //     }
-  //     // Recompute with updated weights
-  //     WZL = (ZL.array().colwise() * W_.array()).matrix();
-  //     LWL = ZL.transpose() * WZL;
-  //     LWL.diagonal().array() += 1.0;
-  //     yb = WZL.transpose() * (ymod - xb).matrix();
-  //     llt_Pb.compute(LWL);
-  //     bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
-  //     diff = (b - bnew).array().abs().maxCoeff();
-  //     itero++;
-  //     b = bnew;
-  //   }
-  // 
-  //   Mb = b;
-  //   llt_Pb.solveInPlace(Vb);
-  // }
+  if(model.family.family == Fam::gaussian) {
+    // Use colwise multiplication (faster than diagonal matrix)
+    MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+    MatrixXd Pb = ZL.transpose() * WZL;
+    Pb.diagonal().array() += 1.0;
+    VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
+    // Reuse Cholesky decomposition
+    llt_Pb.compute(Pb);
+    Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+    llt_Pb.solveInPlace(Vb);
+  } else {
+    // // Initial setup
+    VectorXd b = re.u_.rowwise().mean();
+    VectorXd bnew(b);
+    MatrixXd WZL(W_.size(),n_cols);
+    MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
+    VectorXd yb(b.size());
+    double diff = 1.0;
+    int itero = 0;
+    VectorXd u(b.size());
+
+    while(diff > tol && itero < 10) {
+      u = ZL * b;
+      eta = xb + u.array();
+      eta += -1.0*u.mean();
+
+      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
+        // Numerically stable sigmoid computation
+        ArrayXd exp_neg_eta = (-eta).exp();
+        ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
+        ArrayXd var_p = model.data.variance * logitp;
+        W_ = (var_p * (1.0 - logitp)).matrix();
+        ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
+
+      } else if(model.family.family == Fam::poisson) {
+        ArrayXd exp_eta = eta.exp();
+        W_ = exp_eta.matrix();
+        ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
+      }
+      // Recompute with updated weights
+      WZL = (ZL.array().colwise() * W_.array()).matrix();
+      LWL = ZL.transpose() * WZL;
+      LWL.diagonal().array() += 1.0;
+      yb = WZL.transpose() * (ymod - xb).matrix();
+      llt_Pb.compute(LWL);
+      bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
+      diff = (b - bnew).array().abs().maxCoeff();
+      itero++;
+      b = bnew;
+    }
+
+    Mb = b;
+    re.u_mean_ = Mb;
+    llt_Pb.solveInPlace(Vb);
+  }
   // Rcpp::Rcout << "\nun: " << Mb.head(20).transpose();
   
   // Optimized random number generation

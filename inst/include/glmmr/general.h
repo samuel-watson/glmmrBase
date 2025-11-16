@@ -37,6 +37,7 @@
 #include <set>
 #include <map>
 #include <unordered_map>
+#include <deque>
 
 using namespace Eigen;
 

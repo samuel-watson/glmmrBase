@@ -273,6 +273,10 @@ Model__information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__information_matrix`, xp, type)
 }
 
+Model__check_convergence <- function(xp, tol, hist, type = 0L) {
+    .Call(`_glmmrBase_Model__check_convergence`, xp, tol, hist, type)
+}
+
 Model__D <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__D`, xp, type)
 }

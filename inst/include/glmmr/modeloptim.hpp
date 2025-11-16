@@ -27,6 +27,8 @@ public:
   std::pair<double,double>          current_ll_var = {0.0,0.0};
   std::pair<double,double>          previous_ll_var = {0.0,0.0};
   std::pair<int,int>                fn_counter = {0,0};
+  ArrayXd                           gradients;
+  std::deque<double>                gradient_history;
   
   // constructor
   ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
@@ -83,6 +85,7 @@ public:
   double          log_likelihood_beta(const dblvec &beta);
   double          log_likelihood_theta(const dblvec &theta);
   double          log_likelihood_all(const dblvec &par);
+  bool            check_convergence(const double tol, const int hist);
   
 protected:
 // objects
@@ -91,7 +94,7 @@ protected:
   dblvec    lower_bound_theta;
   dblvec    upper_bound_theta; // bounds for beta
   bool      beta_bounded = false;
-  double    quantile = 0.5;
+  double    quantile = 0;
   
   // functions
   void            calculate_var_par();
@@ -389,7 +392,8 @@ inline double glmmr::ModelOptim<bits_hsgp>::log_likelihood_theta(const dblvec& t
 template<typename modeltype>
 inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
                                                 glmmr::ModelMatrix<modeltype>& matrix_,
-                                                glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_), ll_current(ArrayXXd::Zero(re_.mcmc_block_size,2)) {}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
+                                                glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_), ll_current(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
+                                                gradients(model.linear_predictor.P() + model.covariance.npar()) {}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
@@ -746,10 +750,10 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   previous_ll_var.first = current_ll_var.first;
   
   int niter = re.u(false).cols();
-  //MatrixXd zd = matrix.linpred();
-  MatrixXd zd(model.n(),1);
-  zd.col(0) = model.linear_predictor.xb()+model.data.offset;
-  zd.col(0) += model.covariance.ZLu(re.u_mean_);
+  MatrixXd zd = matrix.linpred();
+  //MatrixXd zd(model.n(),1);
+  //zd.col(0) = model.linear_predictor.xb()+model.data.offset;
+  //zd.col(0) += model.covariance.ZLu(re.u_mean_);
   MatrixXd X = model.linear_predictor.X();
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
@@ -792,24 +796,51 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     resid = model.data.y - zd.col(0);//rowwise().mean();
   }
 
-  // #pragma omp parallel
-  // {
-  //   MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
-  // #pragma omp for nowait
-  //   for(int i = 0; i < niter; ++i){
-  //     XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
-  //   }
-  // #pragma omp critical
-  //   XtWXm += XtWXm_private;
-  // }
-  // 
-  // XtWXm *= (1.0 / niter);
-  XtWXm = X.transpose() * (X.array().colwise() * W.col(0).array()).matrix();
+  #pragma omp parallel
+  {
+    MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
+  #pragma omp for nowait
+    for(int i = 0; i < niter; ++i){
+      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
+    }
+  #pragma omp critical
+    XtWXm += XtWXm_private;
+  }
+
+  XtWXm *= (1.0 / niter);
+  //XtWXm = X.transpose() * (X.array().colwise() * W.col(0).array()).matrix();
   Eigen::LLT<MatrixXd> llt(XtWXm);
-  VectorXd bincr = llt.solve(X.transpose() * resid);
+  gradients.head(X.cols()) = X.transpose() * resid;
+  VectorXd bincr = llt.solve(gradients.head(X.cols()).matrix());
   update_beta(model.linear_predictor.parameter_vector() + bincr);
   current_ll_values.first = log_likelihood();
   current_ll_var.first = (ll_current.col(0) - ll_current.col(0).mean()).square().sum() / (ll_current.col(0).size() - 1);
+}
+
+template<typename modeltype>
+inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, const int hist){
+  // double grad_norm = gradients.matrix().norm() / sqrt(gradients.size());
+  // gradient_history.push_back(grad_norm);
+  // if(gradient_history.size() > 10) gradient_history.pop_front();
+  // double meang = 0;
+  // double varg = 0;
+  // for(const double x: gradient_history) meang += x;
+  // meang *= 1.0/gradient_history.size();
+  // for(const double x: gradient_history) varg += pow(x - meang , 2);
+  // varg *= 1.0/(gradient_history.size()-1);
+  // double sdg = sqrt(varg);
+  gradient_history.push_back(current_ll_values.first + current_ll_values.second);
+  if(gradient_history.size() > hist) gradient_history.pop_front();
+  double meang = 0;
+  for(const double x: gradient_history) meang += x;
+  meang *= 1.0/gradient_history.size();
+  double diff = quantile == 0 ? 10 : meang - quantile;
+  
+  Rcpp::Rcout << "\nGradients: " << gradients.transpose() << " | ||G|| = " << gradients.matrix().norm();
+  //Rcpp::Rcout << "\nmeang: " << meang << " varg " << varg << " sdg: " << sdg << " cv: " << sdg/meang;
+  Rcpp::Rcout << "\nLog-likelihood running mean: " << meang << " (old " << quantile << ") diff: " << diff;
+  quantile = meang;
+  return diff < tol;
 }
 
 template<typename modeltype>
@@ -820,9 +851,10 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(bool tr_approx){
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
   ArrayXd  tmp(ll_current.rows());
-  model.covariance.nr_step(re.scaled_u_, tmp, tr_approx);
+  model.covariance.nr_step(re.scaled_u_, tmp, gradients, tr_approx);
   re.update_zu();
   ll_current.col(1) = tmp;
+  
   current_ll_values.second = ll_current.col(1).mean();
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
   calculate_var_par();
