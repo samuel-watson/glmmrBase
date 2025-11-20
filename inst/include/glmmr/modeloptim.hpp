@@ -29,6 +29,8 @@ public:
   std::pair<int,int>                fn_counter = {0,0};
   ArrayXd                           gradients;
   std::deque<double>                gradient_history;
+  dblvec                            converge_z;
+  dblvec                            converge_bf;
   
   // constructor
   ModelOptim(modeltype& model_, glmmr::ModelMatrix<modeltype>& matrix_,glmmr::RandomEffects<modeltype>& re_) ;
@@ -85,7 +87,7 @@ public:
   double          log_likelihood_beta(const dblvec &beta);
   double          log_likelihood_theta(const dblvec &theta);
   double          log_likelihood_all(const dblvec &par);
-  bool            check_convergence(const double tol, const int hist);
+  bool            check_convergence(const double tol, const int hist, const int k, const int k0);
   
 protected:
 // objects
@@ -105,6 +107,7 @@ protected:
   void            set_newuoa_control(newuoad& op);
   
 private:
+  
   // used for REML
   void        generate_czz();
   MatrixXd    CZZ = MatrixXd::Zero(1,1);
@@ -393,7 +396,7 @@ template<typename modeltype>
 inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
                                                 glmmr::ModelMatrix<modeltype>& matrix_,
                                                 glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_), ll_current(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
-                                                gradients(model.linear_predictor.P() + model.covariance.npar()) {}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
+                                                gradients(model.linear_predictor.P() + model.covariance.npar()){}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
@@ -818,19 +821,36 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
 }
 
 template<typename modeltype>
-inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, const int hist){
-  // double grad_norm = gradients.matrix().norm() / sqrt(gradients.size());
-  // gradient_history.push_back(grad_norm);
-  // if(gradient_history.size() > 10) gradient_history.pop_front();
-  // double meang = 0;
-  // double varg = 0;
-  // for(const double x: gradient_history) meang += x;
-  // meang *= 1.0/gradient_history.size();
-  // for(const double x: gradient_history) varg += pow(x - meang , 2);
-  // varg *= 1.0/(gradient_history.size()-1);
-  // double sdg = sqrt(varg);
+inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, const int hist, const int k, const int k0){
   gradient_history.push_back(current_ll_values.first + current_ll_values.second);
   if(gradient_history.size() > hist) gradient_history.pop_front();
+  double diffg = 1;
+  double vardiffg = 0.1;
+  double z = 10;
+  int iter = 0;
+  if(gradient_history.size()>1){
+    diffg = (gradient_history.back() - gradient_history.front())/(gradient_history.size() - 1);
+    if(gradient_history.size()>2){
+      vardiffg = 0;
+      double a = 0;
+      for(const double x: gradient_history){
+        if(iter > 0) {
+          vardiffg += pow((x - a) - diffg, 2);
+        } 
+        a = x;
+        iter++;
+      }
+      vardiffg *= 1.0/ (gradient_history.size() - 2);
+      z = diffg * sqrt(gradient_history.size()) / sqrt(vardiffg);
+      converge_z.push_back(z);
+    }
+  }
+  if(trace > 0)Rcpp::Rcout << "\nMean: " << diffg << " sd: " << sqrt(vardiffg) << "\nZ (diff): " << z;
+  double prior0 = 1.0 - exp(-(k*k/(k0*k0)));// squared weibull
+  double p = maths::gaussian_cdf(z);
+  double bf = (1-p)*prior0/(p*(1-prior0));
+  if(gradient_history.size()>2)converge_bf.push_back(bf);
+  if(trace > 0)Rcpp::Rcout << "\nBF: " << bf << " prior: " << prior0;
   double meang = 0;
   for(const double x: gradient_history) meang += x;
   meang *= 1.0/gradient_history.size();
@@ -840,7 +860,7 @@ inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, co
   //Rcpp::Rcout << "\nmeang: " << meang << " varg " << varg << " sdg: " << sdg << " cv: " << sdg/meang;
   if(trace > 0)Rcpp::Rcout << "\nLog-likelihood running mean: " << meang << " (old " << quantile << ") diff: " << diff;
   quantile = meang;
-  return diff < tol;
+  return bf > tol;
 }
 
 template<typename modeltype>

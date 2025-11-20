@@ -432,56 +432,81 @@ template<typename modeltype>
 template<glmmr::IM imtype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
 {
-  int n = model.n();
-  std::vector<MatrixXd> derivs;
-  model.covariance.derivatives(derivs,1);
-  int R = model.covariance.npar();
-  int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
-  MatrixXd SigmaInv = Sigma(true);
-  MatrixXd Z = model.covariance.Z();
-  MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
-  glmmr::MatrixField<MatrixXd> S;
-  VectorXd resid(1);
-  
-  // residuals in case of OIM
-  if constexpr (imtype == IM::OIM){
-    if(model.data.y.size() != model.n()) throw std::runtime_error("y data not correct size");
-    resid.resize(model.n());
-    resid = model.linear_predictor.xb()+model.data.offset;
-    resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
-  }
-  
-  for(int i = 0; i < Rmod; i++){
-    MatrixXd partial0(model.n(),model.n());
-    if(i < R){
-      partial0 = Z*derivs[1+i]*Z.transpose();
-    } else {
-      partial0 = MatrixXd::Identity(n,n);
-      if((model.data.weights != 1).any())partial0 = model.data.weights.inverse().matrix().asDiagonal();
+  MatrixXd Mc = model.covariance.information_matrix();
+  if (imtype == IM::EIM && Mc(0,0)!=0){
+    return Mc;
+  } else {
+    int n = model.n();
+    std::vector<MatrixXd> derivs;
+    model.covariance.derivatives(derivs,1);
+    int R = model.covariance.npar();
+    int Rmod = model.family.family==Fam::gaussian ? R+1 : R;
+    MatrixXd SigmaInv = Sigma(true);
+    MatrixXd Z = model.covariance.Z();
+    MatrixXd M_theta = MatrixXd::Zero(Rmod,Rmod);
+    glmmr::MatrixField<MatrixXd> S;
+    VectorXd resid(1);
+    
+    // residuals in case of OIM
+    if constexpr (imtype == IM::OIM){
+      if(model.data.y.size() != model.n()) throw std::runtime_error("y data not correct size");
+      resid.resize(model.n());
+      resid = model.linear_predictor.xb()+model.data.offset;
+      resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
     }
-    S.add(partial0);
-  }
-  
-  if(useBlock){
-    for(int b = 0; b< sigma_blocks.size(); b++){
-      ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
-      MatrixXd SigmaInvsub = glmmr::Eigen_ext::submat(SigmaInv,rows,rows);
-      VectorXd residsub(1);
-      if constexpr (imtype == IM::OIM){
-        residsub.resize(rows.size());
-        for(int r = 0; r < rows.size(); r++) residsub(r) = resid(rows(r));
+    
+    for(int i = 0; i < Rmod; i++){
+      MatrixXd partial0(model.n(),model.n());
+      if(i < R){
+        partial0 = Z*derivs[1+i]*Z.transpose();
+      } else {
+        partial0 = MatrixXd::Identity(n,n);
+        if((model.data.weights != 1).any())partial0 = model.data.weights.inverse().matrix().asDiagonal();
       }
+      S.add(partial0);
+    }
+    
+    if(useBlock){
+      for(int b = 0; b< sigma_blocks.size(); b++){
+        ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
+        MatrixXd SigmaInvsub = glmmr::Eigen_ext::submat(SigmaInv,rows,rows);
+        VectorXd residsub(1);
+        if constexpr (imtype == IM::OIM){
+          residsub.resize(rows.size());
+          for(int r = 0; r < rows.size(); r++) residsub(r) = resid(rows(r));
+        }
+        for(int i = 0; i < Rmod; i++){
+          MatrixXd Ssub1 = glmmr::Eigen_ext::submat(S(i),rows,rows);
+          MatrixXd SPS = SigmaInvsub * Ssub1 * SigmaInvsub;
+          for(int j = i; j < Rmod; j++){
+            MatrixXd Ssub2 = glmmr::Eigen_ext::submat(S(j),rows,rows);
+            double oim_adj;
+            if constexpr (imtype == IM::OIM){
+              oim_adj = (residsub.transpose() * SPS * Ssub2 * SigmaInvsub * residsub)(0);
+            }
+            for(int k = 0; k < rows.size(); k++){
+              for(int l = 0; l < rows.size(); l++){
+                M_theta(i,j) += 0.5*SPS(k,l)*Ssub2(l,k);
+                if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
+              }
+            }
+            if(i!=j)M_theta(j,i)=M_theta(i,j);
+          }
+        }
+      }
+    } else {
       for(int i = 0; i < Rmod; i++){
-        MatrixXd Ssub1 = glmmr::Eigen_ext::submat(S(i),rows,rows);
-        MatrixXd SPS = SigmaInvsub * Ssub1 * SigmaInvsub;
+        MatrixXd SPS = SigmaInv * S(i) * SigmaInv;
         for(int j = i; j < Rmod; j++){
-          MatrixXd Ssub2 = glmmr::Eigen_ext::submat(S(j),rows,rows);
+          MatrixXd Ssub2 = S(j);
           double oim_adj;
           if constexpr (imtype == IM::OIM){
-            oim_adj = (residsub.transpose() * SPS * Ssub2 * SigmaInvsub * residsub)(0);
+            oim_adj = (resid.transpose() * SPS * Ssub2 * SigmaInv * resid)(0);
           }
-          for(int k = 0; k < rows.size(); k++){
-            for(int l = 0; l < rows.size(); l++){
+          // M_theta(i,j) = 0.5*(SPS*Ssub2).trace();
+          // if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
+          for(int k = 0; k < model.n(); k++){
+            for(int l = 0; l <  model.n(); l++){
               M_theta(i,j) += 0.5*SPS(k,l)*Ssub2(l,k);
               if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
             }
@@ -490,52 +515,32 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_theta()
         }
       }
     }
-  } else {
-    for(int i = 0; i < Rmod; i++){
-      MatrixXd SPS = SigmaInv * S(i) * SigmaInv;
-      for(int j = i; j < Rmod; j++){
-        MatrixXd Ssub2 = S(j);
-        double oim_adj;
-        if constexpr (imtype == IM::OIM){
-          oim_adj = (resid.transpose() * SPS * Ssub2 * SigmaInv * resid)(0);
-        }
-        // M_theta(i,j) = 0.5*(SPS*Ssub2).trace();
-        // if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
-        for(int k = 0; k < model.n(); k++){
-          for(int l = 0; l <  model.n(); l++){
-            M_theta(i,j) += 0.5*SPS(k,l)*Ssub2(l,k);
-            if constexpr (imtype == IM::OIM) M_theta(i,j) -= oim_adj;
+    
+    if constexpr (imtype == IM::OIM){
+      // add in the beta-theta part of the matrix
+      MatrixXd X = model.linear_predictor.X();
+      MatrixXd Mbt(X.cols(),M_theta.cols());
+      if(useBlock){
+        for(int b = 0; b< sigma_blocks.size(); b++){
+          Mbt.setZero();
+          ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
+          MatrixXd Xsub = glmmr::Eigen_ext::submat(X,rows,ArrayXi::LinSpaced(P(),0,P()-1));
+          MatrixXd SigmaInvsub = glmmr::Eigen_ext::submat(SigmaInv,rows,rows);
+          VectorXd residsub(rows.size());
+          for(int r = 0; r < rows.size(); r++) residsub(r) = resid(rows(r));
+          for(int i =0; i < M_theta.cols(); i++){
+            MatrixXd Ssub1 = glmmr::Eigen_ext::submat(S(i),rows,rows);
+            Mbt.col(i) += Xsub.transpose() * SigmaInvsub * Ssub1 * SigmaInvsub * residsub;
           }
         }
-        if(i!=j)M_theta(j,i)=M_theta(i,j);
+      } else {
+        for(int i =0; i < M_theta.cols(); i++) Mbt.col(i) = X.transpose() * SigmaInv * S(i) * SigmaInv * resid;
       }
+      M_theta.conservativeResize(M_theta.cols()+X.cols(),M_theta.cols());
+      M_theta.bottomRows(X.cols()) = Mbt;
     }
+    return M_theta;
   }
-  
-  if constexpr (imtype == IM::OIM){
-    // add in the beta-theta part of the matrix
-    MatrixXd X = model.linear_predictor.X();
-    MatrixXd Mbt(X.cols(),M_theta.cols());
-    if(useBlock){
-      for(int b = 0; b< sigma_blocks.size(); b++){
-        Mbt.setZero();
-        ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
-        MatrixXd Xsub = glmmr::Eigen_ext::submat(X,rows,ArrayXi::LinSpaced(P(),0,P()-1));
-        MatrixXd SigmaInvsub = glmmr::Eigen_ext::submat(SigmaInv,rows,rows);
-        VectorXd residsub(rows.size());
-        for(int r = 0; r < rows.size(); r++) residsub(r) = resid(rows(r));
-        for(int i =0; i < M_theta.cols(); i++){
-          MatrixXd Ssub1 = glmmr::Eigen_ext::submat(S(i),rows,rows);
-          Mbt.col(i) += Xsub.transpose() * SigmaInvsub * Ssub1 * SigmaInvsub * residsub;
-        }
-      }
-    } else {
-      for(int i =0; i < M_theta.cols(); i++) Mbt.col(i) = X.transpose() * SigmaInv * S(i) * SigmaInv * resid;
-    }
-    M_theta.conservativeResize(M_theta.cols()+X.cols(),M_theta.cols());
-    M_theta.bottomRows(X.cols()) = Mbt;
-  }
-  return M_theta;
 }
 
 template<typename modeltype>
@@ -1239,73 +1244,73 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
-  // VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
-  // VectorXd resid = model.data.y - mu;
-  // 
-  // MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-  // MatrixXd Pb = ZL.transpose() * WZL;
-  // Pb.diagonal().array() += 1.0;
-  // VectorXd yb = ZL.transpose() * resid - re.u_mean_;
-  // llt_Pb.compute(Pb);
-  // Mb = llt_Pb.solve(yb);
-  // llt_Pb.solveInPlace(Vb);
-  // re.u_mean_ += Mb;
+  VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
+  VectorXd resid = model.data.y - mu;
+
+  MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+  MatrixXd Pb = ZL.transpose() * WZL;
+  Pb.diagonal().array() += 1.0;
+  VectorXd yb = ZL.transpose() * resid - re.u_mean_;
+  llt_Pb.compute(Pb);
+  Mb = llt_Pb.solve(yb);
+  llt_Pb.solveInPlace(Vb);
+  re.u_mean_ += Mb;
   
-  if(model.family.family == Fam::gaussian) {
-    // Use colwise multiplication (faster than diagonal matrix)
-    MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-    MatrixXd Pb = ZL.transpose() * WZL;
-    Pb.diagonal().array() += 1.0;
-    VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
-    // Reuse Cholesky decomposition
-    llt_Pb.compute(Pb);
-    Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-    llt_Pb.solveInPlace(Vb);
-  } else {
-    // // Initial setup
-    VectorXd b = re.u_.rowwise().mean();
-    VectorXd bnew(b);
-    MatrixXd WZL(W_.size(),n_cols);
-    MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-    VectorXd yb(b.size());
-    double diff = 1.0;
-    int itero = 0;
-    VectorXd u(b.size());
-
-    while(diff > tol && itero < 10) {
-      u = ZL * b;
-      eta = xb + u.array();
-      eta += -1.0*u.mean();
-
-      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
-        // Numerically stable sigmoid computation
-        ArrayXd exp_neg_eta = (-eta).exp();
-        ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
-        ArrayXd var_p = model.data.variance * logitp;
-        W_ = (var_p * (1.0 - logitp)).matrix();
-        ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
-
-      } else if(model.family.family == Fam::poisson) {
-        ArrayXd exp_eta = eta.exp();
-        W_ = exp_eta.matrix();
-        ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
-      }
-      // Recompute with updated weights
-      WZL = (ZL.array().colwise() * W_.array()).matrix();
-      LWL = ZL.transpose() * WZL;
-      LWL.diagonal().array() += 1.0;
-      yb = WZL.transpose() * (ymod - xb).matrix();
-      llt_Pb.compute(LWL);
-      bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
-      diff = (b - bnew).array().abs().maxCoeff();
-      itero++;
-      b = bnew;
-    }
-
-    Mb = b;
-    re.u_mean_ = Mb;
-    llt_Pb.solveInPlace(Vb);
-  }
+  // if(model.family.family == Fam::gaussian) {
+  //   // Use colwise multiplication (faster than diagonal matrix)
+  //   MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+  //   MatrixXd Pb = ZL.transpose() * WZL;
+  //   Pb.diagonal().array() += 1.0;
+  //   VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
+  //   // Reuse Cholesky decomposition
+  //   llt_Pb.compute(Pb);
+  //   Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
+  //   llt_Pb.solveInPlace(Vb);
+  // } else {
+  //   // // Initial setup
+  //   VectorXd b = re.u_.rowwise().mean();
+  //   VectorXd bnew(b);
+  //   MatrixXd WZL(W_.size(),n_cols);
+  //   MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
+  //   VectorXd yb(b.size());
+  //   double diff = 1.0;
+  //   int itero = 0;
+  //   VectorXd u(b.size());
+  // 
+  //   while(diff > tol && itero < 10) {
+  //     u = ZL * b;
+  //     eta = xb + u.array();
+  //     eta += -1.0*u.mean();
+  // 
+  //     if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
+  //       // Numerically stable sigmoid computation
+  //       ArrayXd exp_neg_eta = (-eta).exp();
+  //       ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
+  //       ArrayXd var_p = model.data.variance * logitp;
+  //       W_ = (var_p * (1.0 - logitp)).matrix();
+  //       ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
+  // 
+  //     } else if(model.family.family == Fam::poisson) {
+  //       ArrayXd exp_eta = eta.exp();
+  //       W_ = exp_eta.matrix();
+  //       ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
+  //     }
+  //     // Recompute with updated weights
+  //     WZL = (ZL.array().colwise() * W_.array()).matrix();
+  //     LWL = ZL.transpose() * WZL;
+  //     LWL.diagonal().array() += 1.0;
+  //     yb = WZL.transpose() * (ymod - xb).matrix();
+  //     llt_Pb.compute(LWL);
+  //     bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
+  //     diff = (b - bnew).array().abs().maxCoeff();
+  //     itero++;
+  //     b = bnew;
+  //   }
+  // 
+  //   Mb = b;
+  //   re.u_mean_ = Mb;
+  //   llt_Pb.solveInPlace(Vb);
+  // }
   // Rcpp::Rcout << "\nun: " << Mb.head(20).transpose();
   
   // Optimized random number generation

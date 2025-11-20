@@ -860,16 +860,18 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__check_convergence
-SEXP Model__check_convergence(SEXP xp, double tol, int hist, int type);
-RcppExport SEXP _glmmrBase_Model__check_convergence(SEXP xpSEXP, SEXP tolSEXP, SEXP histSEXP, SEXP typeSEXP) {
+SEXP Model__check_convergence(SEXP xp, double tol, int hist, int k, int k0, int type);
+RcppExport SEXP _glmmrBase_Model__check_convergence(SEXP xpSEXP, SEXP tolSEXP, SEXP histSEXP, SEXP kSEXP, SEXP k0SEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< int >::type hist(histSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type k0(k0SEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    rcpp_result_gen = Rcpp::wrap(Model__check_convergence(xp, tol, hist, type));
+    rcpp_result_gen = Rcpp::wrap(Model__check_convergence(xp, tol, hist, k, k0, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1089,6 +1091,52 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__get_theta(xp, type));
     return rcpp_result_gen;
+END_RCPP
+}
+// Model__get_conv_z
+SEXP Model__get_conv_z(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_conv_z(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_conv_z(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__get_conv_bf
+SEXP Model__get_conv_bf(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_conv_bf(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_conv_bf(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__clear_conv_z
+void Model__clear_conv_z(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__clear_conv_z(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__clear_conv_z(xp, type);
+    return R_NilValue;
+END_RCPP
+}
+// Model__clear_conv_bf
+void Model__clear_conv_bf(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__clear_conv_bf(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__clear_conv_bf(xp, type);
+    return R_NilValue;
 END_RCPP
 }
 // Model__get_var_par
@@ -1709,7 +1757,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 3},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
-    {"_glmmrBase_Model__check_convergence", (DL_FUNC) &_glmmrBase_Model__check_convergence, 4},
+    {"_glmmrBase_Model__check_convergence", (DL_FUNC) &_glmmrBase_Model__check_convergence, 6},
     {"_glmmrBase_Model__D", (DL_FUNC) &_glmmrBase_Model__D, 2},
     {"_glmmrBase_Model__log_re", (DL_FUNC) &_glmmrBase_Model__log_re, 2},
     {"_glmmrBase_Model__D_chol", (DL_FUNC) &_glmmrBase_Model__D_chol, 2},
@@ -1728,6 +1776,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_beta", (DL_FUNC) &_glmmrBase_Model__get_beta, 2},
     {"_glmmrBase_Model__y", (DL_FUNC) &_glmmrBase_Model__y, 2},
     {"_glmmrBase_Model__get_theta", (DL_FUNC) &_glmmrBase_Model__get_theta, 2},
+    {"_glmmrBase_Model__get_conv_z", (DL_FUNC) &_glmmrBase_Model__get_conv_z, 2},
+    {"_glmmrBase_Model__get_conv_bf", (DL_FUNC) &_glmmrBase_Model__get_conv_bf, 2},
+    {"_glmmrBase_Model__clear_conv_z", (DL_FUNC) &_glmmrBase_Model__clear_conv_z, 2},
+    {"_glmmrBase_Model__clear_conv_bf", (DL_FUNC) &_glmmrBase_Model__clear_conv_bf, 2},
     {"_glmmrBase_Model__get_var_par", (DL_FUNC) &_glmmrBase_Model__get_var_par, 2},
     {"_glmmrBase_Model__get_variance", (DL_FUNC) &_glmmrBase_Model__get_variance, 2},
     {"_glmmrBase_Model__set_var_par", (DL_FUNC) &_glmmrBase_Model__set_var_par, 3},

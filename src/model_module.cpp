@@ -1172,11 +1172,11 @@ SEXP Model__information_matrix(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-SEXP Model__check_convergence(SEXP xp, double tol, int hist, int type = 0){
+SEXP Model__check_convergence(SEXP xp, double tol, int hist, int k, int k0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [&](auto ptr){return returnType(ptr->optim.check_convergence(tol, hist));}
+    [&](auto ptr){return returnType(ptr->optim.check_convergence(tol, hist, k, k0));}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<bool>(S));
@@ -1388,6 +1388,48 @@ SEXP Model__get_theta(SEXP xp, int type = 0){
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<std::vector<double> >(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__get_conv_z(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.converge_z);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::vector<double> >(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__get_conv_bf(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.converge_bf);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<std::vector<double> >(S));
+}
+
+// [[Rcpp::export]]
+void Model__clear_conv_z(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) { }, 
+    [](auto ptr){ptr->optim.converge_z.clear();}
+  };
+  std::visit(functor,model.ptr);
+}
+
+// [[Rcpp::export]]
+void Model__clear_conv_bf(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) { }, 
+    [](auto ptr){ptr->optim.converge_bf.clear();}
+  };
+  std::visit(functor,model.ptr);
 }
 
 // [[Rcpp::export]]

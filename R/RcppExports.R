@@ -273,8 +273,8 @@ Model__information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__information_matrix`, xp, type)
 }
 
-Model__check_convergence <- function(xp, tol, hist, type = 0L) {
-    .Call(`_glmmrBase_Model__check_convergence`, xp, tol, hist, type)
+Model__check_convergence <- function(xp, tol, hist, k, k0, type = 0L) {
+    .Call(`_glmmrBase_Model__check_convergence`, xp, tol, hist, k, k0, type)
 }
 
 Model__D <- function(xp, type = 0L) {
@@ -347,6 +347,22 @@ Model__y <- function(xp, type = 0L) {
 
 Model__get_theta <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_theta`, xp, type)
+}
+
+Model__get_conv_z <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_conv_z`, xp, type)
+}
+
+Model__get_conv_bf <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_conv_bf`, xp, type)
+}
+
+Model__clear_conv_z <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__clear_conv_z`, xp, type))
+}
+
+Model__clear_conv_bf <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__clear_conv_bf`, xp, type))
 }
 
 Model__get_var_par <- function(xp, type = 0L) {

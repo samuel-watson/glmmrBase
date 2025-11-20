@@ -197,6 +197,7 @@ public:
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
   virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, bool tr_approx = false);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
+  MatrixXd          information_matrix();
   
 protected:
   // data
@@ -221,6 +222,7 @@ protected:
   VectorXd                            zquad;
   bool                                isSparse = true;
   CovarianceLLT                       matL;
+  MatrixXd                            infomat_theta;
   
   // functions
   void                            update_parameters_in_calculators();
@@ -248,7 +250,7 @@ inline glmmr::Covariance::Covariance(const str& formula,
                                      const strvec& colnames) :
   form_(formula), data_(data), colnames_(colnames), Q_(parse()), matZ(data_.rows(),Q_), matD(Q_,Q_),
   dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   Z_constructor();
 };
 
@@ -257,7 +259,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
                                      const strvec& colnames) :
   form_(form), data_(data), colnames_(colnames),
   Q_(parse()),matZ(data_.rows(),Q_),matD(Q_,Q_), dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   Z_constructor();
 };
 
@@ -267,7 +269,7 @@ inline glmmr::Covariance::Covariance(const str& formula,
                                      const dblvec& parameters) :
   form_(formula), data_(data), colnames_(colnames), parameters_(parameters), 
   Q_(parse()), matZ(data_.rows(),Q_),matD(Q_,Q_), dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   make_sparse();
   Z_constructor();
 };
@@ -278,7 +280,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
                                      const dblvec& parameters) :
   form_(form), data_(data), colnames_(colnames), parameters_(parameters),
   Q_(parse()), matZ(data_.rows(),Q_), matD(Q_,Q_),dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   make_sparse();
   Z_constructor();
 };
@@ -291,7 +293,7 @@ inline glmmr::Covariance::Covariance(const str& formula,
   parameters_(parameters.data(),parameters.data()+parameters.size()),
   Q_(parse()), matZ(data_.rows(),Q_),matD(Q_,Q_),
   dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   make_sparse();
   Z_constructor();
 };
@@ -303,7 +305,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Formula& form,
   form_(form), data_(data), colnames_(colnames),
   parameters_(parameters.data(),parameters.data()+parameters.size()),Q_(parse()), matZ(data_.rows(),Q_),
   matD(Q_,Q_),dmat_matrix(max_block_dim(),max_block_dim()),
-  zquad(max_block_dim()) {
+  zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   make_sparse();
   Z_constructor();
 };
@@ -312,7 +314,7 @@ inline glmmr::Covariance::Covariance(const glmmr::Covariance& cov) : form_(cov.f
 colnames_(cov.colnames_),
 parameters_(cov.parameters_), Q_(parse()), matZ(data_.rows(),Q_),matD(Q_,Q_),
 dmat_matrix(max_block_dim(),max_block_dim()),
-zquad(max_block_dim()) {
+zquad(max_block_dim()), infomat_theta(MatrixXd::Zero(npar(),npar())) {
   make_sparse();
   Z_constructor();
 };
@@ -585,6 +587,10 @@ inline int glmmr::Covariance::parse(){
   B_ = calc_.size();
   n_ = data_.rows();
   return Qn;
+}
+
+inline MatrixXd glmmr::Covariance::information_matrix(){
+  return infomat_theta;
 }
 
 inline void glmmr::Covariance::Z_constructor()
@@ -1164,10 +1170,11 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
     
     MatrixXd vmat = matL.solve(umat);
     VectorXd dqf_global = VectorXd::Zero(npars);
+    ArrayXXd dqf_thread = MatrixXd::Zero(niter,npars);
     
 #pragma omp parallel
     {
-      VectorXd dqf_thread = VectorXd::Zero(npars);
+      //VectorXd dqf_thread = VectorXd::Zero(npars);
   
 #pragma omp for 
       for (int i = 0; i < niter; i++)
@@ -1175,14 +1182,16 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
         double qf = vmat.col(i).dot(umat.col(i));
         logl(i) += -0.5 * qf;
         for (int j = 0; j < npars; j++)
-          dqf_thread(j) += umat.col(i).dot(S[j] * vmat.col(i)); 
+          dqf_thread(i,j) = umat.col(i).dot(S[j] * vmat.col(i)); 
       }
   
-#pragma omp critical
-      dqf_global += dqf_thread;
+//#pragma omp critical
+  //    dqf_global += dqf_thread;
     }
-
-
+    
+    dqf_global = dqf_thread.matrix().colwise().sum();
+    MatrixXd grad_v = MatrixXd::Zero(npars,npars);
+    for (int j = 0; j < npars; j++) grad_v(j,j) = 0.5* (dqf_thread.col(j) - dqf_thread.col(j).mean()).square().sum()/(dqf_thread.col(j).size()-1);
     for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
     const double niter_inv = 1.0 / (double)niter;
     for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
@@ -1195,9 +1204,14 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
         if(j != k) M(k, j) = 0.5*val;
       }
     }
+    infomat_theta = M;
     VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
     theta_curr +=  M.llt().solve(grad);
     update_parameters(theta_curr.array());
+    
+    MatrixXd V = MatrixXd::Identity(npars,npars);
+    M.llt().solveInPlace(V);
+    //Rcpp::Rcout << "\nMC err:\n" << V * grad_v * V * niter_inv << " M:\n" << V;
   }
 }
 

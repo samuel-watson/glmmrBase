@@ -997,8 +997,9 @@ Model <- R6::R6Class("Model",
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
                                        tr.approx = FALSE,
-                                       cv.tol = 0,
-                                       cv.hist = 10,
+                                       bf.tol = 10,
+                                       bf.hist = 10,
+                                       bf.k0 = 10,
                                        conv.criterion = 2,
                                        skip.theta = FALSE,
                                        constr.zero = 1){
@@ -1067,6 +1068,8 @@ Model <- R6::R6Class("Model",
                          }
                          Model__use_reml(private$ptr,reml,private$model_type())
                          Model__reset_fn_counter(private$ptr,private$model_type())
+                         Model__clear_conv_bf(private$ptr,private$model_type())
+                         Model__clear_conv_z(private$ptr,private$model_type())
                          if(!is.null(iter.sampling))self$mcmc_options$samps <- iter.sampling
                          if(!is.null(iter.warmup))self$mcmc_options$warmup <- iter.warmup
                          if(!is.null(iter.warmup))self$mcmc_options$chains <- chains
@@ -1275,7 +1278,7 @@ Model <- R6::R6Class("Model",
                              }
                              if(conv.criterion == 5){
                                conv.criterion.value <- 0
-                               converged <- Model__check_convergence(private$ptr, cv.tol, cv.hist, private$model_type())
+                               converged <- Model__check_convergence(private$ptr, bf.tol, bf.hist, iter, bf.k0, private$model_type())
                              }
                            }
                            if(var_par_family)all_pars_new <- c(all_pars_new,var_par_new)
