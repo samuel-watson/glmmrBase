@@ -823,14 +823,13 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__nr_theta
-void Model__nr_theta(SEXP xp, bool tr_approx, int type);
-RcppExport SEXP _glmmrBase_Model__nr_theta(SEXP xpSEXP, SEXP tr_approxSEXP, SEXP typeSEXP) {
+void Model__nr_theta(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__nr_theta(SEXP xpSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
-    Rcpp::traits::input_parameter< bool >::type tr_approx(tr_approxSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__nr_theta(xp, tr_approx, type);
+    Model__nr_theta(xp, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1160,6 +1159,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__get_variance(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__get_mean_u
+SEXP Model__get_mean_u(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_mean_u(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_mean_u(xp, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1754,7 +1765,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__ml_theta", (DL_FUNC) &_glmmrBase_Model__ml_theta, 3},
     {"_glmmrBase_Model__ml_all", (DL_FUNC) &_glmmrBase_Model__ml_all, 3},
     {"_glmmrBase_Model__nr_beta", (DL_FUNC) &_glmmrBase_Model__nr_beta, 2},
-    {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 3},
+    {"_glmmrBase_Model__nr_theta", (DL_FUNC) &_glmmrBase_Model__nr_theta, 2},
     {"_glmmrBase_Model__Sigma", (DL_FUNC) &_glmmrBase_Model__Sigma, 3},
     {"_glmmrBase_Model__information_matrix", (DL_FUNC) &_glmmrBase_Model__information_matrix, 2},
     {"_glmmrBase_Model__check_convergence", (DL_FUNC) &_glmmrBase_Model__check_convergence, 6},
@@ -1782,6 +1793,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__clear_conv_bf", (DL_FUNC) &_glmmrBase_Model__clear_conv_bf, 2},
     {"_glmmrBase_Model__get_var_par", (DL_FUNC) &_glmmrBase_Model__get_var_par, 2},
     {"_glmmrBase_Model__get_variance", (DL_FUNC) &_glmmrBase_Model__get_variance, 2},
+    {"_glmmrBase_Model__get_mean_u", (DL_FUNC) &_glmmrBase_Model__get_mean_u, 2},
     {"_glmmrBase_Model__set_var_par", (DL_FUNC) &_glmmrBase_Model__set_var_par, 3},
     {"_glmmrBase_Model__set_trials", (DL_FUNC) &_glmmrBase_Model__set_trials, 3},
     {"_glmmrBase_Model__L", (DL_FUNC) &_glmmrBase_Model__L, 2},

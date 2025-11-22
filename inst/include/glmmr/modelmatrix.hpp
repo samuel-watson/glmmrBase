@@ -1245,6 +1245,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
   VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
+  if(model.family.family == Fam::binomial) mu.array() *= model.data.variance;
   VectorXd resid = model.data.y - mu;
 
   MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
@@ -1253,8 +1254,10 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   VectorXd yb = ZL.transpose() * resid - re.u_mean_;
   llt_Pb.compute(Pb);
   Mb = llt_Pb.solve(yb);
+  
   llt_Pb.solveInPlace(Vb);
   re.u_mean_ += Mb;
+  re.u_var_ = Vb;
   
   // if(model.family.family == Fam::gaussian) {
   //   // Use colwise multiplication (faster than diagonal matrix)

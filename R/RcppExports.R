@@ -261,8 +261,8 @@ Model__nr_beta <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__nr_beta`, xp, type))
 }
 
-Model__nr_theta <- function(xp, tr_approx, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, tr_approx, type))
+Model__nr_theta <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, type))
 }
 
 Model__Sigma <- function(xp, inverse, type = 0L) {
@@ -371,6 +371,10 @@ Model__get_var_par <- function(xp, type = 0L) {
 
 Model__get_variance <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_variance`, xp, type)
+}
+
+Model__get_mean_u <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_mean_u`, xp, type)
 }
 
 Model__set_var_par <- function(xp, var_par_, type = 0L) {

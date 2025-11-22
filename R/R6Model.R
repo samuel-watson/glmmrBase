@@ -883,7 +883,6 @@ Model <- R6::R6Class("Model",
                        #'will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.
                        #'@param convergence.prob Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.
                        #'@param pr.average Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)
-                       #'@param tr.approx Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta
                        #'@param conv.criterion Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by `tol`,
                        #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
                        #'3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - `convergence.prob`
@@ -996,7 +995,6 @@ Model <- R6::R6Class("Model",
                                        alpha = 0.8,
                                        convergence.prob = 0.95,
                                        pr.average = FALSE,
-                                       tr.approx = FALSE,
                                        bf.tol = 10,
                                        bf.hist = 10,
                                        bf.k0 = 10,
@@ -1235,7 +1233,7 @@ Model <- R6::R6Class("Model",
                              if(private$trace==2)cat("\nBeta fitting took: ",t3-t2,"s")
                              if(!skip.theta){
                                if(dbl_nr){
-                                 Model__nr_theta(private$ptr,tr.approx,private$model_type())
+                                 Model__nr_theta(private$ptr,private$model_type())
                                } else {
                                  Model__ml_theta(private$ptr,0,private$model_type())
                                }

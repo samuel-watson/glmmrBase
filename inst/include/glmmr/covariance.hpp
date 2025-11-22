@@ -84,65 +84,6 @@ public:
   }
 };
 
-class TraceEstimator {
-private:
-  std::mt19937 gen;
-  std::uniform_int_distribution<> rademacher;
-  std::normal_distribution<> gaussian;
-  
-public:
-  TraceEstimator() : gen(std::random_device{}()), 
-  rademacher(0, 1),
-  gaussian(0.0, 1.0) {}
-  
-  // For symmetric positive definite A, use Cholesky
-  double hutchinsonSPD(const CovarianceLLT& llt, 
-                       const MatrixXd& B, 
-                       int numSamples = 100) {
-    int n = B.rows();
-    double traceEstimate = 0.0;
-    for (int i = 0; i < numSamples; ++i) {
-      VectorXd z = rademacherVector(n);
-      VectorXd w = B * z;
-      VectorXd v = llt.solve(w);
-      traceEstimate += z.dot(v);
-    }
-    return traceEstimate / numSamples;
-  }
-  
-  // For symmetric positive definite A, use Cholesky
-  double hutchinsonSPD2(const CovarianceLLT& llt, const MatrixXd& B, 
-                        const MatrixXd& C,
-                        int numSamples = 100) {
-    int n = B.rows();
-    double traceEstimate = 0.0;
-    for (int i = 0; i < numSamples; ++i) {
-      VectorXd z = rademacherVector(n);
-      VectorXd z1 = llt.solve(z);
-      z1 = C * z1;
-      VectorXd v = llt.solve(z1);
-      v = B * v;
-      traceEstimate += z.dot(v);
-    }
-    return traceEstimate / numSamples;
-  }
-private:
-  VectorXd rademacherVector(int n) {
-    VectorXd z(n);
-    for (int i = 0; i < n; ++i) {
-      z(i) = rademacher(gen) == 0 ? -1.0 : 1.0;
-    }
-    return z;
-  }
-  
-  VectorXd gaussianVector(int n) {
-    VectorXd z(n);
-    for (int i = 0; i < n; ++i) {
-      z(i) = gaussian(gen);
-    }
-    return z;
-  }
-};
 
 class Covariance {
 public:
@@ -195,7 +136,7 @@ public:
   virtual SparseMatrix<double>    Z_sparse();
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
-  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, bool tr_approx = false);
+  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
   MatrixXd          information_matrix();
   
@@ -1110,7 +1051,7 @@ inline bool glmmr::Covariance::any_log_re() const{
 }
 
 
-inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, bool tr_approx){
+inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients){
   static const double LOG_2PI = log(2*M_PI);
   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
   std::vector<MatrixXd> derivs;
@@ -1127,92 +1068,54 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
   logdet_val = log_determinant();
   logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
   
-  if(tr_approx){
-    TraceEstimator trace;
-    for(int i = 0; i < npars; i++)
-    {
-      double tr = trace.hutchinsonSPD(matL, derivs[i+1]);
-      grad(i) = -0.5 * tr;
-    }
-    dblvec dqf_local(npars, 0.0);
-    dblvec v_buffer_local(Q_);
-    for(int i = 0; i < niter; i++)
-    {
-      VectorXd ucol = umat.col(i);
-      VectorXd v = matL.solve(ucol);
-      double qf = v.dot(ucol);
-      logl(i) += -0.5 * qf;
-      for(int j = 0; j < npars; j++) dqf_local[j] +=  v.dot(derivs[j+1] * v);// zzquad.dot(derivs[j+1] * zzquad);
-    }
-    for(int j = 0; j < npars; j++) dqf[j] += dqf_local[j];
-    double niter_inv = 1.0 / (double)niter;
-    for(int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
-    gradients.tail(grad.size()) = grad;
-    MatrixXd M(npars, npars);
-    for(int j = 0; j < npars; j++) {
-      for(int k = j; k < npars; k++) {
-        double val = trace.hutchinsonSPD2(matL,derivs[j+1],derivs[k+1]);//(S(j).array() * S(k).array()).sum();
-        M(j, k) = val;
-        if(j != k) M(k, j) = val;
-      }
-    }
-    VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
-    theta_curr +=  M.llt().solve(grad);
-    update_parameters(theta_curr.array());
-  } else {
-    std::vector<MatrixXd> S;
-    for(int i = 0; i < npars; i++)
-    {
-      S.emplace_back(derivs[i + 1].rows(), derivs[i + 1].cols());
-      S[i] = matL.solve(derivs[i+1]);
-      grad(i) = -0.5 * S[i].trace();
-    }
-    
-    MatrixXd vmat = matL.solve(umat);
-    VectorXd dqf_global = VectorXd::Zero(npars);
-    ArrayXXd dqf_thread = MatrixXd::Zero(niter,npars);
-    
-#pragma omp parallel
-    {
-      //VectorXd dqf_thread = VectorXd::Zero(npars);
   
-#pragma omp for 
-      for (int i = 0; i < niter; i++)
-      {
-        double qf = vmat.col(i).dot(umat.col(i));
-        logl(i) += -0.5 * qf;
-        for (int j = 0; j < npars; j++)
-          dqf_thread(i,j) = umat.col(i).dot(S[j] * vmat.col(i)); 
-      }
   
-//#pragma omp critical
-  //    dqf_global += dqf_thread;
-    }
-    
-    dqf_global = dqf_thread.matrix().colwise().sum();
-    MatrixXd grad_v = MatrixXd::Zero(npars,npars);
-    for (int j = 0; j < npars; j++) grad_v(j,j) = 0.5* (dqf_thread.col(j) - dqf_thread.col(j).mean()).square().sum()/(dqf_thread.col(j).size()-1);
-    for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
-    const double niter_inv = 1.0 / (double)niter;
-    for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
-    gradients.tail(grad.size()) = grad;
-    MatrixXd M(npars, npars);
-    for(int j = 0; j < npars; j++) {
-      for(int k = j; k < npars; k++) {
-        double val = (S[j].array() * S[k].array()).sum();
-        M(j, k) = 0.5*val;
-        if(j != k) M(k, j) = 0.5*val;
-      }
-    }
-    infomat_theta = M;
-    VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
-    theta_curr +=  M.llt().solve(grad);
-    update_parameters(theta_curr.array());
-    
-    MatrixXd V = MatrixXd::Identity(npars,npars);
-    M.llt().solveInPlace(V);
-    //Rcpp::Rcout << "\nMC err:\n" << V * grad_v * V * niter_inv << " M:\n" << V;
+  std::vector<MatrixXd> S;
+  for(int i = 0; i < npars; i++)
+  {
+    S.emplace_back(derivs[i + 1].rows(), derivs[i + 1].cols());
+    S[i] = matL.solve(derivs[i+1]);
+    grad(i) = -0.5 * S[i].trace();
   }
+  
+  MatrixXd vmat = matL.solve(umat);
+  VectorXd dqf_global = VectorXd::Zero(npars);
+  //ArrayXXd dqf_thread = MatrixXd::Zero(niter,npars);
+
+#pragma omp parallel
+{
+  VectorXd dqf_thread = VectorXd::Zero(npars);
+
+#pragma omp for
+  for (int i = 0; i < niter; i++)
+  {
+    double qf = vmat.col(i).dot(umat.col(i));
+    logl(i) += -0.5 * qf;
+    for (int j = 0; j < npars; j++)
+      dqf_thread(j) += umat.col(i).dot(S[j] * vmat.col(i));
+  }
+
+#pragma omp critical
+    dqf_global += dqf_thread;
+  }
+
+  //dqf_global = dqf_thread.matrix().colwise().sum();
+  for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
+  const double niter_inv = 1.0 / (double)niter;
+  for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
+  gradients.tail(grad.size()) = grad;
+  MatrixXd M(npars, npars);
+  for(int j = 0; j < npars; j++) {
+    for(int k = j; k < npars; k++) {
+      double val = (S[j].array() * S[k].array()).sum();
+      M(j, k) = 0.5*val;
+      if(j != k) M(k, j) = 0.5*val;
+    }
+  }
+  infomat_theta = M;
+  VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
+  theta_curr +=  M.llt().solve(grad);
+  update_parameters(theta_curr.array());
 }
 
 inline void glmmr::Covariance::derivatives(std::vector<MatrixXd>& derivs,

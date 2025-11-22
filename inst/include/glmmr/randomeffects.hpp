@@ -22,20 +22,22 @@ public:
   MatrixXd    scaled_u_;
   MatrixXd    zu_;
   VectorXd    u_mean_;
+  MatrixXd    u_var_;
   modeltype&  model;
   int         mcmc_block_size = 1; // for saem
   
   RandomEffects(modeltype& model_) : 
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     scaled_u_(MatrixXd::Zero(model_.covariance.Q(),1)),
-    zu_(model_.n(),1), u_mean_(VectorXd::Zero(model_.covariance.Q())), model(model_) {};
+    zu_(model_.n(),1), u_mean_(VectorXd::Zero(model_.covariance.Q())), 
+    u_var_(MatrixXd::Zero(model_.covariance.Q(),model_.covariance.Q())), model(model_) {};
   
   RandomEffects(modeltype& model_, int n, int Q) : 
     u_(MatrixXd::Zero(Q,1)),
     scaled_u_(MatrixXd::Zero(Q,1)),
-    zu_(n,1), u_mean_(Q), model(model_) {};
+    zu_(n,1), u_mean_(Q), u_var_(Q,Q), model(model_) {};
   
-  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), zu_(re.zu_), u_mean_(re.u_mean_), model(re.model) {};
+  RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), zu_(re.zu_), u_mean_(re.u_mean_), u_var_(re.u_var_), model(re.model) {};
   
   MatrixXd      Zu(){return zu_;};
   MatrixXd      u(bool scaled = true);

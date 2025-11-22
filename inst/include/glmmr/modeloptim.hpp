@@ -61,7 +61,7 @@ public:
   virtual double  log_likelihood();
   virtual double  full_log_likelihood();
   virtual void    nr_beta();
-  virtual void    nr_theta(bool tr_approx = false);
+  virtual void    nr_theta();
   virtual void    update_var_par(const double& v);
   virtual void    update_var_par(const ArrayXd& v);
   template<class algo, typename = std::enable_if_t<std::is_base_of<optim_algo, algo>::value> >
@@ -396,7 +396,7 @@ template<typename modeltype>
 inline glmmr::ModelOptim<modeltype>::ModelOptim(modeltype& model_, 
                                                 glmmr::ModelMatrix<modeltype>& matrix_,
                                                 glmmr::RandomEffects<modeltype>& re_) : model(model_), matrix(matrix_), re(re_), ll_current(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
-                                                gradients(model.linear_predictor.P() + model.covariance.npar()){}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
+                                                gradients(model.linear_predictor.P() + model.covariance.npar()) {}; //ll_previous(ArrayXXd::Zero(re_.mcmc_block_size,2)), 
 
 template<typename modeltype>
 inline void glmmr::ModelOptim<modeltype>::set_bobyqa_control(int npt_, double rhobeg_, double rhoend_){
@@ -754,9 +754,6 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
-  //MatrixXd zd(model.n(),1);
-  //zd.col(0) = model.linear_predictor.xb()+model.data.offset;
-  //zd.col(0) += model.covariance.ZLu(re.u_mean_);
   MatrixXd X = model.linear_predictor.X();
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
@@ -782,6 +779,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   W.array().colwise() *= model.data.weights;
 
   zd = maths::mod_inv_func(zd, model.family.link);
+  if(model.family.family == Fam::binomial) zd.array().colwise() *= model.data.variance;
   VectorXd resid(model.n());
   
   if(!model.family.canonical()){
@@ -796,7 +794,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     }
     resid *= (1.0 / niter);
   } else {
-    resid = model.data.y - zd.col(0);//rowwise().mean();
+    resid = model.data.y - zd.rowwise().mean();
   }
 
   #pragma omp parallel
@@ -811,8 +809,8 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   }
 
   XtWXm *= (1.0 / niter);
-  //XtWXm = X.transpose() * (X.array().colwise() * W.col(0).array()).matrix();
   Eigen::LLT<MatrixXd> llt(XtWXm);
+  
   gradients.head(X.cols()) = X.transpose() * resid;
   VectorXd bincr = llt.solve(gradients.head(X.cols()).matrix());
   update_beta(model.linear_predictor.parameter_vector() + bincr);
@@ -864,14 +862,14 @@ inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, co
 }
 
 template<typename modeltype>
-inline void glmmr::ModelOptim<modeltype>::nr_theta(bool tr_approx){
-  if(control.reml)throw std::runtime_error("Newton-Raphson not compatible with REML for covariance parameters");
+inline void glmmr::ModelOptim<modeltype>::nr_theta(){
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   if(ll_current.rows() != re.u_.cols())ll_current.resize(re.u_.cols(),NoChange);
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
   ArrayXd  tmp(ll_current.rows());
-  model.covariance.nr_step(re.scaled_u_, tmp, gradients, tr_approx);
+  
+  model.covariance.nr_step(re.scaled_u_, tmp, gradients);
   re.update_zu();
   ll_current.col(1) = tmp;
   
@@ -881,12 +879,11 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(bool tr_approx){
 }
 
 template<>
-inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(bool tr_approx){
+inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   if(control.reml)throw std::runtime_error("Newton-Raphson not compatible with REML for covariance parameters");
   if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
-  (void) tr_approx;
   
   // Pre-cache frequently accessed members
   const int n_iter = re.u_.cols();
