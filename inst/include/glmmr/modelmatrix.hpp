@@ -107,7 +107,7 @@ public:
   int                     P() const;
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
-  void                    posterior_u_samples(const int niter, const double tol = 1e-3, const bool append = false);                  
+  void                    posterior_u_samples(const int niter, const bool loglik = true, const bool append = false);                  
   
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -1191,7 +1191,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
 
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
-                                                               const double tol, 
+                                                               const bool loglik,
                                                                const bool append)
 {
   if constexpr (std::is_same_v<modeltype,bits_hsgp>){
@@ -1236,7 +1236,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     throw std::runtime_error("Analtyic posterior only available with Gaussian, Poisson, and Binomial");
     break;
   }
-  
   
   MatrixXd ZL = model.covariance.ZL();
   const int n_cols = ZL.cols();
@@ -1331,13 +1330,14 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   // Extract lower triangular for random effect simulation
   LLT<MatrixXd> llt(Vb);
   MatrixXd LVb = llt.matrixL();
-  
+  VectorXd v(re.u_.rows());
+  if(append && loglik) throw std::runtime_error("SAEM and importance sampling not currently compatible");
   bool action_append = append;
   if(append && re.u_.cols() == 1)action_append = false;
   if(action_append){
     int currcolsize = re.u_.cols();
     unew = LVb * unew;
-    unew.colwise() += re.u_mean_;//Mb;
+    unew.colwise() += re.u_mean_;
     re.u_.conservativeResize(NoChange,currcolsize + niter);
     re.zu_.conservativeResize(NoChange,currcolsize + niter);
     re.u_.rightCols(niter).noalias() = unew;
@@ -1345,10 +1345,19 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     if(re.u_.cols() != niter){
       re.u_.resize(NoChange, niter);
       re.zu_.resize(NoChange, niter);
+      re.u_weight_.resize(niter);
+      if(loglik) re.u_loglik_.resize(niter);
     }
     re.u_.noalias() = LVb * unew;
-    re.u_.colwise() += re.u_mean_;//Mb;
+    if(loglik){
+#pragma omp parallel for
+      for(int i = 0; i < re.u_.cols(); i++){
+        v = llt.solve(re.u_.col(i));
+        re.u_loglik_(i) = -0.5 * v.dot(v);
+      }
+    }
+    re.u_.colwise() += re.u_mean_;
   }
-  re.update_zu();
+  re.update_zu(loglik);
 }
 

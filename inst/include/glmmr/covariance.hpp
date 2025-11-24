@@ -136,7 +136,7 @@ public:
   virtual SparseMatrix<double>    Z_sparse();
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
-  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients);
+  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
   MatrixXd          information_matrix();
   
@@ -1051,7 +1051,7 @@ inline bool glmmr::Covariance::any_log_re() const{
 }
 
 
-inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients){
+inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight){
   static const double LOG_2PI = log(2*M_PI);
   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
   std::vector<MatrixXd> derivs;
@@ -1092,7 +1092,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
     double qf = vmat.col(i).dot(umat.col(i));
     logl(i) += -0.5 * qf;
     for (int j = 0; j < npars; j++)
-      dqf_thread(j) += umat.col(i).dot(S[j] * vmat.col(i));
+      dqf_thread(j) += uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
   }
 
 #pragma omp critical
@@ -1102,7 +1102,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
   //dqf_global = dqf_thread.matrix().colwise().sum();
   for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
   const double niter_inv = 1.0 / (double)niter;
-  for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j] * niter_inv;
+  for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j];// * niter_inv;
   gradients.tail(grad.size()) = grad;
   MatrixXd M(npars, npars);
   for(int j = 0; j < npars; j++) {

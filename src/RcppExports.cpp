@@ -1319,16 +1319,16 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__posterior_u_sample
-void Model__posterior_u_sample(SEXP xp, int niter, double tol, bool append, int type);
-RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP tolSEXP, SEXP appendSEXP, SEXP typeSEXP) {
+void Model__posterior_u_sample(SEXP xp, int niter, bool loglik, bool append, int type);
+RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP loglikSEXP, SEXP appendSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
-    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< bool >::type loglik(loglikSEXP);
     Rcpp::traits::input_parameter< bool >::type append(appendSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__posterior_u_sample(xp, niter, tol, append, type);
+    Model__posterior_u_sample(xp, niter, loglik, append, type);
     return R_NilValue;
 END_RCPP
 }

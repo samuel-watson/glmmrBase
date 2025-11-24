@@ -425,8 +425,8 @@ Model__residuals <- function(xp, rtype = 2L, conditional = TRUE, type = 0L) {
     .Call(`_glmmrBase_Model__residuals`, xp, rtype, conditional, type)
 }
 
-Model__posterior_u_sample <- function(xp, niter, tol, append, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, tol, append, type))
+Model__posterior_u_sample <- function(xp, niter, loglik, append, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, loglik, append, type))
 }
 
 Model__get_log_likelihood_values <- function(xp, type = 0L) {

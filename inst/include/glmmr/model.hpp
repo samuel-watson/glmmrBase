@@ -93,7 +93,7 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  re.update_zu();
+  re.update_zu(false);
 }
 
 template<typename modeltype>
@@ -137,6 +137,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
       re.scaled_u_.resize(NoChange,newcolsize);
+      re.u_weight_.resize(newcolsize);
     }
     re.u_ = u_;
     if(re.u_.cols() != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
@@ -144,7 +145,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   MatrixXd Z = model.covariance.Z();
   if(re.zu_.rows() != model.n())re.zu_.resize(model.n(),NoChange);
   if(re.scaled_u_.rows() != re.u_.rows())re.scaled_u_.resize(re.u_.rows(),NoChange);
-  re.update_zu();
+  re.update_zu(false);
 }
 
 template<typename modeltype>

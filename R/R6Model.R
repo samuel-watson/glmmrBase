@@ -998,6 +998,7 @@ Model <- R6::R6Class("Model",
                                        bf.tol = 10,
                                        bf.hist = 10,
                                        bf.k0 = 10,
+                                       importance = FALSE,
                                        conv.criterion = 2,
                                        skip.theta = FALSE,
                                        constr.zero = 1){
@@ -1015,6 +1016,9 @@ Model <- R6::R6Class("Model",
                          if(se != "gls" & private$model_type() != 0)stop("Only GLS standard errors supported for GP approximations.")
                          if(se == "box" & !(self$family[[1]]=="gaussian"&self$family[[2]]=="identity"))stop("Box only available for linear models")
                          if(!mcmc.pkg %in% c("cmdstan","rstan","analytic"))stop("mcmc.pkg must be one of cmdstan, rstan, or analytic")
+                         if(importance & mcmc.pkg != "analytic")stop("Importance sampling only available with mcmc.pkg= analytic")
+                         if(importance & method == "saem")stop("Importance sampling not compatible with SAEM")
+                         
                          if(grepl("mcnr2",method)){
                            dbl_nr <- TRUE
                            method <- gsub("2","",method)
@@ -1215,7 +1219,7 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, 1e-6, append_u, private$model_type())
+                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, importance, append_u, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")

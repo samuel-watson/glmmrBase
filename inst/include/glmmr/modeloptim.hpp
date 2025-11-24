@@ -376,7 +376,8 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood_theta(const dblvec& t
   if(control.saem){
     ll = saem_average(1);
   } else {
-    ll = ll_current.col(1).mean();
+    for(int i = 0; i < ll_current.rows(); i++) ll += re.u_weight_(i) * ll_current(i,1);
+    //ll = ll_current.col(1).mean();
   }
   return -1*ll;
 }
@@ -518,20 +519,14 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   
   if(model.weighted){
     if(model.family.family==Fam::gaussian){
-//#pragma omp parallel for if(re.zu_.cols() > 50)
+#pragma omp parallel for 
       for(int j= 0; j< re.zu_.cols() ; j++){
         ll_current(j,llcol ) = glmmr::maths::log_likelihood(model.data.y.array(),xb + re.zu_.col(j).array(),
                    model.data.variance * model.data.weights.inverse(),
                    model.family);
-        
-        // for(int i = 0; i<model.n(); i++){
-        //   ll_current(j,llcol ) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-        //                                      model.data.variance(i)/model.data.weights(i),
-        //                                      model.family);
-        // }
       }
     } else {
-//#pragma omp parallel for if(re.zu_.cols() > 50)
+//#pragma omp parallel for 
       for(int j=0; j< re.zu_.cols() ; j++){
         for(int i = 0; i<model.n(); i++){
           ll_current(j,llcol) += model.data.weights(i)*glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
@@ -541,17 +536,15 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
       ll_current.col(llcol) *= model.data.weights.sum()/model.n();
     }
   } else {
-//#pragma omp parallel for if(re.zu_.cols() > 50)
+#pragma omp parallel for if(re.zu_.cols() > 50)
     for(int j= 0; j< re.zu_.cols() ; j++){
       ll_current(j,llcol) = glmmr::maths::log_likelihood(model.data.y.array(),xb + re.zu_.col(j).array(),
                  model.data.variance,model.family);
-      // for(int i = 0; i<model.n(); i++){
-      //   ll_current(j,llcol) += glmmr::maths::log_likelihood(model.data.y(i),xb(i) + re.zu_(i,j),
-      //                                      model.data.variance(i),model.family);
-      // }
     }
   }
-  return ll_current.col(llcol).mean();
+  double out = 0;
+  for(int j = 0; j< ll_current.rows(); j++) out += re.u_weight_(j) * ll_current(j,llcol);
+  return out; //ll_current.col(llcol).mean();
 }
 
 template<typename modeltype>
@@ -780,7 +773,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
 
   zd = maths::mod_inv_func(zd, model.family.link);
   if(model.family.family == Fam::binomial) zd.array().colwise() *= model.data.variance;
-  VectorXd resid(model.n());
+  VectorXd resid = VectorXd::Zero(model.n());
   
   if(!model.family.canonical()){
     MatrixXd zdresid = MatrixXd::Zero(model.n(), zd.cols());
@@ -788,13 +781,15 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     zdresid -= zd;
     MatrixXd detmu = maths::detadmu(zd, model.family.link);
     zdresid.array() *= detmu.array();
-    resid.setZero();
     for(int i = 0; i < niter; ++i){
       resid += (W.col(i).array() * zdresid.col(i).array()).matrix();
     }
     resid *= (1.0 / niter);
   } else {
-    resid = model.data.y - zd.rowwise().mean();
+    for(int i = 0; i < niter; ++i){
+      resid += re.u_weight_(i) * (model.data.y - zd.col(i));
+    }
+    //resid = model.data.y - zd.rowwise().mean();
   }
 
   #pragma omp parallel
@@ -802,13 +797,13 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     MatrixXd XtWXm_private = MatrixXd::Zero(P(), P());
   #pragma omp for nowait
     for(int i = 0; i < niter; ++i){
-      XtWXm_private.noalias() += X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
+      XtWXm_private.noalias() += re.u_weight_(i) * X.transpose() * (X.array().colwise() * W.col(i).array()).matrix();
     }
   #pragma omp critical
     XtWXm += XtWXm_private;
   }
 
-  XtWXm *= (1.0 / niter);
+  //XtWXm *= (1.0 / niter);
   Eigen::LLT<MatrixXd> llt(XtWXm);
   
   gradients.head(X.cols()) = X.transpose() * resid;
@@ -855,7 +850,6 @@ inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, co
   double diff = quantile == 0 ? 10 : meang - quantile;
   
   if(trace > 0)Rcpp::Rcout << "\nGradients: " << gradients.transpose() << " | ||G|| = " << gradients.matrix().norm();
-  //Rcpp::Rcout << "\nmeang: " << meang << " varg " << varg << " sdg: " << sdg << " cv: " << sdg/meang;
   if(trace > 0)Rcpp::Rcout << "\nLog-likelihood running mean: " << meang << " (old " << quantile << ") diff: " << diff;
   quantile = meang;
   return bf > tol;
@@ -869,8 +863,8 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(){
   previous_ll_var.second = current_ll_var.second;
   ArrayXd  tmp(ll_current.rows());
   
-  model.covariance.nr_step(re.scaled_u_, tmp, gradients);
-  re.update_zu();
+  model.covariance.nr_step(re.scaled_u_, tmp, gradients, re.u_weight_);
+  re.update_zu(false);
   ll_current.col(1) = tmp;
   
   current_ll_values.second = ll_current.col(1).mean();
