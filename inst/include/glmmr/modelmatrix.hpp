@@ -1353,7 +1353,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
 #pragma omp parallel for
       for(int i = 0; i < re.u_.cols(); i++){
         v = llt.solve(re.u_.col(i));
-        re.u_loglik_(i) = -0.5 * v.dot(v);
+        re.u_loglik_(i) = -0.5 * v.dot(re.u_.col(i));
       }
     }
     re.u_.colwise() += re.u_mean_;
