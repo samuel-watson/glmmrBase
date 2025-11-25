@@ -1263,7 +1263,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     int itero = 0;
     VectorXd u(b.size());
 
-    while(diff > 1e-3 && itero < 10) {
+    while(diff > 1e-6 && itero < 10) {
       u.noalias() = ZL * b;
       u.array() -= u.mean();
       eta = xb + u.array();
@@ -1289,6 +1289,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       diff = (b - bnew).array().abs().maxCoeff();
       itero++;
       b.swap(bnew);
+      //Rcpp::Rcout << "\nu: " << b.head(10).transpose();
     }
 
     Mb = b;

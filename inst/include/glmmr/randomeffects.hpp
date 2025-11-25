@@ -65,10 +65,10 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
 template<typename modeltype>
 inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   scaled_u_ = model.covariance.Lu(u_);
-  //VectorXd umat_means = scaled_u_.colwise().mean();
+  VectorXd umat_means = scaled_u_.colwise().mean();
   //double umean = scaled_u_.mean();
-  scaled_u_.array() -= u_mean_.mean();
-  //for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
+  //scaled_u_.array() -= u_mean_.mean();
+  for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
   MatrixXd Z = model.covariance.Z();
   zu_ = Z * scaled_u_;
   ArrayXd xb = model.xb();

@@ -1094,15 +1094,15 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
     }
     for(int k = j; k < npars; k++){
       Sprod = S[j] * S[k];
-      M(j,k) += -0.5 * Sprod.trace();
+      M(j,k) += 0.5 * Sprod.trace();
       if(j != k) M(k,j) += M(j,k);
-#pragma omp for   
-      for (int i = 0; i < niter; i++)
-      {
-        double val = uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
-        M(j,k) += val;
-        if(j!=k)M(k,j) += val;
-      }
+// #pragma omp for   
+//       for (int i = 0; i < niter; i++)
+//       {
+//         double val = uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
+//         M(j,k) += val;
+//         if(j!=k)M(k,j) += val;
+//       }
     }
   }
 
