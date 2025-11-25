@@ -1202,7 +1202,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   }
   ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
   ArrayXd eta = xb;
-  eta += model.covariance.ZLu(re.u_mean_).array();
+  eta += re.zu_.rowwise().mean().array();//model.covariance.ZLu(re.u_mean_).array();
   ArrayXd ymod(eta.size());
   VectorXd W_(eta.size());
   
@@ -1238,96 +1238,74 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   }
   
   MatrixXd ZL = model.covariance.ZL();
+  MatrixXd ZLt = ZL.transpose();
   const int n_cols = ZL.cols();
   VectorXd Mb(n_cols);
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
-  VectorXd mu = maths::mod_inv_func(eta.matrix(), model.family.link);
-  if(model.family.family == Fam::binomial) mu.array() *= model.data.variance;
-  VectorXd resid = model.data.y - mu;
+  
+  if(model.family.family == Fam::gaussian) {
+    MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
+    MatrixXd Pb = ZLt * WZL;
+    Pb.diagonal().array() += 1.0;
+    VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
+    llt_Pb.compute(Pb);
+    Mb = llt_Pb.solve(yb);
+    llt_Pb.solveInPlace(Vb);
+  } else {
+    VectorXd b = re.u_mean_;
+    VectorXd bnew(b);
+    MatrixXd WZL(W_.size(),n_cols);
+    MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
+    VectorXd yb(b.size());
+    double diff = 1.0;
+    int itero = 0;
+    VectorXd u(b.size());
 
-  MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-  MatrixXd Pb = ZL.transpose() * WZL;
-  Pb.diagonal().array() += 1.0;
-  VectorXd yb = ZL.transpose() * resid - re.u_mean_;
-  llt_Pb.compute(Pb);
-  Mb = llt_Pb.solve(yb);
+    while(diff > 1e-3 && itero < 10) {
+      u.noalias() = ZL * b;
+      u.array() -= u.mean();
+      eta = xb + u.array();
+
+      if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
+        ArrayXd exp_neg_eta = (-eta).exp();
+        ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
+        ArrayXd var_p = model.data.variance * logitp;
+        W_ = (var_p * (1.0 - logitp)).matrix();
+        ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
+
+      } else if(model.family.family == Fam::poisson) {
+        ArrayXd exp_eta = eta.exp();
+        W_ = exp_eta.matrix();
+        ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
+      }
+      WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
+      LWL.noalias() = ZLt * WZL;
+      LWL.diagonal().array() += 1.0;
+      yb.noalias() = WZL.transpose() * (ymod - xb).matrix();
+      llt_Pb.compute(LWL);
+      bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
+      diff = (b - bnew).array().abs().maxCoeff();
+      itero++;
+      b.swap(bnew);
+    }
+
+    Mb = b;
+    re.u_mean_ = Mb;
+    llt_Pb.solveInPlace(Vb);
+  }
   
-  llt_Pb.solveInPlace(Vb);
-  re.u_mean_ += Mb;
-  re.u_var_ = Vb;
-  
-  // if(model.family.family == Fam::gaussian) {
-  //   // Use colwise multiplication (faster than diagonal matrix)
-  //   MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-  //   MatrixXd Pb = ZL.transpose() * WZL;
-  //   Pb.diagonal().array() += 1.0;
-  //   VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
-  //   // Reuse Cholesky decomposition
-  //   llt_Pb.compute(Pb);
-  //   Mb = llt_Pb.solve(WZL.transpose() * (model.data.y - xb.matrix()));
-  //   llt_Pb.solveInPlace(Vb);
-  // } else {
-  //   // // Initial setup
-  //   VectorXd b = re.u_.rowwise().mean();
-  //   VectorXd bnew(b);
-  //   MatrixXd WZL(W_.size(),n_cols);
-  //   MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-  //   VectorXd yb(b.size());
-  //   double diff = 1.0;
-  //   int itero = 0;
-  //   VectorXd u(b.size());
-  // 
-  //   while(diff > tol && itero < 10) {
-  //     u = ZL * b;
-  //     eta = xb + u.array();
-  //     eta += -1.0*u.mean();
-  // 
-  //     if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
-  //       // Numerically stable sigmoid computation
-  //       ArrayXd exp_neg_eta = (-eta).exp();
-  //       ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
-  //       ArrayXd var_p = model.data.variance * logitp;
-  //       W_ = (var_p * (1.0 - logitp)).matrix();
-  //       ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
-  // 
-  //     } else if(model.family.family == Fam::poisson) {
-  //       ArrayXd exp_eta = eta.exp();
-  //       W_ = exp_eta.matrix();
-  //       ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
-  //     }
-  //     // Recompute with updated weights
-  //     WZL = (ZL.array().colwise() * W_.array()).matrix();
-  //     LWL = ZL.transpose() * WZL;
-  //     LWL.diagonal().array() += 1.0;
-  //     yb = WZL.transpose() * (ymod - xb).matrix();
-  //     llt_Pb.compute(LWL);
-  //     bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
-  //     diff = (b - bnew).array().abs().maxCoeff();
-  //     itero++;
-  //     b = bnew;
-  //   }
-  // 
-  //   Mb = b;
-  //   re.u_mean_ = Mb;
-  //   llt_Pb.solveInPlace(Vb);
-  // }
-  // Rcpp::Rcout << "\nun: " << Mb.head(20).transpose();
-  
-  // Optimized random number generation
   MatrixXd unew(re.u_.rows(), niter);
   std::random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<double> d(0.0, 1.0);
   
-  // Fill matrix efficiently
   double* data = unew.data();
   for(int i = 0; i < unew.size(); ++i) {
     data[i] = d(gen);
   }
   
-  // Extract lower triangular for random effect simulation
   LLT<MatrixXd> llt(Vb);
   MatrixXd LVb = llt.matrixL();
   VectorXd v(re.u_.rows());

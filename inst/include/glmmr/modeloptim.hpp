@@ -862,11 +862,9 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(){
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
   ArrayXd  tmp(ll_current.rows());
-  
   model.covariance.nr_step(re.scaled_u_, tmp, gradients, re.u_weight_);
   re.update_zu(false);
   ll_current.col(1) = tmp;
-  
   current_ll_values.second = ll_current.col(1).mean();
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
   calculate_var_par();

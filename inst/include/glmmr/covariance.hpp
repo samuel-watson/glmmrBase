@@ -1051,7 +1051,8 @@ inline bool glmmr::Covariance::any_log_re() const{
 }
 
 
-inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight){
+inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, 
+                                       const ArrayXd& uweight){
   static const double LOG_2PI = log(2*M_PI);
   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
   std::vector<MatrixXd> derivs;
@@ -1067,9 +1068,6 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
   if(!isSparse)make_sparse();
   logdet_val = log_determinant();
   logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
-  
-  
-  
   std::vector<MatrixXd> S;
   for(int i = 0; i < npars; i++)
   {
@@ -1079,9 +1077,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
   }
   
   MatrixXd vmat = matL.solve(umat);
-  //VectorXd dqf_global = VectorXd::Zero(npars);
   MatrixXd M = MatrixXd::Zero(npars, npars);
-  //ArrayXXd dqf_thread = MatrixXd::Zero(niter,npars);
 
 #pragma omp parallel
 {
