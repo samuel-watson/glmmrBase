@@ -136,7 +136,7 @@ public:
   virtual SparseMatrix<double>    Z_sparse();
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
-  virtual void      nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight);
+  virtual void      nr_step(const MatrixXd &umat,const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
   MatrixXd          information_matrix();
   
@@ -162,7 +162,9 @@ protected:
   MatrixXd                            dmat_matrix;
   VectorXd                            zquad;
   bool                                isSparse = true;
+public:
   CovarianceLLT                       matL;
+protected:
   MatrixXd                            infomat_theta;
   
   // functions
@@ -1051,7 +1053,7 @@ inline bool glmmr::Covariance::any_log_re() const{
 }
 
 
-inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, ArrayXd& gradients, 
+inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, 
                                        const ArrayXd& uweight){
   static const double LOG_2PI = log(2*M_PI);
   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
@@ -1076,7 +1078,6 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
     grad(i) = -0.5 * S[i].trace();
   }
   
-  MatrixXd vmat = matL.solve(umat);
   MatrixXd M = MatrixXd::Zero(npars, npars);
 
 #pragma omp parallel
@@ -1094,15 +1095,15 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, ArrayXd& logl, Arra
     }
     for(int k = j; k < npars; k++){
       Sprod = S[j] * S[k];
-      M(j,k) += 0.5 * Sprod.trace();
+      M(j,k) += -0.5 * Sprod.trace();
       if(j != k) M(k,j) += M(j,k);
-// #pragma omp for   
-//       for (int i = 0; i < niter; i++)
-//       {
-//         double val = uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
-//         M(j,k) += val;
-//         if(j!=k)M(k,j) += val;
-//       }
+#pragma omp for
+      for (int i = 0; i < niter; i++)
+      {
+        double val = uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
+        M(j,k) += val;
+        if(j!=k)M(k,j) += val;
+      }
     }
   }
 

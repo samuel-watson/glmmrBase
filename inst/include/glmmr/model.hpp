@@ -102,6 +102,8 @@ inline void glmmr::Model<modeltype>::reset_u(){
   re.u_.setZero();
   re.scaled_u_.resize(model.covariance.Q(),1);
   re.scaled_u_.setZero();
+  re.u_solve_.resize(model.covariance.Q(),1);
+  re.u_solve_.setZero();
   re.zu_.resize(NoChange,1);
   re.zu_.setZero();
 }
@@ -127,6 +129,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.scaled_u_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.u_solve_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;
     optim.ll_current.resize(currcolsize + newcolsize,NoChange);
   } else {
@@ -137,6 +140,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
       re.scaled_u_.resize(NoChange,newcolsize);
+      re.u_solve_.resize(NoChange,newcolsize);
       re.u_weight_.resize(newcolsize);
     }
     re.u_ = u_;
@@ -145,6 +149,7 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   MatrixXd Z = model.covariance.Z();
   if(re.zu_.rows() != model.n())re.zu_.resize(model.n(),NoChange);
   if(re.scaled_u_.rows() != re.u_.rows())re.scaled_u_.resize(re.u_.rows(),NoChange);
+  if(re.u_solve_.rows() != re.u_.rows())re.u_solve_.resize(re.u_.rows(),NoChange);
   re.update_zu(false);
 }
 

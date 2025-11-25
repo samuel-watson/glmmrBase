@@ -22,7 +22,7 @@ public:
   MatrixXd    scaled_u_;
   MatrixXd    zu_;
   VectorXd    u_mean_;
-  MatrixXd    u_var_;
+  MatrixXd    u_solve_;
   VectorXd    u_weight_;
   VectorXd    u_loglik_;
   modeltype&  model;
@@ -32,17 +32,17 @@ public:
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     scaled_u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     zu_(model_.n(),1), u_mean_(VectorXd::Zero(model_.covariance.Q())), 
-    u_var_(MatrixXd::Zero(model_.covariance.Q(),model_.covariance.Q())),
+    u_solve_(MatrixXd::Zero(model_.covariance.Q(),1)),
     u_weight_(VectorXd::Zero(1)), u_loglik_(VectorXd::Zero(1)), model(model_) {};
   
   RandomEffects(modeltype& model_, int n, int Q) : 
     u_(MatrixXd::Zero(Q,1)),
     scaled_u_(MatrixXd::Zero(Q,1)),
-    zu_(n,1), u_mean_(Q), u_var_(Q,Q),
+    zu_(n,1), u_mean_(Q), u_solve_(Q,1),
     u_weight_(1), u_loglik_(1), model(model_) {};
   
   RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), 
-    zu_(re.zu_), u_mean_(re.u_mean_), u_var_(re.u_var_), u_weight_(re.u_weight_),
+    zu_(re.zu_), u_mean_(re.u_mean_), u_solve_(re.u_solve_), u_weight_(re.u_weight_),
     u_loglik_(re.u_loglik_), model(re.model) {};                
   
   MatrixXd      Zu(){return zu_;};
@@ -65,19 +65,21 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
 template<typename modeltype>
 inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   scaled_u_ = model.covariance.Lu(u_);
-  VectorXd umat_means = scaled_u_.colwise().mean();
+  //VectorXd umat_means = scaled_u_.colwise().mean();
   //double umean = scaled_u_.mean();
   //scaled_u_.array() -= u_mean_.mean();
-  for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
+  //for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
   MatrixXd Z = model.covariance.Z();
   zu_ = Z * scaled_u_;
   ArrayXd xb = model.xb();
+  u_solve_ = model.covariance.matL.solve(scaled_u_);
   
   if(weights){
+    
 #pragma omp parallel for 
     for(int i = 0; i < scaled_u_.cols(); i++){
       double llmod = maths::log_likelihood(model.data.y.array(),xb + zu_.col(i).array(), model.data.variance,model.family);
-      double llprior = model.covariance.log_likelihood(scaled_u_.col(i));
+      double llprior = -0.5 * scaled_u_.col(i).dot(u_solve_.col(i)); //model.covariance.log_likelihood(scaled_u_.col(i));
       u_weight_(i) = exp(llmod + llprior - u_loglik_(i));
     }
     double weightsum = u_weight_.sum();

@@ -1265,7 +1265,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
 
     while(diff > 1e-6 && itero < 10) {
       u.noalias() = ZL * b;
-      u.array() -= u.mean();
+      //u.array() -= u.mean();
       eta = xb + u.array();
 
       if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
@@ -1286,6 +1286,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       yb.noalias() = WZL.transpose() * (ymod - xb).matrix();
       llt_Pb.compute(LWL);
       bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
+      //bnew.array() -= bnew.mean();
       diff = (b - bnew).array().abs().maxCoeff();
       itero++;
       b.swap(bnew);
@@ -1318,11 +1319,15 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     unew = LVb * unew;
     unew.colwise() += re.u_mean_;
     re.u_.conservativeResize(NoChange,currcolsize + niter);
+    re.scaled_u_.conservativeResize(NoChange,currcolsize + niter);
+    re.u_solve_.conservativeResize(NoChange,currcolsize + niter);
     re.zu_.conservativeResize(NoChange,currcolsize + niter);
     re.u_.rightCols(niter).noalias() = unew;
   } else {
     if(re.u_.cols() != niter){
       re.u_.resize(NoChange, niter);
+      re.u_solve_.resize(NoChange, niter);
+      re.scaled_u_.resize(NoChange, niter);
       re.zu_.resize(NoChange, niter);
       re.u_weight_.resize(niter);
       if(loglik) re.u_loglik_.resize(niter);
