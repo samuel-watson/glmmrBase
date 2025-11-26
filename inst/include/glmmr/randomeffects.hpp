@@ -23,7 +23,7 @@ public:
   MatrixXd    zu_;
   VectorXd    u_mean_;
   MatrixXd    u_solve_;
-  VectorXd    u_weight_;
+  ArrayXd     u_weight_;
   VectorXd    u_loglik_;
   modeltype&  model;
   int         mcmc_block_size = 1; // for saem
@@ -73,18 +73,19 @@ inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   zu_ = Z * scaled_u_;
   ArrayXd xb = model.xb();
   u_solve_ = model.covariance.matL.solve(scaled_u_);
-  
+  u_weight_.setZero();
   if(weights){
-    
 #pragma omp parallel for 
     for(int i = 0; i < scaled_u_.cols(); i++){
       double llmod = maths::log_likelihood(model.data.y.array(),xb + zu_.col(i).array(), model.data.variance,model.family);
-      double llprior = -0.5 * scaled_u_.col(i).dot(u_solve_.col(i)); //model.covariance.log_likelihood(scaled_u_.col(i));
-      u_weight_(i) = exp(llmod + llprior - u_loglik_(i));
+      double llprior = -0.5 * scaled_u_.col(i).dot(u_solve_.col(i)); 
+      //Rcpp::Rcout << "\nLL weights: " << llmod << " " << llprior << " " <<  u_loglik_(i);
+      u_weight_(i) = llmod + llprior - u_loglik_(i);
     }
+    u_weight_ -= u_weight_.mean();
+    u_weight_ = u_weight_.exp();
     double weightsum = u_weight_.sum();
     u_weight_ *= 1.0/weightsum;
-    //Rcpp::Rcout << "\nweights:\n" << u_weight_.transpose();
   } else {
     u_weight_.setConstant(1.0/scaled_u_.cols());
   }

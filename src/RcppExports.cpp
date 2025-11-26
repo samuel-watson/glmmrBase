@@ -1174,6 +1174,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__get_importance_weights
+SEXP Model__get_importance_weights(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_importance_weights(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_importance_weights(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__set_var_par
 void Model__set_var_par(SEXP xp, SEXP var_par_, int type);
 RcppExport SEXP _glmmrBase_Model__set_var_par(SEXP xpSEXP, SEXP var_par_SEXP, SEXP typeSEXP) {
@@ -1794,6 +1806,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_var_par", (DL_FUNC) &_glmmrBase_Model__get_var_par, 2},
     {"_glmmrBase_Model__get_variance", (DL_FUNC) &_glmmrBase_Model__get_variance, 2},
     {"_glmmrBase_Model__get_mean_u", (DL_FUNC) &_glmmrBase_Model__get_mean_u, 2},
+    {"_glmmrBase_Model__get_importance_weights", (DL_FUNC) &_glmmrBase_Model__get_importance_weights, 2},
     {"_glmmrBase_Model__set_var_par", (DL_FUNC) &_glmmrBase_Model__set_var_par, 3},
     {"_glmmrBase_Model__set_trials", (DL_FUNC) &_glmmrBase_Model__set_trials, 3},
     {"_glmmrBase_Model__L", (DL_FUNC) &_glmmrBase_Model__L, 2},

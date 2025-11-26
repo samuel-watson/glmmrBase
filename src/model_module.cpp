@@ -1466,6 +1466,17 @@ SEXP Model__get_mean_u(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__get_importance_weights(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->re.u_weight_);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::ArrayXd>(S));
+}
+
+// [[Rcpp::export]]
 void Model__set_var_par(SEXP xp, SEXP var_par_, int type = 0){
   double var_par = as<double>(var_par_);
   glmmrType model(xp,static_cast<Type>(type));
