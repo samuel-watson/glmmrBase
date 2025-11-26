@@ -1219,7 +1219,7 @@ Model <- R6::R6Class("Model",
                              }
                              Model__update_u(private$ptr,t(dsamps),append_u,private$model_type())
                            } else {
-                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, importance, append_u, private$model_type())
+                             Model__posterior_u_sample(private$ptr, n_mcmc_sampling, reml, importance, append_u, private$model_type())
                            }
                            if(private$trace==2)t2 <- Sys.time()
                            if(private$trace==2)cat("\nMCMC sampling took: ",t2-t1,"s")

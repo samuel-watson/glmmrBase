@@ -1084,13 +1084,17 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
 {
   VectorXd dqf_thread = VectorXd::Zero(npars);
   MatrixXd Sprod(S[0].rows(), S[0].cols());
+#pragma omp for 
+  for (int i = 0; i < niter; i++)
+  {
+    double qf = vmat.col(i).dot(umat.col(i));
+    logl(i) += -0.5 * qf;
+  }
 
   for (int j = 0; j < npars; j++){
 #pragma omp for   
     for (int i = 0; i < niter; i++)
     {
-      double qf = vmat.col(i).dot(umat.col(i));
-      logl(i) += -0.5 * qf;
       grad(j) += 0.5 * uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
     }
     for(int k = j; k < npars; k++){
@@ -1106,24 +1110,9 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
       }
     }
   }
-
-//#pragma omp critical
-  //  dqf_global += dqf_thread;
 }
 
-  //dqf_global = dqf_thread.matrix().colwise().sum();
-  //for (int j = 0; j < npars; j++) dqf[j] += dqf_global(j);
-  //const double niter_inv = 1.0 / (double)niter;
-  //for (int j = 0; j < npars; j++) grad(j) += 0.5 * dqf[j];// * niter_inv;
   gradients.tail(grad.size()) = grad;
-  
-  // for(int j = 0; j < npars; j++) {
-  //   for(int k = j; k < npars; k++) {
-  //     double val = (S[j].array() * S[k].array()).sum();
-  //     M(j, k) += 0.5*val;
-  //     if(j != k) M(k, j) += 0.5*val;
-  //   }
-  // }
   infomat_theta = M;
   VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
   theta_curr +=  M.llt().solve(grad);

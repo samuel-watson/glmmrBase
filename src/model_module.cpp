@@ -1595,11 +1595,11 @@ SEXP Model__residuals(SEXP xp, int rtype = 2, bool conditional = true, int type 
 }
 
 // [[Rcpp::export]]
-void Model__posterior_u_sample(SEXP xp, int niter, bool loglik, bool append, int type = 0){
+void Model__posterior_u_sample(SEXP xp, int niter, bool reml, bool loglik, bool append, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, loglik, append);}
+    [&](auto ptr){ptr->matrix.posterior_u_samples(niter, reml, loglik, append);}
   };
   std::visit(functor,model.ptr);
 }

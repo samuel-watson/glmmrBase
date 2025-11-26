@@ -107,7 +107,7 @@ public:
   int                     P() const;
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
-  void                    posterior_u_samples(const int niter, const bool loglik = true, const bool append = false);                  
+  void                    posterior_u_samples(const int niter, const bool reml, const bool loglik = true, const bool append = false);                  
   
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
@@ -1191,6 +1191,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
 
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
+                                                               const bool reml,
                                                                const bool loglik,
                                                                const bool append)
 {
@@ -1244,6 +1245,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
+  MatrixXd X = model.linear_predictor.X();
+  const int p = X.cols();
+  const int q = ZL.cols();
   
   if(model.family.family == Fam::gaussian) {
     MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
@@ -1257,6 +1261,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     VectorXd b = re.u_mean_;
     VectorXd bnew(b);
     MatrixXd WZL(W_.size(),n_cols);
+    MatrixXd WX(W_.size(),model.linear_predictor.P());
+    const MatrixXd I = MatrixXd::Identity(W_.size(), W_.size());
+    MatrixXd newW = MatrixXd::Identity(W_.size(), W_.size());
     MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
     VectorXd yb(b.size());
     double diff = 1.0;
@@ -1267,7 +1274,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       u.noalias() = ZL * b;
       //u.array() -= u.mean();
       eta = xb + u.array();
-
       if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
         ArrayXd exp_neg_eta = (-eta).exp();
         ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
@@ -1281,18 +1287,25 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
       WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
-      LWL.noalias() = ZLt * WZL;
+      if(reml){
+        WX.noalias() = (X.array().colwise() * W_.array()).matrix();
+        MatrixXd XWX = X.transpose() * WX;
+        MatrixXd C = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
+        MatrixXd B = WX.transpose() * ZL;
+        MatrixXd CB = C * B;
+        LWL.noalias() = ZLt * WZL - B.transpose() * CB;
+        WZL.noalias() -= WX * CB;
+      } else {
+        LWL.noalias() = ZLt * WZL;
+      }
       LWL.diagonal().array() += 1.0;
       yb.noalias() = WZL.transpose() * (ymod - xb).matrix();
       llt_Pb.compute(LWL);
-      bnew = llt_Pb.solve(WZL.transpose() * (ymod - xb).matrix());
-      //bnew.array() -= bnew.mean();
+      bnew = llt_Pb.solve(yb);
       diff = (b - bnew).array().abs().maxCoeff();
       itero++;
       b.swap(bnew);
-      //Rcpp::Rcout << "\nu: " << b.head(10).transpose();
     }
-
     Mb = b;
     re.u_mean_ = Mb;
     llt_Pb.solveInPlace(Vb);

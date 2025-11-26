@@ -1331,16 +1331,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // Model__posterior_u_sample
-void Model__posterior_u_sample(SEXP xp, int niter, bool loglik, bool append, int type);
-RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP loglikSEXP, SEXP appendSEXP, SEXP typeSEXP) {
+void Model__posterior_u_sample(SEXP xp, int niter, bool reml, bool loglik, bool append, int type);
+RcppExport SEXP _glmmrBase_Model__posterior_u_sample(SEXP xpSEXP, SEXP niterSEXP, SEXP remlSEXP, SEXP loglikSEXP, SEXP appendSEXP, SEXP typeSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
+    Rcpp::traits::input_parameter< bool >::type reml(remlSEXP);
     Rcpp::traits::input_parameter< bool >::type loglik(loglikSEXP);
     Rcpp::traits::input_parameter< bool >::type append(appendSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
-    Model__posterior_u_sample(xp, niter, loglik, append, type);
+    Model__posterior_u_sample(xp, niter, reml, loglik, append, type);
     return R_NilValue;
 END_RCPP
 }
@@ -1819,7 +1820,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
     {"_glmmrBase_Model__residuals", (DL_FUNC) &_glmmrBase_Model__residuals, 4},
-    {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 5},
+    {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 6},
     {"_glmmrBase_Model__get_log_likelihood_values", (DL_FUNC) &_glmmrBase_Model__get_log_likelihood_values, 2},
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
     {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 14},
