@@ -1205,6 +1205,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   ArrayXd eta = xb;
   eta += re.zu_.rowwise().mean().array();//model.covariance.ZLu(re.u_mean_).array();
   ArrayXd ymod(eta.size());
+  ymod.setZero();
   VectorXd W_(eta.size());
   
   switch(model.family.family){
@@ -1220,7 +1221,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
       W_ = (model.data.variance * logitp * (1- logitp)).matrix();
       ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
-      
     } else {
       throw std::runtime_error("Analtyic posterior only available with canonical link");
     }
@@ -1238,41 +1238,33 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     break;
   }
   
-  MatrixXd ZL = model.covariance.ZL();
-  MatrixXd ZLt = ZL.transpose();
+  const MatrixXd ZL = model.covariance.ZL();
+  const MatrixXd ZLt = ZL.transpose();
   const int n_cols = ZL.cols();
   VectorXd Mb(n_cols);
   MatrixXd Vb(n_cols, n_cols);
   Vb.setIdentity();
   LLT<MatrixXd> llt_Pb;
-  MatrixXd X = model.linear_predictor.X();
-  const int p = X.cols();
-  const int q = ZL.cols();
+  VectorXd yb(n_cols);
+  MatrixXd WZL(W_.size(),n_cols);
+  MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
   
   if(model.family.family == Fam::gaussian) {
-    MatrixXd WZL = (ZL.array().colwise() * W_.array()).matrix();
-    MatrixXd Pb = ZLt * WZL;
-    Pb.diagonal().array() += 1.0;
-    VectorXd yb = WZL.transpose() * (model.data.y - xb.matrix());
-    llt_Pb.compute(Pb);
+    WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
+    LWL.noalias() = ZLt * WZL;
+    LWL.diagonal().array() += 1.0;
+    yb.noalias() = WZL.transpose() * (model.data.y - xb.matrix());
+    llt_Pb.compute(LWL);
     Mb = llt_Pb.solve(yb);
     llt_Pb.solveInPlace(Vb);
   } else {
     VectorXd b = re.u_mean_;
     VectorXd bnew(b);
-    MatrixXd WZL(W_.size(),n_cols);
-    MatrixXd WX(W_.size(),model.linear_predictor.P());
-    const MatrixXd I = MatrixXd::Identity(W_.size(), W_.size());
-    MatrixXd newW = MatrixXd::Identity(W_.size(), W_.size());
-    MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-    VectorXd yb(b.size());
     double diff = 1.0;
     int itero = 0;
     VectorXd u(b.size());
-
     while(diff > 1e-6 && itero < 10) {
       u.noalias() = ZL * b;
-      //u.array() -= u.mean();
       eta = xb + u.array();
       if(model.family.family == Fam::binomial || model.family.family == Fam::bernoulli) {
         ArrayXd exp_neg_eta = (-eta).exp();
@@ -1280,26 +1272,14 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         ArrayXd var_p = model.data.variance * logitp;
         W_ = (var_p * (1.0 - logitp)).matrix();
         ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
-
+        
       } else if(model.family.family == Fam::poisson) {
         ArrayXd exp_eta = eta.exp();
         W_ = exp_eta.matrix();
         ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
       WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
-      if(reml){
-        WX.noalias() = (X.array().colwise() * W_.array()).matrix();
-        MatrixXd XWX = X.transpose() * WX;
-        XWX = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
-        newW.setZero();
-        newW.diagonal() += W_;
-        newW -= WX * XWX * WX.transpose();
-        //WZL.noalias() = ZLt * newW;
-        LWL.noalias() = ZLt * newW * ZL;
-      } else {
-        
-        LWL.noalias() = ZLt * WZL;
-      }
+      LWL.noalias() = ZLt * WZL;
       LWL.diagonal().array() += 1.0;
       yb.noalias() = WZL.transpose() * (ymod - xb).matrix();
       llt_Pb.compute(LWL);
@@ -1308,9 +1288,20 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       itero++;
       b.swap(bnew);
     }
+    
     Mb = b;
     re.u_mean_ = Mb;
     llt_Pb.solveInPlace(Vb);
+    if(reml){
+      MatrixXd X = model.linear_predictor.X();
+      MatrixXd WX(W_.size(),model.linear_predictor.P());
+      WX.noalias() = (X.array().colwise() * W_.array()).matrix();
+      MatrixXd XWX = X.transpose() * WX;
+      MatrixXd C = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
+      MatrixXd B = X.transpose() * WZL;
+      MatrixXd Corr = Vb * B.transpose() * C * B * Vb;
+      Vb += Corr;
+    } 
   }
   
   MatrixXd unew(re.u_.rows(), niter);
@@ -1327,11 +1318,11 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   MatrixXd LVb = llt.matrixL();
   VectorXd v(re.u_.rows());
   if(append && loglik) throw std::runtime_error("SAEM and importance sampling not currently compatible");
+  unew = LVb * unew;
   bool action_append = append;
   if(append && re.u_.cols() == 1)action_append = false;
   if(action_append){
     int currcolsize = re.u_.cols();
-    unew = LVb * unew;
     unew.colwise() += re.u_mean_;
     re.u_.conservativeResize(NoChange,currcolsize + niter);
     re.scaled_u_.conservativeResize(NoChange,currcolsize + niter);
@@ -1347,7 +1338,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       re.u_weight_.resize(niter);
       if(loglik) re.u_loglik_.resize(niter);
     }
-    re.u_.noalias() = LVb * unew;
+    re.u_.noalias() = unew;
     if(loglik){
 #pragma omp parallel for
       for(int i = 0; i < re.u_.cols(); i++){

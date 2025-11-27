@@ -82,6 +82,16 @@ public:
   void compute(const MatrixXd& matD){
     matL.compute(matD);
   }
+  
+  MatrixXd Ltrisolve(const MatrixXd& x){
+    MatrixXd L = matL.matrixL();
+    return L.triangularView<Lower>().solve(x);
+  }
+  
+  MatrixXd LtrisolveT(const MatrixXd& x){
+    MatrixXd L = matL.matrixL();
+    return L.transpose().triangularView<Upper>().solve(x);
+  }
 };
 
 
@@ -1071,6 +1081,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
   logdet_val = log_determinant();
   logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
   std::vector<MatrixXd> S;
+  std::vector<MatrixXd> BD;
   for(int i = 0; i < npars; i++)
   {
     S.emplace_back(derivs[i + 1].rows(), derivs[i + 1].cols());
@@ -1078,7 +1089,9 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
     grad(i) = -0.5 * S[i].trace();
   }
   
+  
   MatrixXd M = MatrixXd::Zero(npars, npars);
+  
 
 #pragma omp parallel
 {
@@ -1090,8 +1103,10 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
     double qf = vmat.col(i).dot(umat.col(i));
     logl(i) += -0.5 * qf;
   }
+  
 
   for (int j = 0; j < npars; j++){
+    
 #pragma omp for   
     for (int i = 0; i < niter; i++)
     {
