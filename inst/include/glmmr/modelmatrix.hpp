@@ -1286,16 +1286,18 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         W_ = exp_eta.matrix();
         ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
-      WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
+      
       if(reml){
         WX.noalias() = (X.array().colwise() * W_.array()).matrix();
         MatrixXd XWX = X.transpose() * WX;
-        MatrixXd C = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
-        MatrixXd B = WX.transpose() * ZL;
-        MatrixXd CB = C * B;
-        LWL.noalias() = ZLt * WZL - B.transpose() * CB;
-        WZL.noalias() -= WX * CB;
+        XWX = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
+        newW.setZero();
+        newW.diagonal() += W_;
+        newW -= WX * XWX * WX.transpose();
+        WZL.noalias() = ZLt * newW;
+        LWL.noalias() = WZL * ZL;
       } else {
+        WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
         LWL.noalias() = ZLt * WZL;
       }
       LWL.diagonal().array() += 1.0;
