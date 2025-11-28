@@ -1203,9 +1203,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   }
   ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
   ArrayXd eta = xb;
-  eta += re.zu_.rowwise().mean().array();//model.covariance.ZLu(re.u_mean_).array();
-  ArrayXd ymod(eta.size());
-  ymod.setZero();
+  eta += model.covariance.ZLu(re.u_mean_).array();
+  //ArrayXd ymod(eta.size());
+  //ymod.setZero();
   VectorXd W_(eta.size());
   
   switch(model.family.family){
@@ -1220,7 +1220,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     if(model.family.link == Link::logit){
       ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
       W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-      ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
+      //ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
     } else {
       throw std::runtime_error("Analtyic posterior only available with canonical link");
     }
@@ -1228,7 +1228,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   case Fam::poisson:
     if(model.family.link == Link::loglink){
       W_ = eta.exp().matrix();
-      ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
+      //ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
     } else {
       throw std::runtime_error("Analtyic posterior only available with canonical link");
     }
@@ -1248,6 +1248,10 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   VectorXd yb(n_cols);
   MatrixXd WZL(W_.size(),n_cols);
   MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
+  
+  eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
+  if(model.family.family == Fam::binomial) eta.array().colwise() *= model.data.variance;
+  VectorXd resid = model.data.y - eta.matrix();
   
   if(model.family.family == Fam::gaussian) {
     WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
@@ -1271,17 +1275,22 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         ArrayXd logitp = 1.0 / (1.0 + exp_neg_eta);
         ArrayXd var_p = model.data.variance * logitp;
         W_ = (var_p * (1.0 - logitp)).matrix();
-        ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
+        eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
+        if(model.family.family == Fam::binomial) eta.array().colwise() *= model.data.variance;
+        resid = model.data.y - eta.matrix();
+        //ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
         
       } else if(model.family.family == Fam::poisson) {
         ArrayXd exp_eta = eta.exp();
         W_ = exp_eta.matrix();
-        ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
+        eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
+        resid = model.data.y - eta.matrix();
+        //ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
       }
       WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
       LWL.noalias() = ZLt * WZL;
       LWL.diagonal().array() += 1.0;
-      yb.noalias() = WZL.transpose() * (ymod - xb).matrix();
+      yb.noalias() = WZL.transpose() * u + ZLt * resid;
       llt_Pb.compute(LWL);
       bnew = llt_Pb.solve(yb);
       diff = (b - bnew).array().abs().maxCoeff();
@@ -1291,7 +1300,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     
     Mb = b;
     re.u_mean_ = Mb;
-    llt_Pb.solveInPlace(Vb);
     if(reml){
       MatrixXd X = model.linear_predictor.X();
       MatrixXd WX(W_.size(),model.linear_predictor.P());
@@ -1299,9 +1307,11 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       MatrixXd XWX = X.transpose() * WX;
       MatrixXd C = XWX.llt().solve(MatrixXd::Identity(XWX.rows(), XWX.cols()));
       MatrixXd B = X.transpose() * WZL;
-      MatrixXd Corr = Vb * B.transpose() * C * B * Vb;
-      Vb += Corr;
+      MatrixXd Corr = B.transpose() * C * B;
+      Vb -= Corr;
     } 
+    llt_Pb.solveInPlace(Vb);
+    
   }
   
   MatrixXd unew(re.u_.rows(), niter);

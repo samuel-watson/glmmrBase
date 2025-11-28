@@ -65,10 +65,6 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
 template<typename modeltype>
 inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   scaled_u_ = model.covariance.Lu(u_);
-  //VectorXd umat_means = scaled_u_.colwise().mean();
-  //double umean = scaled_u_.mean();
-  //scaled_u_.array() -= u_mean_.mean();
-  //for(int i = 0; i < scaled_u_.cols(); i++) scaled_u_.col(i).array() += -1.0*umat_means(i);
   MatrixXd Z = model.covariance.Z();
   zu_ = Z * scaled_u_;
   ArrayXd xb = model.xb();
@@ -79,10 +75,9 @@ inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
     for(int i = 0; i < scaled_u_.cols(); i++){
       double llmod = maths::log_likelihood(model.data.y.array(),xb + zu_.col(i).array(), model.data.variance,model.family);
       double llprior = -0.5 * scaled_u_.col(i).dot(u_solve_.col(i)); 
-      //Rcpp::Rcout << "\nLL weights: " << llmod << " " << llprior << " " <<  u_loglik_(i);
       u_weight_(i) = llmod + llprior - u_loglik_(i);
     }
-    u_weight_ -= u_weight_.mean();
+    u_weight_ -= u_weight_.maxCoeff();
     u_weight_ = u_weight_.exp();
     double weightsum = u_weight_.sum();
     u_weight_ *= 1.0/weightsum;

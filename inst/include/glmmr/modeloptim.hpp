@@ -744,6 +744,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   // save the old likelihood values
   previous_ll_values.first = current_ll_values.first;
   previous_ll_var.first = current_ll_var.first;
+  if(trace > 1)Rcpp::Rcout << "\nESS: " << 1.0 / re.u_weight_.square().sum();
   
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
@@ -782,9 +783,8 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     MatrixXd detmu = maths::detadmu(zd, model.family.link);
     zdresid.array() *= detmu.array();
     for(int i = 0; i < niter; ++i){
-      resid += (W.col(i).array() * zdresid.col(i).array()).matrix();
+      resid += re.u_weight_(i) * (W.col(i).array() * zdresid.col(i).array()).matrix();
     }
-    resid *= (1.0 / niter);
   } else {
     for(int i = 0; i < niter; ++i){
       resid += re.u_weight_(i) * (model.data.y - zd.col(i));
