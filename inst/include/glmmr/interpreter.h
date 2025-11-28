@@ -32,7 +32,8 @@ enum class CovFunc {
     arlog = 22,
     grlog = 23,
     ar0log = 24,
-    matern1log = 25
+    matern1log = 25,
+    matern2log = 26
 };
 
 const std::map<str, CovFunc> str_to_covfunc = {
@@ -61,7 +62,8 @@ const std::map<str, CovFunc> str_to_covfunc = {
   {"arlog",CovFunc::arlog},
   {"grlog",CovFunc::grlog},
   {"ar0log",CovFunc::ar0log},
-  {"matern1log",CovFunc::matern1log}
+  {"matern1log",CovFunc::matern1log},
+  {"matern2log",CovFunc::matern2log}
 };
 
 // unfortunately need bidirectional map so need to duplicate this unless there's
@@ -92,7 +94,8 @@ const std::map<CovFunc, str> covfunc_to_str = {
   {CovFunc::arlog, "arlog"},
   {CovFunc::grlog, "grlog"},
   {CovFunc::ar0log, "ar0log"},
-  {CovFunc::matern1log, "matern1log"}
+  {CovFunc::matern1log, "matern1log"},
+  {CovFunc::matern2log, "matern2log"}
 };
 
 const std::map<CovFunc, int> covfunc_to_nvar = {
@@ -121,7 +124,8 @@ const std::map<CovFunc, int> covfunc_to_nvar = {
   {CovFunc::arlog, 2},
   {CovFunc::grlog, 1},
   {CovFunc::ar0log, 1},
-  {CovFunc::matern1log, 2}
+  {CovFunc::matern1log, 2},
+  {CovFunc::matern2log, 2}
 };
 
 inline std::vector<Do> interpret_re(const CovFunc& fn, glmmr::calculator& calc){
@@ -217,6 +221,40 @@ inline std::vector<Do> interpret_re(const CovFunc& fn, glmmr::calculator& calc){
     calc.push_back_function<Do::PushParameter>();
     calc.push_back_function<Do::Exp>();
     calc.push_back_function<Do::PushCovData>();
+    calc.push_back_function<Do::Divide>();
+    calc.push_back_function<Do::Add>();
+    calc.push_back_function<Do::Multiply>();
+    break;
+  }
+  case CovFunc::matern2log:
+  {
+    const instructs C = {Do::Divide,Do::Negate,Do::Exp,Do::PushParameter,Do::Exp,Do::Multiply};  //var par here
+    B.push_back(Do::PushParameter);
+    B.push_back(Do::Exp);
+    B.push_back(Do::PushCovData);
+    B.insert(B.end(), C.begin(), C.end());
+    calc.push_back_function<Do::PushParameter>();
+    calc.push_back_function<Do::Exp>();
+    calc.push_back_function<Do::PushCovData>();
+    calc.push_back_function<Do::Divide>();
+    calc.push_back_function<Do::Negate>();
+    calc.push_back_function<Do::Exp>();
+    calc.push_back_function<Do::PushParameter>();
+    calc.push_back_function<Do::Exp>();
+    calc.push_back_function<Do::Multiply>();
+    calc.push_back_function<Do::Int1>();
+    calc.push_back_function<Do::PushParameter>();
+    calc.push_back_function<Do::Exp>();
+    calc.push_back_function<Do::PushCovData>();
+    calc.push_back_function<Do::Divide>();
+    calc.push_back_function<Do::Add>();
+    calc.push_back_function<Do::PushParameter>();
+    calc.push_back_function<Do::Exp>();
+    calc.push_back_function<Do::Square>();
+    calc.push_back_function<Do::Int3>();
+    calc.push_back_function<Do::Multiply>();
+    calc.push_back_function<Do::PushCovData>();
+    calc.push_back_function<Do::Square>();
     calc.push_back_function<Do::Divide>();
     calc.push_back_function<Do::Add>();
     calc.push_back_function<Do::Multiply>();
@@ -571,6 +609,15 @@ inline intvec interpret_re_par(const CovFunc& fn,
     B.push_back(par_idx[1]);
     addA();
     B.push_back(par_idx[0]);
+    B.push_back(par_idx[1]);
+    addA();
+    break;
+  case CovFunc::matern2log: 
+    B.push_back(par_idx[1]);
+    addA();
+    B.push_back(par_idx[0]);
+    B.push_back(par_idx[1]);
+    addA();
     B.push_back(par_idx[1]);
     addA();
     break;
