@@ -1369,6 +1369,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__fit
+void Model__fit(SEXP xp, int niter, int max_iter, bool start_ml_beta, double tol, int hist, int k0, int type);
+RcppExport SEXP _glmmrBase_Model__fit(SEXP xpSEXP, SEXP niterSEXP, SEXP max_iterSEXP, SEXP start_ml_betaSEXP, SEXP tolSEXP, SEXP histSEXP, SEXP k0SEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< bool >::type start_ml_beta(start_ml_betaSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    Rcpp::traits::input_parameter< int >::type hist(histSEXP);
+    Rcpp::traits::input_parameter< int >::type k0(k0SEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Model__fit(xp, niter, max_iter, start_ml_beta, tol, hist, k0, type);
+    return R_NilValue;
+END_RCPP
+}
 // Model__marginal
 SEXP Model__marginal(SEXP xp, std::string x, int margin, int re, int se, int oim, Nullable<std::vector<std::string> > at, Nullable<std::vector<std::string> > atmeans, Nullable<std::vector<std::string> > average, double xvals_first, double xvals_second, Nullable<std::vector<double> > atvals, Nullable<std::vector<double> > revals, int type);
 RcppExport SEXP _glmmrBase_Model__marginal(SEXP xpSEXP, SEXP xSEXP, SEXP marginSEXP, SEXP reSEXP, SEXP seSEXP, SEXP oimSEXP, SEXP atSEXP, SEXP atmeansSEXP, SEXP averageSEXP, SEXP xvals_firstSEXP, SEXP xvals_secondSEXP, SEXP atvalsSEXP, SEXP revalsSEXP, SEXP typeSEXP) {
@@ -1823,6 +1840,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 6},
     {"_glmmrBase_Model__get_log_likelihood_values", (DL_FUNC) &_glmmrBase_Model__get_log_likelihood_values, 2},
     {"_glmmrBase_Model__u_diagnostic", (DL_FUNC) &_glmmrBase_Model__u_diagnostic, 2},
+    {"_glmmrBase_Model__fit", (DL_FUNC) &_glmmrBase_Model__fit, 8},
     {"_glmmrBase_Model__marginal", (DL_FUNC) &_glmmrBase_Model__marginal, 14},
     {"_glmmrBase_Model__reset_fn_counter", (DL_FUNC) &_glmmrBase_Model__reset_fn_counter, 2},
     {"_glmmrBase_Model__get_fn_counter", (DL_FUNC) &_glmmrBase_Model__get_fn_counter, 2},

@@ -149,6 +149,7 @@ public:
   virtual void      nr_step(const MatrixXd &umat,const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight);
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
   MatrixXd          information_matrix();
+  virtual MatrixXd  solve(const MatrixXd& u);
   
 protected:
   // data
@@ -1106,23 +1107,25 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
   
 
   for (int j = 0; j < npars; j++){
-    
-#pragma omp for   
+    double grad_j = 0.0;
+#pragma omp for reduction(+:grad_j)
     for (int i = 0; i < niter; i++)
     {
-      grad(j) += 0.5 * uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
+      grad_j += 0.5 * uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
     }
+    grad(j) += grad_j;
     for(int k = j; k < npars; k++){
       Sprod = S[j] * S[k];
       M(j,k) += -0.5 * Sprod.trace();
       if(j != k) M(k,j) += M(j,k);
-#pragma omp for
+      double m_jk = 0.0;
+#pragma omp for reduction(+:m_jk)
       for (int i = 0; i < niter; i++)
       {
-        double val = uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
-        M(j,k) += val;
-        if(j!=k)M(k,j) += val;
+        m_jk += uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
       }
+      M(j,k) += m_jk;
+      if(j != k) M(k,j) += m_jk;
     }
   }
 }
@@ -1210,3 +1213,7 @@ inline strvec glmmr::Covariance::parameter_names(){
   }
   return parnames;
 };
+
+inline MatrixXd glmmr::Covariance::solve(const MatrixXd& u){
+  return matL.solve(u);
+}

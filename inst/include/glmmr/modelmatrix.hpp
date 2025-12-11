@@ -1204,8 +1204,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
   ArrayXd eta = xb;
   eta += model.covariance.ZLu(re.u_mean_).array();
-  //ArrayXd ymod(eta.size());
-  //ymod.setZero();
   VectorXd W_(eta.size());
   
   switch(model.family.family){
@@ -1220,7 +1218,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     if(model.family.link == Link::logit){
       ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
       W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-      //ymod = eta + (model.data.y.array() - model.data.variance * logitp) * W_.array().inverse();
     } else {
       throw std::runtime_error("Analtyic posterior only available with canonical link");
     }
@@ -1228,11 +1225,18 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   case Fam::poisson:
     if(model.family.link == Link::loglink){
       W_ = eta.exp().matrix();
-      //ymod = eta + (model.data.y.array() - eta.exp()) * W_.array().inverse();
     } else {
       throw std::runtime_error("Analtyic posterior only available with canonical link");
     }
     break;
+  case Fam::exponential:
+    if(model.family.link == Link::loglink){
+      ArrayXd mu = eta.exp();
+      W_ = ArrayXd::Ones(eta.size()).matrix();  // Constant weight = 1
+    }else {
+      throw std::runtime_error("Analtyic posterior only available with canonical link");
+    }
+  break;
   default:
     throw std::runtime_error("Analtyic posterior only available with Gaussian, Poisson, and Binomial");
     break;
@@ -1278,14 +1282,18 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
         if(model.family.family == Fam::binomial) eta.array().colwise() *= model.data.variance;
         resid = model.data.y - eta.matrix();
-        //ymod = (eta + (model.data.y.array() - var_p) / W_.array()).matrix();
         
       } else if(model.family.family == Fam::poisson) {
         ArrayXd exp_eta = eta.exp();
         W_ = exp_eta.matrix();
         eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
         resid = model.data.y - eta.matrix();
-        //ymod = (eta + (model.data.y.array() - exp_eta) / exp_eta).matrix();
+      } else if(model.family.family == Fam::exponential) {
+        // Log link
+        ArrayXd mu = eta.exp();
+        W_ = ArrayXd::Ones(eta.size()).matrix();  // Constant weight = 1
+        eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
+        resid = ((model.data.y.array() - eta) / eta).matrix();  // (y - mu) / mu
       }
       WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
       LWL.noalias() = ZLt * WZL;

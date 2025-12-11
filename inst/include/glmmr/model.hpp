@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include "general.h"
 #include "modelbits.hpp"
 #include "randomeffects.hpp"
@@ -22,6 +23,9 @@ struct check_type : std::false_type {};
 template<>
 struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > : std::true_type {};
 
+template<>
+struct check_type<glmmr::ModelBits<glmmr::ar1Covariance, glmmr::LinearPredictor> > : std::true_type {};
+
 template<typename modeltype>
 class Model {
 public:
@@ -30,8 +34,32 @@ public:
   glmmr::RandomEffects<modeltype> re;
   glmmr::ModelMatrix<modeltype>   matrix;
   glmmr::ModelOptim<modeltype>    optim;
+  
+  Model(const Model&) = default;
+  Model(Model&&) = default;
+  Model& operator=(const Model&) = default;
+  Model& operator=(Model&&) = default;
+  
   // constructor
-  Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
+  template <typename C = modeltype, typename = std::enable_if_t<!std::is_same_v<C, bits_ar1> > >
+  Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_) : model(formula_,data_,colnames_,family_,link_), 
+  re(model), 
+  matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+  optim(model,matrix,re) {}
+  
+  template <typename C = modeltype, typename = std::enable_if_t<std::is_same_v<C, bits_ar1> > >
+  Model(const std::string& formula_,
+        const ArrayXXd& data_,
+        const ArrayXXd& cov_data_,
+        const strvec& colnames_,
+        const strvec& colnames_cov_,
+        std::string family_, 
+        std::string link_,
+        const int T) : model(formula_,data_,cov_data_,colnames_,colnames_cov_,family_,link_,T), 
+        re(model), 
+        matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+        optim(model,matrix,re) {}
+  
   //functions
   virtual void    set_offset(const VectorXd& offset_);
   virtual void    set_weights(const ArrayXd& weights_);
@@ -41,6 +69,7 @@ public:
   virtual void    update_u(const MatrixXd &u_, bool append = false);
   virtual void    reset_u(); // just resets the random effects samples to zero
   virtual void    set_trace(int trace_);
+  void            fit(const int niter, const int max_iter, const bool start_ml_beta, const double tol, const int hist, const int k0);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
                              const strvec& at,
@@ -56,16 +85,6 @@ public:
 };
 
 }
-
-template<typename modeltype>
-inline glmmr::Model<modeltype>::Model(const std::string& formula_,
-      const ArrayXXd& data_,
-      const strvec& colnames_,
-      std::string family_, 
-      std::string link_) : model(formula_,data_,colnames_,family_,link_), 
-      re(model), 
-      matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
-      optim(model,matrix,re) {};
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
@@ -545,5 +564,51 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   
   return result;
   
+}
+
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, const bool start_ml_beta, const double tol, const int hist,const int k0)
+{
+  using std::chrono::high_resolution_clock;
+  using std::chrono::duration_cast;
+  using std::chrono::duration;
+  using std::chrono::milliseconds;
+  
+  
+  bool converged = false;    
+  int iter = 1;
+  dblpair ll, lldiff;
+  double lltot, llvartot, prob;
+  // start at ml values
+  if(start_ml_beta) optim.template ml_beta<BOBYQA>();
+  VectorXd beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+  VectorXd theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+  std::cout << "\nStarting values\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
+  while (!converged && iter <= max_iter) {
+    std::cout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
+    auto t1 = high_resolution_clock::now();
+    matrix.posterior_u_samples(niter,false,true,false);
+    auto t2 = high_resolution_clock::now();
+    duration<double, std::milli> ms_double = t2 - t1;
+    std::cout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
+    optim.nr_beta();
+    auto t3 = high_resolution_clock::now();
+    ms_double = t3 - t2;
+    std::cout << "TIMING STEP 2 (nr beta): " << ms_double.count() << "ms" << std::endl;
+    optim.nr_theta();
+    auto t4 = high_resolution_clock::now();
+    ms_double = t4 - t3;
+    std::cout << "TIMING STEP 3 (nr theta): " << ms_double.count() << "ms" << std::endl;
+    beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+    theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+    std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
+    std::cout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
+    std::cout << "\nLog-likelihood: " << ll.first << " | " << ll.second << std::endl;
+    if (iter > 2) {
+      converged = optim.check_convergence(tol,hist,iter,k0);
+      if (converged) std::cout << "\nCONVERGED!";
+    }
+    iter++;
+  }
 }
 

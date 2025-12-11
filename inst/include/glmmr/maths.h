@@ -191,6 +191,11 @@ inline Eigen::MatrixXd dhdmu(const Eigen::MatrixXd& xb,
   }
     break;
   }
+  case Fam::exponential:
+  {
+    wdiag.setConstant(1.0);
+    break;
+  }
   case Fam::bernoulli: case Fam::binomial:
   {
     switch(family.link){
@@ -278,6 +283,11 @@ inline Eigen::VectorXd dhdmu(const Eigen::VectorXd& xb,
     wdiag = xb.array().exp().inverse().matrix();
   break;
   }
+    break;
+  }
+  case Fam::exponential:
+  {
+    wdiag.setConstant(1.0);
     break;
   }
   case Fam::bernoulli: case Fam::binomial:

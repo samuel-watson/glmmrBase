@@ -1626,7 +1626,16 @@ SEXP Model__u_diagnostic(SEXP xp, int type = 0){
   return wrap(std::get<std::pair<double,double> >(S));
 }
 
-// MarginType type, dydx, diff, ratio
+// [[Rcpp::export]]
+void Model__fit(SEXP xp, int niter, int max_iter, bool start_ml_beta, double tol, int hist, int k0, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {}, 
+    [&](auto ptr){ptr->fit(niter, max_iter, start_ml_beta, tol, hist, k0);}
+  };
+  std::visit(functor,model.ptr);
+}
+
 // [[Rcpp::export]]
 SEXP Model__marginal(SEXP xp, 
                      std::string x,

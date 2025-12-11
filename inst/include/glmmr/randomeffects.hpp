@@ -47,6 +47,8 @@ public:
   
   MatrixXd      Zu(){return zu_;};
   MatrixXd      u(bool scaled = true);
+  
+  
   VectorMatrix  predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
   void          update_zu(const bool weights);
 };
@@ -68,7 +70,7 @@ inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   MatrixXd Z = model.covariance.Z();
   zu_ = Z * scaled_u_;
   ArrayXd xb = model.xb();
-  u_solve_ = model.covariance.matL.solve(scaled_u_);
+  u_solve_ = model.covariance.solve(scaled_u_);
   u_weight_.setZero();
   if(weights){
 #pragma omp parallel for 
@@ -86,8 +88,8 @@ inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   }
 }
 
-template<>
-inline VectorMatrix glmmr::RandomEffects<bits>::predict_re(const ArrayXXd& newdata_,
+template<typename modeltype>
+inline VectorMatrix glmmr::RandomEffects<modeltype>::predict_re(const ArrayXXd& newdata_,
                                                             const ArrayXd& newoffset_){
   if(model.covariance.data_.cols()!=newdata_.cols())throw std::runtime_error("Different numbers of columns in new data");
   // generate the merged data
@@ -115,46 +117,6 @@ inline VectorMatrix glmmr::RandomEffects<bits>::predict_re(const ArrayXXd& newda
   D22 = D22.llt().solve(MatrixXd::Identity(model.covariance.Q(),model.covariance.Q()));
   MatrixXd D12 = D.block(model.covariance.Q(),0,newQ,model.covariance.Q());
   MatrixXd Lu = model.covariance.Lu(u(false));
-  MatrixXd SSV = D12 * D22 * Lu;
-  result.vec = SSV.rowwise().mean();
-  result.mat -= D12 * D22 * D12.transpose();
-  return result;
-}
-
-template<>
-inline VectorMatrix glmmr::RandomEffects<bits_nngp>::predict_re(const ArrayXXd& newdata_,
-                                                                 const ArrayXd& newoffset_){
-  if(model.covariance.data_.cols()!=newdata_.cols())throw std::runtime_error("Different numbers of columns in new data");
-  // generate the merged data
-  int nnew = newdata_.rows();
-  ArrayXXd mergedata(model.n()+nnew,model.covariance.data_.cols());
-  mergedata.topRows(model.n()) = model.covariance.data_;
-  mergedata.bottomRows(nnew) = newdata_;
-  ArrayXd mergeoffset(model.n()+nnew);
-  mergeoffset.head(model.n()) = model.data.offset;
-  mergeoffset.tail(nnew) = newoffset_;
-  
-  nngpCovariance covariancenew(model.covariance.form_,
-                               mergedata,
-                               model.covariance.colnames_);
-  
-  nngpCovariance covariancenewnew(model.covariance.form_,
-                                  newdata_,
-                                  model.covariance.colnames_);
-  
-  covariancenewnew.update_parameters(model.covariance.parameters_);
-  covariancenew.update_parameters(model.covariance.parameters_);
-  // //generate sigma
-  int newQ = covariancenewnew.Q();
-  VectorMatrix result(newQ);
-  result.vec.setZero();
-  result.mat.setZero();
-  MatrixXd D = covariancenew.D(false,false);
-  result.mat = D.block(model.covariance.Q(),model.covariance.Q(),newQ,newQ);
-  MatrixXd D22 = D.block(0,0,model.covariance.Q(),model.covariance.Q());
-  D22 = D22.llt().solve(MatrixXd::Identity(model.covariance.Q(),model.covariance.Q()));
-  MatrixXd D12 = D.block(model.covariance.Q(),0,newQ,model.covariance.Q());
-  MatrixXd Lu = u();
   MatrixXd SSV = D12 * D22 * Lu;
   result.vec = SSV.rowwise().mean();
   result.mat -= D12 * D22 * D12.transpose();

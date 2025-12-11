@@ -441,6 +441,10 @@ Model__u_diagnostic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__u_diagnostic`, xp, type)
 }
 
+Model__fit <- function(xp, niter, max_iter, start_ml_beta, tol, hist, k0, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__fit`, xp, niter, max_iter, start_ml_beta, tol, hist, k0, type))
+}
+
 Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, oim = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {
     .Call(`_glmmrBase_Model__marginal`, xp, x, margin, re, se, oim, at, atmeans, average, xvals_first, xvals_second, atvals, revals, type)
 }
