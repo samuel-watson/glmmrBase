@@ -77,7 +77,7 @@ inline MatrixXd glmmr::ar1Covariance::ar_matrix(bool chol)
 
 inline MatrixXd glmmr::ar1Covariance::ZL()
 {
-  MatrixXd ZL = glmmr::kronecker(ar_factor_chol, matL.matrixL());
+  MatrixXd ZL = matZ * glmmr::kronecker(ar_factor_chol, matL.matrixL());
   return ZL;
 }
 

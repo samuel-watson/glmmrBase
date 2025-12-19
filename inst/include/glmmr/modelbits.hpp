@@ -50,7 +50,7 @@ public:
               std::string link_, const int T_)
       : formula(formula_), 
         linear_predictor(formula, data_, colnames_),
-        covariance(formula, cov_data_, colnames_cov_),
+        covariance(formula_, cov_data_, colnames_cov_, T_),
         data(data_.rows()),
         family(family_, link_) 
     {}

@@ -118,6 +118,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Covariance_ar__new
+SEXP Covariance_ar__new(SEXP form_, SEXP data_, SEXP colnames_, int T);
+RcppExport SEXP _glmmrBase_Covariance_ar__new(SEXP form_SEXP, SEXP data_SEXP, SEXP colnames_SEXP, SEXP TSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type form_(form_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    Rcpp::traits::input_parameter< int >::type T(TSEXP);
+    rcpp_result_gen = Rcpp::wrap(Covariance_ar__new(form_, data_, colnames_, T));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Covariance__Z
 SEXP Covariance__Z(SEXP xp, int type_);
 RcppExport SEXP _glmmrBase_Covariance__Z(SEXP xpSEXP, SEXP type_SEXP) {
@@ -414,6 +428,24 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type family_(family_SEXP);
     Rcpp::traits::input_parameter< SEXP >::type link_(link_SEXP);
     rcpp_result_gen = Rcpp::wrap(Model__new(formula_, data_, colnames_, family_, link_));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model_ar__new
+SEXP Model_ar__new(SEXP formula_, SEXP data_, SEXP data_cov_, SEXP colnames_, SEXP colnames_cov_, SEXP family_, SEXP link_, int T_);
+RcppExport SEXP _glmmrBase_Model_ar__new(SEXP formula_SEXP, SEXP data_SEXP, SEXP data_cov_SEXP, SEXP colnames_SEXP, SEXP colnames_cov_SEXP, SEXP family_SEXP, SEXP link_SEXP, SEXP T_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type formula_(formula_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_(data_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type data_cov_(data_cov_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_(colnames_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type colnames_cov_(colnames_cov_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type family_(family_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type link_(link_SEXP);
+    Rcpp::traits::input_parameter< int >::type T_(T_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Model_ar__new(formula_, data_, data_cov_, colnames_, colnames_cov_, family_, link_, T_));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1739,6 +1771,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance__new", (DL_FUNC) &_glmmrBase_Covariance__new, 3},
     {"_glmmrBase_Covariance_nngp__new", (DL_FUNC) &_glmmrBase_Covariance_nngp__new, 3},
     {"_glmmrBase_Covariance_hsgp__new", (DL_FUNC) &_glmmrBase_Covariance_hsgp__new, 3},
+    {"_glmmrBase_Covariance_ar__new", (DL_FUNC) &_glmmrBase_Covariance_ar__new, 4},
     {"_glmmrBase_Covariance__Z", (DL_FUNC) &_glmmrBase_Covariance__Z, 2},
     {"_glmmrBase_Covariance__ZL", (DL_FUNC) &_glmmrBase_Covariance__ZL, 2},
     {"_glmmrBase_Covariance__Update_parameters", (DL_FUNC) &_glmmrBase_Covariance__Update_parameters, 3},
@@ -1763,6 +1796,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_ModelBits__update_theta", (DL_FUNC) &_glmmrBase_ModelBits__update_theta, 2},
     {"_glmmrBase_Model__new_w_pars", (DL_FUNC) &_glmmrBase_Model__new_w_pars, 7},
     {"_glmmrBase_Model__new", (DL_FUNC) &_glmmrBase_Model__new, 5},
+    {"_glmmrBase_Model_ar__new", (DL_FUNC) &_glmmrBase_Model_ar__new, 8},
     {"_glmmrBase_Model_nngp__new", (DL_FUNC) &_glmmrBase_Model_nngp__new, 6},
     {"_glmmrBase_Model_nngp__new_w_pars", (DL_FUNC) &_glmmrBase_Model_nngp__new_w_pars, 8},
     {"_glmmrBase_Model_hsgp__new", (DL_FUNC) &_glmmrBase_Model_hsgp__new, 5},

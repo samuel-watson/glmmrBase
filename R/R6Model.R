@@ -1818,15 +1818,26 @@ Model <- R6::R6Class("Model",
                            } else if(grepl("hsgp",form)){
                              self$covariance$.__enclos_env__$private$type <- 2
                              form <- gsub("hsgp_","",form)
+                           } else if(grepl("ar[2-9]",form) | grepl("ar[1-9][1-9]",form)){
+                             if(length(re)>1)stop("AR only available as a single covariance function currently.")
+                             self$covariance$.__enclos_env__$private$type <- 3
+                             self$covariance$.__enclos_env__$private$time <- as.numeric(gsub(".*ar(.+)_.*", "\\1", form))
+                             form <- gsub("ar[2-9]_","",form)
+                             form <- gsub("ar[1-9][1-9]_","",form)
                            }
                            type <- private$model_type()
-                           data <- self$covariance$data
-                           if(any(!colnames(self$mean$data)%in%colnames(data))){
-                             cnames <- which(!colnames(self$mean$data)%in%colnames(data))
-                             data <- cbind(data,self$mean$data[,cnames,drop=FALSE])
+                           if(type < 3){
+                             data <- self$covariance$data
+                             if(any(!colnames(self$mean$data)%in%colnames(data))){
+                               cnames <- which(!colnames(self$mean$data)%in%colnames(data))
+                               data <- cbind(data,self$mean$data[,cnames,drop=FALSE])
+                             }
+                           } else {
+                             data <- self$mean$data
                            }
+                           
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           if(is.null(self$covariance$parameters)){
+                           if(is.null(self$covariance$parameters) | type == 3){
                              if(type == 0){
                                private$ptr <- Model__new(form,
                                                          as.matrix(data),
@@ -1847,12 +1858,20 @@ Model <- R6::R6Class("Model",
                                                               colnames(data),
                                                               tolower(self$family[[1]]),
                                                               self$family[[2]])
+                             } else if(type==3){
+                               private$ptr <- Model_ar__new(form,
+                                                              as.matrix(data),
+                                                              as.matrix(self$covariance$data),
+                                                              colnames(data),
+                                                              colnames(self$covariance$data),
+                                                              tolower(self$family[[1]]),
+                                                              self$family[[2]],
+                                                            self$covariance$.__enclos_env__$private$time)
                              }
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
                              self$covariance$parameters <- runif(ncovpar,0,0.2)
                              Model__update_theta(private$ptr,self$covariance$parameters,type)
-                             #Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type)
                              re <- Model__re_terms(private$ptr,type)
                              paridx <- Model__parameter_fn_index(private$ptr,type)+1
                              names(self$covariance$parameters) <- re[paridx]

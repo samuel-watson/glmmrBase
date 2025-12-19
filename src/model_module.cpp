@@ -139,6 +139,15 @@ SEXP Covariance_hsgp__new(SEXP form_,SEXP data_, SEXP colnames_){
 }
 
 // [[Rcpp::export]]
+SEXP Covariance_ar__new(SEXP form_,SEXP data_, SEXP colnames_, int T){
+  std::string form = as<std::string>(form_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  XPtr<ar1covariance> ptr(new ar1covariance(form,data,colnames,T),true);
+  return ptr;
+}
+
+// [[Rcpp::export]]
 SEXP Covariance__Z(SEXP xp, int type_ = 0){
   Type type = static_cast<Type>(type_);
   switch(type){
@@ -159,6 +168,13 @@ SEXP Covariance__Z(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    Eigen::MatrixXd Z = ptr->Z();
+    return wrap(Z);
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     Eigen::MatrixXd Z = ptr->Z();
     return wrap(Z);
     break;
@@ -197,6 +213,13 @@ SEXP Covariance__ZL(SEXP xp, int type_ = 0){
     return wrap(Z);
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    Eigen::MatrixXd Z = ptr->ZL();
+    return wrap(Z);
+    break;
+  }
   default:
   {
     Eigen::MatrixXd Z = Eigen::MatrixXd::Zero(1,1);
@@ -229,6 +252,12 @@ void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type_ = 0){
     ptr->update_parameters_extern(parameters);
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    ptr->update_parameters_extern(parameters);
+    break;
+  }
   }
 }
 
@@ -253,6 +282,13 @@ SEXP Covariance__D(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    Eigen::MatrixXd D = ptr->D(false,false);
+    return wrap(D);
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     Eigen::MatrixXd D = ptr->D(false,false);
     return wrap(D);
     break;
@@ -291,6 +327,13 @@ SEXP Covariance__D_chol(SEXP xp, int type_ = 0){
     return wrap(D);
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    Eigen::MatrixXd D = ptr->D(true,false);
+    return wrap(D);
+    break;
+  }
   default:
   {
     Eigen::MatrixXd Z = Eigen::MatrixXd::Zero(1,1);
@@ -323,6 +366,12 @@ SEXP Covariance__B(SEXP xp, int type_ = 0){
     B = ptr->B();
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    B = ptr->B();
+    break;
+  }
   }
   return wrap(B);
 }
@@ -347,6 +396,12 @@ SEXP Covariance__Q(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    Q = ptr->Q();
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     Q = ptr->Q();
     break;
   }
@@ -379,6 +434,12 @@ SEXP Covariance__log_likelihood(SEXP xp, SEXP u_, int type_ = 0){
     ll = ptr->log_likelihood(u);
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    ll = ptr->log_likelihood(u);
+    break;
+  }
   }
   return wrap(ll);
 }
@@ -403,6 +464,12 @@ SEXP Covariance__log_determinant(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    ll = ptr->log_determinant();
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     ll = ptr->log_determinant();
     break;
   }
@@ -433,6 +500,12 @@ SEXP Covariance__n_cov_pars(SEXP xp, int type_ = 0){
     G = ptr->npar();
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    G = ptr->npar();
+    break;
+  }
   }
   return wrap(G);
 }
@@ -458,6 +531,13 @@ SEXP Covariance__simulate_re(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    Eigen::VectorXd rr = ptr->sim_re();
+    return wrap(rr);
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     Eigen::VectorXd rr = ptr->sim_re();
     return wrap(rr);
     break;
@@ -493,6 +573,12 @@ void Covariance__make_sparse(SEXP xp, int type_ = 0){
     ptr->set_sparse(true);
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    ptr->set_sparse(true);
+    break;
+  }
   }
 }
 
@@ -515,6 +601,12 @@ void Covariance__make_dense(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    ptr->set_sparse(false);
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     ptr->set_sparse(false);
     break;
   }
@@ -549,6 +641,11 @@ SEXP Covariance__any_gr(SEXP xp, int type_ = 0){
     gr = false;
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    gr = false;
+    break;
+  }
   }
   return wrap(gr);
 }
@@ -573,6 +670,12 @@ SEXP Covariance__get_val(SEXP xp, int i, int j, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    gr = ptr->get_val(0,i,j);
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     gr = ptr->get_val(0,i,j);
     break;
   }
@@ -603,6 +706,12 @@ SEXP Covariance__parameter_fn_index(SEXP xp, int type_ = 0){
     gr = ptr->parameter_fn_index();
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    gr = ptr->parameter_fn_index();
+    break;
+  }
   }
   return wrap(gr);
 }
@@ -630,6 +739,12 @@ SEXP Covariance__re_terms(SEXP xp, int type_ = 0){
     gr = ptr->form_.re_terms();
     break;
   }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
+    gr = ptr->form_.re_terms();
+    break;
+  }
   }
   return wrap(gr);
 }
@@ -654,6 +769,12 @@ SEXP Covariance__re_count(SEXP xp, int type_ = 0){
   case Type::GLMM_HSGP:
   {
     XPtr<hsgp> ptr(xp);
+    gr = ptr->re_count();
+    break;
+  }
+  case Type::GLMM_AR1:
+  {
+    XPtr<ar1covariance> ptr(xp);
     gr = ptr->re_count();
     break;
   }
@@ -726,6 +847,20 @@ SEXP Model__new(SEXP formula_, SEXP data_, SEXP colnames_,
   std::string family = as<std::string>(family_);
   std::string link = as<std::string>(link_);
   XPtr<glmm> ptr(new glmm(formula,data,colnames,family,link),true);
+  return ptr;
+}
+
+// [[Rcpp::export]]
+SEXP Model_ar__new(SEXP formula_, SEXP data_, SEXP data_cov_, SEXP colnames_, SEXP colnames_cov_,
+                SEXP family_, SEXP link_, int T_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  Eigen::ArrayXXd data_cov = as<Eigen::ArrayXXd>(data_cov_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  std::vector<std::string> colnames_cov = as<std::vector<std::string> >(colnames_cov_);
+  std::string family = as<std::string>(family_);
+  std::string link = as<std::string>(link_);
+  XPtr<glmm_ar1> ptr(new glmm_ar1(formula,data,data_cov,colnames,colnames_cov,family,link, T_),true);
   return ptr;
 }
 

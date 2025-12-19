@@ -141,6 +141,7 @@ Covariance <- R6::R6Class("Covariance",
                           cat("\n   \U2BA1 Terms:",re)
                           if(private$type == 1)cat(" (NNGP)")
                           if(private$type == 2)cat(" (HSGP)")
+                          if(private$type == 3)cat(" (AR)")
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
                           cat("\n")
                         },
@@ -317,6 +318,7 @@ Covariance <- R6::R6Class("Covariance",
                         nn = 10,
                         m = 10,
                         L = 1.5,
+                        time = 0, 
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
@@ -329,6 +331,12 @@ Covariance <- R6::R6Class("Covariance",
                             if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
                             private$type <- 2
                             re[1] <- gsub("hsgp_","",re[1])
+                          } else if(any(sapply(re,function(i)grepl("ar[2-9]",i) | grepl("ar[1-9][1-9]",i) ))){
+                            if(length(re)>1)stop("AR only available as a single covariance function currently.")
+                            private$type <- 3
+                            private$time <- as.numeric(gsub("ar","",gsub("_.*","",re[1])))
+                            re[1] <- gsub("ar[2-9]_","",re[1])
+                            re[1] <- gsub("ar[1-9][1-9]_","",re[1])
                           }
                           self$formula <- re[1]
                           if(length(re)>1){
@@ -351,6 +359,14 @@ Covariance <- R6::R6Class("Covariance",
                               private$ptr <- Covariance_hsgp__new(self$formula,
                                                                   as.matrix(self$data),
                                                                   colnames(self$data))
+                            } else if(private$type==2){
+                              if(nrow(self$data) %% private$time != 0)stop("Data not divisible by number of time periods")
+                              nR <- nrow(self$data) / private$time
+                              self$data <- self$data[1:nR,]
+                              private$ptr <- Covariance_ar__new(self$formula,
+                                                                  as.matrix(self$data),
+                                                                  colnames(self$data),
+                                                                private$time)
                             }
                             
                             private$parcount <- Covariance__n_cov_pars(private$ptr,private$type)

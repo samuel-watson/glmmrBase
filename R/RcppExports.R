@@ -37,6 +37,10 @@ Covariance_hsgp__new <- function(form_, data_, colnames_) {
     .Call(`_glmmrBase_Covariance_hsgp__new`, form_, data_, colnames_)
 }
 
+Covariance_ar__new <- function(form_, data_, colnames_, T) {
+    .Call(`_glmmrBase_Covariance_ar__new`, form_, data_, colnames_, T)
+}
+
 Covariance__Z <- function(xp, type_ = 0L) {
     .Call(`_glmmrBase_Covariance__Z`, xp, type_)
 }
@@ -131,6 +135,10 @@ Model__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_,
 
 Model__new <- function(formula_, data_, colnames_, family_, link_) {
     .Call(`_glmmrBase_Model__new`, formula_, data_, colnames_, family_, link_)
+}
+
+Model_ar__new <- function(formula_, data_, data_cov_, colnames_, colnames_cov_, family_, link_, T_) {
+    .Call(`_glmmrBase_Model_ar__new`, formula_, data_, data_cov_, colnames_, colnames_cov_, family_, link_, T_)
 }
 
 Model_nngp__new <- function(formula_, data_, colnames_, family_, link_, nn) {
