@@ -1949,11 +1949,10 @@ Model <- R6::R6Class("Model",
                            } else if(grepl("hsgp",form)){
                              self$covariance$.__enclos_env__$private$type <- 2
                              form <- gsub("hsgp_","",form)
-                           } else if(grepl("ar[2-9]",form) | grepl("ar[1-9][1-9]",form)){
+                           } else if(grepl("ar_",form)){
                              self$covariance$.__enclos_env__$private$type <- 3
-                             self$covariance$.__enclos_env__$private$time <- as.numeric(gsub(".*ar(.+)_.*", "\\1", form))
-                             form <- gsub("ar[2-9]_","",form)
-                             form <- gsub("ar[1-9][1-9]_","",form)
+                             self$covariance$.__enclos_env__$private$time <- as.integer(sub(".*t=(\\d{1,2}).*", "\\1", gsub(" ","",form)))
+                             form <- sub(",t=\\d{1,2}", "", sub("ar_", "", gsub(" ","",form)))
                            }
                            type <- private$model_type()
                            if(type < 3){

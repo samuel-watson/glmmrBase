@@ -27,6 +27,7 @@ public:
   ar1Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames, const int T_);  
   ar1Covariance(const glmmr::ar1Covariance& cov);
   
+  MatrixXd  Z() override;
   MatrixXd  ZL() override;
   MatrixXd  ZLu(const MatrixXd& u) override;
   MatrixXd  Lu(const MatrixXd& u) override;
@@ -75,6 +76,23 @@ inline MatrixXd glmmr::ar1Covariance::ar_matrix(bool chol)
   } else {
     return ar_factor;
   }
+}
+
+inline MatrixXd glmmr::ar1Covariance::Z()
+{
+  
+  
+  const int n_total = matZ.rows();
+  const int n_A = Covariance::Q();
+  const int n_t = n_total / T;
+  
+  MatrixXd Z_full = MatrixXd::Zero(n_total, n_A * T);
+  
+  for(int t = 0; t < T; t++){
+    Z_full.block(t * n_t, t * n_A, n_t, n_A) = matZ.block(t * n_t, 0, n_t, n_A);
+  }
+  
+  return Z_full;
 }
 
 inline MatrixXd glmmr::ar1Covariance::ZL()

@@ -334,12 +334,13 @@ Covariance <- R6::R6Class("Covariance",
                             if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
                             private$type <- 2
                             re[1] <- gsub("hsgp_","",re[1])
-                          } else if(any(sapply(re,function(i)grepl("ar[2-9]",i) | grepl("ar[1-9][1-9]",i) ))){
+                          } else if(any(sapply(re,function(i)grepl("ar_",i) ))){
                             if(length(re)>1)stop("AR only available as a single covariance function currently.")
                             private$type <- 3
-                            private$time <- as.numeric(gsub("ar","",gsub("_.*","",re[1])))
-                            re[1] <- gsub("ar[2-9]_","",re[1])
-                            re[1] <- gsub("ar[1-9][1-9]_","",re[1])
+                            # Extract the value of t
+                            private$time <- as.integer(sub(".*t=(\\d{1,2}).*", "\\1", re[1]))
+                            # Remove "ar_" and ",t=3" (or ",t=12" etc.)
+                            re[1] <- sub(",t=\\d{1,2}", "", sub("ar_", "", re[1]))
                           }
                           self$formula <- re[1]
                           if(length(re)>1){
