@@ -77,25 +77,62 @@ inline MatrixXd glmmr::ar1Covariance::ar_matrix(bool chol)
 
 inline MatrixXd glmmr::ar1Covariance::ZL()
 {
-  MatrixXd ZL = matZ * glmmr::kronecker(ar_factor_chol, matL.matrixL());
-  return ZL;
+  
+  
+  const int n_total = matZ.rows();
+  const int n_A = Covariance::Q();
+  const int n_t = n_total / T;
+  
+  MatrixXd Z_full = MatrixXd::Zero(n_total, n_A * T);
+  
+  for(int t = 0; t < T; t++){
+    Z_full.block(t * n_t, t * n_A, n_t, n_A) = matZ.block(t * n_t, 0, n_t, n_A);
+  }
+  
+  MatrixXd L_full = glmmr::kronecker(ar_factor_chol, MatrixXd(matL.matrixL()));
+  
+  MatrixXd result = Z_full * L_full;
+  return result;
 }
 
 inline MatrixXd glmmr::ar1Covariance::ZLu(const MatrixXd& u)
 {
-  MatrixXd ZLu = glmmr::ar1Covariance::ZL() * u;
-  return ZLu;
+  const int n_total = matZ.rows();
+  const int n_A = Covariance::Q();
+  const int n_t = n_total / T;
+  const int ncols = u.cols();
+  MatrixXd result = MatrixXd::Zero(n_total, ncols);
+  
+  for(int c = 0; c < ncols; c++){
+    Map<const MatrixXd> U(u.col(c).data(), n_A, T);
+    MatrixXd LU = matL.matrixL() * U * ar_factor_chol.transpose();
+    for(int t = 0; t < T; t++){
+      result.block(t * n_t, c, n_t, 1) = matZ.block(t * n_t, 0, n_t, n_A) * LU.col(t);
+    }
+  }
+  return result;
 }
 
 inline MatrixXd glmmr::ar1Covariance::Lu(const MatrixXd& u)
 {
-  MatrixXd ZLu = glmmr::ar1Covariance::ZL() * u;
-  return ZLu;
+  const int n_A = Covariance::Q();
+  const int ncols = u.cols();
+  MatrixXd result(n_A * T, ncols);
+  
+  for(int c = 0; c < ncols; c++){
+    Map<const MatrixXd> U(u.col(c).data(), n_A, T);
+    MatrixXd LU = matL.matrixL() * U * ar_factor_chol.transpose();
+    result.col(c) = Map<const VectorXd>(LU.data(), n_A * T);
+  }
+  return result;
 }
 
 inline int glmmr::ar1Covariance::Q() const 
 {
-  return Covariance::Q() * T;
+  //return Covariance::Q() * T;
+  int parent_Q = Covariance::Q();
+  int q = parent_Q * T;
+  return q;
 }
 
 inline double glmmr::ar1Covariance::log_likelihood(const VectorXd &u)
@@ -103,23 +140,18 @@ inline double glmmr::ar1Covariance::log_likelihood(const VectorXd &u)
   static const double LOG_2PI = log(2*M_PI);
   int N = Covariance::Q();
   int NT = N * T;
-  
-  // Reshape u to N x T matrix (spatial x temporal)
   Map<const MatrixXd> U(u.data(), N, T);
-  
-  // Solve A W = U, giving W = A^{-1} U
   MatrixXd W = matL.solve(MatrixXd(U));
-  
-  // Quadratic form: tr(U^T A^{-1} U R^{-1}) = tr(U^T W R^{-1})
-  MatrixXd M = U.transpose() * W;  // T x T
+  MatrixXd M = U.transpose() * W;
   double qf = (M.array() * ar_factor_inverse.array()).sum();
   
-  // Log determinant: T * log|A| + N * log|R|
-  double logdet_A = log_determinant();
+  double logdet_A = Covariance::log_determinant();
   double logdet_R = 2.0 * ar_factor_chol.diagonal().array().log().sum();
   double logdet = T * logdet_A + N * logdet_R;
   
-  return -0.5 * (NT * LOG_2PI + logdet + qf);
+  double ll = -0.5 * (NT * LOG_2PI + logdet + qf);
+  
+  return ll;
 }
 
 inline double glmmr::ar1Covariance::log_determinant()
@@ -134,11 +166,12 @@ inline void glmmr::ar1Covariance::update_rho(const double rho_)
 {
   rho = rho_;
   ar_factor.setConstant(1.0);
+  ar_factor_deriv.setZero();
   if(T > 1){
     for(int t = 0; t < T-1; t++){
       for(int s = t+1; s < T; s++){
-        ar_factor(t,s) = pow(rho,s);
-        ar_factor_deriv(t,s) = s*pow(rho,s-1);
+        ar_factor(t,s) = pow(rho,s - t);
+        ar_factor_deriv(t,s) = (s-t)*pow(rho,s-t-1);
         ar_factor(s,t) = ar_factor(t,s);
         ar_factor_deriv(s,t) = ar_factor_deriv(t,s);
       }
@@ -159,7 +192,7 @@ inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &
   const int npars_A = derivs_A.size() - 1;
   const int npars = npars_A + 1;  // +1 for rho
   const int niter = umat.cols();
-  const int n_A = derivs_A[0].rows();
+  const int n_A = Covariance::Q();  // spatial dimension
   
   VectorXd grad = VectorXd::Zero(npars);
   logl.setZero();
@@ -167,27 +200,29 @@ inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &
   if(!isSparse) make_sparse();
   
   // Log determinant: T * log|A| + n_A * log|R|
-  double logdet_A = log_determinant();
+  double logdet_A = Covariance::log_determinant();  // just the spatial part
   double logdet_R = 2.0 * ar_factor_chol.diagonal().array().log().sum();
   double logdet_val = T * logdet_A + n_A * logdet_R;
   
-  logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
+  logl.array() += NEG_HALF_LOG_2PI * Q() - 0.5 * logdet_val;
   
   // S_A[j] = A^{-1} dA/dtheta_j
   std::vector<MatrixXd> S_A;
   for(int j = 0; j < npars_A; j++){
     S_A.emplace_back(matL.solve(derivs_A[j + 1]));
+    // tr(I ⊗ S_A) = T * tr(S_A)
     grad(j) = -0.5 * T * S_A[j].trace();
   }
   
   // S_R = R^{-1} dR/drho
   MatrixXd S_R = ar_factor_inverse * ar_factor_deriv;
+  // tr(S_R ⊗ I) = n_A * tr(S_R)
   grad(npars_A) = -0.5 * n_A * S_R.trace();
   
   // Information matrix - trace contributions
   MatrixXd M = MatrixXd::Zero(npars, npars);
   
-  // A-A block: tr((S_A^j ⊗ I)(S_A^k ⊗ I)) = T * tr(S_A^j S_A^k)
+  // A-A block: tr((I ⊗ S_A^j)(I ⊗ S_A^k)) = T * tr(S_A^j S_A^k)
   for(int j = 0; j < npars_A; j++){
     for(int k = j; k < npars_A; k++){
       double tr_val = -0.5 * T * (S_A[j] * S_A[k]).trace();
@@ -196,7 +231,7 @@ inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &
     }
   }
   
-  // A-R cross: tr((S_A ⊗ I)(I ⊗ S_R)) = tr(S_A ⊗ S_R) = tr(S_A) * tr(S_R)
+  // A-R cross: tr((I ⊗ S_A)(S_R ⊗ I)) = tr(S_R ⊗ S_A) = tr(S_R) * tr(S_A)
   double tr_S_R = S_R.trace();
   for(int j = 0; j < npars_A; j++){
     double tr_val = -0.5 * S_A[j].trace() * tr_S_R;
@@ -204,117 +239,134 @@ inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &
     M(npars_A, j) = tr_val;
   }
   
-  // R-R: tr((I ⊗ S_R)^2) = n_A * tr(S_R^2)
+  // R-R: tr((S_R ⊗ I)^2) = n_A * tr(S_R^2)
   MatrixXd S_R_sq = S_R * S_R;
   M(npars_A, npars_A) = -0.5 * n_A * S_R_sq.trace();
   
-  // Monte Carlo contributions
-#pragma omp parallel
-{
-#pragma omp for
+  // Monte Carlo contributions - quadratic form
+#pragma omp parallel for
   for(int i = 0; i < niter; i++){
     double qf = vmat.col(i).dot(umat.col(i));
     logl(i) += -0.5 * qf;
   }
-}
-
-// Gradient MC terms - reshape vectors to T x n_A matrices
-// u^T(S_A ⊗ I)v = tr(U^T V S_A^T)
-// u^T(I ⊗ S_R)v = tr(U^T S_R V)
-for(int j = 0; j < npars_A; j++){
-  double grad_j = 0.0;
+  
+  // Gradient MC terms
+  // Vectors reshaped as n_A x T matrices (spatial x temporal)
+  // For D = R ⊗ A, D^{-1} dD/dθ_A = I ⊗ S_A, D^{-1} dD/dρ = S_R ⊗ I
+  //
+  // u^T (I ⊗ S_A) v: using (I ⊗ S_A) vec(V) = vec(S_A V)
+  //   = vec(U)^T vec(S_A V) = tr(U^T S_A V)
+  //
+  // u^T (S_R ⊗ I) v: using (S_R ⊗ I) vec(V) = vec(V S_R^T)
+  //   = vec(U)^T vec(V S_R^T) = tr(U^T V S_R^T)
+  
+  for(int j = 0; j < npars_A; j++){
+    double grad_j = 0.0;
 #pragma omp parallel for reduction(+:grad_j)
-  for(int i = 0; i < niter; i++){
-    Map<const MatrixXd> U(umat.col(i).data(), T, n_A);
-    Map<const MatrixXd> V(vmat.col(i).data(), T, n_A);
-    grad_j += uweight(i) * (U.transpose() * V * S_A[j].transpose()).trace();
-  }
-  grad(j) += 0.5 * grad_j;
-}
-
-double grad_rho = 0.0;
-#pragma omp parallel for reduction(+:grad_rho)
-for(int i = 0; i < niter; i++){
-  Map<const MatrixXd> U(umat.col(i).data(), T, n_A);
-  Map<const MatrixXd> V(vmat.col(i).data(), T, n_A);
-  grad_rho += uweight(i) * (U.transpose() * S_R * V).trace();
-}
-grad(npars_A) += 0.5 * grad_rho;
-
-// Information matrix MC terms
-// A-A block: u^T(S_A^j S_A^k ⊗ I)v = tr(U^T V (S_A^j S_A^k)^T)
-for(int j = 0; j < npars_A; j++){
-  for(int k = j; k < npars_A; k++){
-    MatrixXd Sprod = S_A[j] * S_A[k];
-    double m_jk = 0.0;
-#pragma omp parallel for reduction(+:m_jk)
     for(int i = 0; i < niter; i++){
-      Map<const MatrixXd> U(umat.col(i).data(), T, n_A);
-      Map<const MatrixXd> V(vmat.col(i).data(), T, n_A);
-      m_jk += uweight(i) * (U.transpose() * V * Sprod.transpose()).trace();
+      Map<const MatrixXd> U(umat.col(i).data(), n_A, T);
+      Map<const MatrixXd> V(vmat.col(i).data(), n_A, T);
+      // tr(U^T S_A V)
+      grad_j += uweight(i) * (U.transpose() * S_A[j] * V).trace();
     }
-    M(j, k) += m_jk;
-    if(j != k) M(k, j) += m_jk;
+    grad(j) += 0.5 * grad_j;
   }
-}
-
-// A-R cross: u^T(S_A ⊗ S_R)v = tr(U^T S_R V S_A^T)
-for(int j = 0; j < npars_A; j++){
-  double m_jr = 0.0;
-#pragma omp parallel for reduction(+:m_jr)
+  
+  double grad_rho = 0.0;
+#pragma omp parallel for reduction(+:grad_rho)
   for(int i = 0; i < niter; i++){
-    Map<const MatrixXd> U(umat.col(i).data(), T, n_A);
-    Map<const MatrixXd> V(vmat.col(i).data(), T, n_A);
-    m_jr += uweight(i) * (U.transpose() * S_R * V * S_A[j].transpose()).trace();
+    Map<const MatrixXd> U(umat.col(i).data(), n_A, T);
+    Map<const MatrixXd> V(vmat.col(i).data(), n_A, T);
+    // tr(U^T V S_R^T) = tr(S_R^T U^T V)
+    grad_rho += uweight(i) * (U.transpose() * V * S_R.transpose()).trace();
   }
-  M(j, npars_A) += m_jr;
-  M(npars_A, j) += m_jr;
-}
-
-// R-R: u^T(I ⊗ S_R^2)v = tr(U^T S_R^2 V)
-double m_rr = 0.0;
+  grad(npars_A) += 0.5 * grad_rho;
+  
+  // Information matrix MC terms
+  //
+  // A-A block: u^T (I ⊗ S_A^j S_A^k) v = tr(U^T S_A^j S_A^k V)
+  //
+  // A-R cross: u^T (S_R ⊗ S_A) v: using (S_R ⊗ S_A) vec(V) = vec(S_A V S_R^T)
+  //   = tr(U^T S_A V S_R^T)
+  //
+  // R-R: u^T (S_R^2 ⊗ I) v = tr(U^T V (S_R^2)^T)
+  
+  for(int j = 0; j < npars_A; j++){
+    for(int k = j; k < npars_A; k++){
+      MatrixXd Sprod = S_A[j] * S_A[k];
+      double m_jk = 0.0;
+#pragma omp parallel for reduction(+:m_jk)
+      for(int i = 0; i < niter; i++){
+        Map<const MatrixXd> U(umat.col(i).data(), n_A, T);
+        Map<const MatrixXd> V(vmat.col(i).data(), n_A, T);
+        // tr(U^T S_A^j S_A^k V)
+        m_jk += uweight(i) * (U.transpose() * Sprod * V).trace();
+      }
+      M(j, k) += m_jk;
+      if(j != k) M(k, j) += m_jk;
+    }
+  }
+  
+  // A-R cross
+  for(int j = 0; j < npars_A; j++){
+    double m_jr = 0.0;
+#pragma omp parallel for reduction(+:m_jr)
+    for(int i = 0; i < niter; i++){
+      Map<const MatrixXd> U(umat.col(i).data(), n_A, T);
+      Map<const MatrixXd> V(vmat.col(i).data(), n_A, T);
+      // tr(U^T S_A V S_R^T)
+      m_jr += uweight(i) * (U.transpose() * S_A[j] * V * S_R.transpose()).trace();
+    }
+    M(j, npars_A) += m_jr;
+    M(npars_A, j) += m_jr;
+  }
+  
+  // R-R
+  double m_rr = 0.0;
 #pragma omp parallel for reduction(+:m_rr)
-for(int i = 0; i < niter; i++){
-  Map<const MatrixXd> U(umat.col(i).data(), T, n_A);
-  Map<const MatrixXd> V(vmat.col(i).data(), T, n_A);
-  m_rr += uweight(i) * (U.transpose() * S_R_sq * V).trace();
-}
-M(npars_A, npars_A) += m_rr;
-
-gradients.tail(npars) = grad;
-infomat_theta = M;
-// Update A parameters
-VectorXd theta_A = Map<VectorXd>(parameters_.data(), parameters_.size());
-
-// Solve for full step
-VectorXd step = M.llt().solve(grad);
-
-// Update A parameters (first npars_A elements of step)
-theta_A += step.head(npars_A);
-update_parameters(theta_A.array());
-
-// Update rho separately (last element of step)
- double newrho = rho + step(npars_A);
-
-// You may want to constrain rho to (-1, 1) for stationarity
-// if(rho >= 1.0) rho = 0.99;
-// if(rho <= -1.0) rho = -0.99;
-
-// Recompute R matrices with new rho
-update_rho(newrho);  // or whatever your method is called
+  for(int i = 0; i < niter; i++){
+    Map<const MatrixXd> U(umat.col(i).data(), n_A, T);
+    Map<const MatrixXd> V(vmat.col(i).data(), n_A, T);
+    // tr(U^T V (S_R^2)^T)
+    m_rr += uweight(i) * (U.transpose() * V * S_R_sq.transpose()).trace();
+  }
+  M(npars_A, npars_A) += m_rr;
+  
+  gradients.tail(npars) = grad;
+  infomat_theta = M;
+  
+  // Update parameters
+  VectorXd theta_A = Map<VectorXd>(parameters_.data(), parameters_.size());
+  
+  // Solve for full step
+  VectorXd step = M.llt().solve(grad);
+  
+  // Update A parameters (first npars_A elements of step)
+  theta_A += step.head(npars_A);
+  update_parameters(theta_A.array());
+  
+  // Update rho (last element of step)
+  double newrho = rho + step(npars_A);
+  
+  // Constrain rho to (-1, 1) for stationarity
+  if(newrho >= 1.0) newrho = 0.99;
+  if(newrho <= -1.0) newrho = -0.99;
+  
+  // Recompute R matrices with new rho
+  update_rho(newrho);
 }
 
 inline MatrixXd glmmr::ar1Covariance::solve(const MatrixXd& u){
   const int n_A = Covariance::Q();
   const int ncols = u.cols();
+  
   MatrixXd result(u.rows(), ncols);
   
   for(int i = 0; i < ncols; i++){
-    Map<const MatrixXd> U(u.col(i).data(), T, n_A);
-    MatrixXd X = ar_factor_inverse * U;
-    MatrixXd Xt = X.transpose();
-    MatrixXd V = matL.solve(Xt).transpose();
-    result.col(i) = Map<const VectorXd>(V.data(), T * n_A);
+    Map<const MatrixXd> U(u.col(i).data(), n_A, T);
+    MatrixXd X = matL.solve(MatrixXd(U));
+    MatrixXd V = X * ar_factor_inverse;
+    result.col(i) = Map<const VectorXd>(V.data(), n_A * T);
   }
   
   return result;

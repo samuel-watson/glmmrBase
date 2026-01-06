@@ -1021,6 +1021,7 @@ Model <- R6::R6Class("Model",
                            private$set_y(y)
                          }
                          if(private$model_type() > 0 & reml == TRUE) stop("REML not available with HSGP/NNGP approximations, please set reml=FALSE")
+                         if(private$model_type() == 3) stop("MCML is not generally stable with the AR1 structure currently, please use fit()")
                          Model__use_attenuation(private$ptr,private$attenuate_parameters,private$model_type())
                          if(!se %in% c("gls","kr","kr2","bw","sat","bwrobust","box"))stop("Option se not recognised")
                          if(self$family[[1]]%in%c("Gamma","beta") & se %in% c("kr","kr2","sat"))stop("KR standard errors are not currently available with gamma or beta families")
@@ -1947,7 +1948,6 @@ Model <- R6::R6Class("Model",
                              self$covariance$.__enclos_env__$private$type <- 2
                              form <- gsub("hsgp_","",form)
                            } else if(grepl("ar[2-9]",form) | grepl("ar[1-9][1-9]",form)){
-                             if(length(re)>1)stop("AR only available as a single covariance function currently.")
                              self$covariance$.__enclos_env__$private$type <- 3
                              self$covariance$.__enclos_env__$private$time <- as.numeric(gsub(".*ar(.+)_.*", "\\1", form))
                              form <- gsub("ar[2-9]_","",form)
@@ -1965,7 +1965,7 @@ Model <- R6::R6Class("Model",
                            }
                            
                            if(self$family[[1]]=="bernoulli" & any(self$trials>1))self$family[[1]] <- "binomial"
-                           if(is.null(self$covariance$parameters) | type == 3){
+                           if(is.null(self$covariance$parameters)){
                              if(type == 0){
                                private$ptr <- Model__new(form,
                                                          as.matrix(data),
@@ -1986,16 +1986,8 @@ Model <- R6::R6Class("Model",
                                                               colnames(data),
                                                               tolower(self$family[[1]]),
                                                               self$family[[2]])
-                             } else if(type==3){
-                               private$ptr <- Model_ar__new(form,
-                                                              as.matrix(data),
-                                                              as.matrix(self$covariance$data),
-                                                              colnames(data),
-                                                              colnames(self$covariance$data),
-                                                              tolower(self$family[[1]]),
-                                                              self$family[[2]],
-                                                            self$covariance$.__enclos_env__$private$time)
-                             }
+                             } 
+                             
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
                              self$covariance$parameters <- runif(ncovpar,0,0.2)
@@ -2033,6 +2025,17 @@ Model <- R6::R6Class("Model",
                                                                      self$family[[2]],
                                                                      self$mean$parameters,
                                                                      self$covariance$parameters)
+                             } else if(type==3){
+                               private$ptr <- Model_ar__new(form,
+                                                            as.matrix(data),
+                                                            as.matrix(self$covariance$data),
+                                                            colnames(data),
+                                                            colnames(self$covariance$data),
+                                                            tolower(self$family[[1]]),
+                                                            self$family[[2]],
+                                                            self$covariance$.__enclos_env__$private$time)
+                               Model__update_beta(private$ptr,self$mean$parameters,type)
+                               Model__update_theta(private$ptr,self$covariance$parameters,type)
                              }
                            }
                            

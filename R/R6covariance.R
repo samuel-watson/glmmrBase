@@ -233,6 +233,11 @@ Covariance <- R6::R6Class("Covariance",
                             paridx <- Model__parameter_fn_index(private$model_ptr,private$type)+1
                             recount <- Model__re_count(private$model_ptr,private$type)
                           }
+                          if(private$type == 3){
+                            re <- c(re, "rho")
+                            paridx <- c(paridx, max(paridx)+1)
+                            recount <- c(recount, private$time)
+                          }
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
                         },

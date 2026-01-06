@@ -60,7 +60,6 @@ SEXP wrap(const BoxResults& x){
 
 using namespace Rcpp;
 
-
 // [[Rcpp::export]]
 SEXP Linpred__new(SEXP formula_,
                   SEXP data_,
@@ -232,7 +231,7 @@ SEXP Covariance__ZL(SEXP xp, int type_ = 0){
 // [[Rcpp::export]]
 void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type_ = 0){
   Type type = static_cast<Type>(type_);
-  std::vector<double> parameters = as<std::vector<double> >(parameters_);
+  std::vector<double> parameters = as<std::vector<double>>(parameters_);
   switch(type){
   case Type::GLMM:
   {
@@ -255,7 +254,11 @@ void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type_ = 0){
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
+    // Last element is rho
+    double rho = parameters.back();
+    parameters.pop_back();
     ptr->update_parameters_extern(parameters);
+    ptr->update_rho(rho);
     break;
   }
   }
@@ -504,6 +507,7 @@ SEXP Covariance__n_cov_pars(SEXP xp, int type_ = 0){
   {
     XPtr<ar1covariance> ptr(xp);
     G = ptr->npar();
+    G++;
     break;
   }
   }
@@ -1004,13 +1008,22 @@ void Model__update_beta(SEXP xp, SEXP beta_, int type = 0){
 
 // [[Rcpp::export]]
 void Model__update_theta(SEXP xp, SEXP theta_, int type = 0){
-  std::vector<double> theta = as<std::vector<double> >(theta_);
-  glmmrType model(xp,static_cast<Type>(type));
+  std::vector<double> theta = as<std::vector<double>>(theta_);
+  glmmrType model(xp, static_cast<Type>(type));
   auto functor = overloaded {
-    [](int) {}, 
-    [&theta](auto ptr){ptr->update_theta(theta);}
+    [](int, std::vector<double>&) {}, 
+    [](Rcpp::XPtr<glmm_ar1> ptr, std::vector<double>& theta) {
+      // Last element is rho
+      double rho = theta.back();
+      theta.pop_back();
+      ptr->update_theta(theta);
+      ptr->model.covariance.update_rho(rho);
+    },
+    [](auto ptr, std::vector<double>& theta) {
+      ptr->update_theta(theta);
+    }
   };
-  std::visit(functor,model.ptr);
+  std::visit([&](auto&& arg) { functor(arg, theta); }, model.ptr);
 }
 
 // [[Rcpp::export]]
@@ -1168,10 +1181,15 @@ SEXP Model__log_likelihood(SEXP xp, int type = 0){
 SEXP Model__n_cov_pars(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->model.covariance.npar());}
+    [](int) { return returnType(0); }, 
+    [](Rcpp::XPtr<glmm_ar1> ptr) {
+      return returnType(ptr->model.covariance.npar() + 1);  // +1 for rho
+    },
+    [](auto ptr) {
+      return returnType(ptr->model.covariance.npar());
+    }
   };
-  auto S = std::visit(functor,model.ptr);
+  auto S = std::visit(functor, model.ptr);
   return wrap(std::get<int>(S));
 }
 
@@ -1275,7 +1293,7 @@ void Model__nr_beta(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 void Model__nr_theta(SEXP xp,int type = 0){
-  if(type != 0)Rcpp::stop("MCNR2 Only currently available for standard covariance functions");
+  if(type == 1 || type == 2)Rcpp::stop("MCNR2 Only currently available for standard covariance functions");
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
@@ -1518,11 +1536,18 @@ SEXP Model__y(SEXP xp, int type = 0){
 SEXP Model__get_theta(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->model.covariance.parameters_);}
+    [](int) { return returnType(0); }, 
+    [](Rcpp::XPtr<glmm_ar1> ptr) {
+      std::vector<double> theta = ptr->model.covariance.parameters_;
+      theta.push_back(ptr->model.covariance.rho);
+      return returnType(theta);
+    },
+    [](auto ptr) {
+      return returnType(ptr->model.covariance.parameters_);
+    }
   };
-  auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<std::vector<double> >(S));
+  auto S = std::visit(functor, model.ptr);
+  return wrap(std::get<std::vector<double>>(S));
 }
 
 // [[Rcpp::export]]

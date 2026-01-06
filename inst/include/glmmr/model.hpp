@@ -599,6 +599,9 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
       beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
       theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
       if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
+      if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+        if(optim.trace > 0) std::cout << "\nrho: " << model.covariance.rho;
+      }
       if(optim.trace > 0)std::cout << "Log likelihood (new | previous): " << ll_new << " | " << ll_old << " Diff: " << std::abs(ll_new - ll_old) << std::endl;
       converged = std::abs(ll_new - ll_old) < tol;
       ll_old = ll_new;
@@ -622,6 +625,9 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
       beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
       theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
       if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
+      if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+        if(optim.trace > 0) std::cout << "\nrho: " << model.covariance.rho;
+      }
       if(optim.trace > 0)std::cout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
       if (iter > 2) {
         converged = optim.check_convergence(tol,hist,iter,k0);

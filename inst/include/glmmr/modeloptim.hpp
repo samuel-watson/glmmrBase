@@ -159,6 +159,8 @@ inline void glmmr::ModelOptim<modeltype>::ml_beta(){
     op.template fn<&glmmr::ModelOptim<bits_nngp>::log_likelihood_beta, glmmr::ModelOptim<bits_nngp> >(this);
   } else if constexpr (std::is_same_v<modeltype,bits_hsgp>){
     op.template fn<&glmmr::ModelOptim<bits_hsgp>::log_likelihood_beta, glmmr::ModelOptim<bits_hsgp> >(this);
+  } else if constexpr (std::is_same_v<modeltype,bits_ar1>){
+    op.template fn<&glmmr::ModelOptim<bits_ar1>::log_likelihood_beta, glmmr::ModelOptim<bits_ar1> >(this);
   }
   op.minimise();
   int eval_size = control.saem ? re.mcmc_block_size : ll_current.rows();

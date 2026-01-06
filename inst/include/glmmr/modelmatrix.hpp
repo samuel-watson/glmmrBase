@@ -1195,6 +1195,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
                                                                const bool loglik,
                                                                const bool append)
 {
+  
   if constexpr (std::is_same_v<modeltype,bits_hsgp>){
     if(model.covariance.Q() != re.u_.rows()){
       re.u_.resize(model.covariance.Q(),1);
@@ -1205,9 +1206,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   ArrayXd eta = xb;
   eta += model.covariance.ZLu(re.u_mean_).array();
   VectorXd W_(eta.size());
-  
+
   switch(model.family.family){
-  case Fam::gaussian: 
+  case Fam::gaussian:
     if(model.family.link == Link::identity){
       W_ = (model.data.variance.inverse() *  model.data.weights).matrix();
     } else {
@@ -1241,7 +1242,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     throw std::runtime_error("Analtyic posterior only available with Gaussian, Poisson, and Binomial");
     break;
   }
-  
+
   const MatrixXd ZL = model.covariance.ZL();
   const MatrixXd ZLt = ZL.transpose();
   const int n_cols = ZL.cols();
@@ -1252,11 +1253,11 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   VectorXd yb(n_cols);
   MatrixXd WZL(W_.size(),n_cols);
   MatrixXd LWL = MatrixXd::Identity(n_cols,n_cols);
-  
+
   eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
   if(model.family.family == Fam::binomial) eta.array().colwise() *= model.data.variance;
   VectorXd resid = model.data.y - eta.matrix();
-  
+
   if(model.family.family == Fam::gaussian) {
     WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
     LWL.noalias() = ZLt * WZL;
@@ -1282,7 +1283,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
         eta = maths::mod_inv_func(eta.matrix(), model.family.link).array();
         if(model.family.family == Fam::binomial) eta.array().colwise() *= model.data.variance;
         resid = model.data.y - eta.matrix();
-        
+
       } else if(model.family.family == Fam::poisson) {
         ArrayXd exp_eta = eta.exp();
         W_ = exp_eta.matrix();
@@ -1305,7 +1306,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       itero++;
       b.swap(bnew);
     }
-    
+
     Mb = b;
     re.u_mean_ = Mb;
     if(reml){
@@ -1317,21 +1318,21 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       MatrixXd B = X.transpose() * WZL;
       MatrixXd Corr = B.transpose() * C * B;
       Vb -= Corr;
-    } 
+    }
     llt_Pb.solveInPlace(Vb);
-    
+
   }
-  
+
   MatrixXd unew(re.u_.rows(), niter);
   std::random_device rd;
   std::mt19937 gen(rd());
   std::normal_distribution<double> d(0.0, 1.0);
-  
+
   double* data = unew.data();
   for(int i = 0; i < unew.size(); ++i) {
     data[i] = d(gen);
   }
-  
+
   LLT<MatrixXd> llt(Vb);
   MatrixXd LVb = llt.matrixL();
   VectorXd v(re.u_.rows());
