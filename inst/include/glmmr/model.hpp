@@ -577,37 +577,58 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
   
   bool converged = false;    
   int iter = 1;
-  dblpair ll, lldiff;
-  double lltot, llvartot, prob;
+  double ll_old = -std::numeric_limits<double>::infinity();
   // start at ml values
   if(start_ml_beta) optim.template ml_beta<BOBYQA>();
   VectorXd beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
   VectorXd theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
   if(optim.trace > 0)std::cout << "\nStarting values\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
   while (!converged && iter <= max_iter) {
-    std::cout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
-    auto t1 = high_resolution_clock::now();
-    matrix.posterior_u_samples(niter,false,true,false);
-    auto t2 = high_resolution_clock::now();
-    duration<double, std::milli> ms_double = t2 - t1;
-    if(optim.trace > 0)std::cout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
-    optim.nr_beta();
-    auto t3 = high_resolution_clock::now();
-    ms_double = t3 - t2;
-    std::cout << "TIMING STEP 2 (nr beta): " << ms_double.count() << "ms" << std::endl;
-    optim.nr_theta();
-    auto t4 = high_resolution_clock::now();
-    ms_double = t4 - t3;
-    if(optim.trace > 0)std::cout << "TIMING STEP 3 (nr theta): " << ms_double.count() << "ms" << std::endl;
-    beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
-    theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
-    if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
-    if(optim.trace > 0)std::cout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
-    if(optim.trace > 0)std::cout << "\nLog-likelihood: " << ll.first << " | " << ll.second << std::endl;
-    if (iter > 2) {
-      converged = optim.check_convergence(tol,hist,iter,k0);
-      if (converged) std::cout << "\nCONVERGED!";
+    if(model.family.family==Fam::gaussian){
+      if(optim.trace > 0)std::cout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
+      auto t1 = high_resolution_clock::now();
+      optim.nr_beta_gaussian();
+      auto t2 = high_resolution_clock::now();
+      duration<double, std::milli> ms_double = t2 - t1;
+      if(optim.trace > 0)std::cout << "TIMING STEP 1 (nr beta): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_theta_gaussian();
+      auto t3 = high_resolution_clock::now();
+      ms_double = t3 - t2;
+      if(optim.trace > 0)std::cout << "TIMING STEP 2 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      double ll_new = optim.marginal_log_likelihood();
+      beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+      theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+      if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
+      if(optim.trace > 0)std::cout << "Log likelihood (new | previous): " << ll_new << " | " << ll_old << " Diff: " << std::abs(ll_new - ll_old) << std::endl;
+      converged = std::abs(ll_new - ll_old) < tol;
+      ll_old = ll_new;
+      if(optim.trace > 0) if (converged) std::cout << "\nCONVERGED!";
+      
+    } else {
+      if(optim.trace > 0)std::cout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
+      auto t1 = high_resolution_clock::now();
+      matrix.posterior_u_samples(niter,false,true,false);
+      auto t2 = high_resolution_clock::now();
+      duration<double, std::milli> ms_double = t2 - t1;
+      if(optim.trace > 0)std::cout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_beta();
+      auto t3 = high_resolution_clock::now();
+      ms_double = t3 - t2;
+      if(optim.trace > 0)std::cout << "TIMING STEP 2 (nr beta): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_theta();
+      auto t4 = high_resolution_clock::now();
+      ms_double = t4 - t3;
+      if(optim.trace > 0)std::cout << "TIMING STEP 3 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+      theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+      if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
+      if(optim.trace > 0)std::cout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
+      if (iter > 2) {
+        converged = optim.check_convergence(tol,hist,iter,k0);
+        if(optim.trace > 0) if (converged) std::cout << "\nCONVERGED!";
+      }
     }
+    
     iter++;
   }
 }

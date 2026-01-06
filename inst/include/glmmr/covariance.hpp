@@ -175,9 +175,9 @@ protected:
   bool                                isSparse = true;
 public:
   CovarianceLLT                       matL;
-protected:
   MatrixXd                            infomat_theta;
-  
+
+protected:  
   // functions
   void                            update_parameters_in_calculators();
   MatrixXd                        get_block(int b);

@@ -60,8 +60,11 @@ public:
   virtual double  log_likelihood(bool beta);
   virtual double  log_likelihood();
   virtual double  full_log_likelihood();
+  virtual double  marginal_log_likelihood();
   virtual void    nr_beta();
   virtual void    nr_theta();
+  virtual void    nr_beta_gaussian();
+  virtual void    nr_theta_gaussian();
   virtual void    update_var_par(const double& v);
   virtual void    update_var_par(const ArrayXd& v);
   template<class algo, typename = std::enable_if_t<std::is_base_of<optim_algo, algo>::value> >
@@ -270,6 +273,66 @@ template<typename modeltype>
 inline std::pair<double,double> glmmr::ModelOptim<modeltype>::current_likelihood_values()
 {
   return current_ll_values;
+}
+
+template<typename modeltype>
+inline double glmmr::ModelOptim<modeltype>::marginal_log_likelihood(){
+  int n = model.data.y.size();
+  int p = model.linear_predictor.P();
+  int q = model.covariance.Q();
+  
+  double sigma2 = model.data.var_par;
+  double sigma2_inv = 1.0 / sigma2;
+  double sigma4_inv = sigma2_inv * sigma2_inv;
+  
+  MatrixXd Z = model.covariance.Z();
+  MatrixXd X = model.linear_predictor.X();
+  VectorXd r = model.data.y.matrix() - model.linear_predictor.xb();
+  
+  MatrixXd G = Z.transpose() * Z;
+  MatrixXd C = Z.transpose() * X;
+  VectorXd c = Z.transpose() * r;
+  
+  std::vector<MatrixXd> derivs;
+  model.covariance.derivatives(derivs, 1);
+  MatrixXd& D = derivs[0];
+  
+  LLT<MatrixXd> llt_D(D);
+  MatrixXd D_inv = llt_D.solve(MatrixXd::Identity(q, q));
+  MatrixXd M = D_inv + sigma2_inv * G;
+  LLT<MatrixXd> llt_M(M);
+  VectorXd M_inv_c = llt_M.solve(c);
+  
+  // log|V| = log|D| + n*log(sigma2) + log|M|
+  double logdetD = 2.0 * llt_D.matrixL().toDenseMatrix().diagonal().array().log().sum();
+  double logdetM = 2.0 * llt_M.matrixL().toDenseMatrix().diagonal().array().log().sum();
+  double logdetV = logdetD + n * std::log(sigma2) + logdetM;
+  
+  // r^T V^{-1} r = sigma^{-2}*r^T*r - sigma^{-4}*c^T*M^{-1}*c
+  double rtr = r.squaredNorm();
+  double quadform = sigma2_inv * rtr - sigma4_inv * c.dot(M_inv_c);
+  
+  double ll;
+  if(control.reml){
+    // REML: add -0.5*log|X^T V^{-1} X|
+    MatrixXd XtX = X.transpose() * X;
+    MatrixXd M_inv_C = llt_M.solve(C);
+    MatrixXd XtVinvX = sigma2_inv * XtX - sigma4_inv * C.transpose() * M_inv_C;
+    LLT<MatrixXd> llt_XtVinvX(XtVinvX);
+    double logdetXtVinvX = 2.0 * llt_XtVinvX.matrixL().toDenseMatrix().diagonal().array().log().sum();
+    
+    // Quadratic form uses P not V^{-1}
+    VectorXd XtVinvr = sigma2_inv * X.transpose() * r - sigma4_inv * C.transpose() * M_inv_c;
+    VectorXd adj = llt_XtVinvX.solve(XtVinvr);
+    double adj_quadform = XtVinvr.dot(adj);
+    quadform -= adj_quadform;
+    
+    ll = -0.5 * ((n - p) * std::log(2 * M_PI) + logdetV + logdetXtVinvX + quadform);
+  } else {
+    ll = -0.5 * (n * std::log(2 * M_PI) + logdetV + quadform);
+  }
+  
+  return ll;
 }
 
 template<typename modeltype>
@@ -814,6 +877,287 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
 }
 
 template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::nr_beta_gaussian(){
+  int n = model.data.y.size();
+  int q = model.covariance.Q();
+  
+  double sigma2 = model.data.var_par;
+  double sigma2_inv = 1.0 / sigma2;
+  double sigma4_inv = sigma2_inv * sigma2_inv;
+  
+  MatrixXd Z = model.covariance.Z();
+  MatrixXd X = model.linear_predictor.X();
+  VectorXd y = model.data.y.matrix();
+  
+  // Precompute
+  MatrixXd G = Z.transpose() * Z;
+  MatrixXd C = Z.transpose() * X;
+  VectorXd c = Z.transpose() * y;
+  
+  std::vector<MatrixXd> derivs;
+  model.covariance.derivatives(derivs, 1);
+  MatrixXd& D = derivs[0];
+  
+  LLT<MatrixXd> llt_D(D);
+  MatrixXd D_inv = llt_D.solve(MatrixXd::Identity(q, q));
+  MatrixXd M = D_inv + sigma2_inv * G;
+  LLT<MatrixXd> llt_M(M);
+  MatrixXd M_inv = llt_M.solve(MatrixXd::Identity(q, q));
+  
+  // X^T V^{-1} X = sigma^{-2}*X^T*X - sigma^{-4}*C^T*M^{-1}*C
+  MatrixXd XtX = X.transpose() * X;
+  MatrixXd M_inv_C = M_inv * C;
+  MatrixXd XtVinvX = sigma2_inv * XtX - sigma4_inv * C.transpose() * M_inv_C;
+  
+  // X^T V^{-1} y = sigma^{-2}*X^T*y - sigma^{-4}*C^T*M^{-1}*c
+  VectorXd Xty = X.transpose() * y;
+  VectorXd M_inv_c = M_inv * c;
+  VectorXd XtVinvy = sigma2_inv * Xty - sigma4_inv * C.transpose() * M_inv_c;
+  
+  // beta = (X^T V^{-1} X)^{-1} X^T V^{-1} y
+  LLT<MatrixXd> llt_XtVinvX(XtVinvX);
+  VectorXd beta_new = llt_XtVinvX.solve(XtVinvy);
+  
+  model.linear_predictor.update_parameters(beta_new);
+}
+
+template<typename modeltype>
+inline void glmmr::ModelOptim<modeltype>::nr_theta_gaussian(){
+  int n = model.data.y.size();
+  int p = model.linear_predictor.P();
+  int n_theta = model.covariance.parameters_.size();
+  int n_psi = n_theta + 1;
+  int q = model.covariance.Q();
+  
+  VectorXd score(n_psi);
+  MatrixXd fisher(n_psi, n_psi);
+  score.setZero();
+  fisher.setZero();
+  
+  double sigma2 = model.data.var_par;
+  double sigma2_inv = 1.0 / sigma2;
+  double sigma4_inv = sigma2_inv * sigma2_inv;
+  double sigma6_inv = sigma4_inv * sigma2_inv;
+  double sigma8_inv = sigma4_inv * sigma4_inv;
+  
+  // Get D and derivatives (all q x q)
+  std::vector<MatrixXd> derivs;
+  model.covariance.derivatives(derivs, 1);
+  MatrixXd& D = derivs[0];
+  
+  MatrixXd Z = model.covariance.Z();
+  MatrixXd X = model.linear_predictor.X();
+  VectorXd r = model.data.y.matrix() - model.linear_predictor.xb();
+  
+  // Precompute q-dimensional quantities
+  MatrixXd G = Z.transpose() * Z;                    // q x q
+  MatrixXd C = Z.transpose() * X;                    // q x p
+  VectorXd c = Z.transpose() * r;                    // q x 1
+  MatrixXd XtX = X.transpose() * X;                  // p x p
+  VectorXd Xtr = X.transpose() * r;                  // p x 1
+  
+  // M = D^{-1} + sigma^{-2} * G  (q x q)
+  LLT<MatrixXd> llt_D(D);
+  MatrixXd D_inv = llt_D.solve(MatrixXd::Identity(q, q));
+  MatrixXd M = D_inv + sigma2_inv * G;
+  LLT<MatrixXd> llt_M(M);
+  MatrixXd M_inv = llt_M.solve(MatrixXd::Identity(q, q));
+  
+  // Precompute products we'll need multiple times
+  MatrixXd M_inv_G = M_inv * G;                      // q x q
+  MatrixXd M_inv_C = M_inv * C;                      // q x p
+  VectorXd M_inv_c = M_inv * c;                      // q x 1
+  MatrixXd M_inv_G_M_inv = M_inv * G * M_inv;        // q x q
+  
+  // V^{-1} via Woodbury: V^{-1} = sigma^{-2}*I - sigma^{-4}*Z*M^{-1}*Z^T
+  // We never form this explicitly
+  
+  // Z^T V^{-1} Z = sigma^{-2}*G - sigma^{-4}*G*M^{-1}*G
+  MatrixXd ZtVinvZ = sigma2_inv * G - sigma4_inv * G * M_inv_G;
+  
+  // Z^T V^{-1} X = sigma^{-2}*C - sigma^{-4}*G*M^{-1}*C
+  MatrixXd ZtVinvX = sigma2_inv * C - sigma4_inv * G * M_inv_C;
+  
+  // Z^T V^{-1} r = sigma^{-2}*c - sigma^{-4}*G*M^{-1}*c
+  VectorXd ZtVinvr = sigma2_inv * c - sigma4_inv * G * M_inv_c;
+  
+  // X^T V^{-1} X = sigma^{-2}*X^T*X - sigma^{-4}*C^T*M^{-1}*C
+  MatrixXd XtVinvX = sigma2_inv * XtX - sigma4_inv * C.transpose() * M_inv_C;
+  LLT<MatrixXd> llt_XtVinvX(XtVinvX);
+  MatrixXd XtVinvX_inv = llt_XtVinvX.solve(MatrixXd::Identity(p, p));
+  
+  // X^T V^{-1} r = sigma^{-2}*X^T*r - sigma^{-4}*C^T*M^{-1}*c
+  VectorXd XtVinvr = sigma2_inv * Xtr - sigma4_inv * C.transpose() * M_inv_c;
+  
+  // V^{-1} r (as n-vector, but compute via q-space)
+  VectorXd Vinvr = sigma2_inv * r - sigma4_inv * Z * M_inv_c;
+  
+  // tr(V^{-1}) = n*sigma^{-2} - sigma^{-4}*tr(M^{-1}*G)
+  double trM_inv_G = (M_inv.array() * G.transpose().array()).sum();
+  double trVinv = n * sigma2_inv - sigma4_inv * trM_inv_G;
+  
+  // Z^T V^{-2} Z = sigma^{-4}*G - 2*sigma^{-6}*G*M^{-1}*G + sigma^{-8}*G*M^{-1}*G*M^{-1}*G
+  MatrixXd G_M_inv_G = G * M_inv_G;
+  MatrixXd G_M_inv_G_M_inv_G = G_M_inv_G * M_inv_G;
+  MatrixXd ZtV2Z = sigma4_inv * G 
+  - 2.0 * sigma6_inv * G_M_inv_G
+  + sigma8_inv * G_M_inv_G_M_inv_G;
+  
+  // X^T V^{-2} X = sigma^{-4}*X^T*X - 2*sigma^{-6}*C^T*M^{-1}*C + sigma^{-8}*C^T*M^{-1}*G*M^{-1}*C
+  MatrixXd XtV2X = sigma4_inv * XtX 
+  - 2.0 * sigma6_inv * C.transpose() * M_inv_C
+  + sigma8_inv * C.transpose() * M_inv_G_M_inv * C;
+  
+  // Z^T V^{-2} X = sigma^{-4}*C - 2*sigma^{-6}*G*M^{-1}*C + sigma^{-8}*G*M^{-1}*G*M^{-1}*C
+  MatrixXd ZtV2X = sigma4_inv * C
+  - 2.0 * sigma6_inv * G * M_inv_C
+  + sigma8_inv * G_M_inv_G * M_inv_C;
+  
+  // tr(V^{-2}) = n*sigma^{-4} - 2*sigma^{-6}*tr(M^{-1}*G) + sigma^{-8}*tr(G*M^{-1}*G*M^{-1})
+  double trM_inv_G_M_inv_G = (M_inv_G.array() * M_inv_G.transpose().array()).sum();
+  double trV2 = n * sigma4_inv 
+  - 2.0 * sigma6_inv * trM_inv_G
+  + sigma8_inv * trM_inv_G_M_inv_G;
+  
+  // Now compute P-related quantities depending on REML or ML
+  MatrixXd ZtPZ;
+  VectorXd ZtPr;
+  double trP;
+  double trP2;
+  MatrixXd ZtP2Z;
+  double Pr_sqnorm;
+  
+  if(control.reml){
+    // P = V^{-1} - V^{-1}*X*(X^T*V^{-1}*X)^{-1}*X^T*V^{-1}
+    
+    // Z^T P Z = Z^T V^{-1} Z - Z^T V^{-1} X (X^T V^{-1} X)^{-1} X^T V^{-1} Z
+    MatrixXd XtVinvX_inv_ZtVinvX_t = llt_XtVinvX.solve(ZtVinvX.transpose());
+    ZtPZ = ZtVinvZ - ZtVinvX * XtVinvX_inv_ZtVinvX_t;
+    
+    // Z^T P r = Z^T V^{-1} r - Z^T V^{-1} X (X^T V^{-1} X)^{-1} X^T V^{-1} r
+    VectorXd XtVinvX_inv_XtVinvr = llt_XtVinvX.solve(XtVinvr);
+    ZtPr = ZtVinvr - ZtVinvX * XtVinvX_inv_XtVinvr;
+    
+    // Pr = V^{-1}r - V^{-1}X*(X^TV^{-1}X)^{-1}*X^TV^{-1}r
+    VectorXd VinvX_adj = sigma2_inv * X * XtVinvX_inv_XtVinvr 
+    - sigma4_inv * Z * (M_inv * (C * XtVinvX_inv_XtVinvr));
+    VectorXd Pr = Vinvr - VinvX_adj;
+    Pr_sqnorm = Pr.squaredNorm();
+    
+    // tr(P) = tr(V^{-1}) - tr((X^T V^{-1} X)^{-1} X^T V^{-2} X)
+    trP = trVinv - (XtVinvX_inv.array() * XtV2X.transpose().array()).sum();
+    
+    // tr(P^2) = tr(V^{-2}) - 2*tr(V^{-2}X W^{-1} X^T V^{-1}) + tr(V^{-1}X W^{-1} X^T V^{-2} X W^{-1} X^T V^{-1})
+    // where W = X^T V^{-1} X
+    
+    // Term 1: tr(V^{-2})
+    double term1 = trV2;
+    
+    // Term 2: 2*tr(V^{-2}X W^{-1} X^T V^{-1}) = 2*tr(W^{-1} X^T V^{-1} V^{-2} X)
+    //       = 2*tr(W^{-1} X^T V^{-3} X)... complicated
+    // Simpler: = 2*tr((X^T V^{-2} X) W^{-1})
+    double term2 = 2.0 * (XtV2X.array() * XtVinvX_inv.transpose().array()).sum();
+    
+    // Term 3: tr(V^{-1}X W^{-1} X^T V^{-2} X W^{-1} X^T V^{-1})
+    //       = tr(W^{-1} X^T V^{-2} X W^{-1} X^T V^{-2} X)
+    MatrixXd W_inv_XtV2X = XtVinvX_inv * XtV2X;
+    double term3 = (W_inv_XtV2X.array() * W_inv_XtV2X.transpose().array()).sum();
+    
+    trP2 = term1 - term2 + term3;
+    
+    // Z^T P^2 Z = Z^T V^{-2} Z - 2*Z^T V^{-2} X W^{-1} X^T V^{-1} Z 
+    //           + Z^T V^{-1} X W^{-1} X^T V^{-2} X W^{-1} X^T V^{-1} Z
+    
+    // Term 1: Z^T V^{-2} Z
+    // Term 2: 2 * Z^T V^{-2} X W^{-1} X^T V^{-1} Z
+    MatrixXd ZtV2X_W_inv = ZtV2X * XtVinvX_inv;
+    MatrixXd term2_mat = ZtV2X_W_inv * ZtVinvX.transpose();
+    
+    // Term 3: Z^T V^{-1} X W^{-1} X^T V^{-2} X W^{-1} X^T V^{-1} Z
+    MatrixXd ZtVinvX_W_inv = ZtVinvX * XtVinvX_inv;
+    MatrixXd term3_mat = ZtVinvX_W_inv * XtV2X * XtVinvX_inv * ZtVinvX.transpose();
+    
+    ZtP2Z = ZtV2Z - term2_mat - term2_mat.transpose() + term3_mat;
+    
+  } else {
+    // ML: P = V^{-1}
+    ZtPZ = ZtVinvZ;
+    ZtPr = ZtVinvr;
+    Pr_sqnorm = Vinvr.squaredNorm();
+    trP = trVinv;
+    trP2 = trV2;
+    ZtP2Z = ZtV2Z;
+  }
+  
+  // Score and Fisher for theta (random effects parameters)
+  std::vector<MatrixXd> ZtPZ_dD(n_theta);
+  
+  for(int j = 0; j < n_theta; j++){
+    MatrixXd& dD_j = derivs[j + 1];
+    
+    // tr(P * dV_j) = tr(ZtPZ * dD_j)
+    double trace_PdV = (ZtPZ.array() * dD_j.transpose().array()).sum();
+    
+    // r^T P dV_j P r = ZtPr^T * dD_j * ZtPr
+    double quadform = ZtPr.dot(dD_j * ZtPr);
+    
+    score(j) = -0.5 * trace_PdV + 0.5 * quadform;
+    
+    ZtPZ_dD[j] = ZtPZ * dD_j;
+  }
+  
+  // Fisher theta-theta
+  for(int j = 0; j < n_theta; j++){
+    for(int k = j; k < n_theta; k++){
+      fisher(j, k) = 0.5 * (ZtPZ_dD[j].array() * ZtPZ_dD[k].transpose().array()).sum();
+      fisher(k, j) = fisher(j, k);
+    }
+  }
+  
+  // Score for sigma2 (phi = log(sigma2))
+  score(n_theta) = -0.5 * sigma2 * trP + 0.5 * sigma2 * Pr_sqnorm;
+  
+  // Fisher sigma2-sigma2
+  fisher(n_theta, n_theta) = 0.5 * sigma2 * sigma2 * trP2;
+  
+  // Fisher theta-sigma2
+  for(int j = 0; j < n_theta; j++){
+    MatrixXd& dD_j = derivs[j + 1];
+    fisher(j, n_theta) = 0.5 * sigma2 * (ZtP2Z.array() * dD_j.transpose().array()).sum();
+    fisher(n_theta, j) = fisher(j, n_theta);
+  }
+  
+  // Newton step
+  LLT<MatrixXd> llt_fisher(fisher);
+  if(llt_fisher.info() != Eigen::Success){
+    // Fisher not positive definite - add small ridge
+    fisher.diagonal().array() += 0.01 * fisher.diagonal().array().abs().maxCoeff() + 1e-6;
+    llt_fisher.compute(fisher);
+  }
+  
+  VectorXd step = llt_fisher.solve(score);
+  
+  // Damping if step is too large
+  double max_step = step.array().abs().maxCoeff();
+  if(max_step > 1.0){
+    step *= 1.0 / max_step;
+  }
+  
+  // Update parameters
+  VectorXd theta_current = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(model.covariance.parameters_.data(),model.covariance.parameters_.size());
+  VectorXd theta_new = theta_current + step.head(n_theta);
+  model.covariance.update_parameters(theta_new);
+  
+  if(model.covariance.infomat_theta.rows() != fisher.rows()) model.covariance.infomat_theta.resize(fisher.rows(), fisher.cols());
+  model.covariance.infomat_theta = fisher;
+  
+  double phi = std::log(sigma2);
+  // Update sigma2
+  phi += step(n_theta);
+  update_var_par(std::exp(phi));
+}
+
+template<typename modeltype>
 inline bool glmmr::ModelOptim<modeltype>::check_convergence(const double tol, const int hist, const int k, const int k0){
   gradient_history.push_back(current_ll_values.first + current_ll_values.second);
   if(gradient_history.size() > hist) gradient_history.pop_front();
@@ -897,7 +1241,6 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   }
   
   MatrixXd zd = matrix.linpred();
-  
   MatrixXd Phi_d0 = Phi * lambda_deriv.matrix().col(0).asDiagonal();
   MatrixXd Phi_d1 = Phi * lambda_deriv.matrix().col(1).asDiagonal();
   
@@ -934,18 +1277,9 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
       throw std::runtime_error("NR2 posterior only available with Gaussian, Poisson, and Binomial");
     break;
     }
-    
-    // ArrayXd resid = (model.data.y.matrix() - zdu).array();
     ArrayXd w_arr = W_.array();
-    
-    // Vectorized products
     ArrayXd d0prod = (Phi_d0 * re.u_.col(i)).array();
     ArrayXd d1prod = (Phi_d1 * re.u_.col(i)).array();
-    // ArrayXd d2prod = (Phi_d200 * re.u_.col(i)).array();
-    // ArrayXd d3prod = (Phi_d211 * re.u_.col(i)).array();
-    // ArrayXd d4prod = (Phi_d201 * re.u_.col(i)).array();
-    
-    // Vectorized accumulation - replaces entire inner loop!
     ArrayXd resid_w = resid * w_arr;
     
     grad(0) += (d0prod * resid_w).sum();
@@ -958,10 +1292,6 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     hess(0, 1) += addv;
     hess(1, 0) += addv;
   }
-  
-  // Rcpp::Rcout << "\nHess: \n" << hess;
-  // Rcpp::Rcout << "\nGrad: " << grad.transpose();
-  
   // Apply scaling
   hess *= inv_n_iter;
   grad *= inv_n_iter;
@@ -971,10 +1301,7 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   VectorXd logpars(2);
   logpars(0) = log(model.covariance.parameters_[0]);
   logpars(1) = log(model.covariance.parameters_[1]);
-  // Rcpp::Rcout << "\nOld pars: " << logpars.transpose();
   logpars += hess * grad;
-  
-  //Rcpp::Rcout << "\nNew pars: " << logpars.transpose();
   model.covariance.update_parameters(logpars.array().exp());
   current_ll_values.second = log_likelihood(false);
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);

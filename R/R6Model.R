@@ -1442,26 +1442,105 @@ Model <- R6::R6Class("Model",
                        #'@description
                        #'MCML model fitting with the fastest options
                        #'
-                       #' Uses double Newton-Raphson method without REML, 50 samples per iteration, Normal approximation 
+                       #' Uses double Newton-Raphson method without REML, 50 samples per iteration, importance sampling,  
                        #' posteriors for the random effects, and trace approximations for larger samples.
-                       #' @param ... Additional arguments passed to MCML. For examples, see MCML.
+                       #' @param niter Integer. Number of samples for the random effects, ignored for Gaussian models.
+                       #' @param max_iter Integer. Maximum number of iterations.
+                       #' @param tol Scalar. The tolerance for the convergence criterion. For GLMMs this is the tolerance for 
+                       #' the Bayes Factor convergence criterion, for Gaussian linear models the tolerance is the difference 
+                       #' in the log-likelihood between successive iterations.
+                       #' @param hist Integer. The length of the running mean for the convergence criterion for non-Gaussian models.
+                       #' @param k0 Integer. The expected number of iterations until convergence.
+                       #' @param reml Bool. For Gaussian models, whether to use REML or not.
                        #' @return A `mcml` model fit object
                        #' @md
-                       fit = function(...){
-                         args <- list(...)
-                         return(do.call(self$MCML,append(list(method = "mcnr2",reml= FALSE, iter.sampling = 50, 
-                                                              mcmc.pkg="analytic"),args)))
-                       },
-                       #'@description
-                       #' Previous implementation of Laplace Approximation
-                       #' 
-                       #' This function has been deprecated, as it provides inferior capability to other packages
-                       #' for this method, and this implementation was typically slower than the MCMC-ML.
-                       #' @param ... Previous arguments
-                       #' @return Nothing. Will be removed in future updates
-                       #'@md
-                       LA = function(...){
-                         stop("This function has been deprecated")
+                       fit = function(niter = 100, max_iter = 30, tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), hist = 5, k0 = 10, reml = TRUE){
+                         if(self$family[[1]]=="gaussian"&self$family[[2]]=="identity")Model__use_reml(private$ptr,reml,private$model_type())
+                         Model__fit(private$ptr, niter, max_iter, TRUE, tol, hist, k0, private$model_type())
+                         self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
+                                                cov.pars = Model__get_theta(private$ptr, private$model_type()))
+                         u <- Model__u(private$ptr,TRUE,private$model_type())
+                         M <- self$information_matrix() 
+                         M <- solve(M)
+                         ncovpars <- Model__n_cov_pars(private$ptr,private$model_type())
+                         if(self$family[[1]]=="gaussian")ncovpars <- ncovpars + 1
+                         SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpars))
+                         SE <- sqrt(diag(M))
+                         repar_table <- self$covariance$parameter_table()
+                         beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
+                         theta_names <- repar_table$term
+                         all_pars_new <- c(self$mean$parameters, self$covariance$parameters)
+                         if(self$family[[1]]%in%c("Gamma","beta","quantile_scaled")){
+                           mf_pars_names <- c(beta_names,theta_names,"sigma")
+                           SE <- c(SE,rep(NA,length(theta_new)+1))
+                         } else {
+                           mf_pars_names <- c(beta_names,theta_names)
+                           if(self$family[[1]]%in%c("gaussian")){
+                             mf_pars_names <- c(mf_pars_names,"sigma")
+                             self$update_parameters(var.par = Model__get_var_par(private$ptr,private$model_type()))
+                             all_pars_new <- c(all_pars_new, self$var_par)
+                           }
+                             SE <- c(SE,SE_theta)
+                         }
+                         res <- data.frame(par = c(mf_pars_names,paste0("d",1:nrow(u))),
+                                           est = c(all_pars_new,rowMeans(u)),
+                                           SE=c(SE,rep(NA,nrow(u))),
+                                           t = NA,
+                                           p = NA,
+                                           lower = NA,
+                                           upper = NA)
+                         dof <- rep(self$n(),length(beta))
+                         res$t <- res$est/res$SE
+                         res$p <- 2*(1-stats::pnorm(abs(res$t)))
+                         res$lower <- res$est - qnorm(1-0.05/2)*res$SE
+                         res$upper <- res$est + qnorm(1-0.05/2)*res$SE
+                         repar_table <- repar_table[!duplicated(repar_table$id),]
+                         if(private$model_type()!=2){
+                           rownames(u) <- rep(repar_table$term,repar_table$count)
+                         } else {
+                           if(nrow(repar_table)==1) rownames(u) <-  rep(repar_table$term,nrow(u))
+                         }
+                         aic <- ifelse(private$model_type()==0 , Model__aic(private$ptr,private$model_type()),NA)
+                         xb <- Model__xb(private$ptr,private$model_type())
+                         zd <- self$covariance$Z %*% rowMeans(u)
+                         wdiag <- Matrix::diag(self$w_matrix())
+                         total_var <- var(Matrix::drop(xb)) + var(Matrix::drop(zd)) + mean(wdiag)
+                         condR2 <- (var(Matrix::drop(xb)) + var(Matrix::drop(zd)))/total_var
+                         margR2 <- var(Matrix::drop(xb))/total_var
+                         out <- list(coefficients = res,
+                                     converged = TRUE,
+                                     method = "mcnr",
+                                     m = dim(u)[2],
+                                     tol = tol,
+                                     sim_lik = FALSE,
+                                     aic = aic,
+                                     se="gls",
+                                     vcov = M,
+                                     Rsq = c(cond = condR2,marg=margR2),
+                                     logl = self$log_likelihood(),
+                                     logl_theta = NA,
+                                     mean_form = self$mean$formula,
+                                     cov_form = self$covariance$formula,
+                                     family = self$family[[1]],
+                                     link = self$family[[2]],
+                                     re.samps = u,
+                                     iter = NA,
+                                     dof = dof,
+                                     reml = FALSE,
+                                     P = length(self$mean$parameters),
+                                     Q = length(self$covariance$parameters),
+                                     var_par_family =I(self$family[[1]]%in%c("gaussian","Gamma","beta","quantile_scaled")),
+                                     model_data = list(
+                                       y = Model__y(private$ptr,private$model_type()),
+                                       data = private$model_data_frame(),
+                                       trials = self$trials,
+                                       offset = self$mean$offset,
+                                       weights = self$weights
+                                     ),
+                                     fn_count = 0)
+                         class(out) <- "mcml"
+                         return(out)
+                         
                        },
                        #' @description 
                        #' Set whether to use sparse matrix methods for model calculations and fitting.
