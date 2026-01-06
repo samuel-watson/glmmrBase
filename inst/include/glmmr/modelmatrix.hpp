@@ -1297,7 +1297,7 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       }
       WZL.noalias() = (ZL.array().colwise() * W_.array()).matrix();
       LWL.noalias() = ZLt * WZL;
-      yb.noalias() = LWL * u + ZLt * resid;
+      yb.noalias() = LWL * b + ZLt * resid;
       LWL.diagonal().array() += 1.0;
       llt_Pb.compute(LWL);
       bnew = llt_Pb.solve(yb);
