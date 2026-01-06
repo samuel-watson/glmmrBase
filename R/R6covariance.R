@@ -203,15 +203,13 @@ Covariance <- R6::R6Class("Covariance",
                         #' @description
                         #' If this function is called then sparse matrix methods will be used for calculations involving D
                         #' @param sparse Logical. Whether to use sparse methods (TRUE) or not (FALSE)
-                        #' @param amd Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
-                        #' that the Cholesky decomposition of PAP^T is calculated rather than A.
                         #' @return None. Called for effects.
-                        sparse = function(sparse = TRUE, amd = TRUE){
+                        sparse = function(sparse = TRUE){
                           if(sparse){
                             if(is.null(private$model_ptr)){
-                              Covariance__make_sparse(private$ptr,amd,private$type)
+                              Covariance__make_sparse(private$ptr,private$type)
                             } else {
-                              Model__make_sparse(private$model_ptr,amd,private$type)
+                              Model__make_sparse(private$model_ptr,private$type)
                             }
                           } else {
                             if(is.null(private$model_ptr)){

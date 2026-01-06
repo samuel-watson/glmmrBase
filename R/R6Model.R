@@ -813,7 +813,13 @@ Model <- R6::R6Class("Model",
                        #'Stochastic Maximum Likelihood model fitting
                        #'
                        #'@details
+                       #'This function provides a large range of options for fitting GLMMs using stochastic algorithms. The function provides
+                       #'fine control over all aspects of the algorithm, including method of sampling the random effects, convergence criteria, 
+                       #'optimisation methods, and so forth. For a fast and reliable alternative use the `fit()` function in this class, which is 
+                       #'recommended for most users.
+                       #'
                        #'**Monte Carlo maximum likelihood**
+                       #'
                        #'Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
                        #'Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation 
                        #'maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
@@ -887,6 +893,11 @@ Model <- R6::R6Class("Model",
                        #'2 = The probability of improvement in the overall log-likelihood is less than 1 - `convergence.prob`
                        #'3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - `convergence.prob`
                        #'4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - `convergence.prob`
+                       #'@param bf.tol Integer indicating the Bayes Factor convergence criterion 
+                       #'@param bf.hist Integer, the number of iterations in the running mean for the Bayes Factor convergence criterion
+                       #'@param bf.k0 Integer, the expected number of iterations to convergence of the Bayes Factor convergence criterion.
+                       #'@param importance Logical. If TRUE and using the analytic samples, the u samples are weighted using an importance sampling step. If FALSE, it is equivalent to the Laplace 
+                       #'Approximation Gaussian distribution of the random effects.
                        #'@param skip.theta Logical. If TRUE then the covariance parameter estimation step is skipped. This option is mainly used for testing, but may be useful
                        #'if covariance parameters are known.
                        #'@param constr.zero Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
@@ -1442,9 +1453,11 @@ Model <- R6::R6Class("Model",
                        #'@description
                        #'MCML model fitting with the fastest options
                        #'
-                       #' Uses double Newton-Raphson method without REML, 50 samples per iteration, importance sampling,  
-                       #' posteriors for the random effects, and trace approximations for larger samples.
-                       #' @param niter Integer. Number of samples for the random effects, ignored for Gaussian models.
+                       #' Uses double Newton-Raphson method (with or without REML for Gaussian models). For details on the algorithm see `MCML()`. This function
+                       #' uses the fastest set of options, including specialised model fitting for linear models. Note that no random effect
+                       #' samples are drawn for Gaussian models, but can be subsequently drawn using `mcmc_sample()`. It is recommended to use the log 
+                       #' version of the covariance functions with this method as the Newton-Raphson steps can lead to negative values otherwise.
+                       #' @param niter Integer. Number of samples for the random effects, ignored for Gaussian models, see examples.
                        #' @param max_iter Integer. Maximum number of iterations.
                        #' @param tol Scalar. The tolerance for the convergence criterion. For GLMMs this is the tolerance for 
                        #' the Bayes Factor convergence criterion, for Gaussian linear models the tolerance is the difference 
@@ -1453,6 +1466,42 @@ Model <- R6::R6Class("Model",
                        #' @param k0 Integer. The expected number of iterations until convergence.
                        #' @param reml Bool. For Gaussian models, whether to use REML or not.
                        #' @return A `mcml` model fit object
+                       #' @examples
+                       #' # Simulated trial data example using REML
+                       #'data(SimTrial,package = "glmmrBase")
+                       #' fit1 <- Model$new(
+                       #'   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
+                       #'   data = SimTrial,
+                       #'   family = gaussian()
+                       #' )$fit(reml = TRUE)
+                       #' 
+                       #' # Salamanders data example
+                       #' data(Salamanders,package="glmmrBase")
+                       #' model <- Model$new(
+                       #'   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+                       #'   data = Salamanders,
+                       #'   family = binomial()
+                       #' )
+                       #' 
+                       #' fit2 <- model$fit()
+                       #' 
+                       #' # Example using simulated data
+                       #' #create example data with six clusters, five time periods, and five people per cluster-period
+                       #' df <- nelder(~(cl(20)*t(10)) > ind(5))
+                       #' # parallel trial design intervention indicator
+                       #' df$int <- 0
+                       #' df[df$cl > 10, 'int'] <- 1 
+                       #' # specify parameter values in the call for the data simulation below
+                       #' des <- Model$new(
+                       #'   formula= ~ factor(t) + int - 1 +(1|grlog(cl)*ar0log(t)),
+                       #'   covariance = log(c(0.15,0.7)),
+                       #'   mean = c(rep(0,10),0.2),
+                       #'   data = df,
+                       #'   family = binomial()
+                       #' )
+                       #' ysim <- des$sim_data() # simulate some data from the model
+                       #' des$update_y(ysim)
+                       #' fit2 <- des$fit() 
                        #' @md
                        fit = function(niter = 100, max_iter = 30, tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), hist = 5, k0 = 10, reml = TRUE){
                          if(self$family[[1]]=="gaussian"&self$family[[2]]=="identity")Model__use_reml(private$ptr,reml,private$model_type())
