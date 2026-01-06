@@ -241,6 +241,10 @@ Model__n_cov_pars <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__n_cov_pars`, xp, type)
 }
 
+Model__se_theta <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__se_theta`, xp, type)
+}
+
 Model__Z <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__Z`, xp, type)
 }

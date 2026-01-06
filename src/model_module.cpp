@@ -1194,6 +1194,35 @@ SEXP Model__n_cov_pars(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__se_theta(SEXP xp, int type = 0){
+  glmmrType model(xp, static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) { return returnType(std::vector<double>()); },
+    [](Rcpp::XPtr<glmm_ar1> ptr) {
+      MatrixXd info_inv = ptr->model.covariance.infomat_theta.inverse();
+      std::vector<double> se(info_inv.rows());
+      for(int i = 0; i < info_inv.rows(); i++){
+        se[i] = sqrt(info_inv(i, i));
+      }
+      // Transform last element from SE(phi) to SE(rho)
+      double rho = ptr->model.covariance.rho;
+      se.back() *= (1.0 - rho * rho);
+      return returnType(se);
+    },
+    [](auto ptr) {
+      MatrixXd info_inv = ptr->model.covariance.infomat_theta.inverse();
+      std::vector<double> se(info_inv.rows());
+      for(int i = 0; i < info_inv.rows(); i++){
+        se[i] = sqrt(info_inv(i, i));
+      }
+      return returnType(se);
+    }
+  };
+  auto S = std::visit(functor, model.ptr);
+  return wrap(std::get<std::vector<double>>(S));
+}
+
+// [[Rcpp::export]]
 SEXP Model__Z(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

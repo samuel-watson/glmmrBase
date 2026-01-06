@@ -1514,7 +1514,7 @@ Model <- R6::R6Class("Model",
                          M <- solve(M)
                          ncovpars <- Model__n_cov_pars(private$ptr,private$model_type())
                          if(self$family[[1]]=="gaussian")ncovpars <- ncovpars + 1
-                         SE_theta <- tryCatch(sqrt(diag(solve(Model__infomat_theta(private$ptr,private$model_type())))), error = rep(NA, ncovpars))
+                         SE_theta <- Model__se_theta(private$ptr,private$model_type())
                          SE <- sqrt(diag(M))
                          repar_table <- self$covariance$parameter_table()
                          beta_names <- Model__beta_parameter_names(private$ptr,private$model_type())
@@ -1545,8 +1545,10 @@ Model <- R6::R6Class("Model",
                          res$lower <- res$est - qnorm(1-0.05/2)*res$SE
                          res$upper <- res$est + qnorm(1-0.05/2)*res$SE
                          repar_table <- repar_table[!duplicated(repar_table$id),]
-                         if(private$model_type()!=2){
+                         if(private$model_type()<2){
                            rownames(u) <- rep(repar_table$term,repar_table$count)
+                         } else if(private$model_type()==3){
+                           rownames(u) <- rep(paste0(repar_table$term[1],".t",1:self$covariance$.__enclos_env__$private$time),each=repar_table$count[1])
                          } else {
                            if(nrow(repar_table)==1) rownames(u) <-  rep(repar_table$term,nrow(u))
                          }

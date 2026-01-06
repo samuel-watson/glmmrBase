@@ -22,6 +22,7 @@ inline MatrixXd kronecker(const MatrixXd& A, const MatrixXd& B){
 class ar1Covariance : public Covariance {
 public:
   double rho;
+  double phi;
   
   ar1Covariance(const str& formula,const ArrayXXd &data,const strvec& colnames, const int T_);  
   ar1Covariance(const glmmr::ar1Covariance& cov);
@@ -33,6 +34,7 @@ public:
   double    log_likelihood(const VectorXd &u) override;
   double    log_determinant() override;
   void      update_rho(const double rho_);
+  void      update_phi(const double phi_);
   MatrixXd  ar_matrix(bool chol = false);
   void      nr_step(const MatrixXd &umat,const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight) override;
   MatrixXd  solve(const MatrixXd& u) override;
@@ -165,20 +167,41 @@ inline double glmmr::ar1Covariance::log_determinant()
 inline void glmmr::ar1Covariance::update_rho(const double rho_)
 {
   rho = rho_;
+  // Clamp to avoid numerical issues at boundaries
+  if(rho >= 0.999) rho = 0.999;
+  if(rho <= -0.999) rho = -0.999;
+  
+  phi = atanh(rho);  // transformed scale
+  
   ar_factor.setConstant(1.0);
   ar_factor_deriv.setZero();
+  
   if(T > 1){
+    // d(rho)/d(phi) = 1 - rho^2
+    double drho_dphi = 1.0 - rho * rho;
+    
     for(int t = 0; t < T-1; t++){
       for(int s = t+1; s < T; s++){
-        ar_factor(t,s) = pow(rho,s - t);
-        ar_factor_deriv(t,s) = (s-t)*pow(rho,s-t-1);
+        int lag = s - t;
+        ar_factor(t,s) = pow(rho, lag);
+        // Derivative w.r.t. phi via chain rule:
+        // d(rho^lag)/d(phi) = lag * rho^{lag-1} * d(rho)/d(phi)
+        ar_factor_deriv(t,s) = lag * pow(rho, lag - 1) * drho_dphi;
         ar_factor(s,t) = ar_factor(t,s);
         ar_factor_deriv(s,t) = ar_factor_deriv(t,s);
       }
     }
   }
+  
   ar_factor_chol = MatrixXd(ar_factor.llt().matrixL());
   ar_factor_inverse = ar_factor.llt().solve(MatrixXd::Identity(T, T));
+}
+
+inline void glmmr::ar1Covariance::update_phi(const double phi_)
+{
+  phi = phi_;
+  double rho_ = tanh(phi);
+  update_rho(rho_);
 }
 
 inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, 
@@ -346,14 +369,8 @@ inline void glmmr::ar1Covariance::nr_step(const MatrixXd &umat, const MatrixXd &
   update_parameters(theta_A.array());
   
   // Update rho (last element of step)
-  double newrho = rho + step(npars_A);
-  
-  // Constrain rho to (-1, 1) for stationarity
-  if(newrho >= 1.0) newrho = 0.99;
-  if(newrho <= -1.0) newrho = -0.99;
-  
-  // Recompute R matrices with new rho
-  update_rho(newrho);
+  double newphi = phi + step(npars_A);
+  update_phi(newphi);
 }
 
 inline MatrixXd glmmr::ar1Covariance::solve(const MatrixXd& u){

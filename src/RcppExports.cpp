@@ -772,6 +772,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__se_theta
+SEXP Model__se_theta(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__se_theta(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__se_theta(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__Z
 SEXP Model__Z(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__Z(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1822,6 +1834,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__linear_predictor", (DL_FUNC) &_glmmrBase_Model__linear_predictor, 2},
     {"_glmmrBase_Model__log_likelihood", (DL_FUNC) &_glmmrBase_Model__log_likelihood, 2},
     {"_glmmrBase_Model__n_cov_pars", (DL_FUNC) &_glmmrBase_Model__n_cov_pars, 2},
+    {"_glmmrBase_Model__se_theta", (DL_FUNC) &_glmmrBase_Model__se_theta, 2},
     {"_glmmrBase_Model__Z", (DL_FUNC) &_glmmrBase_Model__Z, 2},
     {"_glmmrBase_Model__Z_needs_updating", (DL_FUNC) &_glmmrBase_Model__Z_needs_updating, 2},
     {"_glmmrBase_Model__cov_set_nn", (DL_FUNC) &_glmmrBase_Model__cov_set_nn, 2},
