@@ -363,19 +363,6 @@ Model <- R6::R6Class("Model",
                              } else {
                                stop("covariance should be Covariance class or parameter vector")
                              } 
-                             # if(is(covariance,"list")){
-                             #   if(is.null(covariance$formula))stop("A formula must be specified for the covariance")
-                             #   if(is.null(covariance$data) & is.null(data))stop("No data specified in covariance list or call to function.")
-                             #   self$covariance <- Covariance$new(
-                             #     formula= covariance$formula
-                             #   )
-                             #   if(is.null(covariance$data)){
-                             #     self$covariance$data <- private$process_data(self$covariance$formula,data,TRUE,FALSE)$data
-                             #   } else {
-                             #     self$covariance$data <- covariance$data
-                             #   }
-                             #   if(!is.null(covariance$parameters))self$covariance$update_parameters(covariance$parameters)
-                             # }
                              if(is(mean,"R6")){
                                if(is(mean,"MeanFunction")){
                                  self$mean <- mean
@@ -385,24 +372,6 @@ Model <- R6::R6Class("Model",
                              } else {
                                stop("mean should be MeanFunction class or parameter vector")
                              }
-                             
-                             #   if(is(mean,"list")){
-                             #   if(is.null(mean$formula))stop("A formula must be specified for the mean function.")
-                             #   if(is.null(mean$data) & is.null(data))stop("No data specified in mean list or call to function.")
-                             #   if(is.null(mean$data)){
-                             #     processed_data <- private$process_data(form_1,data,TRUE,FALSE)
-                             #     self$mean <- MeanFunction$new(
-                             #       formula = processed_data$formula,
-                             #       data = processed_data$data
-                             #     )
-                             #   } else {
-                             #     self$mean <- MeanFunction$new(
-                             #       formula = mean$formula,
-                             #       data = mean$data
-                             #     )
-                             #   }
-                             #   if(!is.null(mean$parameters))self$mean$update_parameters(mean$parameters)
-                             # }
                            }
                            if(is.null(offset)){
                              self$mean$offset <- rep(0,nrow(self$mean$data))
@@ -1257,7 +1226,7 @@ Model <- R6::R6Class("Model",
                              if(private$trace==2)t4 <- Sys.time()
                              if(private$trace==2)cat("\nTheta fitting took: ",t4-t3,"s")
                            }
-                           
+                           Model__check_for_errors(private$ptr,private$model_type())
                            # set up the vectors needed 
                            beta_new <- Model__get_beta(private$ptr,private$model_type())
                            theta_new <- Model__get_theta(private$ptr,private$model_type())
@@ -1987,7 +1956,18 @@ Model <- R6::R6Class("Model",
                                                               colnames(data),
                                                               tolower(self$family[[1]]),
                                                               self$family[[2]])
-                             } 
+                             } else {
+                               n_A <- nrow(self$covariance$data) / self$covariance$.__enclos_env__$private$time
+                               self$covariance$data <- self$covariance$data[1:n_A,]
+                               private$ptr <- Model_ar__new(form,
+                                                            as.matrix(data),
+                                                            as.matrix(self$covariance$data),
+                                                            colnames(data),
+                                                            colnames(self$covariance$data),
+                                                            tolower(self$family[[1]]),
+                                                            self$family[[2]],
+                                                            self$covariance$.__enclos_env__$private$time)
+                             }
                              
                              Model__update_beta(private$ptr,self$mean$parameters,type)
                              ncovpar <- Model__n_cov_pars(private$ptr,type)
@@ -2027,6 +2007,8 @@ Model <- R6::R6Class("Model",
                                                                      self$mean$parameters,
                                                                      self$covariance$parameters)
                              } else if(type==3){
+                               n_A <- nrow(self$covariance$data) / self$covariance$.__enclos_env__$private$time
+                               self$covariance$data <- self$covariance$data[1:n_A,]
                                private$ptr <- Model_ar__new(form,
                                                             as.matrix(data),
                                                             as.matrix(self$covariance$data),
@@ -2170,6 +2152,7 @@ Model <- R6::R6Class("Model",
                                new_formula <- paste0(new_formula,"+",r1[i])
                              }
                              new_formula <- as.formula(paste0("~ ",new_formula))
+                             
                              result <- list(formula = new_formula, data = as.data.frame(mm_result))
                            } 
                          }
@@ -2198,12 +2181,6 @@ Model <- R6::R6Class("Model",
                              }
                            }
                            return(list(formula = form, data = new_data))
-                           # if(!all(s1 %in% cnames)){
-                           #   not_in <- which(!s1 %in% cnames)
-                           #   stop(paste0("The following variables are not in the data: ",paste0(s1[not_in],collapse = " ")))
-                           # } else {
-                           #   
-                           # }
                          } else {
                            return(result)
                          }

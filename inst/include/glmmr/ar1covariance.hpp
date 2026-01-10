@@ -39,6 +39,7 @@ public:
   MatrixXd  ar_matrix(bool chol = false);
   void      nr_step(const MatrixXd &umat,const MatrixXd &vmat, ArrayXd& logl, ArrayXd& gradients, const ArrayXd& uweight) override;
   MatrixXd  solve(const MatrixXd& u) override;
+  MatrixXd  L_matrix() const;
   
 protected:
   int T;
@@ -80,16 +81,16 @@ inline MatrixXd glmmr::ar1Covariance::ar_matrix(bool chol)
 
 inline MatrixXd glmmr::ar1Covariance::Z()
 {
-  
-  
-  const int n_total = matZ.rows();
+  // matZ has n_A rows (one time period)
+  // We need to create block diagonal Z_full of size (n_A * T) x (n_A * T)
   const int n_A = Covariance::Q();
-  const int n_t = n_total / T;
+  const int n_A_T = n_A * T;
   
-  MatrixXd Z_full = MatrixXd::Zero(n_total, n_A * T);
+  MatrixXd Z_full = MatrixXd::Zero(n_A_T, n_A_T);
   
   for(int t = 0; t < T; t++){
-    Z_full.block(t * n_t, t * n_A, n_t, n_A) = matZ.block(t * n_t, 0, n_t, n_A);
+    // Each time block uses the same matZ
+    Z_full.block(t * n_A, t * n_A, n_A, n_A) = matZ;
   }
   
   return Z_full;
@@ -97,39 +98,44 @@ inline MatrixXd glmmr::ar1Covariance::Z()
 
 inline MatrixXd glmmr::ar1Covariance::ZL()
 {
-  
-  
-  const int n_total = matZ.rows();
+  // matZ has n_A rows (one time period)
   const int n_A = Covariance::Q();
-  const int n_t = n_total / T;
+  const int n_A_T = n_A * T;
   
-  MatrixXd Z_full = MatrixXd::Zero(n_total, n_A * T);
-  
+  // Build block diagonal Z_full
+  MatrixXd Z_full = MatrixXd::Zero(n_A_T, n_A_T);
   for(int t = 0; t < T; t++){
-    Z_full.block(t * n_t, t * n_A, n_t, n_A) = matZ.block(t * n_t, 0, n_t, n_A);
+    Z_full.block(t * n_A, t * n_A, n_A, n_A) = matZ;
   }
   
+  // L_full = L_R ⊗ L_A
   MatrixXd L_full = glmmr::kronecker(ar_factor_chol, MatrixXd(matL.matrixL()));
   
-  MatrixXd result = Z_full * L_full;
-  return result;
+  return Z_full * L_full;
 }
 
 inline MatrixXd glmmr::ar1Covariance::ZLu(const MatrixXd& u)
 {
-  const int n_total = matZ.rows();
+  // matZ has n_A rows (one time period)
   const int n_A = Covariance::Q();
-  const int n_t = n_total / T;
+  const int n_A_T = n_A * T;
   const int ncols = u.cols();
-  MatrixXd result = MatrixXd::Zero(n_total, ncols);
+  
+  MatrixXd result(n_A_T, ncols);
   
   for(int c = 0; c < ncols; c++){
+    // Reshape u column to n_A x T
     Map<const MatrixXd> U(u.col(c).data(), n_A, T);
+    
+    // Apply Kronecker: (L_R ⊗ L_A) vec(U) = vec(L_A * U * L_R^T)
     MatrixXd LU = matL.matrixL() * U * ar_factor_chol.transpose();
+    
+    // Apply Z (same at each time period)
     for(int t = 0; t < T; t++){
-      result.block(t * n_t, c, n_t, 1) = matZ.block(t * n_t, 0, n_t, n_A) * LU.col(t);
+      result.col(c).segment(t * n_A, n_A) = matZ * LU.col(t);
     }
   }
+  
   return result;
 }
 
@@ -172,6 +178,11 @@ inline double glmmr::ar1Covariance::log_likelihood(const VectorXd &u)
   double ll = -0.5 * (NT * LOG_2PI + logdet + qf);
   
   return ll;
+}
+
+inline MatrixXd glmmr::ar1Covariance::L_matrix() const
+{
+  return glmmr::kronecker(ar_factor_chol, MatrixXd(matL.matrixL()));
 }
 
 inline double glmmr::ar1Covariance::log_determinant()

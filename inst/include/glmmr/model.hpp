@@ -70,6 +70,7 @@ public:
   virtual void    reset_u(); // just resets the random effects samples to zero
   virtual void    set_trace(int trace_);
   void            fit(const int niter, const int max_iter, const bool start_ml_beta, const double tol, const int hist, const int k0);
+  void            check_for_errors(const std::string& caller = "unknown", bool full_check = false);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
                              const strvec& at,
@@ -595,6 +596,7 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
       auto t3 = high_resolution_clock::now();
       ms_double = t3 - t2;
       if(optim.trace > 0)std::cout << "TIMING STEP 2 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      check_for_errors("Gaussian fit");
       double ll_new = optim.marginal_log_likelihood();
       beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
       theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
@@ -611,17 +613,21 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
       if(optim.trace > 0)std::cout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
       auto t1 = high_resolution_clock::now();
       matrix.posterior_u_samples(niter,false,true,false);
+      check_for_errors("u step");
       auto t2 = high_resolution_clock::now();
       duration<double, std::milli> ms_double = t2 - t1;
       if(optim.trace > 0)std::cout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
       optim.nr_beta();
+      check_for_errors("beta step");
       auto t3 = high_resolution_clock::now();
       ms_double = t3 - t2;
       if(optim.trace > 0)std::cout << "TIMING STEP 2 (nr beta): " << ms_double.count() << "ms" << std::endl;
       optim.nr_theta();
+      check_for_errors("theta step");
       auto t4 = high_resolution_clock::now();
       ms_double = t4 - t3;
       if(optim.trace > 0)std::cout << "TIMING STEP 3 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      
       beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
       theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
       if(optim.trace > 0) std::cout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
@@ -639,3 +645,131 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
   }
 }
 
+template<typename modeltype>
+void glmmr::Model<modeltype>::check_for_errors(const std::string& caller, bool full_check) {
+  bool has_error = false;
+  std::stringstream diagnostics;
+  
+  // ==================== Fast checks (always run) ====================
+  // These are O(p) and O(n_theta) - very small
+  
+  // Beta parameters
+  const auto& beta = model.linear_predictor.parameters;
+  for(size_t i = 0; i < beta.size(); i++) {
+    if(std::isnan(beta[i]) || std::isinf(beta[i])) {
+      has_error = true;
+      diagnostics << "ERROR: beta[" << i << "] is NaN/Inf: " << beta[i] << std::endl;
+    }
+  }
+  
+  // Theta parameters
+  const auto& theta = model.covariance.parameters_;
+  for(size_t i = 0; i < theta.size(); i++) {
+    if(std::isnan(theta[i]) || std::isinf(theta[i])) {
+      has_error = true;
+      diagnostics << "ERROR: theta[" << i << "] is NaN/Inf: " << theta[i] << std::endl;
+    }
+  }
+  
+  // AR1 rho
+  if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+    if(std::isnan(model.covariance.rho) || std::isinf(model.covariance.rho)) {
+      has_error = true;
+      diagnostics << "ERROR: rho is NaN/Inf: " << model.covariance.rho << std::endl;
+    }
+    if(model.covariance.rho <= -1.0 || model.covariance.rho >= 1.0) {
+      has_error = true;
+      diagnostics << "ERROR: rho out of bounds: " << model.covariance.rho << std::endl;
+    }
+  }
+  
+  // u_mean_ - O(Q), usually manageable
+  if(re.u_mean_.hasNaN()) {
+    has_error = true;
+    diagnostics << "ERROR: u_mean_ contains NaN" << std::endl;
+  }
+  
+  // Only do expensive checks if requested or if error already found
+  if(full_check || has_error) {
+    // ==================== Expensive checks ====================
+    
+    if(re.u_.size() > 0 && re.u_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_ contains NaN" << std::endl;
+    }
+    
+    if(re.scaled_u_.size() > 0 && re.scaled_u_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: scaled_u_ contains NaN" << std::endl;
+    }
+    
+    if(re.u_solve_.size() > 0 && re.u_solve_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_solve_ contains NaN" << std::endl;
+    }
+    
+    if(re.u_weight_.size() > 0 && (re.u_weight_.hasNaN() || !re.u_weight_.isFinite().all())) {
+      has_error = true;
+      diagnostics << "ERROR: u_weight_ contains NaN/Inf" << std::endl;
+    }
+    
+    if(re.u_loglik_.size() > 0 && re.u_loglik_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_loglik_ contains NaN" << std::endl;
+    }
+    
+    // Data checks
+    if(model.data.y.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: y contains NaN" << std::endl;
+    }
+    
+    if(model.data.offset.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: offset contains NaN" << std::endl;
+    }
+  }
+  
+  // ==================== Print diagnostics if error ====================
+  if(has_error) {
+    diagnostics << std::endl << "=== CONTEXT (from " << caller << ") ===" << std::endl;
+    
+    // Dimensions
+    diagnostics << "Dimensions: n=" << model.n() 
+                << ", p=" << model.linear_predictor.P() 
+                << ", Q=" << model.covariance.Q() << std::endl;
+    
+    // Parameters
+    diagnostics << "beta: ";
+    for(size_t i = 0; i < beta.size(); i++) diagnostics << beta[i] << " ";
+    diagnostics << std::endl;
+    
+    diagnostics << "theta: ";
+    for(size_t i = 0; i < theta.size(); i++) diagnostics << theta[i] << " ";
+    diagnostics << std::endl;
+    
+    if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+      diagnostics << "rho: " << model.covariance.rho << std::endl;
+    }
+    
+    // Data ranges
+    diagnostics << "y range: [" << model.data.y.minCoeff() << ", " << model.data.y.maxCoeff() << "]" << std::endl;
+    diagnostics << "offset range: [" << model.data.offset.minCoeff() << ", " << model.data.offset.maxCoeff() << "]" << std::endl;
+    
+    // Random effects ranges (only if they exist)
+    if(re.u_.size() > 0) {
+      diagnostics << "u_ range: [" << re.u_.minCoeff() << ", " << re.u_.maxCoeff() << "]" << std::endl;
+    }
+    if(re.u_mean_.size() > 0) {
+      diagnostics << "u_mean_ range: [" << re.u_mean_.minCoeff() << ", " << re.u_mean_.maxCoeff() << "]" << std::endl;
+    }
+    if(re.u_weight_.size() > 0) {
+      double ess = 1.0 / (re.u_weight_ * re.u_weight_).sum();
+      diagnostics << "u_weight_ sum: " << re.u_weight_.sum() << ", ESS: " << ess << std::endl;
+    }
+    
+    Rcpp::Rcout << diagnostics.str();
+    R_FlushConsole();
+    Rcpp::stop("Numerical error detected. See diagnostics above.");
+  }
+}

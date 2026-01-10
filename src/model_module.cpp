@@ -1655,6 +1655,16 @@ SEXP Model__get_mean_u(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+void Model__check_for_errors(SEXP xp, int type = 0) {
+  glmmrType model(xp, static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {},
+    [](auto ptr) { ptr->check_for_errors("R_manual_check"); }
+  };
+  std::visit(functor, model.ptr);
+}
+
+// [[Rcpp::export]]
 SEXP Model__get_importance_weights(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

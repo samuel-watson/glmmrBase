@@ -363,10 +363,12 @@ Covariance <- R6::R6Class("Covariance",
                               private$ptr <- Covariance_hsgp__new(self$formula,
                                                                   as.matrix(self$data),
                                                                   colnames(self$data))
-                            } else if(private$type==2){
+                            } else if(private$type==3){
                               if(nrow(self$data) %% private$time != 0)stop("Data not divisible by number of time periods")
                               nR <- nrow(self$data) / private$time
                               self$data <- self$data[1:nR,]
+                              print(nrow(self$data))
+                              stop("test1")
                               private$ptr <- Covariance_ar__new(self$formula,
                                                                   as.matrix(self$data),
                                                                   colnames(self$data),

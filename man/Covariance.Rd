@@ -314,16 +314,13 @@ A vector of random effect values
 \subsection{Method \code{sparse()}}{
 If this function is called then sparse matrix methods will be used for calculations involving D
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE, amd = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Covariance$sparse(sparse = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{sparse}}{Logical. Whether to use sparse methods (TRUE) or not (FALSE)}
-
-\item{\code{amd}}{Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
-that the Cholesky decomposition of PAP^T is calculated rather than A.}
 }
 \if{html}{\out{</div>}}
 }

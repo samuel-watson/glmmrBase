@@ -389,6 +389,10 @@ Model__get_mean_u <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_mean_u`, xp, type)
 }
 
+Model__check_for_errors <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__check_for_errors`, xp, type))
+}
+
 Model__get_importance_weights <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_importance_weights`, xp, type)
 }
