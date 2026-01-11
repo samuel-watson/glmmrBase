@@ -895,8 +895,10 @@ Model <- R6::R6Class("Model",
                        #' # use MCEM + REML with 500 sampling iterations
                        #' glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
                        #' 
-                       #' # as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
-                       #' # we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+                       #' # as an alternative, we will specify the variance parameters on the 
+                       #' # log scale and use a fast fitting algorithm
+                       #' # we will use two newton-raphson steps, and Normal approximation posteriors with 
+                       #' # conjugate gradient descent
                        #' # the maximum number of iterations is increased as it takes 100-110 in this example
                        #' # we can also chain together the functions
                        #' glm3 <- Model$new(

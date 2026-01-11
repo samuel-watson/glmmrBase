@@ -475,7 +475,7 @@ inline Eigen::VectorXd marginal_var(const Eigen::VectorXd& mu,
   case Fam::bernoulli: case Fam::binomial:
     wdiag = mu.array()*(1-mu.array());
     break;
-  case Fam::poisson:
+  case Fam::poisson: case Fam::exponential:
     wdiag = mu.array();
     break;
   case Fam::gamma:
@@ -667,6 +667,11 @@ inline double log_likelihood(const double y,
     logl = resid <= 0 ? resid*(1.0 - family.quantile) : -1.0*resid*family.quantile;
     break;
   }
+  case Fam::exponential:
+  {
+    logl = mu - y * exp(mu);
+    break;
+  }
   }
   return logl;
 }
@@ -806,6 +811,10 @@ inline double log_likelihood(const Eigen::ArrayXd y,
   {
     throw std::runtime_error("Quantile disabled");
     break;
+  }
+  case Fam::exponential:
+  {
+    logl = (mu - y * mu.exp()).sum();
   }
   }
   return logl;

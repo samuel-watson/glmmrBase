@@ -1108,6 +1108,11 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
     throw std::runtime_error("Quantile is currently disabled");
     break;
   }
+  case Fam::exponential:
+  {
+    throw std::runtime_error("Gradient_eta not yet available with exponential distribution");
+    break;
+  }
   }
   return size_n_array.matrix();
 }
@@ -1125,7 +1130,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   ZLt.transpose();
   
   switch(model.family.family){
-  case Fam::poisson: case Fam::bernoulli: case Fam::binomial: case Fam::beta: case Fam::quantile: case Fam::quantile_scaled:
+  case Fam::poisson: case Fam::bernoulli: case Fam::binomial: case Fam::beta: case Fam::quantile: case Fam::quantile_scaled: case Fam::exponential:
   {
     if(betapars){
     size_p_array =  (model.linear_predictor.X().transpose()*size_n_array.matrix()).array();
