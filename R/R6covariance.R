@@ -88,6 +88,8 @@ Covariance <- R6::R6Class("Covariance",
 
                           if(!is.null(parameters)){
                             self$parameters <- parameters
+                          } else {
+                            allset <- FALSE
                           }
                           if(allset) private$cov_form()
                         },
@@ -139,6 +141,7 @@ Covariance <- R6::R6Class("Covariance",
                           cat("\n   \U2BA1 Terms:",re)
                           if(private$type == 1)cat(" (NNGP)")
                           if(private$type == 2)cat(" (HSGP)")
+                          if(private$type == 3)cat(" (AR)")
                           cat("\n   \U2BA1 Parameters: ",self$parameters)
                           cat("\n")
                         },
@@ -200,15 +203,13 @@ Covariance <- R6::R6Class("Covariance",
                         #' @description
                         #' If this function is called then sparse matrix methods will be used for calculations involving D
                         #' @param sparse Logical. Whether to use sparse methods (TRUE) or not (FALSE)
-                        #' @param amd Logical indicating whether to use and Approximate Minimum Degree algorithm to calculate an efficient permutation matrix so 
-                        #' that the Cholesky decomposition of PAP^T is calculated rather than A.
                         #' @return None. Called for effects.
-                        sparse = function(sparse = TRUE, amd = TRUE){
+                        sparse = function(sparse = TRUE){
                           if(sparse){
                             if(is.null(private$model_ptr)){
-                              Covariance__make_sparse(private$ptr,amd,private$type)
+                              Covariance__make_sparse(private$ptr,private$type)
                             } else {
-                              Model__make_sparse(private$model_ptr,amd,private$type)
+                              Model__make_sparse(private$model_ptr,private$type)
                             }
                           } else {
                             if(is.null(private$model_ptr)){
@@ -231,6 +232,11 @@ Covariance <- R6::R6Class("Covariance",
                             re <- Model__re_terms(private$model_ptr,private$type)
                             paridx <- Model__parameter_fn_index(private$model_ptr,private$type)+1
                             recount <- Model__re_count(private$model_ptr,private$type)
+                          }
+                          if(private$type == 3){
+                            re <- c(re, "rho")
+                            paridx <- c(paridx, max(paridx)+1)
+                            recount <- c(recount, private$time)
                           }
                           partable <- data.frame(id = paridx, term = re[paridx], parameter = self$parameters,count = recount[paridx])
                           return(partable)
@@ -315,6 +321,7 @@ Covariance <- R6::R6Class("Covariance",
                         nn = 10,
                         m = 10,
                         L = 1.5,
+                        time = 0, 
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
@@ -327,6 +334,13 @@ Covariance <- R6::R6Class("Covariance",
                             if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
                             private$type <- 2
                             re[1] <- gsub("hsgp_","",re[1])
+                          } else if(any(sapply(re,function(i)grepl("ar_",i) ))){
+                            if(length(re)>1)stop("AR only available as a single covariance function currently.")
+                            private$type <- 3
+                            # Extract the value of t
+                            private$time <- as.integer(sub(".*t=(\\d{1,2}).*", "\\1", re[1]))
+                            # Remove "ar_" and ",t=3" (or ",t=12" etc.)
+                            re[1] <- sub(",t=\\d{1,2}", "", sub("ar_", "", re[1]))
                           }
                           self$formula <- re[1]
                           if(length(re)>1){
@@ -349,6 +363,16 @@ Covariance <- R6::R6Class("Covariance",
                               private$ptr <- Covariance_hsgp__new(self$formula,
                                                                   as.matrix(self$data),
                                                                   colnames(self$data))
+                            } else if(private$type==3){
+                              if(nrow(self$data) %% private$time != 0)stop("Data not divisible by number of time periods")
+                              nR <- nrow(self$data) / private$time
+                              self$data <- self$data[1:nR,]
+                              print(nrow(self$data))
+                              stop("test1")
+                              private$ptr <- Covariance_ar__new(self$formula,
+                                                                  as.matrix(self$data),
+                                                                  colnames(self$data),
+                                                                private$time)
                             }
                             
                             private$parcount <- Covariance__n_cov_pars(private$ptr,private$type)

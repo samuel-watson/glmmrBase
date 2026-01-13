@@ -37,6 +37,10 @@ Covariance_hsgp__new <- function(form_, data_, colnames_) {
     .Call(`_glmmrBase_Covariance_hsgp__new`, form_, data_, colnames_)
 }
 
+Covariance_ar__new <- function(form_, data_, colnames_, T) {
+    .Call(`_glmmrBase_Covariance_ar__new`, form_, data_, colnames_, T)
+}
+
 Covariance__Z <- function(xp, type_ = 0L) {
     .Call(`_glmmrBase_Covariance__Z`, xp, type_)
 }
@@ -131,6 +135,10 @@ Model__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_,
 
 Model__new <- function(formula_, data_, colnames_, family_, link_) {
     .Call(`_glmmrBase_Model__new`, formula_, data_, colnames_, family_, link_)
+}
+
+Model_ar__new <- function(formula_, data_, data_cov_, colnames_, colnames_cov_, family_, link_, T_) {
+    .Call(`_glmmrBase_Model_ar__new`, formula_, data_, data_cov_, colnames_, colnames_cov_, family_, link_, T_)
 }
 
 Model_nngp__new <- function(formula_, data_, colnames_, family_, link_, nn) {
@@ -233,6 +241,10 @@ Model__n_cov_pars <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__n_cov_pars`, xp, type)
 }
 
+Model__se_theta <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__se_theta`, xp, type)
+}
+
 Model__Z <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__Z`, xp, type)
 }
@@ -261,8 +273,8 @@ Model__nr_beta <- function(xp, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__nr_beta`, xp, type))
 }
 
-Model__nr_theta <- function(xp, tr_approx, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, tr_approx, type))
+Model__nr_theta <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__nr_theta`, xp, type))
 }
 
 Model__Sigma <- function(xp, inverse, type = 0L) {
@@ -271,6 +283,10 @@ Model__Sigma <- function(xp, inverse, type = 0L) {
 
 Model__information_matrix <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__information_matrix`, xp, type)
+}
+
+Model__check_convergence <- function(xp, tol, hist, k, k0, type = 0L) {
+    .Call(`_glmmrBase_Model__check_convergence`, xp, tol, hist, k, k0, type)
 }
 
 Model__D <- function(xp, type = 0L) {
@@ -345,12 +361,40 @@ Model__get_theta <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_theta`, xp, type)
 }
 
+Model__get_conv_z <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_conv_z`, xp, type)
+}
+
+Model__get_conv_bf <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_conv_bf`, xp, type)
+}
+
+Model__clear_conv_z <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__clear_conv_z`, xp, type))
+}
+
+Model__clear_conv_bf <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__clear_conv_bf`, xp, type))
+}
+
 Model__get_var_par <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_var_par`, xp, type)
 }
 
 Model__get_variance <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_variance`, xp, type)
+}
+
+Model__get_mean_u <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_mean_u`, xp, type)
+}
+
+Model__check_for_errors <- function(xp, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__check_for_errors`, xp, type))
+}
+
+Model__get_importance_weights <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_importance_weights`, xp, type)
 }
 
 Model__set_var_par <- function(xp, var_par_, type = 0L) {
@@ -401,8 +445,8 @@ Model__residuals <- function(xp, rtype = 2L, conditional = TRUE, type = 0L) {
     .Call(`_glmmrBase_Model__residuals`, xp, rtype, conditional, type)
 }
 
-Model__posterior_u_sample <- function(xp, niter, tol, append, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, tol, append, type))
+Model__posterior_u_sample <- function(xp, niter, reml, loglik, append, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__posterior_u_sample`, xp, niter, reml, loglik, append, type))
 }
 
 Model__get_log_likelihood_values <- function(xp, type = 0L) {
@@ -411,6 +455,10 @@ Model__get_log_likelihood_values <- function(xp, type = 0L) {
 
 Model__u_diagnostic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__u_diagnostic`, xp, type)
+}
+
+Model__fit <- function(xp, niter, max_iter, start_ml_beta, tol, hist, k0, type = 0L) {
+    invisible(.Call(`_glmmrBase_Model__fit`, xp, niter, max_iter, start_ml_beta, tol, hist, k0, type))
 }
 
 Model__marginal <- function(xp, x, margin = 0L, re = 3L, se = 0L, oim = 0L, at = NULL, atmeans = NULL, average = NULL, xvals_first = 1, xvals_second = 0, atvals = NULL, revals = NULL, type = 0L) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include "general.h"
 #include "modelbits.hpp"
 #include "randomeffects.hpp"
@@ -22,6 +23,9 @@ struct check_type : std::false_type {};
 template<>
 struct check_type<glmmr::ModelBits<glmmr::Covariance, glmmr::LinearPredictor> > : std::true_type {};
 
+template<>
+struct check_type<glmmr::ModelBits<glmmr::ar1Covariance, glmmr::LinearPredictor> > : std::true_type {};
+
 template<typename modeltype>
 class Model {
 public:
@@ -30,8 +34,32 @@ public:
   glmmr::RandomEffects<modeltype> re;
   glmmr::ModelMatrix<modeltype>   matrix;
   glmmr::ModelOptim<modeltype>    optim;
+  
+  Model(const Model&) = default;
+  Model(Model&&) = default;
+  Model& operator=(const Model&) = default;
+  Model& operator=(Model&&) = default;
+  
   // constructor
-  Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_);
+  template <typename C = modeltype, typename = std::enable_if_t<!std::is_same_v<C, bits_ar1> > >
+  Model(const std::string& formula_,const ArrayXXd& data_,const strvec& colnames_,std::string family_,std::string link_) : model(formula_,data_,colnames_,family_,link_), 
+  re(model), 
+  matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+  optim(model,matrix,re) {}
+  
+  template <typename C = modeltype, typename = std::enable_if_t<std::is_same_v<C, bits_ar1> > >
+  Model(const std::string& formula_,
+        const ArrayXXd& data_,
+        const ArrayXXd& cov_data_,
+        const strvec& colnames_,
+        const strvec& colnames_cov_,
+        std::string family_, 
+        std::string link_,
+        const int T) : model(formula_,data_,cov_data_,colnames_,colnames_cov_,family_,link_,T), 
+        re(model), 
+        matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
+        optim(model,matrix,re) {}
+  
   //functions
   virtual void    set_offset(const VectorXd& offset_);
   virtual void    set_weights(const ArrayXd& weights_);
@@ -41,6 +69,8 @@ public:
   virtual void    update_u(const MatrixXd &u_, bool append = false);
   virtual void    reset_u(); // just resets the random effects samples to zero
   virtual void    set_trace(int trace_);
+  void            fit(const int niter, const int max_iter, const bool start_ml_beta, const double tol, const int hist, const int k0);
+  void            check_for_errors(const std::string& caller = "unknown", bool full_check = false);
   virtual dblpair marginal(const MarginType type,
                              const std::string& x,
                              const strvec& at,
@@ -56,16 +86,6 @@ public:
 };
 
 }
-
-template<typename modeltype>
-inline glmmr::Model<modeltype>::Model(const std::string& formula_,
-      const ArrayXXd& data_,
-      const strvec& colnames_,
-      std::string family_, 
-      std::string link_) : model(formula_,data_,colnames_,family_,link_), 
-      re(model), 
-      matrix(model,re,check_type<modeltype>::value,check_type<modeltype>::value),  
-      optim(model,matrix,re) {};
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::set_offset(const VectorXd& offset_){
@@ -93,14 +113,17 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  re.zu_ = model.covariance.ZLu(re.u_);
-  // model.vcalc.data = model.covariance.ZL();
+  re.update_zu(false);
 }
 
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::reset_u(){
   re.u_.resize(model.covariance.Q(),1);
   re.u_.setZero();
+  re.scaled_u_.resize(model.covariance.Q(),1);
+  re.scaled_u_.setZero();
+  re.u_solve_.resize(model.covariance.Q(),1);
+  re.u_solve_.setZero();
   re.zu_.resize(NoChange,1);
   re.zu_.setZero();
 }
@@ -125,6 +148,8 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
   if(action_append){
     re.u_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.zu_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.scaled_u_.conservativeResize(NoChange,currcolsize + newcolsize);
+    re.u_solve_.conservativeResize(NoChange,currcolsize + newcolsize);
     re.u_.rightCols(newcolsize) = u_;
     optim.ll_current.resize(currcolsize + newcolsize,NoChange);
   } else {
@@ -134,13 +159,18 @@ inline void glmmr::Model<modeltype>::update_u(const MatrixXd &u_, bool append){
       #endif
       re.u_.resize(NoChange,newcolsize);
       re.zu_.resize(NoChange,newcolsize);
+      re.scaled_u_.resize(NoChange,newcolsize);
+      re.u_solve_.resize(NoChange,newcolsize);
+      re.u_weight_.resize(newcolsize);
     }
     re.u_ = u_;
     if(re.u_.cols() != optim.ll_current.rows()) optim.ll_current.resize(newcolsize,NoChange);
   }
-  MatrixXd ZL = model.covariance.ZL();
+  MatrixXd Z = model.covariance.Z();
   if(re.zu_.rows() != model.n())re.zu_.resize(model.n(),NoChange);
-  re.zu_ = model.covariance.ZLu(re.u_);
+  if(re.scaled_u_.rows() != re.u_.rows())re.scaled_u_.resize(re.u_.rows(),NoChange);
+  if(re.u_solve_.rows() != re.u_.rows())re.u_solve_.resize(re.u_.rows(),NoChange);
+  re.update_zu(false);
 }
 
 template<typename modeltype>
@@ -537,3 +567,209 @@ inline dblpair glmmr::Model<modeltype>::marginal(const MarginType type,
   
 }
 
+template<typename modeltype>
+inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, const bool start_ml_beta, const double tol, const int hist,const int k0)
+{
+  using std::chrono::high_resolution_clock;
+  using std::chrono::duration_cast;
+  using std::chrono::duration;
+  using std::chrono::milliseconds;
+  
+  
+  bool converged = false;    
+  int iter = 1;
+  double ll_old = -std::numeric_limits<double>::infinity();
+  // start at ml values
+  if(start_ml_beta) optim.template ml_beta<BOBYQA>();
+  VectorXd beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+  VectorXd theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+  if(optim.trace > 0)Rcpp::Rcout << "\nStarting values\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
+  while (!converged && iter <= max_iter) {
+    if(model.family.family==Fam::gaussian){
+      if(optim.trace > 0)Rcpp::Rcout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
+      auto t1 = high_resolution_clock::now();
+      optim.nr_beta_gaussian();
+      auto t2 = high_resolution_clock::now();
+      duration<double, std::milli> ms_double = t2 - t1;
+      if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 1 (nr beta): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_theta_gaussian();
+      auto t3 = high_resolution_clock::now();
+      ms_double = t3 - t2;
+      if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 2 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      check_for_errors("Gaussian fit");
+      double ll_new = optim.marginal_log_likelihood();
+      beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+      theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+      if(optim.trace > 0) Rcpp::Rcout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose() << std::endl;
+      if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+        if(optim.trace > 0) Rcpp::Rcout << "\nrho: " << model.covariance.rho;
+      }
+      if(optim.trace > 0)Rcpp::Rcout << "Log likelihood (new | previous): " << ll_new << " | " << ll_old << " Diff: " << std::abs(ll_new - ll_old) << std::endl;
+      converged = std::abs(ll_new - ll_old) < tol;
+      ll_old = ll_new;
+      if(optim.trace > 0) if (converged) Rcpp::Rcout << "\nCONVERGED!";
+      
+    } else {
+      if(optim.trace > 0)Rcpp::Rcout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
+      auto t1 = high_resolution_clock::now();
+      matrix.posterior_u_samples(niter,false,true,false);
+      check_for_errors("u step");
+      auto t2 = high_resolution_clock::now();
+      duration<double, std::milli> ms_double = t2 - t1;
+      if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_beta();
+      check_for_errors("beta step");
+      auto t3 = high_resolution_clock::now();
+      ms_double = t3 - t2;
+      if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 2 (nr beta): " << ms_double.count() << "ms" << std::endl;
+      optim.nr_theta();
+      check_for_errors("theta step");
+      auto t4 = high_resolution_clock::now();
+      ms_double = t4 - t3;
+      if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 3 (nr theta): " << ms_double.count() << "ms" << std::endl;
+      
+      beta = Map<VectorXd>(model.linear_predictor.parameters.data(), model.linear_predictor.parameters.size());
+      theta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+      if(optim.trace > 0) Rcpp::Rcout << "\nBeta: " << beta.transpose() << "\ntheta: " << theta.transpose();
+      if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+        if(optim.trace > 0) Rcpp::Rcout << "\nrho: " << model.covariance.rho;
+      }
+      if(optim.trace > 0)Rcpp::Rcout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
+      if (iter > 2) {
+        converged = optim.check_convergence(tol,hist,iter,k0);
+        if(optim.trace > 0) if (converged) Rcpp::Rcout << "\nCONVERGED!";
+      }
+    }
+    
+    iter++;
+  }
+}
+
+template<typename modeltype>
+void glmmr::Model<modeltype>::check_for_errors(const std::string& caller, bool full_check) {
+  bool has_error = false;
+  std::stringstream diagnostics;
+  
+  // ==================== Fast checks (always run) ====================
+  // These are O(p) and O(n_theta) - very small
+  
+  // Beta parameters
+  const auto& beta = model.linear_predictor.parameters;
+  for(size_t i = 0; i < beta.size(); i++) {
+    if(std::isnan(beta[i]) || std::isinf(beta[i])) {
+      has_error = true;
+      diagnostics << "ERROR: beta[" << i << "] is NaN/Inf: " << beta[i] << std::endl;
+    }
+  }
+  
+  // Theta parameters
+  const auto& theta = model.covariance.parameters_;
+  for(size_t i = 0; i < theta.size(); i++) {
+    if(std::isnan(theta[i]) || std::isinf(theta[i])) {
+      has_error = true;
+      diagnostics << "ERROR: theta[" << i << "] is NaN/Inf: " << theta[i] << std::endl;
+    }
+  }
+  
+  // AR1 rho
+  if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+    if(std::isnan(model.covariance.rho) || std::isinf(model.covariance.rho)) {
+      has_error = true;
+      diagnostics << "ERROR: rho is NaN/Inf: " << model.covariance.rho << std::endl;
+    }
+    if(model.covariance.rho <= -1.0 || model.covariance.rho >= 1.0) {
+      has_error = true;
+      diagnostics << "ERROR: rho out of bounds: " << model.covariance.rho << std::endl;
+    }
+  }
+  
+  // u_mean_ - O(Q), usually manageable
+  if(re.u_mean_.hasNaN()) {
+    has_error = true;
+    diagnostics << "ERROR: u_mean_ contains NaN" << std::endl;
+  }
+  
+  // Only do expensive checks if requested or if error already found
+  if(full_check || has_error) {
+    // ==================== Expensive checks ====================
+    
+    if(re.u_.size() > 0 && re.u_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_ contains NaN" << std::endl;
+    }
+    
+    if(re.scaled_u_.size() > 0 && re.scaled_u_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: scaled_u_ contains NaN" << std::endl;
+    }
+    
+    if(re.u_solve_.size() > 0 && re.u_solve_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_solve_ contains NaN" << std::endl;
+    }
+    
+    if(re.u_weight_.size() > 0 && (re.u_weight_.hasNaN() || !re.u_weight_.isFinite().all())) {
+      has_error = true;
+      diagnostics << "ERROR: u_weight_ contains NaN/Inf" << std::endl;
+    }
+    
+    if(re.u_loglik_.size() > 0 && re.u_loglik_.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: u_loglik_ contains NaN" << std::endl;
+    }
+    
+    // Data checks
+    if(model.data.y.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: y contains NaN" << std::endl;
+    }
+    
+    if(model.data.offset.hasNaN()) {
+      has_error = true;
+      diagnostics << "ERROR: offset contains NaN" << std::endl;
+    }
+  }
+  
+  // ==================== Print diagnostics if error ====================
+  if(has_error) {
+    diagnostics << std::endl << "=== CONTEXT (from " << caller << ") ===" << std::endl;
+    
+    // Dimensions
+    diagnostics << "Dimensions: n=" << model.n() 
+                << ", p=" << model.linear_predictor.P() 
+                << ", Q=" << model.covariance.Q() << std::endl;
+    
+    // Parameters
+    diagnostics << "beta: ";
+    for(size_t i = 0; i < beta.size(); i++) diagnostics << beta[i] << " ";
+    diagnostics << std::endl;
+    
+    diagnostics << "theta: ";
+    for(size_t i = 0; i < theta.size(); i++) diagnostics << theta[i] << " ";
+    diagnostics << std::endl;
+    
+    if constexpr (std::is_same_v<modeltype, bits_ar1>) {
+      diagnostics << "rho: " << model.covariance.rho << std::endl;
+    }
+    
+    // Data ranges
+    diagnostics << "y range: [" << model.data.y.minCoeff() << ", " << model.data.y.maxCoeff() << "]" << std::endl;
+    diagnostics << "offset range: [" << model.data.offset.minCoeff() << ", " << model.data.offset.maxCoeff() << "]" << std::endl;
+    
+    // Random effects ranges (only if they exist)
+    if(re.u_.size() > 0) {
+      diagnostics << "u_ range: [" << re.u_.minCoeff() << ", " << re.u_.maxCoeff() << "]" << std::endl;
+    }
+    if(re.u_mean_.size() > 0) {
+      diagnostics << "u_mean_ range: [" << re.u_mean_.minCoeff() << ", " << re.u_mean_.maxCoeff() << "]" << std::endl;
+    }
+    if(re.u_weight_.size() > 0) {
+      double ess = 1.0 / (re.u_weight_ * re.u_weight_).sum();
+      diagnostics << "u_weight_ sum: " << re.u_weight_.sum() << ", ESS: " << ess << std::endl;
+    }
+    
+    Rcpp::Rcout << diagnostics.str();
+    R_FlushConsole();
+    Rcpp::stop("Numerical error detected. See diagnostics above.");
+  }
+}

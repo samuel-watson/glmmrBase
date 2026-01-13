@@ -57,7 +57,13 @@ Using \code{update_parameters()} is the preferred way of updating the parameters
 mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
 
+This function provides a large range of options for fitting GLMMs using stochastic algorithms. The function provides
+fine control over all aspects of the algorithm, including method of sampling the random effects, convergence criteria,
+optimisation methods, and so forth. For a fast and reliable alternative use the \code{fit()} function in this class, which is
+recommended for most users.
+
 \strong{Monte Carlo maximum likelihood}
+
 Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
 Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation
 maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
@@ -232,15 +238,17 @@ model <- Model$new(
 # use MCEM + REML with 500 sampling iterations
 glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
 
-# as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
-# we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+# as an alternative, we will specify the variance parameters on the 
+# log scale and use a fast fitting algorithm
+# we will use two newton-raphson steps, and Normal approximation posteriors with 
+# conjugate gradient descent
 # the maximum number of iterations is increased as it takes 100-110 in this example
 # we can also chain together the functions
 glm3 <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
   family = binomial()
-)$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
+)$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
@@ -292,6 +300,46 @@ summary(nm1)
 
 
 }
+
+## ------------------------------------------------
+## Method `Model$fit`
+## ------------------------------------------------
+
+# Simulated trial data example using REML
+data(SimTrial,package = "glmmrBase")
+fit1 <- Model$new(
+  formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
+  data = SimTrial,
+  family = gaussian()
+)$fit(reml = TRUE)
+
+# Salamanders data example
+data(Salamanders,package="glmmrBase")
+model <- Model$new(
+  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+  data = Salamanders,
+  family = binomial()
+)
+
+fit2 <- model$fit()
+
+# Example using simulated data
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(20)*t(10)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 10, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|grlog(cl)*ar0log(t)),
+  covariance = log(c(0.15,0.7)),
+  mean = c(rep(0,10),0.2),
+  data = df,
+  family = binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+des$update_y(ysim)
+fit2 <- des$fit() 
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
@@ -366,8 +414,7 @@ from every iteration.
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
 \item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
 \item \href{#method-Model-MCML}{\code{Model$MCML()}}
-\item \href{#method-Model-fit_fast}{\code{Model$fit_fast()}}
-\item \href{#method-Model-LA}{\code{Model$LA()}}
+\item \href{#method-Model-fit}{\code{Model$fit()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
 \item \href{#method-Model-gradient}{\code{Model$gradient()}}
@@ -980,8 +1027,10 @@ Stochastic Maximum Likelihood model fitting
   alpha = 0.8,
   convergence.prob = 0.95,
   pr.average = FALSE,
-  tr.approx = FALSE,
-  cg = FALSE,
+  bf.tol = 10,
+  bf.hist = 10,
+  bf.k0 = 10,
+  importance = FALSE,
   conv.criterion = 2,
   skip.theta = FALSE,
   constr.zero = 1
@@ -1046,10 +1095,14 @@ will result in lower bias but slower convergence, values closer to 1 will result
 
 \item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)}
 
-\item{\code{tr.approx}}{Logical indicating whether to use an approximation for the trace in a Newton-Raphson step for theta}
+\item{\code{bf.tol}}{Integer indicating the Bayes Factor convergence criterion}
 
-\item{\code{cg}}{Logical indicating whether to use a conjugate gradient descent algorithm if using analytic random effect sampling, may give a
-performance improvement at large samples, particularly if the covariance matrix is sparse.}
+\item{\code{bf.hist}}{Integer, the number of iterations in the running mean for the Bayes Factor convergence criterion}
+
+\item{\code{bf.k0}}{Integer, the expected number of iterations to convergence of the Bayes Factor convergence criterion.}
+
+\item{\code{importance}}{Logical. If TRUE and using the analytic samples, the u samples are weighted using an importance sampling step. If FALSE, it is equivalent to the Laplace
+Approximation Gaussian distribution of the random effects.}
 
 \item{\code{conv.criterion}}{Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by \code{tol},
 2 = The probability of improvement in the overall log-likelihood is less than 1 - \code{convergence.prob}
@@ -1090,15 +1143,17 @@ model <- Model$new(
 # use MCEM + REML with 500 sampling iterations
 glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
 
-# as an alternative, we will specify the variance parameters on the log scale and use a fast fitting algorithm
-# we will use two newton-raphson steps, and Normal approximation posteriors with conjugate gradient descent
+# as an alternative, we will specify the variance parameters on the 
+# log scale and use a fast fitting algorithm
+# we will use two newton-raphson steps, and Normal approximation posteriors with 
+# conjugate gradient descent
 # the maximum number of iterations is increased as it takes 100-110 in this example
 # we can also chain together the functions
 glm3 <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
   family = binomial()
-)$MCML(method = "mcnr2", mcmc.pkg = "analytic", cg = TRUE, iter.sampling = 50, max.iter = 150)
+)$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
 #create example data with six clusters, five time periods, and five people per cluster-period
@@ -1157,50 +1212,91 @@ summary(nm1)
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-fit_fast"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-fit_fast}{}}}
-\subsection{Method \code{fit_fast()}}{
+\if{html}{\out{<a id="method-Model-fit"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-fit}{}}}
+\subsection{Method \code{fit()}}{
 MCML model fitting with the fastest options
 
-Uses double Newton-Raphson method without REML, 50 samples per iteration, Normal approximation
-posteriors for the random effects, and trace approximations for larger samples.
+Uses double Newton-Raphson method (with or without REML for Gaussian models). For details on the algorithm see \code{MCML()}. This function
+uses the fastest set of options, including specialised model fitting for linear models. Note that no random effect
+samples are drawn for Gaussian models, but can be subsequently drawn using \code{mcmc_sample()}. It is recommended to use the log
+version of the covariance functions with this method as the Newton-Raphson steps can lead to negative values otherwise.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$fit_fast(...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$fit(
+  niter = 100,
+  max_iter = 30,
+  tol = ifelse(self$family[[1]] == "gaussian" & self$family[[2]] == "identity", 1e-06,
+    10),
+  hist = 5,
+  k0 = 10,
+  reml = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{...}}{Additional arguments passed to MCML. For examples, see MCML.}
+\item{\code{niter}}{Integer. Number of samples for the random effects, ignored for Gaussian models, see examples.}
+
+\item{\code{max_iter}}{Integer. Maximum number of iterations.}
+
+\item{\code{tol}}{Scalar. The tolerance for the convergence criterion. For GLMMs this is the tolerance for
+the Bayes Factor convergence criterion, for Gaussian linear models the tolerance is the difference
+in the log-likelihood between successive iterations.}
+
+\item{\code{hist}}{Integer. The length of the running mean for the convergence criterion for non-Gaussian models.}
+
+\item{\code{k0}}{Integer. The expected number of iterations until convergence.}
+
+\item{\code{reml}}{Bool. For Gaussian models, whether to use REML or not.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 A \code{mcml} model fit object
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-LA"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-LA}{}}}
-\subsection{Method \code{LA()}}{
-Previous implementation of Laplace Approximation
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Simulated trial data example using REML
+data(SimTrial,package = "glmmrBase")
+fit1 <- Model$new(
+  formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
+  data = SimTrial,
+  family = gaussian()
+)$fit(reml = TRUE)
 
-This function has been deprecated, as it provides inferior capability to other packages
-for this method, and this implementation was typically slower than the MCMC-ML.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$LA(...)}\if{html}{\out{</div>}}
-}
+# Salamanders data example
+data(Salamanders,package="glmmrBase")
+model <- Model$new(
+  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
+  data = Salamanders,
+  family = binomial()
+)
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{Previous arguments}
+fit2 <- model$fit()
+
+# Example using simulated data
+#create example data with six clusters, five time periods, and five people per cluster-period
+df <- nelder(~(cl(20)*t(10)) > ind(5))
+# parallel trial design intervention indicator
+df$int <- 0
+df[df$cl > 10, 'int'] <- 1 
+# specify parameter values in the call for the data simulation below
+des <- Model$new(
+  formula= ~ factor(t) + int - 1 +(1|grlog(cl)*ar0log(t)),
+  covariance = log(c(0.15,0.7)),
+  mean = c(rep(0,10),0.2),
+  data = df,
+  family = binomial()
+)
+ysim <- des$sim_data() # simulate some data from the model
+des$update_y(ysim)
+fit2 <- des$fit() 
 }
 \if{html}{\out{</div>}}
+
 }
-\subsection{Returns}{
-Nothing. Will be removed in future updates
-}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-sparse"></a>}}

@@ -12,7 +12,8 @@ enum class Fam {
     beta = 4,
     binomial = 5,
     quantile = 6, // quantile is the asymmetric Laplacian distribution
-    quantile_scaled = 7
+    quantile_scaled = 7,
+    exponential = 8
 };
 
 enum class Link {
@@ -32,7 +33,8 @@ const std::map<str, Fam> str_to_family = {
   {"beta",Fam::beta},
   {"binomial",Fam::binomial},
   {"quantile",Fam::quantile},
-  {"quantile_scaled",Fam::quantile_scaled}
+  {"quantile_scaled",Fam::quantile_scaled},
+  {"exponential",Fam::exponential}
 };
 
 const std::map<str, Link> str_to_link = {
@@ -56,6 +58,11 @@ public:
     if(q <= 0 || q >= 1) throw std::runtime_error("q !in [0,1]");
     if(! (family == Fam::quantile || family == Fam::quantile_scaled)) throw std::runtime_error("Quantile only relevant for quantile family");
     quantile = q;
+  }
+  
+  bool canonical() const {
+    return (family == Fam::gaussian && link == Link::identity) || (family == Fam::poisson && link == Link::loglink) || 
+      (family == Fam::bernoulli && link == Link::logit) || (family == Fam::binomial && link == Link::logit) || (family == Fam::exponential && link == Link::loglink);
   }
 };
 }
