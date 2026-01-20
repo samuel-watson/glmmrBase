@@ -1588,8 +1588,8 @@ Model <- R6::R6Class("Model",
                        },
                        #' @description 
                        #' Generate an MCMC sample of the random effects
-                       #' @param mcmc.pkg String. Either `cmdstan` for cmdstan (requires the package `cmdstanr`), `rstan` to use rstan sampler (the default), or `analytic` for an approximation 
-                       #' based on the estimated posterior mean and variance.
+                       #' @param mcmc.pkg String. Either `analytic` for importance sampling from Gaussian posterior proposal, `cmdstan` for cmdstan 
+                       #'  (requires the package `cmdstanr`), `rstan` to use rstan sampler (the default)
                        #' @param scaled Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.
                        #' @param constr.zero Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
                        #' may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.
@@ -1597,7 +1597,7 @@ Model <- R6::R6Class("Model",
                        mcmc_sample = function(mcmc.pkg = "rstan",
                                               scaled = TRUE,
                                               constr.zero = 1){
-                         if(!mcmc.pkg %in% c("cmdstan","rstan"))stop("mcmc.pkg must be one of cmdstan, rstan, or hmc")
+                         if(!mcmc.pkg %in% c("cmdstan","rstan","analytic"))stop("mcmc.pkg must be one of analytic, cmdstan or rstan")
                          if(!private$y_has_been_updated) stop("No y data has been added")
                          if(mcmc.pkg == "cmdstan" | mcmc.pkg == "rstan"){
                            file_type <- mcnr_family(self$family,mcmc.pkg == "cmdstan")
@@ -1695,12 +1695,18 @@ Model <- R6::R6Class("Model",
                              Model__update_u(private$ptr,dsamps,FALSE,private$model_type())
                            }
                            
-                         }else {
+                         } else {
                            Model__posterior_u_sample(private$ptr,self$mcmc_options$samps, 1e-6, FALSE, private$model_type())
                            dsamps <- Model__u(private$ptr,FALSE,private$model_type())
                          }
                          if(scaled)dsamps <- Model__ZL(private$ptr, private$model_type()) %*% dsamps
                          return(invisible(dsamps))
+                       },
+                       #' @description
+                       #' Returns the importance weights for the random effect samples. If using MCMC then weights are all equal.
+                       #' @return A vector of the weights
+                       importance_weights = function(){
+                         return(Model__get_importance_weights(private$ptr, private$model_type()))
                        },
                        #' @description 
                        #' The gradient of the log-likelihood with respect to either the random effects or

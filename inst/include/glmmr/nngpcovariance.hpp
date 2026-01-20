@@ -24,7 +24,7 @@ public:
   MatrixXd      ZLu(const MatrixXd& u) override;
   MatrixXd      Lu(const MatrixXd& u) override;
   VectorXd      sim_re() override;
-  SparseMatrix<double>        ZL_sparse() override;
+  SparseMatrix<double>        ZL_sparse_new() override;
   int           Q() const override;
   double        log_likelihood(const VectorXd &u) override;
   double        log_determinant() override;
@@ -125,7 +125,7 @@ inline VectorXd glmmr::nngpCovariance::sim_re(){
   return samps;
 }
 
-inline SparseMatrix<double> glmmr::nngpCovariance::ZL_sparse(){
+inline SparseMatrix<double> glmmr::nngpCovariance::ZL_sparse_new(){
   MatrixXd L = D(true,false);
   return L.sparseView();
 }
