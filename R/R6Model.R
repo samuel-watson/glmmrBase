@@ -1707,7 +1707,7 @@ Model <- R6::R6Class("Model",
                        #' @return A vector of the weights
                        importance_weights = function(){
                          return(Model__get_importance_weights(private$ptr, private$model_type()))
-                       }
+                       },
                        #' @description 
                        #' The gradient of the log-likelihood with respect to either the random effects or
                        #' the model parameters. The random effects are on the N(0,I) scale, i.e. scaled by the
