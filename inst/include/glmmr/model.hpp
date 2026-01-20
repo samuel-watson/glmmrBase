@@ -113,7 +113,8 @@ inline void glmmr::Model<modeltype>::update_beta(const dblvec &beta_){
 template<typename modeltype>
 inline void glmmr::Model<modeltype>::update_theta(const dblvec &theta_){
   model.covariance.update_parameters(theta_);
-  re.update_zu(false);
+  bool weighted = re.u_weight_.maxCoeff() - re.u_weight_.minCoeff() > 1e-10;
+  re.update_zu(weighted);
 }
 
 template<typename modeltype>
