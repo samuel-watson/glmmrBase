@@ -962,7 +962,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::gradient_eta(const MatrixXd& v){
   size_n_array.setZero();
   if(size_n_array.rows() != model.n())throw std::runtime_error("Size n array != n");
   size_n_array.colwise() += model.xb();
-  SparseMatrix<double> ZL = model.covariance.ZL_sparse();
+  SparseMatrix<double> ZL = model.covariance.ZL_sparse_new();
   if(ZL.cols() != v.rows())throw std::runtime_error("ZL cols != v rows");
   size_n_array += (ZL * v).array();
   
@@ -1126,7 +1126,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::log_gradient(const VectorXd &v,
   size_n_array = (gradient_eta(vm)).col(0).array();
   ArrayXd size_q_array = ArrayXd::Zero(Q());
   ArrayXd size_p_array = ArrayXd::Zero(P());
-  SparseMatrix<double> ZLt = model.covariance.ZL_sparse();
+  SparseMatrix<double> ZLt = model.covariance.ZL_sparse_new();
   ZLt.transpose();
   
   switch(model.family.family){

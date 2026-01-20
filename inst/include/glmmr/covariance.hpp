@@ -142,7 +142,7 @@ public:
   bool              any_log_re() const;
   intvec            parameter_fn_index() const;
   virtual intvec    re_count() const;
-  virtual SparseMatrix<double>    ZL_sparse();
+  virtual SparseMatrix<double>    ZL_sparse_new();
   virtual SparseMatrix<double>    Z_sparse();
   strvec            parameter_names();
   virtual void      derivatives(std::vector<MatrixXd>& derivs,int order = 1);
@@ -150,6 +150,12 @@ public:
   void              linear_predictor_ptr(glmmr::LinearPredictor* ptr);
   MatrixXd          information_matrix();
   virtual MatrixXd  solve(const MatrixXd& u);
+  
+  // the functions below are deprecated
+  // virtual MatrixXd LZWZL(const VectorXd& w);
+  // virtual sparse ZL_sparse();
+  // virtual MatrixXd  log_gradient(const MatrixXd& u, VectorXd& logl);
+  // virtual VectorXd  log_gradient(const MatrixXd& u, double& logl);
   
 protected:
   // data
@@ -851,7 +857,7 @@ inline MatrixXd glmmr::Covariance::D_builder(int b, bool chol, bool upper)
   }
 }
 
-inline SparseMatrix<double> glmmr::Covariance::ZL_sparse() 
+inline SparseMatrix<double> glmmr::Covariance::ZL_sparse_new() 
 {
   Z_updater();
   return matL.productR(matZ);
@@ -863,12 +869,12 @@ inline SparseMatrix<double> glmmr::Covariance::Z_sparse() {
 }
 
 inline MatrixXd glmmr::Covariance::ZL() {
-  SparseMatrix<double> ZL = ZL_sparse();
+  SparseMatrix<double> ZL = ZL_sparse_new();
   return MatrixXd(ZL);
 }
 
 inline MatrixXd glmmr::Covariance::ZLu(const MatrixXd& u){
-  SparseMatrix<double> ZL = ZL_sparse();
+  SparseMatrix<double> ZL = ZL_sparse_new();
   return ZL * u;
 }
 
@@ -1104,29 +1110,29 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
     double qf = vmat.col(i).dot(umat.col(i));
     logl(i) += -0.5 * qf;
   }
-  
+}
 
-  for (int j = 0; j < npars; j++){
-    double grad_j = 0.0;
-#pragma omp for reduction(+:grad_j)
+for (int j = 0; j < npars; j++){
+  double grad_j = 0.0;
+#pragma omp parallel for reduction(+:grad_j)
+  for (int i = 0; i < niter; i++)
+  {
+    grad_j += 0.5 * uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
+  }
+  grad(j) += grad_j;
+  
+  for(int k = j; k < npars; k++){
+    MatrixXd Sprod = S[j] * S[k];
+    M(j,k) += -0.5 * Sprod.trace();
+    if(j != k) M(k,j) = M(j,k);
+    double m_jk = 0.0;
+#pragma omp parallel for reduction(+:m_jk)
     for (int i = 0; i < niter; i++)
     {
-      grad_j += 0.5 * uweight(i) * (umat.col(i).dot(S[j] * vmat.col(i)));
+      m_jk += uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
     }
-    grad(j) += grad_j;
-    for(int k = j; k < npars; k++){
-      Sprod = S[j] * S[k];
-      M(j,k) += -0.5 * Sprod.trace();
-      if(j != k) M(k,j) += M(j,k);
-      double m_jk = 0.0;
-#pragma omp for reduction(+:m_jk)
-      for (int i = 0; i < niter; i++)
-      {
-        m_jk += uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
-      }
-      M(j,k) += m_jk;
-      if(j != k) M(k,j) += m_jk;
-    }
+    M(j,k) += m_jk;
+    if(j != k) M(k,j) += m_jk;
   }
 }
 
@@ -1217,3 +1223,22 @@ inline strvec glmmr::Covariance::parameter_names(){
 inline MatrixXd glmmr::Covariance::solve(const MatrixXd& u){
   return matL.solve(u);
 }
+
+// deprecated functions
+
+// MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w) {
+//   return MatrixXd();  // or MatrixXd::Zero(0,0)
+// }
+// 
+// MatrixXd  glmmr::Covariance::log_gradient(const MatrixXd& u, VectorXd& logl) {
+//   return MatrixXd();
+// }
+// 
+// VectorXd  glmmr::Covariance::log_gradient(const MatrixXd& u, double& logl) {
+//   return VectorXd();
+// }
+// 
+// sparse glmmr::Covariance::ZL_sparse(){
+//   sparse ZL;
+//   return ZL;
+// }
