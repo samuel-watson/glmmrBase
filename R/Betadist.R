@@ -18,7 +18,7 @@ Beta <- function(link="logit"){
 #' @param link Name of link function. Only accepts `logit` currently.
 #' @return A list with two elements naming the family and link function
 #' @export
-exponential <- function(link="logit"){
-  if(link != "logit")stop("Only logit currently supported for Beta distribution")
+exponential <- function(link="log"){
+  if(link != "log")stop("Only log currently supported for exponential distribution")
   return(list(Family = "exponential", Link= link))
 }

@@ -417,6 +417,7 @@ from every iteration.
 \item \href{#method-Model-fit}{\code{Model$fit()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
 \item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
+\item \href{#method-Model-importance_weights}{\code{Model$importance_weights()}}
 \item \href{#method-Model-gradient}{\code{Model$gradient()}}
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
@@ -1331,8 +1332,8 @@ Generate an MCMC sample of the random effects
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{mcmc.pkg}}{String. Either \code{cmdstan} for cmdstan (requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler (the default), or \code{analytic} for an approximation
-based on the estimated posterior mean and variance.}
+\item{\code{mcmc.pkg}}{String. Either \code{analytic} for importance sampling from Gaussian posterior proposal, \code{cmdstan} for cmdstan
+(requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler (the default)}
 
 \item{\code{scaled}}{Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.}
 
@@ -1343,6 +1344,19 @@ may be useful if there is possible identifiability issues for intercept terms, s
 }
 \subsection{Returns}{
 A matrix of samples of the random effects
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-importance_weights"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-importance_weights}{}}}
+\subsection{Method \code{importance_weights()}}{
+Returns the importance weights for the random effect samples. If using MCMC then weights are all equal.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$importance_weights()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A vector of the weights
 }
 }
 \if{html}{\out{<hr>}}
