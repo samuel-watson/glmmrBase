@@ -244,10 +244,13 @@ glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
 # conjugate gradient descent
 # the maximum number of iterations is increased as it takes 100-110 in this example
 # we can also chain together the functions
+# specify starting values for the covariance parameters to prevent potential fit failure
+# with random initialisation on the log scale
 glm3 <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = c(-0.5,-0.5)
 )$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
@@ -306,19 +309,23 @@ summary(nm1)
 ## ------------------------------------------------
 
 # Simulated trial data example using REML
+# specify covariance starting values to potential prevent fit failure with random intialisation
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
   data = SimTrial,
-  family = gaussian()
+  family = gaussian(),
+  covariance = log(c(0.05,0.8)),
 )$fit(reml = TRUE)
 
 # Salamanders data example
 data(Salamanders,package="glmmrBase")
+# specify covariance starting values to prevent potential fit failure with random intialisation
 model <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = c(-0.5, -0.5)
 )
 
 fit2 <- model$fit()
@@ -1150,10 +1157,13 @@ glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
 # conjugate gradient descent
 # the maximum number of iterations is increased as it takes 100-110 in this example
 # we can also chain together the functions
+# specify starting values for the covariance parameters to prevent potential fit failure
+# with random initialisation on the log scale
 glm3 <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = c(-0.5,-0.5)
 )$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
 
 # Example using simulated data
@@ -1259,19 +1269,23 @@ A \code{mcml} model fit object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# Simulated trial data example using REML
+# specify covariance starting values to potential prevent fit failure with random intialisation
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
   data = SimTrial,
-  family = gaussian()
+  family = gaussian(),
+  covariance = log(c(0.05,0.8)),
 )$fit(reml = TRUE)
 
 # Salamanders data example
 data(Salamanders,package="glmmrBase")
+# specify covariance starting values to prevent potential fit failure with random intialisation
 model <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = c(-0.5, -0.5)
 )
 
 fit2 <- model$fit()
