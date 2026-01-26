@@ -926,16 +926,16 @@ Model <- R6::R6Class("Model",
                        #' )
                        #' ysim <- des$sim_data() # simulate some data from the model
                        #' fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
-                       #' # use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
-                       #' fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
+                       #' # use MCNR instead 
+                       #' fit2 <- des$MCML(y = ysim, method="mcnr")
                        #' 
                        #' # Non-linear model fitting example using the example provided by nlmer in lme4
                        #' data(Orange, package = "lme4")
                        #' 
                        #' # the lme4 example:
-                       #' startvec <- c(Asym = 200, xmid = 725, scal = 350)
-                       #' (nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
-                       #'               Orange, start = startvec))
+                       #' # startvec <- c(Asym = 200, xmid = 725, scal = 350)
+                       #' # (nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
+                       #' #              Orange, start = startvec))
                        #' 
                        #' Orange <- as.data.frame(Orange)
                        #' Orange$Tree <- as.numeric(Orange$Tree)
@@ -956,7 +956,6 @@ Model <- R6::R6Class("Model",
                        #' nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
                        #' 
                        #' summary(nfit)
-                       #' summary(nm1)
                        #' 
                        #' 
                        #'}
