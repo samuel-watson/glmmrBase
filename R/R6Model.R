@@ -1924,7 +1924,7 @@ Model <- R6::R6Class("Model",
                        },
                        update_ptr = function(force = FALSE){
                          if(is.null(private$ptr) | force | private$session_id != Sys.getpid()){
-                           if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta","quantile","quantile_scaled"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta, or quantile")
+                           if(!self$family[[1]]%in%c("poisson","binomial","gaussian","bernoulli","Gamma","beta","quantile","quantile_scaled","exponential"))stop("family must be one of Poisson, Binomial, Gaussian, Gamma, Beta, or quantile")
                            form <- gsub(" ","",self$formula)
                            form <- gsub("~","",self$formula)
                            if(grepl("nngp",form)){
