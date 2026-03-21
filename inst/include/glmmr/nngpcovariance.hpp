@@ -38,7 +38,6 @@ public:
   MatrixXd      inv_ldlt_AD(const MatrixXd &A,const VectorXd &D,const ArrayXXi &NN);
   void          parse_grid_data(const ArrayXXd &data);
   void          gen_AD_derivatives(glmmr::MatrixField<VectorXd>& dD, glmmr::MatrixField<MatrixXd>& dA); 
-  //void          nr_step(const MatrixXd &umat, ArrayXd& logl) override;
 };
 
 }
@@ -280,105 +279,6 @@ inline MatrixXd glmmr::nngpCovariance::inv_ldlt_AD(const MatrixXd &A,
   }
   return y * dsqrt.matrix().asDiagonal();
 }
-
-// inline void glmmr::nngpCovariance::nr_step(const MatrixXd &umat, ArrayXd& logl){
-// 
-//   static const double LOG_2PI = log(2*M_PI);
-//   static const double NEG_HALF_LOG_2PI = -0.5 * LOG_2PI;
-//   
-//   std::vector<MatrixXd> derivs;
-//   derivatives(derivs, 1);
-//   int npars = derivs.size() - 1;
-//   int niter = umat.cols();
-//   VectorXd grad(npars);
-//   grad.setZero();
-//   double logdet_val = 0.0;
-//   logl.setZero();
-//   dblvec dqf(npars, 0.0);
-//   int m = A.rows();
-//   sparse IA(umat.rows(),umat.rows(),true);
-//   
-//   int idxlim;
-//   for (int i = 0; i < umat.rows(); i++) {
-//     idxlim = i<=m ? i : m;
-//     for (int j = 0; j < idxlim; j++) {
-//       if(grid.NN(j,i)==i){
-//         IA.insert(grid.NN(j,i),i,1.0 - A(j,i));
-//       } else {
-//         IA.insert(grid.NN(j,i),i,-1.0 * A(j,i));
-//       }
-//     }
-//   }
-//   
-//   sparse IAt = IA;
-//   IAt.transpose();
-//   sparse IAD = IAt % Dvec;
-//   logdet_val = log_determinant();
-//   // Precompute S matrices and gradient
-//   glmmr::MatrixField<MatrixXd> S;
-//   for(int i = 0; i < npars; i++)
-//   {
-//     MatrixXd detmat2 = SparseOperators::operator*(
-//       SparseOperators::operator*(IAt, derivs[i+1]), 
-//       IAD
-//     );
-//     grad(i) = -0.5 * detmat2.trace();
-//     S.add(detmat2);
-//   }
-//   
-//   // Update logl with constant terms
-//   logl.array() += NEG_HALF_LOG_2PI * Q_ - 0.5 * logdet_val;
-//   // Main iteration loop - OPTIMIZED
-//   //#pragma omp parallel if(niter > 20)
-//   {
-//     dblvec dqf_local(npars, 0.0);
-// 
-//   //#pragma omp for
-//     for(int i = 0; i < niter; i++)
-//     {
-//       VectorXd IAu = IA * umat.col(i);
-//       VectorXd IAuD = (IAu.array() * Dvec.array()).matrix();
-//       // Quadratic form
-//       double qf = IAuD.dot(IAu);
-//   //#pragma omp atomic
-//       logl(i) += -0.5 * qf;
-// 
-//       // Gradient contribution - MUCH faster than outer product
-//       for(int j = 0; j < npars; j++)
-//       {
-//         dqf_local[j] += (S(j) * IAuD).dot(IAu);
-//       }
-//     }
-// 
-//     // Accumulate thread-local results
-//   //#pragma omp critical
-//     for(int j = 0; j < npars; j++) {
-//       dqf[j] += dqf_local[j];
-//     }
-//   }
-// 
-//   double niter_inv = 1.0 / (double)niter;
-//   for(int j = 0; j < npars; j++)
-//   {
-//     grad(j) += 0.5 * dqf[j] * niter_inv;
-//   }
-// 
-//   // Hessian computation
-//   MatrixXd M(npars, npars);
-//   for(int j = 0; j < npars; j++) {
-//     for(int k = j; k < npars; k++) {
-//       double val = (S(j) * S(k)).trace();
-//       M(j, k) = val;
-//       if(j != k) M(k, j) = val;
-//     }
-//   }
-//   // Newton-Raphson update
-//   // M = M.llt().solve(MatrixXd::Identity(npars, npars));
-//   VectorXd theta_curr = Map<VectorXd>(parameters_.data(), parameters_.size());
-//   theta_curr += M.llt().solve(grad);
-//   update_parameters(theta_curr.array());
-// 
-// }
 
 inline void glmmr::nngpCovariance::gen_AD_derivatives(glmmr::MatrixField<VectorXd>& dD, glmmr::MatrixField<MatrixXd>& dA)
 {

@@ -1207,7 +1207,7 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(){
   if(ll_current.rows() != re.u_.cols())ll_current.resize(re.u_.cols(),NoChange);
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
-  ArrayXd  tmp(ll_current.rows());
+  ArrayXd tmp(ll_current.rows());
   model.covariance.nr_step(re.scaled_u_, re.u_solve_, tmp, gradients, re.u_weight_);
   bool weighted = re.u_weight_.maxCoeff() - re.u_weight_.minCoeff() > 1e-10;
   re.update_zu(weighted);
@@ -1219,41 +1219,74 @@ inline void glmmr::ModelOptim<modeltype>::nr_theta(){
 
 template<>
 inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
-  if(control.reml)throw std::runtime_error("Newton-Raphson not compatible with REML for covariance parameters");
-  if(re.scaled_u_.cols() != re.u_.cols())re.scaled_u_.resize(NoChange,re.u_.cols());
+  if(re.scaled_u_.cols() != re.u_.cols()) re.scaled_u_.resize(NoChange, re.u_.cols());
   previous_ll_values.second = current_ll_values.second;
   previous_ll_var.second = current_ll_var.second;
   
-  // Pre-cache frequently accessed members
   const int n_iter = re.u_.cols();
-  const int resid_size = model.data.y.size();
-  const double inv_n_iter = 1.0 / static_cast<double>(n_iter);
+  const int M = model.covariance.Q();
+  const int npars = 2;
   ArrayXd eta(model.n());
   VectorXd W_(eta.size());
   ArrayXd resid(eta.size());
   
   MatrixXd Phi = model.covariance.PhiSPD(false, false);
-  VectorXd grad = VectorXd::Zero(2);
-  MatrixXd hess = MatrixXd::Zero(2, 2);
   
-  // Pre-compute lambda derivatives
-  ArrayXXd lambda_deriv(model.covariance.Q(), 2);
-  for(int i = 0; i < model.covariance.Q(); i++){
+  ArrayXd Lambda = model.covariance.LambdaSPD();
+  ArrayXd inv_lambda = 1.0 / Lambda;
+  ArrayXd inv_lambda2 = inv_lambda.square();
+  ArrayXd sqrt_lambda = Lambda.sqrt();
+  
+  ArrayXXd lambda_deriv(M, npars);
+  ArrayXXd dsqrt_lambda(M, npars);
+  for(int i = 0; i < M; i++){
     dblvec deriv = model.covariance.d_spd_nD(i);
-    for(int j = 0; j < 2; j++) lambda_deriv(i, j) = deriv[j];
+    for(int j = 0; j < npars; j++){
+      lambda_deriv(i, j) = deriv[j];
+      dsqrt_lambda(i, j) = deriv[j] / (2.0 * sqrt_lambda(i));
+    }
   }
   
-  MatrixXd zd = matrix.linpred();
-  MatrixXd Phi_d0 = Phi * lambda_deriv.matrix().col(0).asDiagonal();
-  MatrixXd Phi_d1 = Phi * lambda_deriv.matrix().col(1).asDiagonal();
+  // Precompute Phi * diag(d sqrt(Lambda)/d theta_j) for observation-space Hessian
+  std::vector<MatrixXd> Phi_dj(npars);
+  for(int j = 0; j < npars; j++){
+    Phi_dj[j] = Phi * dsqrt_lambda.col(j).matrix().asDiagonal();
+  }
   
+  // --- Prior gradient: deterministic + MC ---
+  VectorXd grad = VectorXd::Zero(npars);
+  for(int j = 0; j < npars; j++){
+    grad(j) = -0.5 * (lambda_deriv.col(j) * inv_lambda).sum();
+  }
+  for(int i = 0; i < n_iter; i++){
+    double w_i = re.u_weight_(i);
+    // u_ is in u-space, so quadratic form uses u^2/Lambda^2
+    ArrayXd u2 = re.u_.col(i).array().square();
+    for(int j = 0; j < npars; j++){
+      grad(j) += 0.5 * w_i * (u2 * lambda_deriv.col(j) * inv_lambda2).sum();
+    }
+  }
+  
+  // --- Combined Hessian: prior Fisher + observation-space Fisher ---
+  // Prior Fisher: ½ sum_k (dLambda_k/dtheta_j)(dLambda_k/dtheta_l) / Lambda_k^2
+  MatrixXd Hess = MatrixXd::Zero(npars, npars);
+  for(int j = 0; j < npars; j++){
+    for(int l = j; l < npars; l++){
+      double h = 0.5 * (lambda_deriv.col(j) * lambda_deriv.col(l) * inv_lambda2).sum();
+      Hess(j, l) = h;
+      if(j != l) Hess(l, j) = h;
+    }
+  }
+  
+  // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
+  MatrixXd zd = matrix.linpred();
   for(int i = 0; i < n_iter; i++){
     eta = zd.col(i).array();
+    
     switch(model.family.family){
-    case Fam::gaussian: 
+    case Fam::gaussian:
       if(model.family.link == Link::identity){
-        W_ = (model.data.variance.inverse() *  model.data.weights).matrix();
-        resid = model.data.y.array() - eta;
+        W_ = (model.data.variance.inverse() * model.data.weights).matrix();
       } else {
         throw std::runtime_error("NR2 only available with canonical link");
       }
@@ -1261,51 +1294,73 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     case Fam::binomial: case Fam::bernoulli:
       if(model.family.link == Link::logit){
         ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
-        resid = model.data.y.array() - model.data.variance * logitp;
-        W_ = (model.data.variance * logitp * (1- logitp)).matrix();
-        
+        W_ = (model.data.variance * logitp * (1 - logitp)).matrix();
       } else {
-        throw std::runtime_error("NR2 posterior only available with canonical link");
+        throw std::runtime_error("NR2 only available with canonical link");
       }
       break;
     case Fam::poisson:
       if(model.family.link == Link::loglink){
-        resid = model.data.y.array() - eta.exp();
         W_ = eta.exp().matrix();
       } else {
-        throw std::runtime_error("NR2 posterior only available with canonical link");
+        throw std::runtime_error("NR2 only available with canonical link");
       }
       break;
     default:
-      throw std::runtime_error("NR2 posterior only available with Gaussian, Poisson, and Binomial");
-    break;
+      throw std::runtime_error("NR2 only available with Gaussian, Poisson, and Binomial");
     }
+    
+    double w_i = re.u_weight_(i);
     ArrayXd w_arr = W_.array();
-    ArrayXd d0prod = (Phi_d0 * re.u_.col(i)).array();
-    ArrayXd d1prod = (Phi_d1 * re.u_.col(i)).array();
-    ArrayXd resid_w = resid * w_arr;
     
-    grad(0) += (d0prod * resid_w).sum();
-    grad(1) += (d1prod * resid_w).sum();
-    
-    hess(0, 0) += (d0prod * d0prod * w_arr).sum();// - d2prod * resid_w).sum();
-    hess(1, 1) += (d1prod * d1prod * w_arr).sum();//  - d4prod * resid_w).sum();
-    
-    double addv = (d0prod * d1prod * w_arr).sum();//  - d3prod * resid_w).sum();
-    hess(0, 1) += addv;
-    hess(1, 0) += addv;
+    for(int j = 0; j < npars; j++){
+      ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
+      for(int l = j; l < npars; l++){
+        ArrayXd dlprod = (Phi_dj[l] * re.u_.col(i)).array();
+        double h_obs = (djprod * dlprod * w_arr).sum();
+        Hess(j, l) += w_i * h_obs;
+        if(j != l) Hess(l, j) += w_i * h_obs;
+      }
+    }
   }
-  // Apply scaling
-  hess *= inv_n_iter;
-  grad *= inv_n_iter;
   
-  hess = hess.llt().solve(MatrixXd::Identity(2, 2));
+  // --- Solve with fallback ---
+  model.covariance.infomat_theta = Hess;
   
-  VectorXd logpars(2);
-  logpars(0) = log(model.covariance.parameters_[0]);
-  logpars(1) = log(model.covariance.parameters_[1]);
-  logpars += hess * grad;
-  model.covariance.update_parameters(logpars.array().exp());
+  bool logpars = model.covariance.all_log_re();
+  VectorXd logtheta(npars);
+  if(logpars){
+    logtheta = Map<VectorXd>(model.covariance.parameters_.data(), model.covariance.parameters_.size());
+  } else {
+    for(int j = 0; j < npars; j++) logtheta(j) = log(model.covariance.parameters_[j]);
+  }
+  
+  VectorXd step;
+  double lambda_damp = 1e-4 * Hess.diagonal().array().abs().maxCoeff();
+  MatrixXd Hess_reg = Hess;
+  Hess_reg.diagonal().array() += lambda_damp;
+  Eigen::LLT<MatrixXd> llt_H(Hess_reg);
+  if(llt_H.info() == Eigen::Success){
+    step = llt_H.solve(grad);
+  } else {
+    step = grad.array() / Hess.diagonal().array().abs().max(1e-6);
+  }
+  
+  double max_step = 1.0;
+  double step_norm = step.array().abs().maxCoeff();
+  if(step_norm > max_step) step *= max_step / step_norm;
+  
+  logtheta += step;
+  
+  if(logpars){
+    dblvec newpars(logtheta.data(), logtheta.data() + logtheta.size());
+    model.covariance.update_parameters(newpars);
+  } else {
+    model.covariance.update_parameters(logtheta.array().exp());
+  }
+  gradients.tail(grad.size()) = grad.array();
+  bool weighted = re.u_weight_.maxCoeff() - re.u_weight_.minCoeff() > 1e-10;
+  re.update_zu(weighted);
   current_ll_values.second = log_likelihood(false);
   current_ll_var.second = (ll_current.col(1) - ll_current.col(1).mean()).square().sum() / (ll_current.col(1).size() - 1);
   calculate_var_par();

@@ -108,7 +108,6 @@ public:
   int                     Q() const;
   MatrixXd                residuals(const int type, bool conditional = true);
   void                    posterior_u_samples(const int niter, const bool reml, const bool loglik = true, const bool append = false);                  
-  
 private:
   std::vector<glmmr::SigmaBlock>  sigma_blocks;
   void                            gen_sigma_blocks();
@@ -148,6 +147,46 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_by_block(int b
   MatrixXd S = sigma_block(b,true);
   MatrixXd M = X.transpose()*S*X;
   return M;
+}
+
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::information_matrix(){
+  W.update();
+  const int P_ = P();
+  const int M = model.covariance.Q();
+  
+  MatrixXd X = model.linear_predictor.X();          // n × P
+  MatrixXd A = model.covariance.ZPhi();              // n × M
+  ArrayXd Lambda = model.covariance.LambdaSPD();     // M
+  ArrayXd inv_lambda = 1.0 / Lambda;
+  
+  // W X and W A
+  MatrixXd WX = X;
+  MatrixXd WA = A;
+  bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();
+  if(nonlinear_w){
+    WX.applyOnTheLeft(W.W_.asDiagonal());
+    WA.applyOnTheLeft(W.W_.asDiagonal());
+  } else {
+    WX /= model.data.var_par;
+    WA /= model.data.var_par;
+  }
+  
+  // X^T W X  (P × P)
+  MatrixXd XtWX = X.transpose() * WX;
+  
+  // A^T W A + diag(1/Λ)  (M × M)
+  MatrixXd AtWA = A.transpose() * WA;
+  AtWA.diagonal() += inv_lambda.matrix();
+  
+  // X^T W A  (P × M)
+  MatrixXd XtWA = X.transpose() * WA;
+  
+  // Woodbury: M_β = X^T W X - X^T W A (A^T W A + Λ^{-1})^{-1} A^T W X
+  Eigen::LLT<MatrixXd> llt(AtWA);
+  MatrixXd solve_XtWA = llt.solve(XtWA.transpose());  // M × P
+  
+  return XtWX - XtWA * solve_XtWA;
 }
 
 template<typename modeltype>
@@ -1375,3 +1414,109 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
   re.update_zu(loglik);
 }
 
+
+template<>
+inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
+    const int niter, const bool reml, const bool loglik, const bool append)
+{
+  if(model.covariance.Q() != re.u_.rows()){
+    re.u_.resize(model.covariance.Q(), 1);
+    re.u_.setZero();
+  }
+  
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  const int M = model.covariance.Q();
+  const int n = model.n();
+  ArrayXd eta(n);
+  VectorXd W_(n);
+  
+  // A = Z * Phi: maps u to observation space (no Lambda scaling)
+  MatrixXd A = model.covariance.ZPhi();    // n × M
+  MatrixXd At = A.transpose();             // M × n
+  ArrayXd inv_lambda = 1.0 / model.covariance.LambdaSPD();
+  
+  // IRLS for posterior mode in u-space
+  VectorXd b = re.u_mean_;
+  if(b.size() != M){ b.resize(M); b.setZero(); }
+  VectorXd bnew(M);
+  double diff = 1.0;
+  int itero = 0;
+  MatrixXd AtWA(M, M);
+  MatrixXd P(M, M);
+  VectorXd rhs(M);
+  LLT<MatrixXd> llt_P;
+  
+  while(diff > 1e-6 && itero < 10){
+    eta = xb + (A * b).array();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+      W_ = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+      ArrayXd mu = model.data.variance * logitp;
+      rhs = At * (model.data.y - mu.matrix()).matrix();
+      break;
+    }
+    case Fam::poisson: {
+      W_ = eta.exp().matrix();
+      rhs = At * (model.data.y - eta.exp().matrix()).matrix();
+      break;
+    }
+    case Fam::gaussian: {
+      W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+      rhs = At * (model.data.y - eta.matrix()).matrix();
+      break;
+    }
+    default:
+      throw std::runtime_error("HSGP posterior only for Gaussian, Poisson, Binomial");
+    }
+    
+    // P = A^T W A + diag(1/Lambda)
+    AtWA.noalias() = At * W_.asDiagonal() * A;
+    P = AtWA;
+    P.diagonal() += inv_lambda.matrix();
+    
+    // rhs = AtWA * b + A^T * residuals
+    rhs += AtWA * b;
+    
+    llt_P.compute(P);
+    bnew = llt_P.solve(rhs);
+    diff = (b - bnew).array().abs().maxCoeff();
+    b.swap(bnew);
+    itero++;
+  }
+  
+  re.u_mean_ = b;
+  
+  // Posterior variance V_u = P^{-1}, its Cholesky for sampling
+  MatrixXd Vu = MatrixXd::Identity(M, M);
+  llt_P.solveInPlace(Vu);
+  LLT<MatrixXd> llt_Vu(Vu);
+  MatrixXd L_Vu = llt_Vu.matrixL();
+  
+  // Generate samples: u = u_mean + L_Vu * z, z ~ N(0,I)
+  MatrixXd znorm(M, niter);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> d(0.0, 1.0);
+  for(int i = 0; i < znorm.size(); ++i) znorm.data()[i] = d(gen);
+  
+  if(re.u_.cols() != niter){
+    re.u_.resize(M, niter);
+    re.u_solve_.resize(M, niter);
+    re.scaled_u_.resize(M, niter);
+    re.zu_.resize(n, niter);
+    re.u_weight_.resize(niter);
+    if(loglik) re.u_loglik_.resize(niter);
+  }
+  
+  // Store log proposal density per sample: -½ ||z_i||²
+  if(loglik){
+    for(int i = 0; i < niter; i++){
+      re.u_loglik_(i) = -0.5 * znorm.col(i).squaredNorm();
+    }
+  }
+  
+  re.u_ = (L_Vu * znorm).colwise() + re.u_mean_;
+  re.update_zu(loglik);
+}

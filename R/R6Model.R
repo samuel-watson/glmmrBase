@@ -621,10 +621,6 @@ Model <- R6::R6Class("Model",
                          if(oim & !private$y_has_been_updated) stop("No y data has been added")
                          private$update_ptr()
                          nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
-                         # if(nonlin){
-                         #   if(!private$y_has_been_updated) stop("No y data has been added")
-                         #   # if(!hessian.corr %in% c("add","return","none"))stop("hessian.corr must be add, return, or none")
-                         # }
                          if(oim){
                            M <- Model__observed_information_matrix(private$ptr,private$model_type())
                          } else {
@@ -634,30 +630,14 @@ Model <- R6::R6Class("Model",
                              if(include.re & !private$model_type()>0){
                                M <- Model__obs_information_matrix(private$ptr,private$model_type())
                              } else {
-                               if(private$model_type()==0){
+                               if(private$model_type()==0 | private$model_type()==2){
                                  M <- Model__information_matrix(private$ptr,private$model_type())
                                } else {
                                  M <- Model__information_matrix_crude(private$ptr,private$model_type())
                                }
                              }
-                             # if((nonlin & hessian.corr%in%c("add","none")) | !nonlin){
-                             #   
-                             # }
-                             # if(Model__any_nonlinear(private$ptr,private$model_type()) & hessian.corr %in% c("add","return")){
-                             #   A <- Model__hessian_correction(private$ptr,private$model_type())
-                             #   if(any(eigen(A)$values < 0) & adj.nonspd){
-                             #     if(adj.nonspd)message("Hessian correction for non-linear parameters is not positive semi-definite and will be adjusted. To disable this feature set adj.nonspd = FALSE")
-                             #     A <- near_semi_pd(A)
-                             #   }
-                             #   if(hessian.corr == "add"){
-                             #     M <- M + A
-                             #   } else {
-                             #     M <- A
-                             #   }
-                             # }
                            }
                          }
-                         
                          return(M)
                        },
                        #' @description 
@@ -1475,11 +1455,14 @@ Model <- R6::R6Class("Model",
                        #' des$update_y(ysim)
                        #' fit2 <- des$fit() 
                        #' @md
-                       fit = function(niter = 100, max_iter = 30, tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), hist = 5, k0 = 10, reml = TRUE){
+                       fit = function(niter = 100, max_iter = 30, 
+                                      tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), 
+                                      hist = 5, k0 = 10, reml = TRUE){
                          if(self$family[[1]]=="gaussian"&self$family[[2]]=="identity")Model__use_reml(private$ptr,reml,private$model_type())
                          Model__fit(private$ptr, niter, max_iter, TRUE, tol, hist, k0, private$model_type())
                          self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
                                                 cov.pars = Model__get_theta(private$ptr, private$model_type()))
+                         if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()
                          u <- Model__u(private$ptr,TRUE,private$model_type())
                          M <- self$information_matrix() 
                          M <- solve(M)

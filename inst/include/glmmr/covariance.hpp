@@ -151,12 +151,6 @@ public:
   MatrixXd          information_matrix();
   virtual MatrixXd  solve(const MatrixXd& u);
   
-  // the functions below are deprecated
-  // virtual MatrixXd LZWZL(const VectorXd& w);
-  // virtual sparse ZL_sparse();
-  // virtual MatrixXd  log_gradient(const MatrixXd& u, VectorXd& logl);
-  // virtual VectorXd  log_gradient(const MatrixXd& u, double& logl);
-  
 protected:
   // data
   std::vector<glmmr::calculator>      calc_;
@@ -182,7 +176,6 @@ protected:
 public:
   CovarianceLLT                       matL;
   MatrixXd                            infomat_theta;
-
 protected:  
   // functions
   void                            update_parameters_in_calculators();
@@ -1047,7 +1040,8 @@ inline bool glmmr::Covariance::all_log_re() const {
   bool logre = true;
   for (int i = 0; i < fn_.size(); i++) {
     for (int j = 0; j < fn_[i].size(); j++) {
-      bool anylog = any_match(fn_[i][j], CovFunc::grlog, CovFunc::arlog, CovFunc::ar0log, CovFunc::fexplog);// (fn_[i][j] == CovFunc::grlog || fn_[i][j] == CovFunc::arlog || fn_[i][j] == CovFunc::fexplog || fn_[i][j] == CovFunc::ar0log);
+      bool anylog = any_match(fn_[i][j], CovFunc::grlog, CovFunc::arlog, CovFunc::ar0log, 
+                              CovFunc::fexplog, CovFunc::matern1log, CovFunc::matern2log);
       logre = logre && anylog;
     }
   }
@@ -1056,8 +1050,8 @@ inline bool glmmr::Covariance::all_log_re() const {
 
 inline bool glmmr::Covariance::any_log_re() const{
   bool gr = false;
-  const static std::vector<CovFunc> logfns {CovFunc::grlog, CovFunc::arlog, CovFunc::fexplog, CovFunc::ar0log};
-  
+  const static std::vector<CovFunc> logfns {CovFunc::grlog, CovFunc::arlog, CovFunc::fexplog, 
+                                            CovFunc::ar0log, CovFunc::matern1log, CovFunc::matern2log};
   for(int i = 0; i < fn_.size(); i++){
     auto idxgr = std::find_first_of(fn_[i].begin(), fn_[i].end(),logfns.begin(),logfns.end());
     if(idxgr != fn_[i].end()){
@@ -1103,7 +1097,7 @@ inline void glmmr::Covariance::nr_step(const MatrixXd &umat, const MatrixXd &vma
 #pragma omp parallel
 {
   VectorXd dqf_thread = VectorXd::Zero(npars);
-  MatrixXd Sprod(S[0].rows(), S[0].cols());
+  //MatrixXd Sprod(S[0].rows(), S[0].cols());
 #pragma omp for 
   for (int i = 0; i < niter; i++)
   {
@@ -1122,14 +1116,14 @@ for (int j = 0; j < npars; j++){
   grad(j) += grad_j;
   
   for(int k = j; k < npars; k++){
-    MatrixXd Sprod = S[j] * S[k];
-    M(j,k) += -0.5 * Sprod.trace();
+    //MatrixXd Sprod = S[j] * S[k];
+    M(j,k) += -0.5 * (S[j].array() * S[k].transpose().array()).sum();
     if(j != k) M(k,j) = M(j,k);
     double m_jk = 0.0;
 #pragma omp parallel for reduction(+:m_jk)
     for (int i = 0; i < niter; i++)
     {
-      m_jk += uweight(i) * (umat.col(i).dot(Sprod * vmat.col(i)));
+      m_jk += uweight(i) * (umat.col(i).dot(S[j] * (S[k] * vmat.col(i))));
     }
     M(j,k) += m_jk;
     if(j != k) M(k,j) += m_jk;
@@ -1224,21 +1218,3 @@ inline MatrixXd glmmr::Covariance::solve(const MatrixXd& u){
   return matL.solve(u);
 }
 
-// deprecated functions
-
-// MatrixXd glmmr::Covariance::LZWZL(const VectorXd& w) {
-//   return MatrixXd();  // or MatrixXd::Zero(0,0)
-// }
-// 
-// MatrixXd  glmmr::Covariance::log_gradient(const MatrixXd& u, VectorXd& logl) {
-//   return MatrixXd();
-// }
-// 
-// VectorXd  glmmr::Covariance::log_gradient(const MatrixXd& u, double& logl) {
-//   return VectorXd();
-// }
-// 
-// sparse glmmr::Covariance::ZL_sparse(){
-//   sparse ZL;
-//   return ZL;
-// }

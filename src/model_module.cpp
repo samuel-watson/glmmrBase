@@ -1068,7 +1068,6 @@ void Model__update_W(SEXP xp, int type = 0){
   std::visit(functor,model.ptr);
 }
 
-
 // [[Rcpp::export]]
 SEXP Model__get_W(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
@@ -1227,7 +1226,14 @@ SEXP Model__Z(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->model.covariance.Z());}
+    [](auto ptr){
+      return returnType(ptr->model.covariance.Z());
+      // if constexpr (std::is_same_v<decltype(ptr), XPtr<glmm_hsgp> >) {
+      //   return returnType(ptr->model.covariance.ZPhi());
+      // } else {
+      //   return returnType(ptr->model.covariance.Z());
+      // }
+    }
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::MatrixXd>(S));
@@ -1768,6 +1774,13 @@ void Covariance_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
 SEXP Model_hsgp__dim(SEXP xp){
   XPtr<glmm_hsgp> ptr(xp);
   int dim = ptr->model.covariance.dim;
+  return wrap(dim);
+}
+
+// [[Rcpp::export]]
+SEXP Model_hsgp__lambda_spd(SEXP xp){
+  XPtr<glmm_hsgp> ptr(xp);
+  ArrayXd dim = ptr->model.covariance.LambdaSPD();
   return wrap(dim);
 }
 

@@ -88,6 +88,38 @@ inline void glmmr::RandomEffects<modeltype>::update_zu(const bool weights){
   }
 }
 
+template<>
+inline void glmmr::RandomEffects<bits_hsgp>::update_zu(const bool weights){
+  // u_ is M-dimensional u-space spectral coefficients, u ~ N(0, diag(Λ))
+  // zu_ = Z * Phi * u (no sqrt(Lambda) scaling)
+  zu_ = model.covariance.ZLu(u_);  // ZLu now returns ZPhi * u
+  
+  scaled_u_ = u_;
+  u_solve_ = model.covariance.solve(u_);  // diag(1/Λ) * u
+  
+  ArrayXd xb = model.xb();
+  u_weight_.setZero();
+  
+  if(weights){
+    ArrayXd Lambda = model.covariance.LambdaSPD();
+    double half_logdet = 0.5 * Lambda.log().sum();
+    
+#pragma omp parallel for
+    for(int i = 0; i < u_.cols(); i++){
+      double llmod = maths::log_likelihood(model.data.y.array(), xb + zu_.col(i).array(),
+                                           model.data.variance, model.family);
+      // log prior: -½ Σ log(Λ_k) - ½ Σ u_k²/Λ_k
+      double llprior = -half_logdet - 0.5 * (u_.col(i).array().square() / Lambda).sum();
+      u_weight_(i) = llmod + llprior - u_loglik_(i);
+    }
+    u_weight_ -= u_weight_.maxCoeff();
+    u_weight_ = u_weight_.exp();
+    u_weight_ *= 1.0 / u_weight_.sum();
+  } else {
+    u_weight_.setConstant(1.0 / u_.cols());
+  }
+}
+
 template<typename modeltype>
 inline VectorMatrix glmmr::RandomEffects<modeltype>::predict_re(const ArrayXXd& newdata_,
                                                             const ArrayXd& newoffset_){
@@ -125,29 +157,35 @@ inline VectorMatrix glmmr::RandomEffects<modeltype>::predict_re(const ArrayXXd& 
 
 template<>
 inline VectorMatrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd& newdata_,
-                                                                 const ArrayXd& newoffset_){
-  if(model.covariance.data_.cols()!=newdata_.cols())throw std::runtime_error("Different numbers of columns in new data");
+                                                                const ArrayXd& newoffset_){
+  if(model.covariance.data_.cols() != newdata_.cols())
+    throw std::runtime_error("Different numbers of columns in new data");
   
-  hsgpCovariance covariancenewnew(model.covariance.form_,
-                                  newdata_,
-                                  model.covariance.colnames_);
+  hsgpCovariance covnew(model.covariance.form_,
+                        newdata_,
+                        model.covariance.colnames_);
   
-  covariancenewnew.update_parameters(model.covariance.parameters_);
-  MatrixXd newLu = covariancenewnew.Lu(u(false));
-  int iter = newLu.cols();
+  // Copy basis function settings from fitted model
+  covnew.update_approx_parameters(model.covariance.m, model.covariance.L_boundary);
+  covnew.update_parameters(model.covariance.parameters_);
   
-  // //generate sigma
-  int newQ = newdata_.rows();//covariancenewnew.Q();
-  VectorMatrix result(newQ);
-  result.vec.setZero();
+  // Phi_new is n_new × M, evaluated at new locations
+  MatrixXd Phi_new = covnew.PhiSPD(false, false);
+  
+  // Map u-space samples to predictions at new locations: Phi_new * u
+  MatrixXd umat = u(false);  // M × n_iter
+  MatrixXd pred = Phi_new * umat;  // n_new × n_iter
+  
+  int n_new = newdata_.rows();
+  int iter = pred.cols();
+  VectorMatrix result(n_new);
+  result.vec = pred.rowwise().mean();
   result.mat.setZero();
-  result.vec = newLu.rowwise().mean();
-  VectorXd newLuCol(newLu.rows());
   for(int i = 0; i < iter; i++){
-    newLuCol = newLu.col(i) - result.vec;
-    result.mat += (newLuCol * newLuCol.transpose());
+    VectorXd diff = pred.col(i) - result.vec;
+    result.mat.noalias() += diff * diff.transpose();
   }
-  result.mat.array() *= (1/(double)iter);
+  result.mat.array() *= (1.0 / (double)iter);
   return result;
 }
 

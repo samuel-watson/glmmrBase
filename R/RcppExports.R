@@ -437,6 +437,10 @@ Model_hsgp__dim <- function(xp) {
     .Call(`_glmmrBase_Model_hsgp__dim`, xp)
 }
 
+Model_hsgp__lambda_spd <- function(xp) {
+    .Call(`_glmmrBase_Model_hsgp__lambda_spd`, xp)
+}
+
 Model__aic <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__aic`, xp, type)
 }

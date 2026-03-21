@@ -301,11 +301,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(is.null(m) & is.null(L)){
                               return(c(TRUE,private$m,private$L))
                             } else {
-                              if(is.null(private$model_ptr)){
-                                Covariance_hsgp__set_approx_pars(private$ptr,private$m,private$L)
-                              } else {
-                                Model_hsgp__set_approx_pars(private$model_ptr,private$m,private$L)
-                              }
+                              private$genZ()
                             }
                           } else {
                             return(FALSE)
@@ -322,6 +318,13 @@ Covariance <- R6::R6Class("Covariance",
                         m = 10,
                         L = 1.5,
                         time = 0, 
+                        genZ = function(){
+                          if(is.null(private$model_ptr)){
+                            self$Z <- Covariance__Z(private$ptr,private$type)
+                          } else {
+                            self$Z <- Model__Z(private$model_ptr,private$type)
+                          }
+                        },
                         cov_form = function(){
                           self$formula <- gsub("\\s","",self$formula)
                           self$formula <- gsub("~","",self$formula)
