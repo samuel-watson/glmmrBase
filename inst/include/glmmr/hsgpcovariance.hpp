@@ -178,10 +178,10 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
       sq_exp = true;
       return;
     } else if(fn == CovFunc::matern || fn == CovFunc::matern1log){
-      nu = 1.0;
+      nu = 1.5;
       return;
     } else if(fn == CovFunc::matern2log){
-      nu = 2.0;
+      nu = 2.5;
       return;
     } else if(fn == CovFunc::fexp || fn == CovFunc::fexp0 || fn == CovFunc::fexplog){
       nu = 0.5;
