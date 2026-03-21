@@ -1785,6 +1785,13 @@ SEXP Model_hsgp__lambda_spd(SEXP xp){
 }
 
 // [[Rcpp::export]]
+SEXP Model_hsgp__Phi(SEXP xp){
+  XPtr<glmm_hsgp> ptr(xp);
+  MatrixXd dim = ptr->model.covariance.ZPhi();
+  return wrap(dim);
+}
+
+// [[Rcpp::export]]
 SEXP Model__aic(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
