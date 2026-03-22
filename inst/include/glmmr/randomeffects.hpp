@@ -166,7 +166,7 @@ inline VectorMatrix glmmr::RandomEffects<bits_hsgp>::predict_re(const ArrayXXd& 
                         model.covariance.colnames_);
   
   // Copy basis function settings from fitted model
-  covnew.update_approx_parameters(model.covariance.m, model.covariance.L_boundary);
+  covnew.update_approx_parameters(model.covariance.m, model.covariance.L_factor_);
   covnew.update_parameters(model.covariance.parameters_);
   
   // Phi_new is n_new × M, evaluated at new locations

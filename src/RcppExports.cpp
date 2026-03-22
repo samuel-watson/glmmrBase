@@ -1370,6 +1370,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model_hsgp__Phi
+SEXP Model_hsgp__Phi(SEXP xp);
+RcppExport SEXP _glmmrBase_Model_hsgp__Phi(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model_hsgp__Phi(xp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model_hsgp__set_anisotropic
+void Model_hsgp__set_anisotropic(SEXP xp);
+RcppExport SEXP _glmmrBase_Model_hsgp__set_anisotropic(SEXP xpSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Model_hsgp__set_anisotropic(xp);
+    return R_NilValue;
+END_RCPP
+}
 // Model__aic
 SEXP Model__aic(SEXP xp, int type);
 RcppExport SEXP _glmmrBase_Model__aic(SEXP xpSEXP, SEXP typeSEXP) {
@@ -1906,6 +1927,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Covariance_hsgp__set_approx_pars", (DL_FUNC) &_glmmrBase_Covariance_hsgp__set_approx_pars, 3},
     {"_glmmrBase_Model_hsgp__dim", (DL_FUNC) &_glmmrBase_Model_hsgp__dim, 1},
     {"_glmmrBase_Model_hsgp__lambda_spd", (DL_FUNC) &_glmmrBase_Model_hsgp__lambda_spd, 1},
+    {"_glmmrBase_Model_hsgp__Phi", (DL_FUNC) &_glmmrBase_Model_hsgp__Phi, 1},
+    {"_glmmrBase_Model_hsgp__set_anisotropic", (DL_FUNC) &_glmmrBase_Model_hsgp__set_anisotropic, 1},
     {"_glmmrBase_Model__aic", (DL_FUNC) &_glmmrBase_Model__aic, 2},
     {"_glmmrBase_Model__residuals", (DL_FUNC) &_glmmrBase_Model__residuals, 4},
     {"_glmmrBase_Model__posterior_u_sample", (DL_FUNC) &_glmmrBase_Model__posterior_u_sample, 6},

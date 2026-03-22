@@ -1225,7 +1225,7 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   
   const int n_iter = re.u_.cols();
   const int M = model.covariance.Q();
-  const int npars = 2;
+  const int npars = model.covariance.npar();
   ArrayXd eta(model.n());
   VectorXd W_(eta.size());
   ArrayXd resid(eta.size());

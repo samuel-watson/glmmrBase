@@ -140,7 +140,7 @@ public:
   bool              all_group_re() const;
   bool              all_log_re() const;
   bool              any_log_re() const;
-  intvec            parameter_fn_index() const;
+  virtual intvec    parameter_fn_index() const;
   virtual intvec    re_count() const;
   virtual SparseMatrix<double>    ZL_sparse_new();
   virtual SparseMatrix<double>    Z_sparse();

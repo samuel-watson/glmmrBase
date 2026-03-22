@@ -286,20 +286,10 @@ Covariance <- R6::R6Class("Covariance",
                               }
                             }
                             if(!is.null(L)){
-                              if(length(L)==1 & dim > 1){
-                                private$L <- rep(L,dim)
-                              } else if(length(L) > 1 & dim > 1){
-                                if(length(L)==dim){
-                                  private$L <- L
-                                } else (
-                                  stop("m wrong dimension")
-                                )
-                              } else if(length(m) == 1 & dim == 1){
-                                private$L <- L
-                              }
+                              private$L <- L
                             }
                             if(is.null(m) & is.null(L)){
-                              return(c(TRUE,private$m,private$L))
+                              return(list(hsgp = TRUE,m = private$m,L = private$L))
                             } else {
                               private$genZ()
                             }
@@ -315,7 +305,7 @@ Covariance <- R6::R6Class("Covariance",
                         type = 0,
                         z_requires_update = FALSE,
                         nn = 10,
-                        m = 10,
+                        m = c(10,10),
                         L = 1.5,
                         time = 0, 
                         genZ = function(){
@@ -386,7 +376,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(private$type==2){
                               dim <- Model_hsgp__dim(private$ptr)
                               private$m <- rep(10,dim)
-                              private$L <- rep(1.5,dim)
+                              private$L <- 1.5
                             }
                           } else {
                             private$parcount <- Model__n_cov_pars(private$model_ptr,private$type)
@@ -397,7 +387,7 @@ Covariance <- R6::R6Class("Covariance",
                             if(private$type==2){
                               dim <- Model_hsgp__dim(private$model_ptr)
                               private$m <- rep(10,dim)
-                              private$L <- rep(1.5,dim)
+                              private$L <- 1.5
                             }
                           }
                         },

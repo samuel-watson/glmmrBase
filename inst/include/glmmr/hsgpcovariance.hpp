@@ -16,12 +16,18 @@ public:
   ArrayXd   L_boundary;
   double    nu = 0.5;
   bool      sq_exp = false;
+  ArrayXd   raw_half_range_;   // per-dimension half-range (always stored)
+  ArrayXd   shift_;            // per-dimension center
+  ArrayXd   scale_factors_;    // what's currently applied to hsgp_data
+  double    L_factor_ = 1.5;
+  
   //constructors
   hsgpCovariance(const std::string& formula,const ArrayXXd& data,const strvec& colnames);
   hsgpCovariance(const glmmr::Formula& formula,const ArrayXXd& data,const strvec& colnames);
   hsgpCovariance(const std::string& formula,const ArrayXXd& data,const strvec& colnames,const dblvec& parameters);
   hsgpCovariance(const glmmr::Formula& formula,const ArrayXXd& data,const strvec& colnames,const dblvec& parameters);
   hsgpCovariance(const glmmr::hsgpCovariance& cov);
+  
   // functions
   double      spd_nD(int i);
   dblvec      d_spd_nD(int i);
@@ -45,12 +51,15 @@ public:
   void        update_parameters(const dblvec& parameters) override;
   void        update_parameters(const ArrayXd& parameters) override;
   void        update_parameters_extern(const dblvec& parameters) override;
+  dblvec      get_parameters_extern() const;
   void        set_function(bool squared_exp);
   MatrixXd    PhiSPD(bool lambda = true, bool inverse = false);
   ArrayXd     LambdaSPD();
-  void        update_approx_parameters(intvec m_, ArrayXd L_);
+  void        update_approx_parameters(intvec m_, double L_factor);
   void        update_approx_parameters();
-  MatrixXd    solve_spectral(const MatrixXd& u);
+  void        set_anisotropic(bool aniso);
+  int         npar() const override;
+  intvec      parameter_fn_index() const override;
 protected:
 //data
   int       total_m;
@@ -59,6 +68,7 @@ protected:
   ArrayXXi  indices;
   MatrixXd  Phi;
   MatrixXd  PhiT;
+  bool      anisotropic = false;
   
   //functions
   void      parse_hsgp_data();
@@ -83,8 +93,11 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
-  for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+  for(int i = 0; i < dim; i++)L_boundary(i) = 1.05;
   std::fill(m.begin(),m.end(),10);
+  raw_half_range_ = ArrayXd::Ones(dim);
+  shift_ = ArrayXd::Zero(dim);
+  scale_factors_ = ArrayXd::Ones(dim);
   parse_hsgp_data();
   update_approx_parameters();
 };
@@ -102,8 +115,11 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
-  for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+  for(int i = 0; i < dim; i++)L_boundary(i) = 1.05;
   std::fill(m.begin(),m.end(),10);
+  raw_half_range_ = ArrayXd::Ones(dim);
+  shift_ = ArrayXd::Zero(dim);
+  scale_factors_ = ArrayXd::Ones(dim);
   parse_hsgp_data();
   update_approx_parameters();
 };
@@ -122,8 +138,11 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const std::string& formula,
                Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
-  for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+  for(int i = 0; i < dim; i++)L_boundary(i) = 1.05;
   std::fill(m.begin(),m.end(),10);
+  raw_half_range_ = ArrayXd::Ones(dim);
+  shift_ = ArrayXd::Zero(dim);
+  scale_factors_ = ArrayXd::Ones(dim);
   parse_hsgp_data();
   update_approx_parameters();
   update_lambda();
@@ -143,17 +162,26 @@ inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::Formula& formula,
                Phi(this->matZ.cols(),1), 
                PhiT(2,2) {
   isSparse = false;
-  for(int i = 0; i < dim; i++)L_boundary(i) = 1.5;
+  for(int i = 0; i < dim; i++)L_boundary(i) = 1.05;
   std::fill(m.begin(),m.end(),10);
   parse_hsgp_data();
+  raw_half_range_ = ArrayXd::Ones(dim);
+  shift_ = ArrayXd::Zero(dim);
+  scale_factors_ = ArrayXd::Ones(dim);
   update_approx_parameters();
   update_lambda();
 };
 
-inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::hsgpCovariance& cov) : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_), 
-dim(cov.dim),m(cov.m), hsgp_data(cov.hsgp_data),
-L_boundary(cov.L_boundary), L(cov.L), Lambda(cov.Lambda), 
-indices(cov.indices), Phi(cov.Phi), PhiT(cov.PhiT) {
+inline glmmr::hsgpCovariance::hsgpCovariance(const glmmr::hsgpCovariance& cov) 
+  : Covariance(cov.form_, cov.data_, cov.colnames_, cov.parameters_), 
+    dim(cov.dim), m(cov.m), hsgp_data(cov.hsgp_data),
+    L_boundary(cov.L_boundary), 
+    anisotropic(cov.anisotropic),
+    raw_half_range_(cov.raw_half_range_), 
+    shift_(cov.shift_),
+    scale_factors_(cov.scale_factors_),
+    L(cov.L), Lambda(cov.Lambda), 
+    indices(cov.indices), Phi(cov.Phi), PhiT(cov.PhiT) {
   isSparse = false;
 };
 
@@ -171,48 +199,83 @@ inline void glmmr::hsgpCovariance::parse_hsgp_data(){
       }
     }
     
-    sq_exp = false;
-  nu = 0.5; // default
-  for(const auto& fn : this->fn_[0]){
-    if(fn == CovFunc::sqexp || fn == CovFunc::sqexp0){
-      sq_exp = true;
-      return;
-    } else if(fn == CovFunc::matern || fn == CovFunc::matern1log){
-      nu = 1.5;
-      return;
-    } else if(fn == CovFunc::matern2log){
-      nu = 2.5;
-      return;
-    } else if(fn == CovFunc::fexp || fn == CovFunc::fexp0 || fn == CovFunc::fexplog){
-      nu = 0.5;
-      return;
+    shift_.resize(dim);
+    raw_half_range_.resize(dim);
+    scale_factors_.resize(dim);
+    
+    for(int d = 0; d < dim; d++){
+      double mn = hsgp_data.col(d).minCoeff();
+      double mx = hsgp_data.col(d).maxCoeff();
+      shift_(d) = 0.5 * (mn + mx);
+      raw_half_range_(d) = 0.5 * (mx - mn);
+      if(raw_half_range_(d) < 1e-10) raw_half_range_(d) = 1.0;
     }
+    
+    double max_range = raw_half_range_.maxCoeff();
+    scale_factors_.setConstant(max_range);
+    
+    for(int d = 0; d < dim; d++){
+      hsgp_data.col(d) = (hsgp_data.col(d) - shift_(d)) / scale_factors_(d);
+    }
+    
+    for(int d = 0; d < dim; d++){
+      double max_abs = hsgp_data.col(d).abs().maxCoeff();
+      L_boundary(d) = L_factor_ * std::max(max_abs, 0.1);
+    }
+    
+    sq_exp = false;
+    nu = 0.5; // default
+    for(const auto& fn : this->fn_[0]){
+      if(fn == CovFunc::sqexp || fn == CovFunc::sqexp0){
+        sq_exp = true;
+        return;
+      } else if(fn == CovFunc::matern || fn == CovFunc::matern1log){
+        nu = 1.5;
+        return;
+      } else if(fn == CovFunc::matern2log){
+        nu = 2.5;
+        return;
+      } else if(fn == CovFunc::fexp || fn == CovFunc::fexp0 || fn == CovFunc::fexplog){
+        nu = 0.5;
+        return;
+      }
   }
   throw std::runtime_error("HSGP only allows exp, matern (nu=1,2), and sqexp currently.");
 }
 
-inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, ArrayXd L_){
+inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, double L_factor){
   m = m_;
-  L_boundary = L_;
+  L_factor_ = L_factor;
+  // Actual boundary = factor * max(|scaled data|) per dimension
+  for(int d = 0; d < dim; d++){
+    double max_abs = hsgp_data.col(d).abs().maxCoeff();
+    L_boundary(d) = L_factor_ * std::max(max_abs, 0.1);
+  }
   total_m = glmmr::algo::prod_vec(m);
   this->Q_ = total_m;
-  indices.resize(total_m,NoChange);
-  Phi.resize(NoChange,total_m);
-  PhiT.resize(total_m,total_m);
+  indices.resize(total_m, NoChange);
+  Phi.resize(NoChange, total_m);
+  PhiT.resize(total_m, total_m);
   Lambda.resize(total_m);
-  L.resize(NoChange,total_m);
+  L.resize(NoChange, total_m);
   gen_indices();
   gen_phi_prod();
 }
 
+// Keep the explicit version for internal use, but have it 
+// also recompute from scaled data
 inline void glmmr::hsgpCovariance::update_approx_parameters(){
+  for(int d = 0; d < dim; d++){
+    double max_abs = hsgp_data.col(d).abs().maxCoeff();
+    L_boundary(d) = L_factor_ * std::max(max_abs, 0.1);
+  }
   total_m = glmmr::algo::prod_vec(m);
   this->Q_ = total_m;
-  indices.resize(total_m,NoChange);
-  Phi.resize(NoChange,total_m);
-  PhiT.resize(total_m,total_m);
+  indices.resize(total_m, NoChange);
+  Phi.resize(NoChange, total_m);
+  PhiT.resize(total_m, total_m);
   Lambda.resize(total_m);
-  L.resize(NoChange,total_m);
+  L.resize(NoChange, total_m);
   gen_indices();
   gen_phi_prod();
 }
@@ -221,62 +284,188 @@ inline MatrixXd glmmr::hsgpCovariance::solve(const MatrixXd& u){
   return u.array().colwise() / Lambda;
 }
 
-inline double glmmr::hsgpCovariance::spd_nD(int i){
-  double wprod = 0;
-  for(int d = 0; d < dim; d++){
-    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
-    wprod += w * w;
-  }
-  
-  bool logpars = all_log_re();
-  double sigma2 = logpars ? exp(parameters_[0]) : parameters_[0];
-  double ell    = logpars ? exp(parameters_[1]) : parameters_[1];
-  
-  if(sq_exp){
-    double phisq = ell * ell;
-    return sigma2 * pow(2 * M_PI, dim / 2.0) * pow(ell, dim) * exp(-0.5 * phisq * wprod);
-  }
-  
-  double ell2 = ell * ell;
-  double two_nu = 2.0 * nu;
-  double alpha = nu + dim / 2.0;
-  double A = pow(4.0 * M_PI, dim / 2.0) * tgamma(alpha) / tgamma(nu);
-  double B = pow(two_nu, nu) / pow(ell, two_nu);
-  double C = pow(two_nu / ell2 + wprod, -alpha);
-  
-  return sigma2 * A * B * C;
+inline int glmmr::hsgpCovariance::npar() const {
+  int np = 2;
+  if(anisotropic) np += dim - 1;
+  return np;
 }
 
-inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i){
-  // Always returns ∂S/∂log(σ²) and ∂S/∂log(ℓ)
-  dblvec result(2);
+inline intvec glmmr::hsgpCovariance::parameter_fn_index() const {
+  intvec idx = re_fn_par_link_;
+  if(!anisotropic) return idx;
+  int max = *std::max_element(idx.begin(), idx.end());
+  for(int i = 0; i < (dim - 1); i++) idx.push_back(max + i + 1);
+  return idx;
+}
+
+inline void glmmr::hsgpCovariance::set_anisotropic(bool aniso){
+  if(aniso == anisotropic) return;
+  anisotropic = aniso;
   
-  double wprod = 0;
+  // Undo current scaling, apply new
   for(int d = 0; d < dim; d++){
-    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
-    wprod += w * w;
+    hsgp_data.col(d) *= scale_factors_(d);  // back to centred original
   }
   
+  for(int d = 0; d < dim; d++){
+    double max_abs = hsgp_data.col(d).abs().maxCoeff();
+    L_boundary(d) = L_factor_ * std::max(max_abs, 0.1);
+  }
+  
+  // Recompute basis functions with rescaled data
+  gen_phi_prod();
+  if(parameters_.size() > 1) update_lambda();
+  
+  if(aniso){
+    scale_factors_ = raw_half_range_;
+    // Resize parameters: sigma^2 + dim length scales
+    dblvec newpars(1 + dim, 0.0);
+    if(!parameters_.empty()) newpars[0] = parameters_[0];
+    // Initialise each ell_d from existing ell (if present), 
+    // converting from old to new scale
+    if(parameters_.size() > 1){
+      bool logpars = all_log_re();
+      double old_scale = scale_factors_.maxCoeff(); // previous isotropic scale
+      // Actually old scale is still in scale_factors_ before we overwrote...
+      // We already set scale_factors_ = raw_half_range_ above, so reconstruct:
+      double iso_scale = raw_half_range_.maxCoeff();
+      for(int d = 0; d < dim; d++){
+        if(logpars){
+          // old internal: log(ell_orig) - log(iso_scale)
+          // new internal: log(ell_orig) - log(raw_half_range_(d))
+          newpars[1 + d] = parameters_[1] - log(raw_half_range_(d)) + log(iso_scale);
+        } else {
+          newpars[1 + d] = parameters_[1] * iso_scale / raw_half_range_(d);
+        }
+      }
+    }
+    parameters_ = newpars;
+  } else {
+    double max_range = raw_half_range_.maxCoeff();
+    double old_scale_0 = scale_factors_(0); // any dim, since about to go isotropic
+    scale_factors_.setConstant(max_range);
+    // Collapse to sigma^2 + single ell (use geometric mean of scaled ells)
+    dblvec newpars(2, 0.0);
+    if(!parameters_.empty()) newpars[0] = parameters_[0];
+    if(parameters_.size() > 1){
+      bool logpars = all_log_re();
+      double avg = 0;
+      for(int d = 0; d < dim; d++){
+        if(logpars){
+          avg += parameters_[1 + d] + log(raw_half_range_(d)) - log(max_range);
+        } else {
+          avg += log(parameters_[1 + d] * raw_half_range_(d) / max_range);
+        }
+      }
+      avg /= dim;
+      newpars[1] = logpars ? avg : exp(avg);
+    }
+    parameters_ = newpars;
+  }
+  
+  for(int d = 0; d < dim; d++){
+    hsgp_data.col(d) /= scale_factors_(d);  // apply new scaling
+  }
+  
+  // Recompute basis functions with rescaled data
+  gen_phi_prod();
+  if(parameters_.size() > 1) update_lambda();
+}
+
+// In hsgpcovariance.hpp — replace spd_nD
+
+inline double glmmr::hsgpCovariance::spd_nD(int i){
   bool logpars = all_log_re();
   double sigma2 = logpars ? exp(parameters_[0]) : parameters_[0];
-  double ell    = logpars ? exp(parameters_[1]) : parameters_[1];
-  double S = spd_nD(i);
+  
+  // Anisotropic: one length scale per dimension
+  // parameters_[1..dim] are the per-dimension length scales
   
   if(sq_exp){
-    double phisq = ell * ell;
-    result[0] = S;
-    result[1] = S * (dim - phisq * wprod);
+    double result = sigma2 * pow(2 * M_PI, dim / 2.0);
+    for(int d = 0; d < dim; d++){
+      double ell_d = anisotropic 
+      ? (logpars ? exp(parameters_[1 + d]) : parameters_[1 + d])
+        : (logpars ? exp(parameters_[1])     : parameters_[1]);
+      double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+      result *= ell_d * exp(-0.5 * ell_d * ell_d * w * w);
+    }
     return result;
   }
   
-  double ell2 = ell * ell;
-  double two_nu = 2.0 * nu;
-  double E = two_nu / ell2 + wprod;
-  double alpha = nu + dim / 2.0;
+  // Matérn / exponential: product of 1D spectral densities
+  // S_1d(w; nu, ell) = C(nu) * (2*nu/ell^2 + w^2)^{-(nu + 0.5)}
+  // For separable: S(w) = sigma^2 * prod_d S_1d(w_d; nu, ell_d)
+  double result = sigma2;
+  double alpha_1d = nu + 0.5;
+  double C_1d = pow(4.0 * M_PI, 0.5) * tgamma(alpha_1d) / tgamma(nu);
   
-  result[0] = S;
-  result[1] = S * (-two_nu + two_nu * 2.0 * alpha / (ell2 * E));
+  for(int d = 0; d < dim; d++){
+    double ell_d = anisotropic
+    ? (logpars ? exp(parameters_[1 + d]) : parameters_[1 + d])
+      : (logpars ? exp(parameters_[1])     : parameters_[1]);
+    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+    double two_nu = 2.0 * nu;
+    double ell2 = ell_d * ell_d;
+    double B = pow(two_nu, nu) / pow(ell_d, two_nu);
+    double C = pow(two_nu / ell2 + w * w, -alpha_1d);
+    result *= C_1d * B * C;
+  }
+  return result;
+}
+
+inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i){
+  // Returns: d/dlog(sigma^2), d/dlog(ell_1), ..., d/dlog(ell_dim)
+  bool logpars = all_log_re();
+  double sigma2 = logpars ? exp(parameters_[0]) : parameters_[0];
+  bool anisotropic = (parameters_.size() >= 1 + dim);
+  int npars = anisotropic ? 1 + dim : 2;
+  dblvec result(npars, 0.0);
   
+  double S = spd_nD(i);
+  result[0] = S;  // dS/dlog(sigma^2) = S always
+  
+  if(sq_exp){
+    for(int d = 0; d < dim; d++){
+      int par_idx = anisotropic ? 1 + d : 1;
+      double ell_d = logpars ? exp(parameters_[par_idx]) : parameters_[par_idx];
+      double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+      // dS/dlog(ell_d) = S * (1 - ell_d^2 * w^2)
+      // but if isotropic, accumulate over all dims into result[1]
+      double contrib = S * (1.0 - ell_d * ell_d * w * w);
+      if(anisotropic){
+        // Each dimension contributes independently via product rule
+        // d/dlog(ell_d) of prod = S/S_d * dS_d/dlog(ell_d)
+        // Simpler: dlog(S)/dlog(ell_d) = 1 - ell_d^2 w_d^2
+        result[1 + d] = S * (1.0 - ell_d * ell_d * w * w);
+      } else {
+        result[1] += contrib;  // isotropic: chain rule sum
+      }
+    }
+    return result;
+  }
+  
+  // Matérn separable: product rule
+  // d log(S) / d log(ell_d) = d log(S_d) / d log(ell_d)
+  //   = -2*nu + 2*nu * (nu+0.5) * 2 / (ell_d^2 * (2*nu/ell_d^2 + w_d^2)) ... 
+  // but cleaner: for the 1D factor with params (nu, ell_d):
+  //   dlog(S_1d)/dlog(ell_d) = -2*nu + 2*(nu+0.5)*2*nu / (2*nu + ell_d^2 * w_d^2)
+  for(int d = 0; d < dim; d++){
+    int par_idx = anisotropic ? 1 + d : 1;
+    double ell_d = logpars ? exp(parameters_[par_idx]) : parameters_[par_idx];
+    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+    double ell2 = ell_d * ell_d;
+    double two_nu = 2.0 * nu;
+    double alpha_1d = nu + 0.5;
+    double E = two_nu / ell2 + w * w;
+    double dlogS_d = -two_nu + two_nu * 2.0 * alpha_1d / (ell2 * E);
+    
+    if(anisotropic){
+      result[1 + d] = S * dlogS_d;
+    } else {
+      result[1] += S * dlogS_d;
+    }
+  }
   return result;
 }
 
@@ -329,9 +518,44 @@ inline VectorXd glmmr::hsgpCovariance::sim_re(){
 }
 
 inline void glmmr::hsgpCovariance::update_parameters_extern(const dblvec& parameters){
+  if(static_cast<int>(parameters.size())!=npar())throw std::runtime_error(std::to_string(parameters.size())+" covariance parameters provided, "+std::to_string(npar())+" required");
+  bool logpars = all_log_re();
   parameters_ = parameters;
+  
+  if(anisotropic){
+    for(int d = 0; d < dim; d++){
+      int idx = 1 + d;
+      if(idx < (int)parameters_.size()){
+        if(logpars) parameters_[idx] -= log(scale_factors_(d));
+        else        parameters_[idx] /= scale_factors_(d);
+      }
+    }
+  } else if(parameters_.size() > 1){
+    if(logpars) parameters_[1] -= log(scale_factors_(0));
+    else        parameters_[1] /= scale_factors_(0);
+  }
+  
   update_lambda();
 };
+
+inline dblvec glmmr::hsgpCovariance::get_parameters_extern() const {
+  bool logpars = all_log_re();
+  dblvec pars = parameters_;
+  
+  if(anisotropic){
+    for(int d = 0; d < dim; d++){
+      int idx = 1 + d;
+      if(idx < (int)pars.size()){
+        if(logpars) pars[idx] += log(scale_factors_(d));
+        else        pars[idx] *= scale_factors_(d);
+      }
+    }
+  } else if(pars.size() > 1){
+    if(logpars) pars[1] += log(scale_factors_(0));
+    else        pars[1] *= scale_factors_(0);
+  }
+  return pars;
+}
 
 inline void glmmr::hsgpCovariance::update_parameters(const dblvec& parameters){
   parameters_ = parameters;
@@ -453,6 +677,3 @@ inline void glmmr::hsgpCovariance::nr_step(
 
 }
 
-inline MatrixXd glmmr::hsgpCovariance::solve_spectral(const MatrixXd& u){
-  return u;
-}
