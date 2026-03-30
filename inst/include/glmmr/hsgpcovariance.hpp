@@ -263,6 +263,7 @@ inline void glmmr::hsgpCovariance::update_approx_parameters(intvec m_, double L_
   gen_phi_prod();
 }
 
+
 // Keep the explicit version for internal use, but have it 
 // also recompute from scaled data
 inline void glmmr::hsgpCovariance::update_approx_parameters(){

@@ -872,6 +872,14 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   int niter = re.u(false).cols();
   MatrixXd zd = matrix.linpred();
   MatrixXd X = model.linear_predictor.X();
+  
+  VectorXd xb = X * model.linear_predictor.parameter_vector();
+  double xb_mean = xb.mean();
+  for(int i = 0; i < zd.cols(); i++){
+    double zu_mean = zd.col(i).mean() - xb_mean;
+    zd.col(i).array() -= zu_mean;
+  }
+  
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
   case Fam::gaussian:

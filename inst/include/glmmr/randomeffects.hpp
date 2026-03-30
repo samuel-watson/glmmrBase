@@ -93,13 +93,10 @@ inline void glmmr::RandomEffects<bits_hsgp>::update_zu(const bool weights){
   // u_ is M-dimensional u-space spectral coefficients, u ~ N(0, diag(Λ))
   // zu_ = Z * Phi * u (no sqrt(Lambda) scaling)
   zu_ = model.covariance.ZLu(u_);  // ZLu now returns ZPhi * u
-  
   scaled_u_ = u_;
   u_solve_ = model.covariance.solve(u_);  // diag(1/Λ) * u
-  
   ArrayXd xb = model.xb();
   u_weight_.setZero();
-  
   if(weights){
     ArrayXd Lambda = model.covariance.LambdaSPD();
     double half_logdet = 0.5 * Lambda.log().sum();
