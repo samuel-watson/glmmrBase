@@ -16,6 +16,7 @@ public:
   ArrayXd   L_boundary;
   double    nu = 0.5;
   bool      sq_exp = false;
+  bool      anisotropic = false;
   ArrayXd   raw_half_range_;   // per-dimension half-range (always stored)
   ArrayXd   shift_;            // per-dimension center
   ArrayXd   scale_factors_;    // what's currently applied to hsgp_data
@@ -68,7 +69,7 @@ protected:
   ArrayXXi  indices;
   MatrixXd  Phi;
   MatrixXd  PhiT;
-  bool      anisotropic = false;
+  
   
   //functions
   void      parse_hsgp_data();

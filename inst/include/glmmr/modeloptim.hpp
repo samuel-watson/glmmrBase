@@ -1583,6 +1583,8 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     }
   }
   
+  ArrayXd W_avg = ArrayXd::Zero(model.n());
+  
   // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
   MatrixXd zd = matrix.linpred();
   for(int i = 0; i < n_iter; i++){
@@ -1617,6 +1619,7 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
     
     double w_i = re.u_weight_(i);
     ArrayXd w_arr = W_.array();
+    W_avg += w_i * W_.array();
     
     for(int j = 0; j < npars; j++){
       ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
@@ -1625,6 +1628,48 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
         double h_obs = (djprod * dlprod * w_arr).sum();
         Hess(j, l) += w_i * h_obs;
         if(j != l) Hess(l, j) += w_i * h_obs;
+      }
+    }
+  }
+  
+  // --- REML correction to gradient ---
+  if(control.reml){
+    int P = model.linear_predictor.P();
+    MatrixXd X = model.linear_predictor.X();  // n × P
+    
+    // C = diag(1/Lambda) + Phi' diag(W_avg) Phi   [M × M]
+    MatrixXd PhiW = Phi.transpose() * W_avg.matrix().asDiagonal();   // M × n
+    MatrixXd C_mat = inv_lambda.matrix().asDiagonal().toDenseMatrix();
+    C_mat.noalias() += PhiW * Phi;
+    
+    // PhiWX = Phi' diag(W_avg) X   [M × P]
+    MatrixXd WX = W_avg.matrix().asDiagonal() * X;
+    MatrixXd PhiWX = Phi.transpose() * WX;
+    
+    // Solve C
+    Eigen::LLT<MatrixXd> llt_C(C_mat);
+    if(llt_C.info() == Eigen::Success){
+      MatrixXd C_inv_PhiWX = llt_C.solve(PhiWX);           // M × P
+      
+      // R = diag(1/Lambda) C^{-1} PhiWX   [M × P]
+      // (Woodbury simplification: Phi' V^{-1} X = diag(1/Lambda) C^{-1} Phi'WX)
+      MatrixXd R = inv_lambda.matrix().asDiagonal() * C_inv_PhiWX;
+      
+      // X' V^{-1} X = X'WX - PhiWX' C^{-1} PhiWX   [P × P]
+      MatrixXd XtVinvX = X.transpose() * WX;
+      XtVinvX.noalias() -= PhiWX.transpose() * C_inv_PhiWX;
+      
+      Eigen::LLT<MatrixXd> llt_XVX(XtVinvX);
+      if(llt_XVX.info() == Eigen::Success){
+        MatrixXd S = llt_XVX.solve(MatrixXd::Identity(P, P));  // P × P
+        
+        // trace((X'V^{-1}X)^{-1} R' diag(dLambda_j) R) per parameter
+        MatrixXd T = R * S;                                     // M × P
+        ArrayXd TR_diag = (T.array() * R.array()).rowwise().sum();  // M
+        
+        for(int j = 0; j < npars; j++){
+          grad(j) += 0.5 * (lambda_deriv.col(j) * TR_diag).sum();
+        }
       }
     }
   }
