@@ -1463,11 +1463,10 @@ Model <- R6::R6Class("Model",
                        fit = function(niter = 100, max_iter = 30, 
                                       tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), 
                                       hist = 5, k0 = 10, reml = TRUE){
-                         if(self$family[[1]]=="gaussian"&self$family[[2]]=="identity")Model__use_reml(private$ptr,reml,private$model_type())
+                         Model__use_reml(private$ptr,reml,private$model_type())
                          if(private$model_type() == 2){
                            hsgp_vals <- self$covariance$hsgp()
                            hsgp_dim <- Model_hsgp__dim(private$ptr)
-                           hs <<- hsgp_vals
                            if(length(hsgp_vals[["m"]]) != hsgp_dim) hsgp_vals[["m"]] <- rep(hsgp_vals[["m"]][1],hsgp_dim)
                            Model_hsgp__set_approx_pars(private$ptr, hsgp_vals[["m"]], hsgp_vals[["L"]])
                          }
