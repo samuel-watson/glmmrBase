@@ -2055,7 +2055,7 @@ Model <- R6::R6Class("Model",
                            if(!(all(y>=0 & y%%1 == 0)))stop("y must be integer >= 0")
                            if(any(y > self$trials))stop("Number of successes > number of trials")
                          } else if(self$family[[1]]=="poisson"){
-                           if(any(y <0) || any(y%%1 != 0))stop("y must be integer >= 0")
+                           if(any(y <0) )stop("y must be integer >= 0")
                          } else if(self$family[[1]]=="beta"){
                            if(any(y<0 || y>1))stop("y must be between 0 and 1")
                          } else if(self$family[[1]]=="Gamma") {
