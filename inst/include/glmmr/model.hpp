@@ -636,12 +636,19 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
         if(optim.trace > 0) Rcpp::Rcout << "\nrho: " << model.covariance.rho;
       }
       if(optim.trace > 0)Rcpp::Rcout << "\nu: " << re.u_.topRows(5).rowwise().mean().transpose();
-      if (iter > 2) {
-        converged = optim.check_convergence(tol,hist,iter,k0);
+      if(niter > 1){
+        if (iter > 2) {
+          converged = optim.check_convergence(tol,hist,iter,k0);
+          if(optim.trace > 0) if (converged) Rcpp::Rcout << "\nCONVERGED!";
+        }
+      } else {
+        double ll_new = optim.marginal_log_likelihood();
+        converged = ll_new - ll_old < tol;
+        if(optim.trace > 0)Rcpp::Rcout << "\nLog likelihood (new | previous): " << ll_new << " | " << ll_old << " Diff: " << ll_new - ll_old << std::endl;
+        ll_old = ll_new;
         if(optim.trace > 0) if (converged) Rcpp::Rcout << "\nCONVERGED!";
       }
     }
-    
     iter++;
   }
 }

@@ -1449,7 +1449,7 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   VectorXd rhs(M);
   LLT<MatrixXd> llt_P;
   
-  while(diff > 1e-6 && itero < 10){
+  while(diff > 1e-6 && itero < 20){
     eta = xb + (A * b).array();
     
     switch(model.family.family){

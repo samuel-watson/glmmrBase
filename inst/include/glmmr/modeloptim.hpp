@@ -283,54 +283,69 @@ inline double glmmr::ModelOptim<bits_hsgp>::marginal_log_likelihood(){
   int p = model.linear_predictor.P();
   int Mspec = model.covariance.Q();
   
-  double sigma2 = model.data.var_par;
-  double sigma2_inv = 1.0 / sigma2;
-  double sigma4_inv = sigma2_inv * sigma2_inv;
-  
   MatrixXd ZPhi = model.covariance.ZPhi();
   MatrixXd X = model.linear_predictor.X();
-  VectorXd r = model.data.y.matrix() - model.linear_predictor.xb();
-  
   ArrayXd Lambda = model.covariance.LambdaSPD();
   ArrayXd inv_lambda = 1.0 / Lambda;
   
-  MatrixXd G = ZPhi.transpose() * ZPhi;
-  MatrixXd C = ZPhi.transpose() * X;
-  VectorXd c = ZPhi.transpose() * r;
+  // Compute eta, mu, W at current beta and posterior mode of u
+  VectorXd b = re.u_mean_;
+  ArrayXd eta = (model.linear_predictor.xb() + ZPhi * b).array() 
+    + model.data.offset.array();
+  ArrayXd mu = maths::mod_inv_func(eta.matrix(), model.family.link).array();
   
-  // M = diag(1/Lambda) + sigma^{-2} G
-  MatrixXd Mmat = sigma2_inv * G;
+  ArrayXd W_inv;  // working variance per observation
+  ArrayXd working_resid;  // (y - mu) * d eta/d mu
+  
+  switch(model.family.family){
+  case Fam::gaussian:
+    W_inv = (model.data.variance / model.data.weights).matrix();
+    working_resid = model.data.y.array() - mu;
+    break;
+  case Fam::binomial: case Fam::bernoulli: {
+    ArrayXd p_logit = mu / model.data.variance;  // probability
+    W_inv = 1.0 / (model.data.variance * p_logit * (1.0 - p_logit));
+    working_resid = (model.data.y.array() - mu) * W_inv;  // (y - mu) / W = d eta/d mu * (y - mu)
+    break;
+  }
+  case Fam::poisson:
+    W_inv = 1.0 / mu;
+    working_resid = (model.data.y.array() - mu) / mu;  // d eta/d mu = 1/mu
+    break;
+  default:
+    throw std::runtime_error("Marginal QL only for Gaussian/Binomial/Poisson");
+  }
+  
+  // Working response: y_tilde = X*beta + working_resid  (relative to fixed effect part)
+  // Equivalently the residual r = working_resid (since we subtract X*beta below)
+  VectorXd r = working_resid.matrix();
+  
+  // V = diag(W_inv) + ZPhi * diag(Lambda) * ZPhi^T
+  // log|V| via Sylvester: log|V| = sum(log W_inv) + log|I + Lambda^{1/2} ZPhi^T W ZPhi Lambda^{1/2}|
+  // Or use the same M-matrix trick as Gaussian but with W in place of sigma^{-2} I
+  
+  ArrayXd W_diag = 1.0 / W_inv;  // the IRLS weights
+  MatrixXd WZPhi = (ZPhi.array().colwise() * W_diag).matrix();
+  MatrixXd G = ZPhi.transpose() * WZPhi;  // Phi^T W Phi (n cancels into W)
+  VectorXd c = WZPhi.transpose() * r;
+  
+  MatrixXd Mmat = G;
   Mmat.diagonal() += inv_lambda.matrix();
   LLT<MatrixXd> llt_M(Mmat);
   VectorXd M_inv_c = llt_M.solve(c);
   
-  // log|V| = log|D| + n*log(sigma2) + log|M|
-  // D = diag(Lambda), so log|D| = sum(log(Lambda))
+  // log|V| = sum(log W_inv) + log|D| + log|M|  
+  //        = -sum(log W) + sum(log Lambda) + log|M|
+  double logdet_Winv = -W_diag.log().sum();
   double logdetD = Lambda.log().sum();
   double logdetM = 2.0 * llt_M.matrixL().toDenseMatrix().diagonal().array().log().sum();
-  double logdetV = logdetD + n * std::log(sigma2) + logdetM;
+  double logdetV = logdet_Winv + logdetD + logdetM;
   
   // r^T V^{-1} r via Woodbury
-  double rtr = r.squaredNorm();
-  double quadform = sigma2_inv * rtr - sigma4_inv * c.dot(M_inv_c);
+  double rWr = (r.array().square() * W_diag).sum();
+  double quadform = rWr - c.dot(M_inv_c);
   
-  double ll;
-  if(control.reml){
-    MatrixXd XtX = X.transpose() * X;
-    MatrixXd M_inv_C = llt_M.solve(C);
-    MatrixXd XtVinvX = sigma2_inv * XtX - sigma4_inv * C.transpose() * M_inv_C;
-    LLT<MatrixXd> llt_XtVinvX(XtVinvX);
-    double logdetXtVinvX = 2.0 * llt_XtVinvX.matrixL().toDenseMatrix().diagonal().array().log().sum();
-    
-    VectorXd XtVinvr = sigma2_inv * X.transpose() * r - sigma4_inv * C.transpose() * M_inv_c;
-    VectorXd adj = llt_XtVinvX.solve(XtVinvr);
-    double adj_quadform = XtVinvr.dot(adj);
-    quadform -= adj_quadform;
-    
-    ll = -0.5 * ((n - p) * std::log(2 * M_PI) + logdetV + logdetXtVinvX + quadform);
-  } else {
-    ll = -0.5 * (n * std::log(2 * M_PI) + logdetV + quadform);
-  }
+  double ll = -0.5 * (n * std::log(2*M_PI) + logdetV + quadform);
   
   return ll;
 }
@@ -1561,9 +1576,15 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   }
   
   // Precompute Phi * diag(d sqrt(Lambda)/d theta_j) for observation-space Hessian
+  // std::vector<MatrixXd> Phi_dj(npars);
+  // for(int j = 0; j < npars; j++){
+  //   Phi_dj[j] = Phi * dsqrt_lambda.col(j).matrix().asDiagonal();
+  // }
+  
   std::vector<MatrixXd> Phi_dj(npars);
   for(int j = 0; j < npars; j++){
-    Phi_dj[j] = Phi * dsqrt_lambda.col(j).matrix().asDiagonal();
+    ArrayXd scale = 0.5 * lambda_deriv.col(j) * inv_lambda;
+    Phi_dj[j] = Phi * scale.matrix().asDiagonal();
   }
   
   // --- Prior gradient: deterministic + MC ---
@@ -1600,85 +1621,75 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   
   ArrayXd W_avg = ArrayXd::Zero(model.n());
   
-  // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
-  MatrixXd zd = matrix.linpred();
-  for(int i = 0; i < n_iter; i++){
-    eta = zd.col(i).array();
-    
-    switch(model.family.family){
-    case Fam::gaussian:
-      if(model.family.link == Link::identity){
-        W_ = (model.data.variance.inverse() * model.data.weights).matrix();
-      } else {
-        throw std::runtime_error("NR2 only available with canonical link");
+  if(n_iter > 1){
+    // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
+    MatrixXd zd = matrix.linpred();
+    for(int i = 0; i < n_iter; i++){
+      eta = zd.col(i).array();
+      
+      switch(model.family.family){
+      case Fam::gaussian:
+        if(model.family.link == Link::identity){
+          W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+        } else {
+          throw std::runtime_error("NR2 only available with canonical link");
+        }
+        break;
+      case Fam::binomial: case Fam::bernoulli:
+        if(model.family.link == Link::logit){
+          ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
+          W_ = (model.data.variance * logitp * (1 - logitp)).matrix();
+        } else {
+          throw std::runtime_error("NR2 only available with canonical link");
+        }
+        break;
+      case Fam::poisson:
+        if(model.family.link == Link::loglink){
+          W_ = eta.exp().matrix();
+        } else {
+          throw std::runtime_error("NR2 only available with canonical link");
+        }
+        break;
+      default:
+        throw std::runtime_error("NR2 only available with Gaussian, Poisson, and Binomial");
       }
-      break;
-    case Fam::binomial: case Fam::bernoulli:
-      if(model.family.link == Link::logit){
-        ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
-        W_ = (model.data.variance * logitp * (1 - logitp)).matrix();
-      } else {
-        throw std::runtime_error("NR2 only available with canonical link");
-      }
-      break;
-    case Fam::poisson:
-      if(model.family.link == Link::loglink){
-        W_ = eta.exp().matrix();
-      } else {
-        throw std::runtime_error("NR2 only available with canonical link");
-      }
-      break;
-    default:
-      throw std::runtime_error("NR2 only available with Gaussian, Poisson, and Binomial");
-    }
-    
-    double w_i = re.u_weight_(i);
-    ArrayXd w_arr = W_.array();
-    W_avg += w_i * W_.array();
-    
-    for(int j = 0; j < npars; j++){
-      ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
-      for(int l = j; l < npars; l++){
-        ArrayXd dlprod = (Phi_dj[l] * re.u_.col(i)).array();
-        double h_obs = (djprod * dlprod * w_arr).sum();
-        Hess(j, l) += w_i * h_obs;
-        if(j != l) Hess(l, j) += w_i * h_obs;
+      
+      double w_i = re.u_weight_(i);
+      ArrayXd w_arr = W_.array();
+      W_avg += w_i * W_.array();
+      
+      for(int j = 0; j < npars; j++){
+        ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
+        for(int l = j; l < npars; l++){
+          ArrayXd dlprod = (Phi_dj[l] * re.u_.col(i)).array();
+          double h_obs = (djprod * dlprod * w_arr).sum();
+          Hess(j, l) += w_i * h_obs;
+          if(j != l) Hess(l, j) += w_i * h_obs;
+        }
       }
     }
   }
+  
   
   // --- REML correction to gradient ---
   if(control.reml){
     int P = model.linear_predictor.P();
     MatrixXd X = model.linear_predictor.X();  // n × P
-    
-    // C = diag(1/Lambda) + Phi' diag(W_avg) Phi   [M × M]
     MatrixXd PhiW = Phi.transpose() * W_avg.matrix().asDiagonal();   // M × n
     MatrixXd C_mat = inv_lambda.matrix().asDiagonal().toDenseMatrix();
     C_mat.noalias() += PhiW * Phi;
-    
-    // PhiWX = Phi' diag(W_avg) X   [M × P]
     MatrixXd WX = W_avg.matrix().asDiagonal() * X;
     MatrixXd PhiWX = Phi.transpose() * WX;
-    
-    // Solve C
     Eigen::LLT<MatrixXd> llt_C(C_mat);
     if(llt_C.info() == Eigen::Success){
       MatrixXd C_inv_PhiWX = llt_C.solve(PhiWX);           // M × P
-      
-      // R = diag(1/Lambda) C^{-1} PhiWX   [M × P]
-      // (Woodbury simplification: Phi' V^{-1} X = diag(1/Lambda) C^{-1} Phi'WX)
       MatrixXd R = inv_lambda.matrix().asDiagonal() * C_inv_PhiWX;
-      
-      // X' V^{-1} X = X'WX - PhiWX' C^{-1} PhiWX   [P × P]
       MatrixXd XtVinvX = X.transpose() * WX;
       XtVinvX.noalias() -= PhiWX.transpose() * C_inv_PhiWX;
       
       Eigen::LLT<MatrixXd> llt_XVX(XtVinvX);
       if(llt_XVX.info() == Eigen::Success){
         MatrixXd S = llt_XVX.solve(MatrixXd::Identity(P, P));  // P × P
-        
-        // trace((X'V^{-1}X)^{-1} R' diag(dLambda_j) R) per parameter
         MatrixXd T = R * S;                                     // M × P
         ArrayXd TR_diag = (T.array() * R.array()).rowwise().sum();  // M
         
@@ -1713,7 +1724,7 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   
   double max_step = 1.0;
   double step_norm = step.array().abs().maxCoeff();
-  if(step_norm > max_step) step *= max_step / step_norm;
+  if(n_iter > 1 & step_norm > max_step) step *= max_step / step_norm;
   
   logtheta += step;
   
