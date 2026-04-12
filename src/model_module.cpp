@@ -1080,6 +1080,17 @@ SEXP Model__get_W(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__get_gradients(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->optim.gradients);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::VectorXd>(S));
+}
+
+// [[Rcpp::export]]
 void Model__use_reml(SEXP xp, bool reml = true, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
@@ -1328,7 +1339,6 @@ void Model__nr_beta(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 void Model__nr_theta(SEXP xp,int type = 0){
-  if(type == 1 || type == 2)Rcpp::stop("MCNR2 Only currently available for standard covariance functions");
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
@@ -1683,6 +1693,17 @@ SEXP Model__get_importance_weights(SEXP xp, int type = 0){
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::ArrayXd>(S));
+}
+
+// [[Rcpp::export]]
+SEXP Model__get_zu_var(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->re.zu_var_);}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::VectorXd>(S));
 }
 
 // [[Rcpp::export]]

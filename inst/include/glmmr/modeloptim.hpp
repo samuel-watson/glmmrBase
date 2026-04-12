@@ -1571,12 +1571,19 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   for(int j = 0; j < npars; j++){
     grad(j) = -0.5 * (lambda_deriv.col(j) * inv_lambda).sum();
   }
-  for(int i = 0; i < n_iter; i++){
-    double w_i = re.u_weight_(i);
-    // u_ is in u-space, so quadratic form uses u^2/Lambda^2
-    ArrayXd u2 = re.u_.col(i).array().square();
+  if(n_iter == 1){
+    ArrayXd second_moment = re.u_.col(0).array().square() + re.u_var_diag_.array();
     for(int j = 0; j < npars; j++){
-      grad(j) += 0.5 * w_i * (u2 * lambda_deriv.col(j) * inv_lambda2).sum();
+      grad(j) += 0.5 * (second_moment * lambda_deriv.col(j) * inv_lambda2).sum();
+    }
+  } else {
+    for(int i = 0; i < n_iter; i++){
+      double w_i = re.u_weight_(i);
+      // u_ is in u-space, so quadratic form uses u^2/Lambda^2
+      ArrayXd u2 = re.u_.col(i).array().square();
+      for(int j = 0; j < npars; j++){
+        grad(j) += 0.5 * w_i * (u2 * lambda_deriv.col(j) * inv_lambda2).sum();
+      }
     }
   }
   

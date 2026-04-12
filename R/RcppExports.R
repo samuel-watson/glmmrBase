@@ -209,6 +209,10 @@ Model__get_W <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_W`, xp, type)
 }
 
+Model__get_gradients <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_gradients`, xp, type)
+}
+
 Model__use_reml <- function(xp, reml = TRUE, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__use_reml`, xp, reml, type))
 }
@@ -395,6 +399,10 @@ Model__check_for_errors <- function(xp, type = 0L) {
 
 Model__get_importance_weights <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_importance_weights`, xp, type)
+}
+
+Model__get_zu_var <- function(xp, type = 0L) {
+    .Call(`_glmmrBase_Model__get_zu_var`, xp, type)
 }
 
 Model__set_var_par <- function(xp, var_par_, type = 0L) {

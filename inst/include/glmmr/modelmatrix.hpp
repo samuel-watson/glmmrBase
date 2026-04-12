@@ -1364,6 +1364,9 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       Vb -= Corr;
     }
     llt_Pb.solveInPlace(Vb);
+    re.u_var_diag_ = Vb.diagonal(); 
+    MatrixXd ZLVb = ZL * Vb;  // n × n_cols
+    re.zu_var_ = (ZLVb.array() * ZL.array()).rowwise().sum();
 
   }
 
@@ -1487,19 +1490,11 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   }
   
   re.u_mean_ = b;
-  
-  // Posterior variance V_u = P^{-1}, its Cholesky for sampling
   MatrixXd Vu = MatrixXd::Identity(M, M);
   llt_P.solveInPlace(Vu);
-  LLT<MatrixXd> llt_Vu(Vu);
-  MatrixXd L_Vu = llt_Vu.matrixL();
-  
-  // Generate samples: u = u_mean + L_Vu * z, z ~ N(0,I)
-  MatrixXd znorm(M, niter);
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::normal_distribution<double> d(0.0, 1.0);
-  for(int i = 0; i < znorm.size(); ++i) znorm.data()[i] = d(gen);
+  re.u_var_diag_ = Vu.diagonal(); 
+  MatrixXd PhiV = A * Vu;
+  re.zu_var_ = (PhiV.array() * A.array()).rowwise().sum();
   
   if(re.u_.cols() != niter){
     re.u_.resize(M, niter);
@@ -1510,13 +1505,29 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
     if(loglik) re.u_loglik_.resize(niter);
   }
   
-  // Store log proposal density per sample: -½ ||z_i||²
-  if(loglik){
-    for(int i = 0; i < niter; i++){
-      re.u_loglik_(i) = -0.5 * znorm.col(i).squaredNorm();
+  if(niter == 1){
+    // Laplace: posterior mode only
+    re.u_.col(0) = re.u_mean_;
+    if(loglik) re.u_loglik_(0) = 0.0;
+    re.update_zu(loglik);
+  } else {
+    // Existing MC sampling code
+    LLT<MatrixXd> llt_Vu(Vu);
+    MatrixXd L_Vu = llt_Vu.matrixL();
+    
+    MatrixXd znorm(M, niter);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::normal_distribution<double> d(0.0, 1.0);
+    for(int i = 0; i < znorm.size(); ++i) znorm.data()[i] = d(gen);
+    
+    if(loglik){
+      for(int i = 0; i < niter; i++){
+        re.u_loglik_(i) = -0.5 * znorm.col(i).squaredNorm();
+      }
     }
+    
+    re.u_ = (L_Vu * znorm).colwise() + re.u_mean_;
+    re.update_zu(loglik);
   }
-  
-  re.u_ = (L_Vu * znorm).colwise() + re.u_mean_;
-  re.update_zu(loglik);
 }

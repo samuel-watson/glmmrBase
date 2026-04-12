@@ -21,6 +21,8 @@ public:
   MatrixXd    u_;
   MatrixXd    scaled_u_;
   MatrixXd    zu_;
+  VectorXd    zu_var_;
+  VectorXd    u_var_diag_;
   VectorXd    u_mean_;
   MatrixXd    u_solve_;
   ArrayXd     u_weight_;
@@ -31,18 +33,18 @@ public:
   RandomEffects(modeltype& model_) : 
     u_(MatrixXd::Zero(model_.covariance.Q(),1)),
     scaled_u_(MatrixXd::Zero(model_.covariance.Q(),1)),
-    zu_(model_.n(),1), u_mean_(VectorXd::Zero(model_.covariance.Q())), 
+    zu_(model_.n(),1), zu_var_(model_.n()), u_var_diag_(model_.covariance.Q()), u_mean_(VectorXd::Zero(model_.covariance.Q())), 
     u_solve_(MatrixXd::Zero(model_.covariance.Q(),1)),
     u_weight_(VectorXd::Zero(1)), u_loglik_(VectorXd::Zero(1)), model(model_) {};
   
   RandomEffects(modeltype& model_, int n, int Q) : 
     u_(MatrixXd::Zero(Q,1)),
     scaled_u_(MatrixXd::Zero(Q,1)),
-    zu_(n,1), u_mean_(Q), u_solve_(Q,1),
+    zu_(n,1), zu_var_(n), u_var_diag_(Q), u_mean_(Q), u_solve_(Q,1),
     u_weight_(1), u_loglik_(1), model(model_) {};
   
   RandomEffects(const glmmr::RandomEffects<modeltype>& re) : u_(re.u_), scaled_u_(re.scaled_u_), 
-    zu_(re.zu_), u_mean_(re.u_mean_), u_solve_(re.u_solve_), u_weight_(re.u_weight_),
+    zu_(re.zu_), zu_var_(re.zu_var_), u_var_diag_(re.u_var_diag_), u_mean_(re.u_mean_), u_solve_(re.u_solve_), u_weight_(re.u_weight_),
     u_loglik_(re.u_loglik_), model(re.model) {};                
   
   MatrixXd      Zu(){return zu_;};

@@ -671,6 +671,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model__get_gradients
+SEXP Model__get_gradients(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_gradients(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_gradients(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model__use_reml
 void Model__use_reml(SEXP xp, bool reml, int type);
 RcppExport SEXP _glmmrBase_Model__use_reml(SEXP xpSEXP, SEXP remlSEXP, SEXP typeSEXP) {
@@ -1238,6 +1250,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
     rcpp_result_gen = Rcpp::wrap(Model__get_importance_weights(xp, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// Model__get_zu_var
+SEXP Model__get_zu_var(SEXP xp, int type);
+RcppExport SEXP _glmmrBase_Model__get_zu_var(SEXP xpSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(Model__get_zu_var(xp, type));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -1869,6 +1893,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__use_attenuation", (DL_FUNC) &_glmmrBase_Model__use_attenuation, 3},
     {"_glmmrBase_Model__update_W", (DL_FUNC) &_glmmrBase_Model__update_W, 2},
     {"_glmmrBase_Model__get_W", (DL_FUNC) &_glmmrBase_Model__get_W, 2},
+    {"_glmmrBase_Model__get_gradients", (DL_FUNC) &_glmmrBase_Model__get_gradients, 2},
     {"_glmmrBase_Model__use_reml", (DL_FUNC) &_glmmrBase_Model__use_reml, 3},
     {"_glmmrBase_Model__set_bound", (DL_FUNC) &_glmmrBase_Model__set_bound, 5},
     {"_glmmrBase_Model__print_instructions", (DL_FUNC) &_glmmrBase_Model__print_instructions, 2},
@@ -1916,6 +1941,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__get_mean_u", (DL_FUNC) &_glmmrBase_Model__get_mean_u, 2},
     {"_glmmrBase_Model__check_for_errors", (DL_FUNC) &_glmmrBase_Model__check_for_errors, 2},
     {"_glmmrBase_Model__get_importance_weights", (DL_FUNC) &_glmmrBase_Model__get_importance_weights, 2},
+    {"_glmmrBase_Model__get_zu_var", (DL_FUNC) &_glmmrBase_Model__get_zu_var, 2},
     {"_glmmrBase_Model__set_var_par", (DL_FUNC) &_glmmrBase_Model__set_var_par, 3},
     {"_glmmrBase_Model__set_trials", (DL_FUNC) &_glmmrBase_Model__set_trials, 3},
     {"_glmmrBase_Model__L", (DL_FUNC) &_glmmrBase_Model__L, 2},
