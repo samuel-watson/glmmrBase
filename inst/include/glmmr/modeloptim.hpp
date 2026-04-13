@@ -890,9 +890,11 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   
   VectorXd xb = X * model.linear_predictor.parameter_vector();
   double xb_mean = xb.mean();
-  for(int i = 0; i < zd.cols(); i++){
-    double zu_mean = zd.col(i).mean() - xb_mean;
-    zd.col(i).array() -= zu_mean;
+  if(zd.cols() > 1){
+    for(int i = 0; i < zd.cols(); i++){
+      double zu_mean = zd.col(i).mean() - xb_mean;
+      zd.col(i).array() -= zu_mean;
+    }
   }
   
   ArrayXd nvar_par(model.n());
@@ -1621,51 +1623,49 @@ inline void glmmr::ModelOptim<bits_hsgp>::nr_theta(){
   
   ArrayXd W_avg = ArrayXd::Zero(model.n());
   
-  if(n_iter > 1){
-    // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
-    MatrixXd zd = matrix.linpred();
-    for(int i = 0; i < n_iter; i++){
-      eta = zd.col(i).array();
-      
-      switch(model.family.family){
-      case Fam::gaussian:
-        if(model.family.link == Link::identity){
-          W_ = (model.data.variance.inverse() * model.data.weights).matrix();
-        } else {
-          throw std::runtime_error("NR2 only available with canonical link");
-        }
-        break;
-      case Fam::binomial: case Fam::bernoulli:
-        if(model.family.link == Link::logit){
-          ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
-          W_ = (model.data.variance * logitp * (1 - logitp)).matrix();
-        } else {
-          throw std::runtime_error("NR2 only available with canonical link");
-        }
-        break;
-      case Fam::poisson:
-        if(model.family.link == Link::loglink){
-          W_ = eta.exp().matrix();
-        } else {
-          throw std::runtime_error("NR2 only available with canonical link");
-        }
-        break;
-      default:
-        throw std::runtime_error("NR2 only available with Gaussian, Poisson, and Binomial");
+  // Observation-space Fisher: sum_i w_i (d eta/d theta_j)^T W (d eta/d theta_l)
+  MatrixXd zd = matrix.linpred();
+  for(int i = 0; i < n_iter; i++){
+    eta = zd.col(i).array();
+    
+    switch(model.family.family){
+    case Fam::gaussian:
+      if(model.family.link == Link::identity){
+        W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+      } else {
+        throw std::runtime_error("NR2 only available with canonical link");
       }
-      
-      double w_i = re.u_weight_(i);
-      ArrayXd w_arr = W_.array();
-      W_avg += w_i * W_.array();
-      
-      for(int j = 0; j < npars; j++){
-        ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
-        for(int l = j; l < npars; l++){
-          ArrayXd dlprod = (Phi_dj[l] * re.u_.col(i)).array();
-          double h_obs = (djprod * dlprod * w_arr).sum();
-          Hess(j, l) += w_i * h_obs;
-          if(j != l) Hess(l, j) += w_i * h_obs;
-        }
+      break;
+    case Fam::binomial: case Fam::bernoulli:
+      if(model.family.link == Link::logit){
+        ArrayXd logitp = (eta.exp().inverse() + 1.0).inverse();
+        W_ = (model.data.variance * logitp * (1 - logitp)).matrix();
+      } else {
+        throw std::runtime_error("NR2 only available with canonical link");
+      }
+      break;
+    case Fam::poisson:
+      if(model.family.link == Link::loglink){
+        W_ = eta.exp().matrix();
+      } else {
+        throw std::runtime_error("NR2 only available with canonical link");
+      }
+      break;
+    default:
+      throw std::runtime_error("NR2 only available with Gaussian, Poisson, and Binomial");
+    }
+    
+    double w_i = re.u_weight_(i);
+    ArrayXd w_arr = W_.array();
+    W_avg += w_i * W_.array();
+    
+    for(int j = 0; j < npars; j++){
+      ArrayXd djprod = (Phi_dj[j] * re.u_.col(i)).array();
+      for(int l = j; l < npars; l++){
+        ArrayXd dlprod = (Phi_dj[l] * re.u_.col(i)).array();
+        double h_obs = (djprod * dlprod * w_arr).sum();
+        Hess(j, l) += w_i * h_obs;
+        if(j != l) Hess(l, j) += w_i * h_obs;
       }
     }
   }
