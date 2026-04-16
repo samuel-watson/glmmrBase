@@ -1482,7 +1482,7 @@ Model <- R6::R6Class("Model",
                          self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
                                                 cov.pars = Model__get_theta(private$ptr, private$model_type()))
                          if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()
-                         if(se == "average" & niter == 1) Model__posterior_u_sample(private$ptr, 100, FALSE, TRUE, FALSE, private$model_type()) 
+                         if(se == "average" & niter == 1) Model__posterior_u_sample(private$ptr, 200, FALSE, TRUE, FALSE, private$model_type()) 
                          u <- Model__u(private$ptr,TRUE,private$model_type())
                          M <- self$information_matrix(average = (se == "average")) 
                          M <- solve(M)
