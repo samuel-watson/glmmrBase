@@ -1370,6 +1370,18 @@ SEXP Model__information_matrix(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
+SEXP Model__ave_information_matrix(SEXP xp, int type = 0){
+  glmmrType model(xp,static_cast<Type>(type));
+  auto functor = overloaded {
+    [](int) {  return returnType(0);}, 
+    [](auto ptr){return returnType(ptr->matrix.ave_information_matrix());}
+  };
+  auto S = std::visit(functor,model.ptr);
+  return wrap(std::get<Eigen::MatrixXd>(S));
+}
+
+
+// [[Rcpp::export]]
 SEXP Model__check_convergence(SEXP xp, double tol, int hist, int k, int k0, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {

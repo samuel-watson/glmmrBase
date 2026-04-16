@@ -88,6 +88,7 @@ public:
   ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_, bool useBlock_, bool useSparse_);
   // functions
   MatrixXd                information_matrix();
+  MatrixXd                ave_information_matrix();
   MatrixXd                Sigma(bool inverse = false);
   template<IM imtype>
   MatrixXd                observed_information_matrix();
@@ -197,6 +198,111 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
     M += information_matrix_by_block(i);
   }
   return M;
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
+  // Louis (1982) marginal observed information for beta:
+  //
+  //   J_beta = X' E_{u|y}[W(u)] X  -  X' Var_{u|y}[s(u)] X
+  //
+  // where s(u) = E[y|u], W(u) = -d^2 log f(y|u) / d eta^2.
+  // Expectations are taken over the MC samples in re.u_ with importance
+  // weights re.u_weight_ (uniform if those are set to 1/K).
+  //
+  // For the conventional GLS information X'V^{-1}X this is the exact
+  // marginal info; for binomial / non-canonical links the higher-order
+  // curvature in mu(eta) makes the GLS form a Laplace approximation that
+  // systematically inflates information. Louis recovers the missing term.
+  
+  W.update();
+  const int P_ = P();
+  const int n  = model.n();
+  const int K  = re.u_.cols();
+  
+  if(K < 2) throw std::runtime_error(
+      "louis_information_beta requires at least 2 MC samples in re.u_; "
+      "for Laplace-fit models, draw a posterior sample first via "
+      "posterior_u_samples().");
+  
+  // Importance weights, normalised
+  ArrayXd w = re.u_weight_;
+  double wsum = w.sum();
+  if(wsum <= 0 || !std::isfinite(wsum)){
+    w = ArrayXd::Constant(K, 1.0/K);
+  } else {
+    w /= wsum;
+  }
+  
+  const MatrixXd& X = model.linear_predictor.X();
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  
+  // Per-sample s_k (n-vector) and weighted accumulators for s_bar and W_bar
+  MatrixXd s_mat(n, K);          // s(u^k) per sample
+  VectorXd s_bar = VectorXd::Zero(n);
+  VectorXd W_bar = VectorXd::Zero(n);
+  
+  // re.zu_ has columns Z*L*u^k (for HSGP, A * u^k); same as in linpred()
+  ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
+  
+  for(int k = 0; k < K; ++k){
+    eta_k = xb + re.zu_.col(k).array();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      if(model.family.link == Link::logit){
+      mu_k = 1.0 / (1.0 + (-eta_k).exp());
+    } else {
+      // probit or other: route through generic helper
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+    }
+    s_k = model.data.variance * mu_k;                 // m_i * mu_i
+    W_k = model.data.variance * mu_k * (1.0 - mu_k);  // m_i * mu_i (1-mu_i)
+    break;
+    }
+    case Fam::poisson: {
+      mu_k = eta_k.exp();
+      s_k = mu_k;
+      W_k = mu_k;
+      break;
+    }
+    case Fam::gaussian: {
+      mu_k = eta_k;                                     // identity link
+      s_k = mu_k;
+      W_k = (model.data.variance.inverse() * model.data.weights);
+      break;
+    }
+    case Fam::gamma: case Fam::beta: case Fam::exponential: {
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+      s_k = mu_k;
+      // For non-canonical links the W expression is family/link specific.
+      // Fall back to the model's working weights at the conditional mean,
+      // which is the correct first-order approximation; second-order
+      // corrections for these families are not currently implemented here.
+      W_k = W.W_.array();
+      break;
+    }
+    default:
+      throw std::runtime_error("louis_information_beta: unsupported family");
+    }
+    
+    s_mat.col(k) = s_k.matrix();
+    s_bar += w(k) * s_k.matrix();
+    W_bar += w(k) * W_k.matrix();
+  }
+  
+  // Bread: X' diag(W_bar) X
+  MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
+  
+  // Meat: sum_k w_k g_k g_k', g_k = X' (s_k - s_bar)
+  MatrixXd meat = MatrixXd::Zero(P_, P_);
+  VectorXd g_k(P_);
+  for(int k = 0; k < K; ++k){
+    g_k = X.transpose() * (s_mat.col(k) - s_bar);
+    meat.noalias() += w(k) * g_k * g_k.transpose();
+  }
+  
+  return bread - meat;
 }
 
 template<typename modeltype>

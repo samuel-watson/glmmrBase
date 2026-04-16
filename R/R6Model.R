@@ -617,7 +617,7 @@ Model <- R6::R6Class("Model",
                        #' parameter information matrix is returned.
                        #' @param oim Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.
                        #' @return A matrix
-                       information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE){
+                       information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE, average = TRUE){
                          if(oim & !private$y_has_been_updated) stop("No y data has been added")
                          private$update_ptr()
                          nonlin <- Model__any_nonlinear(private$ptr,private$model_type())
@@ -631,7 +631,11 @@ Model <- R6::R6Class("Model",
                                M <- Model__obs_information_matrix(private$ptr,private$model_type())
                              } else {
                                if(private$model_type()==0 | private$model_type()==2){
-                                 M <- Model__information_matrix(private$ptr,private$model_type())
+                                 if(average){
+                                   M <- Model__ave_information_matrix(private$ptr,private$model_type())
+                                 } else {
+                                   M <- Model__information_matrix(private$ptr,private$model_type())
+                                 }
                                } else {
                                  M <- Model__information_matrix_crude(private$ptr,private$model_type())
                                }
@@ -1416,6 +1420,9 @@ Model <- R6::R6Class("Model",
                        #' version of the covariance functions with this method as the Newton-Raphson steps can lead to negative values otherwise.
                        #' @param niter Integer. Number of samples for the random effects, ignored for Gaussian models, see examples.
                        #' @param max_iter Integer. Maximum number of iterations.
+                       #' @param se Either "average" or "point". "Average" (default) estimates the information matrix for beta averaging over MC samples, if `niter` is one (triggering a
+                       #' Laplace Approximation) then a final sample is drawn for this estimator. "Point" evaluates the information matrix for beta at the posterior mean of the 
+                       #' random effects.
                        #' @param tol Scalar. The tolerance for the convergence criterion. For GLMMs this is the tolerance for 
                        #' the Bayes Factor convergence criterion, for Gaussian linear models the tolerance is the difference 
                        #' in the log-likelihood between successive iterations.
@@ -1460,10 +1467,11 @@ Model <- R6::R6Class("Model",
                        #' des$update_y(ysim)
                        #' fit2 <- des$fit() 
                        #' @md
-                       fit = function(niter = 100, max_iter = 30, 
+                       fit = function(niter = 100, max_iter = 30, se = "average",
                                       tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), 
                                       hist = 5, k0 = 10, reml = TRUE){
                          if((self$family[[1]]=="gaussian"&self$family[[2]]=="identity") | private$model_type() == 2)Model__use_reml(private$ptr,reml,private$model_type())
+                         if(!se %in% c("average","point"))stop("se argument should be average or point")
                          if(private$model_type() == 2){
                            hsgp_vals <- self$covariance$hsgp()
                            hsgp_dim <- Model_hsgp__dim(private$ptr)
@@ -1474,8 +1482,9 @@ Model <- R6::R6Class("Model",
                          self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
                                                 cov.pars = Model__get_theta(private$ptr, private$model_type()))
                          if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()
+                         if(se == "average" & niter == 1) Model__posterior_u_sample(private$ptr, 100, FALSE, TRUE, FALSE, private$model_type()) 
                          u <- Model__u(private$ptr,TRUE,private$model_type())
-                         M <- self$information_matrix() 
+                         M <- self$information_matrix(average = (se == "average")) 
                          M <- solve(M)
                          ncovpars <- Model__n_cov_pars(private$ptr,private$model_type())
                          if(self$family[[1]]=="gaussian")ncovpars <- ncovpars + 1
