@@ -246,7 +246,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
   ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
   
   for(int k = 0; k < K; ++k){
-    eta_k = xb + re.zu_.col(k).array();
+    eta_k = xb + re.zu_.col(k).array() - re.zu_.col(k).mean();
     
     switch(model.family.family){
     case Fam::binomial: case Fam::bernoulli: {
@@ -387,9 +387,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::Sigma(bool inverse){
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sigma_block(int b,
                                                            bool inverse){
-#if defined(ENABLE_DEBUG) && defined(R_BUILD)
-  if(b >= sigma_blocks.size())Rcpp::stop("Index out of range");
-#endif
   // UPDATE THIS TO NOT USE SPARSE IF DESIRED
   MatrixXd ZLs = model.covariance.ZL();
   ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(),sigma_blocks[b].RowIndexes.size());
