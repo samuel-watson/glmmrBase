@@ -2061,7 +2061,7 @@ Model <- R6::R6Class("Model",
                        verify_data = function(y){
                          if(any(is.na(y)))stop("NAs in y")
                          if(self$family[[1]]=="binomial"){
-                           if(!(all(y>=0 & y%%1 == 0)))stop("y must be integer >= 0")
+                           if(!(all(y>=0)))stop("y must be integer >= 0")
                            if(any(y > self$trials))stop("Number of successes > number of trials")
                          } else if(self$family[[1]]=="poisson"){
                            if(any(y <0) )stop("y must be integer >= 0")
