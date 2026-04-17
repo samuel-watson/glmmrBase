@@ -14,7 +14,7 @@ public:
   modeltype&  model;
   MatrixW(modeltype& model_): model(model_) { update(); };
   VectorXd    W() const;
-  void        update();
+  void        update(const VectorXd& u);
 };
 }
 
@@ -24,7 +24,7 @@ inline VectorXd glmmr::MatrixW<modeltype>::W() const{
 }
 
 template<typename modeltype>
-inline void glmmr::MatrixW<modeltype>::update(){
+inline void glmmr::MatrixW<modeltype>::update(const VectorXd& u){
   if(W_.size() != model.n())W_.conservativeResize(model.n());
   ArrayXd nvar_par(model.n());
   VectorXd xb(model.n());
@@ -54,9 +54,9 @@ inline void glmmr::MatrixW<modeltype>::update(){
   }
   
   if(attenuated){
-    xb = (glmmr::maths::attenuted_xb(model.xb(), model.covariance.Z(), model.covariance.D(), model.family.link)).matrix();
+    xb = (glmmr::maths::attenuted_xb(model.xb() + u.array(), model.covariance.Z(), model.covariance.D(), model.family.link)).matrix();
   } else {
-    xb = model.xb().matrix();
+    xb = model.xb().matrix() + u;
   }
   W_ = (glmmr::maths::dhdmu(xb, model.family)).array();
   W_ = (W_.array()*nvar_par).matrix();

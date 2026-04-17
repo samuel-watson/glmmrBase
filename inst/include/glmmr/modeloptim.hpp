@@ -756,7 +756,7 @@ inline void glmmr::ModelOptim<modeltype>::generate_czz()
 {
   CZZ.resize(Q(),Q());
   CZZ = MatrixXd::Identity(Q(), Q());
-  matrix.W.update();
+  matrix.W.update(re.centred_u_mean());
   VectorXd w = matrix.W.W();
   // w = w.array().inverse().matrix();
   bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();

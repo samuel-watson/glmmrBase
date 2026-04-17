@@ -49,7 +49,7 @@ public:
   
   MatrixXd      Zu(){return zu_;};
   MatrixXd      u(bool scaled = true);
-  
+  VectorXd      centred_u_mean();
   
   VectorMatrix  predict_re(const ArrayXXd& newdata_,const ArrayXd& newoffset_);
   void          update_zu(const bool weights);
@@ -64,6 +64,14 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
   } else {
     return u_;
   }
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::RandomEffects<modeltype>::centred_u_mean(){
+  MatrixXd umat = u(true);
+  VectorXd umean = umat.rowwise().mean();
+  umean -= umat.mean();
+  return umean;
 }
 
 template<typename modeltype>

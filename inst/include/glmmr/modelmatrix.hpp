@@ -152,7 +152,8 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix_by_block(int b
 
 template<>
 inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::information_matrix(){
-  W.update();
+  
+  W.update(re.centred_u_mean());
   const int P_ = P();
   const int M = model.covariance.Q();
   
@@ -192,7 +193,7 @@ inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::information_matrix(){
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
-  W.update();
+  W.update(re.centred_u_mean());
   MatrixXd M = MatrixXd::Zero(P(),P());
   for(int i = 0; i< sigma_blocks.size(); i++){
     M += information_matrix_by_block(i);
@@ -215,7 +216,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
   // curvature in mu(eta) makes the GLS form a Laplace approximation that
   // systematically inflates information. Louis recovers the missing term.
   
-  W.update();
+  W.update(re.centred_u_mean());
   const int P_ = P();
   const int n  = model.n();
   const int K  = re.u_.cols();
@@ -369,7 +370,7 @@ inline int glmmr::ModelMatrix<modeltype>::Q() const {
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::Sigma(bool inverse){
-  W.update();
+  W.update(re.centred_u_mean());
   MatrixXd S(model.n(), model.n());
   if(useBlock){
     S = sigma_builder(0,inverse);
@@ -432,7 +433,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
   MatrixXd X = model.linear_predictor.X();
   bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();
   if constexpr (imtype == IM::EIM){
-    W.update();
+    W.update(re.centred_u_mean());
     MatrixXd WX = X;
     if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
     MatrixXd XtXW = X.transpose() * WX;
@@ -464,7 +465,7 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     infomat.bottomRightCorner(npar,npar) = Mt.topRows(npar);
     return -1.0*infomat;
   } else if constexpr (imtype == IM::EIM2) {
-    W.update();
+    W.update(re.centred_u_mean());
     MatrixXd WX = X;
     if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
     MatrixXd Z = model.covariance.Z();
