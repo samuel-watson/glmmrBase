@@ -203,23 +203,12 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
-  // Louis (1982) marginal observed information for beta:
-  //
-  //   J_beta = X' E_{u|y}[W(u)] X  -  X' Var_{u|y}[s(u)] X
-  //
-  // where s(u) = E[y|u], W(u) = -d^2 log f(y|u) / d eta^2.
-  // Expectations are taken over the MC samples in re.u_ with importance
-  // weights re.u_weight_ (uniform if those are set to 1/K).
-  //
-  // For the conventional GLS information X'V^{-1}X this is the exact
-  // marginal info; for binomial / non-canonical links the higher-order
-  // curvature in mu(eta) makes the GLS form a Laplace approximation that
-  // systematically inflates information. Louis recovers the missing term.
   
   W.update(re.centred_u_mean());
   const int P_ = P();
   const int n  = model.n();
   const int K  = re.u_.cols();
+  MatrixXd u_samples = model.covariance.ZLu(re.u_);
   
   if(K < 2) throw std::runtime_error(
       "louis_information_beta requires at least 2 MC samples in re.u_; "
@@ -235,9 +224,8 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
     w /= wsum;
   }
   
-  const MatrixXd& X = model.linear_predictor.X();
+  const MatrixXd X = model.linear_predictor.X();
   ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
-  
   // Per-sample s_k (n-vector) and weighted accumulators for s_bar and W_bar
   MatrixXd s_mat(n, K);          // s(u^k) per sample
   VectorXd s_bar = VectorXd::Zero(n);
@@ -246,8 +234,24 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
   // re.zu_ has columns Z*L*u^k (for HSGP, A * u^k); same as in linpred()
   ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
   
+  if(model.family.family == Fam::poisson){
+    MatrixXd D = model.covariance.D(false, false);
+    MatrixXd Z(model.n(), model.covariance.Q());
+    if constexpr (std::is_same_v<modeltype, bits_hsgp>){
+      Z = model.covariance.ZPhi();
+    } else {
+      Z = model.covariance.Z();
+    }
+    ArrayXd sigma2_i(model.n());
+    MatrixXd ZD = Z * D;  // n x Q
+    for(int i = 0; i < model.n(); i++){
+      sigma2_i(i) = ZD.row(i).dot(Z.row(i));
+    }
+    xb -= 0.5 * sigma2_i;
+  }
+  
   for(int k = 0; k < K; ++k){
-    eta_k = xb + re.zu_.col(k).array() - re.zu_.col(k).mean();
+    eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();
     
     switch(model.family.family){
     case Fam::binomial: case Fam::bernoulli: {
@@ -276,10 +280,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
     case Fam::gamma: case Fam::beta: case Fam::exponential: {
       mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
       s_k = mu_k;
-      // For non-canonical links the W expression is family/link specific.
-      // Fall back to the model's working weights at the conditional mean,
-      // which is the correct first-order approximation; second-order
-      // corrections for these families are not currently implemented here.
       W_k = W.W_.array();
       break;
     }
@@ -291,7 +291,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
     s_bar += w(k) * s_k.matrix();
     W_bar += w(k) * W_k.matrix();
   }
-  
   // Bread: X' diag(W_bar) X
   MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
   

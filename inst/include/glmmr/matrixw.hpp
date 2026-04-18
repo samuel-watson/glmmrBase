@@ -12,7 +12,7 @@ public:
   bool        attenuated = false;
   VectorXd    W_ = VectorXd::Constant(1,1.0);
   modeltype&  model;
-  MatrixW(modeltype& model_): model(model_) { update(); };
+  MatrixW(modeltype& model_): model(model_) { update(VectorXd::Zero(model.n())); };
   VectorXd    W() const;
   void        update(const VectorXd& u);
 };

@@ -67,10 +67,10 @@ inline MatrixXd glmmr::RandomEffects<modeltype>::u(bool scaled){
 }
 
 template<typename modeltype>
-inline MatrixXd glmmr::RandomEffects<modeltype>::centred_u_mean(){
+inline VectorXd glmmr::RandomEffects<modeltype>::centred_u_mean(){
   MatrixXd umat = u(true);
   VectorXd umean = umat.rowwise().mean();
-  umean -= umat.mean();
+  umean.array() -= umat.mean();
   return umean;
 }
 

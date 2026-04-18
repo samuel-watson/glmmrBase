@@ -1063,7 +1063,7 @@ void Model__update_W(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {}, 
-    [](auto ptr){ptr->matrix.W.update();}
+    [](auto ptr){ptr->matrix.W.update(ptr->re.centred_u_mean());}
   };
   std::visit(functor,model.ptr);
 }

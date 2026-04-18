@@ -897,6 +897,26 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
     }
   }
   
+  // if(model.family.family == Fam::poisson){
+  //   MatrixXd D = model.covariance.D();
+  //   MatrixXd Z(model.n(), D.cols());
+  //   if constexpr (std::is_same_v<modeltype, bits_hsgp>){
+  //     Z = model.covariance.ZPhi();
+  //   } else {
+  //     Z = model.covariance.Z();
+  //   }
+  //   
+  //   ArrayXd sigma2_i(model.n());
+  //   MatrixXd ZD = Z * D;  // n x Q
+  //   for(int i = 0; i < model.n(); i++){
+  //     sigma2_i(i) = ZD.row(i).dot(Z.row(i));
+  //   }
+  //   sigma2_i *= 0.5;
+  //   for(int k = 0; k < zd.cols(); k++){
+  //     zd.col(k).array() -= sigma2_i;
+  //   }
+  // }
+  
   ArrayXd nvar_par(model.n());
   switch(model.family.family){
   case Fam::gaussian:
