@@ -627,7 +627,7 @@ Model <- R6::R6Class("Model",
                            if(theta){
                              M <- Model__infomat_theta(private$ptr,private$model_type())
                            } else {
-                             if(include.re & !private$model_type()>0){
+                             if(include.re & private$model_type() != 1){
                                M <- Model__obs_information_matrix(private$ptr,private$model_type())
                              } else {
                                if(private$model_type()==0 | private$model_type()==2){

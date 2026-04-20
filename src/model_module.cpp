@@ -1506,7 +1506,7 @@ SEXP Model__obs_information_matrix(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->matrix.template observed_information_matrix<glmmr::IM::EIM>());}
+    [](auto ptr){return returnType(ptr->matrix.template observed_information_matrix<glmmr::IM::EIM2>());}
   };
   auto S = std::visit(functor,model.ptr);
   return wrap(std::get<Eigen::MatrixXd>(S));

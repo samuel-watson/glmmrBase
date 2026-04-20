@@ -467,21 +467,39 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     W.update(re.centred_u_mean());
     MatrixXd WX = X;
     if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
-    MatrixXd Z = model.covariance.Z();
+    
+    // Z matrix: Phi for HSGP, Z for standard
+    MatrixXd Z;
+    if constexpr (std::is_same_v<modeltype, bits_hsgp>){
+      Z = model.covariance.ZPhi();       // n x M
+    } else {
+      Z = model.covariance.Z();          // n x Q
+    }
+    
     MatrixXd WZ = Z;
     if (nonlinear_w) WZ.applyOnTheLeft(W.W_.asDiagonal());
-
-    MatrixXd D = model.covariance.D();
+    
+    // D^{-1}: must pass (false, false) to get D not chol(D)
+    MatrixXd Dinv;
+    MatrixXd D = model.covariance.D(false, false);
     if (model.covariance.all_group_re()) {
-        for (int i = 0; i < D.rows(); i++)D(i, i) = 1.0 / D(i, i);
+      Dinv = D;
+      for (int i = 0; i < D.rows(); i++) Dinv(i, i) = 1.0 / D(i, i);
     } else {
-        D = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
-    }    
-    MatrixXd infomat(P()+Q(),P()+Q());
-    infomat.topLeftCorner(P(),P()) = X.transpose() * WX;
-    infomat.topRightCorner(P(),Q()) = X.transpose() * WZ;
-    infomat.bottomLeftCorner(Q(),P()) = infomat.topRightCorner(P(), Q()).transpose();
-    infomat.bottomRightCorner(Q(),Q()) = WZ.transpose() * Z + D;
+      Dinv = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
+    }
+    
+    if (!nonlinear_w) {
+      WX *= (1.0 / model.data.var_par);
+      WZ *= (1.0 / model.data.var_par);
+    }
+    
+    int Qdim = Z.cols();
+    MatrixXd infomat(P() + Qdim, P() + Qdim);
+    infomat.topLeftCorner(P(), P()) = X.transpose() * WX;
+    infomat.topRightCorner(P(), Qdim) = X.transpose() * WZ;
+    infomat.bottomLeftCorner(Qdim, P()) = infomat.topRightCorner(P(), Qdim).transpose();
+    infomat.bottomRightCorner(Qdim, Qdim) = Z.transpose() * WZ + Dinv;
     return infomat;
   } else {
     MatrixXd M = information_matrix();
