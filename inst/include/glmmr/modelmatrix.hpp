@@ -92,6 +92,10 @@ public:
   MatrixXd                Sigma(bool inverse = false);
   template<IM imtype>
   MatrixXd                observed_information_matrix();
+  template<typename C = modeltype, 
+           typename = std::enable_if_t<std::is_same_v<C, bits_hsgp> || 
+             std::is_same_v<C, bits_spde>>>
+  VectorXd                re_variance_obs();
   MatrixXd                sandwich_matrix(); 
   std::vector<MatrixXd>   sigma_derivatives();
   template<IM imtype>
@@ -608,34 +612,37 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     
     // Z matrix: Phi for HSGP, Z for standard
     MatrixXd Z;
+    MatrixXd Dinv;
+    
     if constexpr (std::is_same_v<modeltype, bits_hsgp>){
-      Z = model.covariance.ZPhi();       // n x M
+      Z = model.covariance.ZPhi();
+      Dinv = model.covariance.LambdaSPD().inverse().matrix().asDiagonal();  // diag, cheap
+    } else if constexpr (std::is_same_v<modeltype, bits_spde>){
+      Z = MatrixXd(model.covariance.ZA_);
+      Dinv = MatrixXd(model.covariance.Q_mat);       // Q_mat *is* D⁻¹
     } else {
-      Z = model.covariance.Z();          // n x Q
+      Z = model.covariance.Z();
+      MatrixXd D = model.covariance.D(false, false);
+      if (model.covariance.all_group_re()){
+        Dinv = D;
+        for (int i = 0; i < D.rows(); ++i) Dinv(i, i) = 1.0 / D(i, i);
+      } else {
+        Dinv = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
+      }
     }
     
+    if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
     MatrixXd WZ = Z;
     if (nonlinear_w) WZ.applyOnTheLeft(W.W_.asDiagonal());
-    
-    // D^{-1}: must pass (false, false) to get D not chol(D)
-    MatrixXd Dinv;
-    MatrixXd D = model.covariance.D(false, false);
-    if (model.covariance.all_group_re()) {
-      Dinv = D;
-      for (int i = 0; i < D.rows(); i++) Dinv(i, i) = 1.0 / D(i, i);
-    } else {
-      Dinv = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
-    }
-    
-    if (!nonlinear_w) {
+    if (!nonlinear_w){
       WX *= (1.0 / model.data.var_par);
       WZ *= (1.0 / model.data.var_par);
     }
     
-    int Qdim = Z.cols();
+    const int Qdim = Z.cols();
     MatrixXd infomat(P() + Qdim, P() + Qdim);
-    infomat.topLeftCorner(P(), P()) = X.transpose() * WX;
-    infomat.topRightCorner(P(), Qdim) = X.transpose() * WZ;
+    infomat.topLeftCorner(P(), P())     = X.transpose() * WX;
+    infomat.topRightCorner(P(), Qdim)   = X.transpose() * WZ;
     infomat.bottomLeftCorner(Qdim, P()) = infomat.topRightCorner(P(), Qdim).transpose();
     infomat.bottomRightCorner(Qdim, Qdim) = Z.transpose() * WZ + Dinv;
     return infomat;
@@ -646,6 +653,87 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     M = XtXW * M * XtXW;
     return M;
   }
+}
+
+template<typename modeltype>
+template<typename C, typename>
+inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
+{
+  using Eigen::SparseMatrix;
+  
+  W.update(re.centred_u_mean());
+  const int nobs = model.n();
+  const int Pdim = P();
+  
+  MatrixXd X = model.linear_predictor.X();
+  const bool nonlinear_w = model.family.family != Fam::gaussian 
+  || (model.data.weights != 1).any();
+  
+  // --- Build WX (P × P pieces are branch-independent) ---
+  MatrixXd WX = X;
+  if(nonlinear_w){
+    WX.applyOnTheLeft(W.W_.asDiagonal());
+  } else {
+    WX *= (1.0 / model.data.var_par);
+  }
+  MatrixXd XtWX = X.transpose() * WX;   // P × P
+  Eigen::LLT<MatrixXd> llt_XtWX(XtWX);
+  
+  VectorXd var_obs(nobs);
+  
+  if constexpr (std::is_same_v<C, bits_hsgp>){
+    MatrixXd Z = model.covariance.ZPhi();            // n × M
+    const int Mdim = Z.cols();
+    Eigen::ArrayXd Lambda = model.covariance.LambdaSPD();
+    
+    MatrixXd WZ = Z;
+    if(nonlinear_w){
+      WZ.applyOnTheLeft(W.W_.asDiagonal());
+    } else {
+      WZ *= (1.0 / model.data.var_par);
+    }
+    
+    MatrixXd A_mat = Z.transpose() * WZ;
+    A_mat.diagonal().array() += 1.0 / Lambda;
+    Eigen::LLT<MatrixXd> llt_A(A_mat);
+    
+    MatrixXd B = Z.transpose() * WX;                 // M × P
+    MatrixXd AinvB = llt_A.solve(B);                 // M × P
+    MatrixXd Schur = XtWX - B.transpose() * AinvB;   // P × P
+    Eigen::LLT<MatrixXd> llt_Schur(Schur);
+    MatrixXd Ainv_Zt = llt_A.solve(Z.transpose());    // M × n
+    MatrixXd Bt_Ainv_Zt = B.transpose() * Ainv_Zt;    // P × n
+    MatrixXd Schur_solve = llt_Schur.solve(Bt_Ainv_Zt); // P × n
+    for(int i = 0; i < nobs; ++i){
+      double term1 = Z.row(i).dot(Ainv_Zt.col(i));
+      double term2 = Bt_Ainv_Zt.col(i).dot(Schur_solve.col(i));
+      var_obs(i) = term1 + term2;
+    }
+    
+  } else if constexpr (std::is_same_v<C, bits_spde>){
+    auto& cov = model.covariance;
+    const SparseMatrix<double>& ZA = cov.ZA_;         // n × n_v, sparse
+    cov.refactor_P(W.W_);
+    MatrixXd B = ZA.transpose() * WX;                 // n_v × P
+    MatrixXd PinvB = cov.chol_P.solve(B);             // n_v × P  (P sparse solves)
+    MatrixXd Schur = XtWX - B.transpose() * PinvB;    // P × P
+    Eigen::LLT<MatrixXd> llt_Schur(Schur);
+    MatrixXd Pinv_ZAt = cov.chol_P.solve(MatrixXd(ZA.transpose()));  // n_v × n
+    MatrixXd Bt_Pinv_ZAt = B.transpose() * Pinv_ZAt;                 // P × n
+    MatrixXd Schur_solve = llt_Schur.solve(Bt_Pinv_ZAt);             // P × n
+    VectorXd term1_vec = VectorXd::Zero(nobs);
+    {
+      for(int j = 0; j < ZA.outerSize(); ++j){
+        for(SparseMatrix<double>::InnerIterator it(ZA, j); it; ++it){
+          term1_vec(it.row()) += it.value() * Pinv_ZAt(j, it.row());
+        }
+      }
+    }
+    VectorXd term2_vec = (Bt_Pinv_ZAt.array() * Schur_solve.array()).colwise().sum();
+    var_obs = term1_vec + term2_vec;
+  }
+  
+  return var_obs;
 }
 
 template<typename modeltype>

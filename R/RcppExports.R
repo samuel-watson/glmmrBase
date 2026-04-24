@@ -561,6 +561,14 @@ Model_spde__predict <- function(xp, newdata_, newoffset_, A_new_, m) {
     .Call(`_glmmrBase_Model_spde__predict`, xp, newdata_, newoffset_, A_new_, m)
 }
 
+Model_spde__re_var <- function(xp) {
+    .Call(`_glmmrBase_Model_spde__re_var`, xp)
+}
+
+Model_hsgp__re_var <- function(xp) {
+    .Call(`_glmmrBase_Model_hsgp__re_var`, xp)
+}
+
 Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {
     .Call(`_glmmrBase_Model__predict_re`, xp, newdata_, newoffset_, m, type)
 }

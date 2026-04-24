@@ -2295,6 +2295,20 @@ SEXP Model_spde__predict(SEXP xp, SEXP newdata_,
 }
 
 // [[Rcpp::export]]
+SEXP Model_spde__re_var(SEXP xp){
+  XPtr<glmm_spde> ptr(xp);
+  VectorXd var = ptr->matrix.re_variance_obs();
+  return wrap(var);
+}
+
+// [[Rcpp::export]]
+SEXP Model_hsgp__re_var(SEXP xp){
+  XPtr<glmm_hsgp> ptr(xp);
+  VectorXd var = ptr->matrix.re_variance_obs();
+  return wrap(var);
+}
+
+// [[Rcpp::export]]
 SEXP Model__predict_re(SEXP xp, SEXP newdata_,
                        SEXP newoffset_,
                        int m, int type = 0){

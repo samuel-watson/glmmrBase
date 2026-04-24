@@ -174,7 +174,7 @@ mcnr_family <- function(family, cmdstan){
 #' y = runif(n, -1, 1))
 #' mesh <- mesh_helper(df, c(0.15, 0.75), 0.075, c(0.1,0.3))
 mesh_helper <- function(locs, pred_locs = NULL, max_edge, cutoff, offset, ...){
-  mesh  <- fmesher::fm_mesh_2d(loc = locs, max.edge = max.edge, cutoff = cutoff, offset = offset, ...)
+  mesh  <- fmesher::fm_mesh_2d(loc = locs, max.edge = max_edge, cutoff = cutoff, offset = offset, ...)
   fem   <- fmesher::fm_fem(mesh)
   A_loc <- fmesher::fm_basis(mesh, loc = as.matrix(locs))
   A_loc <- Matrix::drop0(A_loc)
