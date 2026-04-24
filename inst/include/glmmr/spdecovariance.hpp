@@ -85,6 +85,7 @@ public:
   double                 quad_form_dQ_log_lambda(const VectorXd& u);  // u^T ∂Q/∂log λ u
   double                 trace_Qinv_dQ_Qinv_dQ_lambda(int K = 30);
   double                 trace_Qinv_dQ_log_lambda_hutch(int K = 30);
+  ArrayXd                diag_ZA_Qinv_ZAt_hutch();
   std::pair<double,double> traces_for_lambda(int K = 30);
   // Exact trace tr(Q^{-1} ∂Q/∂log λ) via selected inverse; σ² version is analytic (-n_v)
   double                 trace_Qinv_dQ_log_lambda();
@@ -455,6 +456,25 @@ inline double glmmr::spdeCovariance::trace_Qinv_dQ_log_lambda_hutch(int K){
     acc += (Ql * a).dot(z);     // z^T Qλ Q⁻¹ z
   }
   return acc / static_cast<double>(K);
+}
+
+inline Eigen::ArrayXd glmmr::spdeCovariance::diag_ZA_Qinv_ZAt_hutch() {
+  if(!chol_Q_current) refactor_Q();
+  if(!probes_current) refresh_probes();   // or inline the random draws
+  const int n_obs = ZA_.rows();
+  thread_local std::mt19937 gen{std::random_device{}()};
+  std::normal_distribution<double> nrm(0.0, 1.0);
+  ArrayXd out = ArrayXd::Zero(n_obs);
+  VectorXd z(n_obs), ATz(nv), QinvATz(nv), ZAQinvATz(n_obs);
+  for(int k = 0; k < probe_K; ++k){
+    // draw z or use cached probe
+    for(int i = 0; i < n_obs; ++i) z(i) = nrm(gen);
+    ATz.noalias()       = ZA_.transpose() * z;
+    QinvATz             = chol_Q.solve(ATz);
+    ZAQinvATz.noalias() = ZA_ * QinvATz;
+    out += (ZAQinvATz.array() * z.array());
+  }
+  return out / static_cast<double>(probe_K);
 }
 
 inline std::pair<double,double> 

@@ -1309,7 +1309,7 @@ Model <- R6::R6Class("Model",
                            Model__set_offset(private$ptr,self$mean$offset,type)
                            Model__set_weights(private$ptr,self$weights,type)
                            Model__set_var_par(private$ptr,self$var_par,type)
-                           if(self$family[[1]] == "binomial")Model__set_trials(private$ptr,self$trials,type)
+                           if(self$family[[1]] == "binomial" | self$family[[1]] == "bernoulli")Model__set_trials(private$ptr,self$trials,type)
                            if(self$family[[1]] %in% c("quantile","quantile_scaled")) Model__set_quantile(private$ptr,self$family$q,type)
                            #Model__update_u(private$ptr,matrix(rnorm(Model__Q(private$ptr,type)),ncol=1),type) # initialise random effects to random
                            if(!private$useSparse & type == 1) Model__make_dense(private$ptr,type)

@@ -128,9 +128,6 @@ private:
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
 
-// template<>
-// inline glmmr::ModelMatrix<bits_hsgp>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) {};
-
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
 
@@ -283,11 +280,10 @@ inline MatrixXd glmmr::ModelMatrix<bits_spde>::ave_information_matrix(){
   VectorXd W_bar = VectorXd::Zero(n);
   ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
   
-  // NOTE: Poisson log-normal correction (xb -= 0.5 * σ²_i) omitted for SPDE.
-  // For dense/HSGP classes, this is computed from diag(Z D Z^T). For SPDE,
-  // σ²_i = (ZA Q^{-1} (ZA)^T)_{ii} would require n sparse solves — prohibitive
-  // for meshes with thousands of nodes. Poisson SEs may be slightly optimistic
-  // as a result. Revisit if empirically problematic.
+  if(model.family.family == Fam::poisson){
+    ArrayXd sigma2_i = cov.diag_ZA_Qinv_ZAt_hutch();
+    xb -= 0.5 * sigma2_i;
+  }
   
   for(int k = 0; k < K; ++k){
     eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();

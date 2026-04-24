@@ -86,7 +86,6 @@ public:
   // functions to optimise
   double          log_likelihood_beta(const dblvec &beta);
   double          log_likelihood_theta(const dblvec &theta);
-  double          log_likelihood_all(const dblvec &par);
   bool            check_convergence(const double tol, const int hist, const int k, const int k0);
   
 protected:
@@ -278,14 +277,7 @@ inline double glmmr::ModelOptim<bits_hsgp>::marginal_log_likelihood(){
     throw std::runtime_error("Marginal QL only for Gaussian/Binomial/Poisson");
   }
   
-  // Working response: y_tilde = X*beta + working_resid  (relative to fixed effect part)
-  // Equivalently the residual r = working_resid (since we subtract X*beta below)
   VectorXd r = working_resid.matrix();
-  
-  // V = diag(W_inv) + ZPhi * diag(Lambda) * ZPhi^T
-  // log|V| via Sylvester: log|V| = sum(log W_inv) + log|I + Lambda^{1/2} ZPhi^T W ZPhi Lambda^{1/2}|
-  // Or use the same M-matrix trick as Gaussian but with W in place of sigma^{-2} I
-  
   ArrayXd W_diag = 1.0 / W_inv;  // the IRLS weights
   MatrixXd WZPhi = (ZPhi.array().colwise() * W_diag).matrix();
   MatrixXd G = ZPhi.transpose() * WZPhi;  // Phi^T W Phi (n cancels into W)
@@ -296,17 +288,12 @@ inline double glmmr::ModelOptim<bits_hsgp>::marginal_log_likelihood(){
   LLT<MatrixXd> llt_M(Mmat);
   VectorXd M_inv_c = llt_M.solve(c);
   
-  // log|V| = sum(log W_inv) + log|D| + log|M|  
-  //        = -sum(log W) + sum(log Lambda) + log|M|
   double logdet_Winv = -W_diag.log().sum();
   double logdetD = Lambda.log().sum();
   double logdetM = 2.0 * llt_M.matrixL().toDenseMatrix().diagonal().array().log().sum();
   double logdetV = logdet_Winv + logdetD + logdetM;
-  
-  // r^T V^{-1} r via Woodbury
   double rWr = (r.array().square() * W_diag).sum();
   double quadform = rWr - c.dot(M_inv_c);
-  
   double ll = -0.5 * (n * std::log(2*M_PI) + logdetV + quadform);
   
   return ll;
@@ -428,25 +415,6 @@ inline void glmmr::ModelOptim<modeltype>::add_reml_corr(const int col){
   ll_current.col(col).array() += -0.5*trCZZ;
 }
 
-template<typename modeltype>
-inline double glmmr::ModelOptim<modeltype>::log_likelihood_all(const dblvec &par)
-{
-  int G = model.covariance.npar();
-  auto first = par.begin();
-  auto last1 = par.begin() + P();
-  auto last2 = par.begin() + P() + G;
-  dblvec beta(first,last1);
-  dblvec theta(last1,last2);
-  model.linear_predictor.update_parameters(beta);
-  model.covariance.update_parameters(theta);
-  re.zu_ = model.covariance.ZLu(re.u_);
-  fn_counter.second += re.scaled_u_.cols();
-  double ll = log_likelihood();
-  if(control.reml)add_reml_corr(0);
-  if(control.saem) ll = saem_average(0);
-  ll_current.col(1) = ll_current.col(0);
-  return -1*ll;
-}
 
 
 
