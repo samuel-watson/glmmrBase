@@ -912,6 +912,20 @@ SEXP Model_hsgp__new(SEXP formula_, SEXP data_, SEXP colnames_,
 }
 
 // [[Rcpp::export]]
+SEXP Model_spde__new(SEXP formula_, SEXP data_, SEXP colnames_,
+                     SEXP family_, SEXP link_){
+  std::string formula = as<std::string>(formula_);
+  Eigen::ArrayXXd data = as<Eigen::ArrayXXd>(data_);
+  std::vector<std::string> colnames = as<std::vector<std::string> >(colnames_);
+  std::string family = as<std::string>(family_);
+  std::string link = as<std::string>(link_);
+  XPtr<glmm_spde> ptr(new glmm_spde(formula,data,colnames,family,link),true);
+  return ptr;
+}
+
+
+
+// [[Rcpp::export]]
 SEXP Model_hsgp__new_w_pars(SEXP formula_, SEXP data_, SEXP colnames_,
                             SEXP family_, SEXP link_, SEXP beta_,
                             SEXP theta_){
@@ -1307,25 +1321,6 @@ void Model__ml_theta(SEXP xp, int algo = 0, int type = 0){
 }
 
 // [[Rcpp::export]]
-void Model__ml_all(SEXP xp, int algo = 0, int type = 0){
-  glmmrType model(xp,static_cast<Type>(type));
-  auto functor = overloaded {
-    [](int) {}, 
-    [&algo](auto ptr){
-      switch(algo){
-      case 1:
-        ptr->optim.template ml_all<NEWUOA>();
-        break;
-      default:
-        ptr->optim.template ml_all<BOBYQA>();
-      break;
-      }
-    }
-  };
-  std::visit(functor,model.ptr);
-}
-
-// [[Rcpp::export]]
 void Model__nr_beta(SEXP xp, int type = 0){
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
@@ -1708,17 +1703,6 @@ SEXP Model__get_importance_weights(SEXP xp, int type = 0){
 }
 
 // [[Rcpp::export]]
-SEXP Model__get_zu_var(SEXP xp, int type = 0){
-  glmmrType model(xp,static_cast<Type>(type));
-  auto functor = overloaded {
-    [](int) {  return returnType(0);}, 
-    [](auto ptr){return returnType(ptr->re.zu_var_);}
-  };
-  auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<Eigen::VectorXd>(S));
-}
-
-// [[Rcpp::export]]
 void Model__set_var_par(SEXP xp, SEXP var_par_, int type = 0){
   double var_par = as<double>(var_par_);
   glmmrType model(xp,static_cast<Type>(type));
@@ -1798,6 +1782,50 @@ void Model_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
   std::vector<double> theta = ptr->model.covariance.parameters_;
   ptr->model.covariance.update_parameters(theta);
 }
+
+// [[Rcpp::export]]
+void Model_spde__set_spde_data(SEXP xp, SEXP A_, SEXP C_diag_, SEXP G_, SEXP alpha_){
+  Eigen::SparseMatrix<double> A = as<Eigen::SparseMatrix<double>>(A_);
+  Eigen::VectorXd             C = as<Eigen::VectorXd>(C_diag_);
+  Eigen::SparseMatrix<double> G = as<Eigen::SparseMatrix<double>>(G_);
+  int alpha                     = as<int>(alpha_);
+  
+  XPtr<glmm_spde> ptr(xp);
+  ptr->model.covariance.spde_data(A, C, G, alpha);
+}
+
+// // [[Rcpp::export]]
+// void Model_spde__set_spde_data(SEXP xp, SEXP A_sexp, SEXP C_diag_, SEXP G_, SEXP alpha_){
+//   // Manually unpack the dgCMatrix slots
+//   S4 A_s4(A_sexp);
+//   IntegerVector A_i = A_s4.slot("i");
+//   IntegerVector A_p = A_s4.slot("p");
+//   NumericVector A_x = A_s4.slot("x");
+//   IntegerVector A_Dim = A_s4.slot("Dim");
+//   int A_rows = A_Dim[0], A_cols = A_Dim[1];
+//   
+//   SparseMatrix<double> A(A_rows, A_cols);
+//   std::vector<Triplet<double>> trips;
+//   trips.reserve(A_x.size());
+//   for(int j = 0; j < A_cols; ++j){
+//     for(int k = A_p[j]; k < A_p[j+1]; ++k){
+//       trips.emplace_back(A_i[k], j, A_x[k]);
+//     }
+//   }
+//   A.setFromTriplets(trips.begin(), trips.end());
+//   A.makeCompressed();
+//   
+//   // Same for G
+//   Eigen::VectorXd C = as<Eigen::VectorXd>(C_diag_);
+//   Eigen::SparseMatrix<double> G = as<Eigen::SparseMatrix<double>>(G_);
+//   int alpha = as<int>(alpha_);
+//   
+//   XPtr<glmm_spde> ptr(xp);
+//   ptr->model.covariance.spde_data(A, C, G, alpha);
+//   // ...
+// }
+
+
 
 // [[Rcpp::export]]
 void Covariance_hsgp__set_approx_pars(SEXP xp, SEXP m_, SEXP L_){
@@ -2094,6 +2122,7 @@ SEXP Model__infomat_theta(SEXP xp, int type = 0){
 
 // [[Rcpp::export]]
 SEXP Model__kenward_roger(SEXP xp, int type = 0){
+  if(type != 0)Rcpp::stop("Small sample corrections require dense covariance (not HSGP/SPDE)");
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
@@ -2106,6 +2135,7 @@ SEXP Model__kenward_roger(SEXP xp, int type = 0){
 // [[Rcpp::export]]
 SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, bool oim = false, int type = 0){
   using namespace glmmr;
+  if(type != 0)Rcpp::stop("Small sample corrections require dense covariance (not HSGP/SPDE)");
   glmmrType model(xp,static_cast<Type>(type));
   SE corr = static_cast<SE>(ss_type);
   switch(corr){
@@ -2179,6 +2209,7 @@ SEXP Model__small_sample_correction(SEXP xp, int ss_type = 0, bool oim = false, 
 
 // [[Rcpp::export]]
 SEXP Model__box(SEXP xp, int type = 0){
+  if(type != 0)Rcpp::stop("Small sample corrections require dense covariance (not HSGP/SPDE)");
   glmmrType model(xp,static_cast<Type>(type));
   auto functor = overloaded {
     [](int) {  return returnType(0);}, 
@@ -2203,6 +2234,7 @@ SEXP Model__cov_deriv(SEXP xp, int type = 0){
 SEXP Model__predict(SEXP xp, SEXP newdata_,
                     SEXP newoffset_,
                     int m, int type = 0){
+  if(type == 4)Rcpp::stop("Use Model_spde__predict instead");
   Eigen::ArrayXXd newdata = Rcpp::as<Eigen::ArrayXXd>(newdata_);
   Eigen::ArrayXd newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
   
@@ -2230,6 +2262,35 @@ SEXP Model__predict(SEXP xp, SEXP newdata_,
     Rcpp::Named("linear_predictor") = wrap(xb),
     Rcpp::Named("re_parameters") = wrap(res),
     Rcpp::Named("samples") = wrap(samps)
+  );
+}
+
+// [[Rcpp::export]]
+SEXP Model_spde__predict(SEXP xp, SEXP newdata_,
+                         SEXP newoffset_,
+                         SEXP A_new_,
+                         int m){
+  Eigen::ArrayXXd newdata  = Rcpp::as<Eigen::ArrayXXd>(newdata_);
+  Eigen::ArrayXd  newoffset = Rcpp::as<Eigen::ArrayXd>(newoffset_);
+  Eigen::SparseMatrix<double> A_new = Rcpp::as<Eigen::SparseMatrix<double>>(A_new_);
+  A_new.makeCompressed();
+  
+  XPtr<glmm_spde> ptr(xp);
+  
+  VectorMatrix    res = ptr->re.predict_re_spde(newdata, newoffset, A_new);
+  Eigen::VectorXd xb  = ptr->model.linear_predictor.predict_xb(newdata, newoffset);
+  
+  Eigen::MatrixXd samps(newdata.rows(), m > 0 ? m : 1);
+  if(m > 0){
+    samps = glmmr::maths::sample_MVN(res, m);
+  } else {
+    samps.setZero();
+  }
+  
+  return Rcpp::List::create(
+    Rcpp::Named("linear_predictor") = wrap(xb),
+    Rcpp::Named("re_parameters")    = wrap(res),
+    Rcpp::Named("samples")          = wrap(samps)
   );
 }
 

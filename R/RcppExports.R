@@ -153,6 +153,10 @@ Model_hsgp__new <- function(formula_, data_, colnames_, family_, link_) {
     .Call(`_glmmrBase_Model_hsgp__new`, formula_, data_, colnames_, family_, link_)
 }
 
+Model_spde__new <- function(formula_, data_, colnames_, family_, link_) {
+    .Call(`_glmmrBase_Model_spde__new`, formula_, data_, colnames_, family_, link_)
+}
+
 Model_hsgp__new_w_pars <- function(formula_, data_, colnames_, family_, link_, beta_, theta_) {
     .Call(`_glmmrBase_Model_hsgp__new_w_pars`, formula_, data_, colnames_, family_, link_, beta_, theta_)
 }
@@ -267,10 +271,6 @@ Model__ml_beta <- function(xp, algo = 0L, type = 0L) {
 
 Model__ml_theta <- function(xp, algo = 0L, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__ml_theta`, xp, algo, type))
-}
-
-Model__ml_all <- function(xp, algo = 0L, type = 0L) {
-    invisible(.Call(`_glmmrBase_Model__ml_all`, xp, algo, type))
 }
 
 Model__nr_beta <- function(xp, type = 0L) {
@@ -405,10 +405,6 @@ Model__get_importance_weights <- function(xp, type = 0L) {
     .Call(`_glmmrBase_Model__get_importance_weights`, xp, type)
 }
 
-Model__get_zu_var <- function(xp, type = 0L) {
-    .Call(`_glmmrBase_Model__get_zu_var`, xp, type)
-}
-
 Model__set_var_par <- function(xp, var_par_, type = 0L) {
     invisible(.Call(`_glmmrBase_Model__set_var_par`, xp, var_par_, type))
 }
@@ -439,6 +435,10 @@ Covariance__submatrix <- function(xp, i) {
 
 Model_hsgp__set_approx_pars <- function(xp, m_, L_) {
     invisible(.Call(`_glmmrBase_Model_hsgp__set_approx_pars`, xp, m_, L_))
+}
+
+Model_spde__set_spde_data <- function(xp, A_, C_diag_, G_, alpha_) {
+    invisible(.Call(`_glmmrBase_Model_spde__set_spde_data`, xp, A_, C_diag_, G_, alpha_))
 }
 
 Covariance_hsgp__set_approx_pars <- function(xp, m_, L_) {
@@ -555,6 +555,10 @@ Model__cov_deriv <- function(xp, type = 0L) {
 
 Model__predict <- function(xp, newdata_, newoffset_, m, type = 0L) {
     .Call(`_glmmrBase_Model__predict`, xp, newdata_, newoffset_, m, type)
+}
+
+Model_spde__predict <- function(xp, newdata_, newoffset_, A_new_, m) {
+    .Call(`_glmmrBase_Model_spde__predict`, xp, newdata_, newoffset_, A_new_, m)
 }
 
 Model__predict_re <- function(xp, newdata_, newoffset_, m, type = 0L) {

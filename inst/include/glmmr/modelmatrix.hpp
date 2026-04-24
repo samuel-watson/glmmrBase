@@ -191,6 +191,51 @@ inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::information_matrix(){
   return XtWX - XtWA * solve_XtWA;
 }
 
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_spde>::information_matrix(){
+  auto& cov = model.covariance;
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE information_matrix: spde_data() not loaded.");
+  }
+  
+  W.update(re.centred_u_mean());
+  const int P_ = P();
+  
+  MatrixXd X = model.linear_predictor.X();           // n × P
+  const SparseMatrix<double>& ZA = cov.ZA_;          // n × n_v, sparse
+  
+  // Weights vector (n)
+  VectorXd W_diag;
+  bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();
+  if(nonlinear_w){
+    W_diag = W.W_;
+  } else {
+    W_diag = VectorXd::Constant(model.n(), 1.0 / model.data.var_par);
+  }
+  
+  // Weighted X  (n × P), dense
+  MatrixXd WX = W_diag.asDiagonal() * X;
+  
+  // X^T W X  (P × P)
+  MatrixXd XtWX = X.transpose() * WX;
+  
+  // (ZA)^T W X  (n_v × P) — sparse × dense
+  MatrixXd ZAtWX = ZA.transpose() * WX;
+  
+  // Posterior precision P_post = (ZA)^T W (ZA) + Q, factorised via refactor_P
+  cov.refactor_P(W_diag);
+  
+  // solve for (P_post)^{-1} (ZA)^T W X    (n_v × P)
+  MatrixXd solve_ZAtWX = cov.chol_P.solve(ZAtWX);
+  if(cov.chol_P.info() != Success){
+    throw std::runtime_error("SPDE information_matrix: P solve failed.");
+  }
+  
+  // M_β = X^T W X - (X^T W ZA) * solve_ZAtWX
+  //     = XtWX - ZAtWX^T * solve_ZAtWX
+  return XtWX - ZAtWX.transpose() * solve_ZAtWX;
+}
+
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
   W.update(re.centred_u_mean());
@@ -199,6 +244,97 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
     M += information_matrix_by_block(i);
   }
   return M;
+}
+
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_spde>::ave_information_matrix(){
+  auto& cov = model.covariance;
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE ave_information_matrix: spde_data() not loaded.");
+  }
+  
+  W.update(re.centred_u_mean());
+  const int P_ = P();
+  const int n  = model.n();
+  const int K  = re.u_.cols();
+  MatrixXd u_samples = cov.ZLu(re.u_);
+  
+  if(K < 2) throw std::runtime_error(
+      "louis_information_beta requires at least 2 MC samples in re.u_; "
+      "for Laplace-fit models, draw a posterior sample first via "
+      "posterior_u_samples().");
+  
+  ArrayXd w = re.u_weight_;
+  double wsum = w.sum();
+  if(wsum <= 0 || !std::isfinite(wsum)){
+    w = ArrayXd::Constant(K, 1.0/K);
+  } else {
+    w /= wsum;
+  }
+  
+  const MatrixXd X = model.linear_predictor.X();
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  MatrixXd s_mat(n, K);
+  VectorXd s_bar = VectorXd::Zero(n);
+  VectorXd W_bar = VectorXd::Zero(n);
+  ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
+  
+  // NOTE: Poisson log-normal correction (xb -= 0.5 * σ²_i) omitted for SPDE.
+  // For dense/HSGP classes, this is computed from diag(Z D Z^T). For SPDE,
+  // σ²_i = (ZA Q^{-1} (ZA)^T)_{ii} would require n sparse solves — prohibitive
+  // for meshes with thousands of nodes. Poisson SEs may be slightly optimistic
+  // as a result. Revisit if empirically problematic.
+  
+  for(int k = 0; k < K; ++k){
+    eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      if(model.family.link == Link::logit){
+      mu_k = 1.0 / (1.0 + (-eta_k).exp());
+    } else {
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+    }
+    s_k = model.data.variance * mu_k;
+    W_k = model.data.variance * mu_k * (1.0 - mu_k);
+    break;
+    }
+    case Fam::poisson: {
+      mu_k = eta_k.exp();
+      s_k = mu_k;
+      W_k = mu_k;
+      break;
+    }
+    case Fam::gaussian: {
+      mu_k = eta_k;
+      s_k = mu_k;
+      W_k = (model.data.variance.inverse() * model.data.weights);
+      break;
+    }
+    case Fam::gamma: case Fam::beta: case Fam::exponential: {
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+      s_k = mu_k;
+      W_k = W.W_.array();
+      break;
+    }
+    default:
+      throw std::runtime_error("ave_information_matrix (SPDE): unsupported family");
+    }
+    
+    s_mat.col(k) = s_k.matrix();
+    s_bar += w(k) * s_k.matrix();
+    W_bar += w(k) * W_k.matrix();
+  }
+  
+  MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
+  MatrixXd meat  = MatrixXd::Zero(P_, P_);
+  VectorXd g_k(P_);
+  for(int k = 0; k < K; ++k){
+    g_k = X.transpose() * (s_mat.col(k) - s_bar);
+    meat.noalias() += w(k) * g_k * g_k.transpose();
+  }
+  
+  return bread - meat;
 }
 
 template<typename modeltype>
@@ -304,6 +440,8 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
   
   return bread - meat;
 }
+
+
 
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
@@ -1486,8 +1624,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     }
     llt_Pb.solveInPlace(Vb);
     re.u_var_diag_ = Vb.diagonal(); 
-    MatrixXd ZLVb = ZL * Vb;  // n × n_cols
-    re.zu_var_ = (ZLVb.array() * ZL.array()).rowwise().sum();
 
   }
 
@@ -1614,8 +1750,6 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   MatrixXd Vu = MatrixXd::Identity(M, M);
   llt_P.solveInPlace(Vu);
   re.u_var_diag_ = Vu.diagonal(); 
-  MatrixXd PhiV = A * Vu;
-  re.zu_var_ = (PhiV.array() * A.array()).rowwise().sum();
   
   if(re.u_.cols() != niter){
     re.u_.resize(M, niter);
@@ -1651,4 +1785,124 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
     re.u_ = (L_Vu * znorm).colwise() + re.u_mean_;
     re.update_zu(loglik);
   }
+}
+
+template<>
+inline void glmmr::ModelMatrix<bits_spde>::posterior_u_samples(
+    const int niter, const bool reml, const bool loglik, const bool append)
+{
+  auto& cov = model.covariance;
+  
+  if(niter == 1)throw std::runtime_error("SPDE requires MC > 1");
+  
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE posterior_u_samples: spde_data() has not been loaded.");
+  }
+  if(cov.Q() != re.u_.rows()){
+    re.u_.resize(cov.Q(), 1);
+    re.u_.setZero();
+  }
+  
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  const int M = cov.Q();               // n_v
+  const int n = model.n();
+  ArrayXd eta(n);
+  VectorXd W_(n);
+  
+  // Observation-to-vertex projector: n × n_v, cached in the covariance class
+  const SparseMatrix<double>& A  = cov.ZA_;        // n × M
+  SparseMatrix<double> At        = A.transpose(); // M × n
+  
+  // Ensure Q factorisation is current (the θ step upstream should have refreshed it)
+  if(!cov.chol_Q_current) cov.refactor_Q();
+  
+  // IRLS for posterior mode in u-space. We solve, at each step,
+  //   P (b_new - b) = A^T (y - μ(b)) - Q b
+  // equivalently   P b_new = A^T W A b + A^T (y - μ(b))
+  VectorXd b = re.u_mean_;
+  if(b.size() != M){ b.resize(M); b.setZero(); }
+  VectorXd bnew(M);
+  double diff = 1.0;
+  int itero = 0;
+  
+  SparseMatrix<double> AtWA(M, M);
+  SparseMatrix<double> P(M, M);
+  VectorXd rhs(M);
+  
+  while(diff > 1e-6 && itero < 20){
+    eta = xb + (A * b).array();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+      W_  = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+      ArrayXd mu = model.data.variance * logitp;
+      rhs = At * (model.data.y - mu.matrix());
+      break;
+    }
+    case Fam::poisson: {
+      W_  = eta.exp().matrix();
+      rhs = At * (model.data.y - eta.exp().matrix());
+      break;
+    }
+    case Fam::gaussian: {
+      W_  = (model.data.variance.inverse() * model.data.weights).matrix();
+      rhs = At * (model.data.y - eta.matrix());
+      break;
+    }
+    default:
+      throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial.");
+    }
+    
+    // Compute AtWA once — used both for rhs update and inside P (via refactor_P)
+    SparseMatrix<double> AtWA = At * W_.asDiagonal() * A;
+    rhs.noalias() += AtWA * b;
+    
+    // Covariance class assembles P = AtWA + Q_mat internally and factorises it
+    cov.refactor_P(W_);
+    
+    bnew = cov.chol_P.solve(rhs);
+    if(cov.chol_P.info() != Success){
+      throw std::runtime_error("SPDE posterior: P solve failed.");
+    }
+    diff = (b - bnew).array().abs().maxCoeff();
+    b.swap(bnew);
+    itero++;
+  }
+  
+  re.u_mean_ = b;
+  
+  // Allocate sample storage
+  if(re.u_.cols() != niter){
+    re.u_.resize(M, niter);
+    re.u_solve_.resize(M, niter);
+    re.scaled_u_.resize(M, niter);
+    re.zu_.resize(n, niter);
+    re.u_weight_.resize(niter);
+    if(loglik) re.u_loglik_.resize(niter);
+  }
+  
+  // Posterior draws: u_k = b + x_k, where x_k ~ N(0, P^{-1}).
+  // Since P = R_P R_P^T  (NaturalOrdering, no permutation),
+  //   z_k ~ N(0, I); solve R_P^T x_k = z_k  ⇒  x_k ~ N(0, P^{-1}).
+  MatrixXd znorm(M, niter);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> d(0.0, 1.0);
+  for(int i = 0; i < znorm.size(); ++i) znorm.data()[i] = d(gen);
+  
+  if(loglik){
+    // log q(u_k) up to iteration-wise constant = -0.5 * z_k^T z_k
+    for(int i = 0; i < niter; ++i){
+      re.u_loglik_(i) = -0.5 * znorm.col(i).squaredNorm();
+    }
+  }
+  
+  // Solve R_P^T X = Z  (upper triangular solve with L^T = R_P^T).
+  // SimplicialLLT exposes matrixU() = L^T, and .solve() on it handles the triangular system.
+  MatrixXd X = cov.chol_P.matrixU().solve(znorm);
+  X = cov.chol_P.permutationP().transpose() * X;
+  re.u_ = X.colwise() + re.u_mean_;
+  re.update_zu(loglik);
+  
 }

@@ -327,6 +327,10 @@ Covariance <- R6::R6Class("Covariance",
                             if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
                             private$type <- 2
                             re[1] <- gsub("hsgp_","",re[1])
+                          } else if(any(sapply(re,function(i)grepl("spde",i)))){
+                            if(length(re)>1)stop("HSGP only available as a single covariance function currently.")
+                            private$type <- 4
+                            re[1] <- gsub("spde_","",re[1])
                           } else if(any(sapply(re,function(i)grepl("ar_",i) ))){
                             if(length(re)>1)stop("AR only available as a single covariance function currently.")
                             private$type <- 3

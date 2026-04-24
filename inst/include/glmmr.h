@@ -3,7 +3,6 @@
 #include <variant>
 #include "glmmr/model.hpp"
 #include "glmmr/openmpheader.h"
-#include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 
@@ -11,12 +10,14 @@ typedef glmmr::Model<bits > glmm;
 typedef glmmr::Model<bits_ar1 > glmm_ar1;
 typedef glmmr::Model<bits_nngp> glmm_nngp;
 typedef glmmr::Model<bits_hsgp > glmm_hsgp;
+typedef glmmr::Model<bits_spde > glmm_spde;
 
 enum class Type {
   GLMM = 0,
   GLMM_NNGP = 1,
   GLMM_HSGP = 2,
-  GLMM_AR1 = 3
+  GLMM_AR1 = 3,
+  GLMM_SPDE = 4
 };
 
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
@@ -24,7 +25,7 @@ template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 struct glmmrType
 {
-  std::variant<int, Rcpp::XPtr<glmm>, Rcpp::XPtr<glmm_nngp>, Rcpp::XPtr<glmm_hsgp>, Rcpp::XPtr<glmm_ar1> > ptr; 
+  std::variant<int, Rcpp::XPtr<glmm>, Rcpp::XPtr<glmm_nngp>, Rcpp::XPtr<glmm_hsgp>, Rcpp::XPtr<glmm_ar1>, Rcpp::XPtr<glmm_spde> > ptr; 
   glmmrType(SEXP xp, Type type) : ptr(0) {
     if(type == Type::GLMM){
       Rcpp::XPtr<glmm> newptr(xp);
@@ -37,6 +38,9 @@ struct glmmrType
       ptr = newptr;
     } else if(type == Type::GLMM_AR1){
       Rcpp::XPtr<glmm_ar1> newptr(xp);
+      ptr = newptr;
+    } else if(type == Type::GLMM_SPDE){
+      Rcpp::XPtr<glmm_spde> newptr(xp);
       ptr = newptr;
     } 
   }
