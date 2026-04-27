@@ -565,6 +565,10 @@ Model_spde__re_var <- function(xp) {
     .Call(`_glmmrBase_Model_spde__re_var`, xp)
 }
 
+Model_spde__re_var_at <- function(xp, A_) {
+    .Call(`_glmmrBase_Model_spde__re_var_at`, xp, A_)
+}
+
 Model_hsgp__re_var <- function(xp) {
     .Call(`_glmmrBase_Model_hsgp__re_var`, xp)
 }

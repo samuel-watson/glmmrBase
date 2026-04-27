@@ -96,6 +96,9 @@ public:
            typename = std::enable_if_t<std::is_same_v<C, bits_hsgp> || 
              std::is_same_v<C, bits_spde>>>
   VectorXd                re_variance_obs();
+  template<typename C = modeltype, 
+           typename = std::enable_if_t<std::is_same_v<C, bits_spde>>>
+  VectorXd                re_variance_at(const Eigen::SparseMatrix<double>& A_proj);
   MatrixXd                sandwich_matrix(); 
   std::vector<MatrixXd>   sigma_derivatives();
   template<IM imtype>
@@ -653,6 +656,68 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
 
 template<typename modeltype>
 template<typename C, typename>
+inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_at(
+    const Eigen::SparseMatrix<double>& A_proj)
+{
+  using Eigen::SparseMatrix; 
+  
+  W.update(re.centred_u_mean());
+  MatrixXd X = model.linear_predictor.X();
+  const bool nonlinear_w = model.family.family != Fam::gaussian
+  || (model.data.weights != 1).any();
+  
+  const int n = model.n();
+  VectorXd W_(n);
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  ArrayXd eta = xb + (A_proj * re.u_mean_).array();
+  switch(model.family.family){
+  case Fam::binomial: case Fam::bernoulli: {
+    ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+    W_ = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+    break;
+  }
+  case Fam::poisson: {
+    W_ = eta.exp().matrix();
+    break;
+  }
+  case Fam::gaussian: {
+    W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+    break;
+  }
+  default:
+    throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial");
+  }
+  
+  MatrixXd WX = X;
+  if(nonlinear_w) WX.applyOnTheLeft(W_.asDiagonal());
+  else            WX *= (1.0 / model.data.var_par);
+  MatrixXd XtWX = X.transpose() * WX;
+  
+  auto& cov = model.covariance;
+  cov.refactor_P(W_);
+  
+  MatrixXd B     = cov.ZA_.transpose() * WX;        // n_v × P  (model-side B)
+  MatrixXd PinvB = cov.chol_P.solve(B);
+  MatrixXd Schur = XtWX - B.transpose() * PinvB;
+  Eigen::LLT<MatrixXd> llt_Schur(Schur);
+  
+  // ── Substitute A_proj for ZA in the diagonal extraction ──
+  MatrixXd Pinv_AT      = cov.chol_P.solve(MatrixXd(A_proj.transpose())); // n_v × n_pred
+  MatrixXd Bt_Pinv_AT   = B.transpose() * Pinv_AT;                       // P × n_pred
+  MatrixXd Schur_solve  = llt_Schur.solve(Bt_Pinv_AT);                   // P × n_pred
+  
+  // VectorXd term1 = (A_proj * Pinv_AT).diagonal();   // sparse × dense → fine
+  // // or, avoiding the off-diagonals:
+  VectorXd term1 = VectorXd::Zero(A_proj.rows());
+  for (int k = 0; k < A_proj.outerSize(); ++k)
+    for (SparseMatrix<double>::InnerIterator it(A_proj, k); it; ++it)
+      term1(it.row()) += it.value() * Pinv_AT(it.col(), it.row());
+  VectorXd term2 = (Bt_Pinv_AT.array() * Schur_solve.array()).colwise().sum();
+  return term1 + term2;
+}
+
+template<typename modeltype>
+template<typename C, typename>
 inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
 {
   using Eigen::SparseMatrix;
@@ -665,10 +730,38 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
   const bool nonlinear_w = model.family.family != Fam::gaussian 
   || (model.data.weights != 1).any();
   
+  const int n = model.n();
+  VectorXd W_(n);
+  ArrayXd eta(n);
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  if constexpr (std::is_same_v<C, bits_hsgp>){
+    eta = xb + (model.covariance.ZPhi() * re.u_mean_).array();
+  }  else if constexpr (std::is_same_v<C, bits_spde>) {
+    eta = xb + (model.covariance.ZA_ * re.u_mean_).array();
+  }
+  
+  switch(model.family.family){
+  case Fam::binomial: case Fam::bernoulli: {
+    ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+    W_ = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+    break;
+  }
+  case Fam::poisson: {
+    W_ = eta.exp().matrix();
+    break;
+  }
+  case Fam::gaussian: {
+    W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+    break;
+  }
+  default:
+    throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial");
+  }
+  
   // --- Build WX (P × P pieces are branch-independent) ---
   MatrixXd WX = X;
   if(nonlinear_w){
-    WX.applyOnTheLeft(W.W_.asDiagonal());
+    WX.applyOnTheLeft(W_.asDiagonal());
   } else {
     WX *= (1.0 / model.data.var_par);
   }
@@ -684,7 +777,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
     
     MatrixXd WZ = Z;
     if(nonlinear_w){
-      WZ.applyOnTheLeft(W.W_.asDiagonal());
+      WZ.applyOnTheLeft(W_.asDiagonal());
     } else {
       WZ *= (1.0 / model.data.var_par);
     }
@@ -709,7 +802,7 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
   } else if constexpr (std::is_same_v<C, bits_spde>){
     auto& cov = model.covariance;
     const SparseMatrix<double>& ZA = cov.ZA_;         // n × n_v, sparse
-    cov.refactor_P(W.W_);
+    cov.refactor_P(W_);
     MatrixXd B = ZA.transpose() * WX;                 // n_v × P
     MatrixXd PinvB = cov.chol_P.solve(B);             // n_v × P  (P sparse solves)
     MatrixXd Schur = XtWX - B.transpose() * PinvB;    // P × P
@@ -734,34 +827,6 @@ inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
-  // none of these produce great results! Not sure what the best strategy is here.
-  
-  // MatrixXd XandZ(model.n(),P()+Q());
-  // XandZ.leftCols(P()) = model.linear_predictor.Xdata;
-  // XandZ.rightCols(Q()) = model.covariance.ZL();
-  // dblvec bu;
-  // for(const auto& b: model.linear_predictor.parameters) bu.push_back(b);
-  // VectorXd umean = re.u(false).rowwise().mean();
-  // for(int i = 0; i < umean.size(); i++) bu.push_back(umean(i));
-  // MatrixMatrix result = model.vcalc.jacobian_and_hessian(bu,XandZ,model.data.offset);
-  // MatrixXd JmatFull = result.mat2 * result.mat2.transpose();
-  // MatrixXd Jmat = JmatFull.block(0,0,P(),P());
-  // MatrixXd invHFull = -1.0*result.mat1;
-  // invHFull = invHFull.llt().solve(MatrixXd::Identity(invHFull.rows(),invHFull.cols()));
-  // MatrixXd invH = invHFull.block(0,0,P(),P());
-  // MatrixXd sandwich = invH * Jmat * invH;
-  // 
-  // 
-  // #if defined(R_BUILD) && defined(ENABLE_DEBUG)
-  //   if(result.mat1.rows() <= P())Rcpp::stop("mat1 <= p");
-  //   Rcpp::Rcout << "\nSANDWICH\n";
-  //   Rcpp::Rcout << "\nHessian: \n" << -1.0*result.mat1.block(0,0,P(),P());
-  //   Rcpp::Rcout << "\nInverse Hessian: \n" << invH;
-  //   Rcpp::Rcout << "\nGradient: \n" << Jmat;
-  //   Rcpp::Rcout << "\nSandwich: \n" << sandwich;
-  // #endif
-  // 
-  // return sandwich;
   
   MatrixXd infomat = information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(P(),P()));
@@ -773,15 +838,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   VectorXd resid = model.linear_predictor.xb()+model.data.offset;
   resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
   MatrixXd resid_sum = resid * resid.transpose();
-  // int niter = zd.cols();
-  // for(int i = 0; i < niter; ++i){
-  //   zd.col(i) = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-  //   if(model.family.family == Fam::binomial){
-  //     zd.col(i) = zd.col(i).cwiseProduct(model.data.variance.matrix());
-  //   }
-  //   zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
-  // }
-  // MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
   
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nSANDWICH\n";
@@ -791,14 +847,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   
   MatrixXd robust = infomat * SX.transpose() * resid_sum * SX * infomat;//(infomat.rows(),infomat.cols());
   
-  // if(type == SandwichType::CR2){
-  //   MatrixXd H = MatrixXd::Identity(X.rows(),X.rows()) - X*infomat * SX.transpose();
-  //   H = H.llt().solve(MatrixXd::Identity(X.rows(),X.rows()));
-  //   MatrixXd HL(H.llt().matrixL());
-  //   robust = infomat * SX.transpose()  * HL * resid_sum * HL * SX * infomat;
-  // } else {
-  //   robust = infomat * SX.transpose() * resid_sum * SX * infomat;
-  // }
   return robust;
 }
 
@@ -1792,7 +1840,7 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   
   while(diff > 1e-6 && itero < 20){
     eta = xb + (A * b).array();
-    
+    VectorXd W_(n);
     switch(model.family.family){
     case Fam::binomial: case Fam::bernoulli: {
       ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());

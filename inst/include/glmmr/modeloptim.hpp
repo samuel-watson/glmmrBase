@@ -818,11 +818,12 @@ inline void glmmr::ModelOptim<modeltype>::nr_beta(){
   MatrixXd zd = matrix.linpred();
   MatrixXd X = model.linear_predictor.X();
   
-  VectorXd xb = X * model.linear_predictor.parameter_vector();
-  double xb_mean = xb.mean();
+  VectorXd xb     = X * model.linear_predictor.parameter_vector();
+  VectorXd offset = model.data.offset;       // or however it's accessed
+  double xb_off_mean = (xb + offset).mean();
   if(zd.cols() > 1){
     for(int i = 0; i < zd.cols(); i++){
-      double zu_mean = zd.col(i).mean() - xb_mean;
+      double zu_mean = zd.col(i).mean() - xb_off_mean;
       zd.col(i).array() -= zu_mean;
     }
   }

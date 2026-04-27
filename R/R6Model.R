@@ -787,6 +787,7 @@ Model <- R6::R6Class("Model",
                        #' @param hist Integer. The length of the running mean for the convergence criterion for non-Gaussian models.
                        #' @param k0 Integer. The expected number of iterations until convergence.
                        #' @param reml Bool. For Gaussian models, whether to use REML or not.
+                       #' @param start_glm Bool. Start beta from the glm fitted values with random effects set to zero.
                        #' @return A `mcml` model fit object
                        #' @examples
                        #' # Simulated trial data example using REML
@@ -892,7 +893,7 @@ Model <- R6::R6Class("Model",
                        #' @md
                        fit = function(niter = 100, max_iter = 30, se = "average",
                                       tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), 
-                                      hist = 5, k0 = 10, reml = TRUE){
+                                      hist = 5, k0 = 10, reml = FALSE, start_glm = TRUE){
                          if((self$family[[1]]=="gaussian"&self$family[[2]]=="identity") | private$model_type() == 2)Model__use_reml(private$ptr,reml,private$model_type())
                          if(!se %in% c("average","point"))stop("se argument should be average or point")
                          if(private$model_type() == 2){
@@ -901,7 +902,7 @@ Model <- R6::R6Class("Model",
                            if(length(hsgp_vals[["m"]]) != hsgp_dim) hsgp_vals[["m"]] <- rep(hsgp_vals[["m"]][1],hsgp_dim)
                            Model_hsgp__set_approx_pars(private$ptr, hsgp_vals[["m"]], hsgp_vals[["L"]])
                          }
-                         Model__fit(private$ptr, niter, max_iter, TRUE, tol, hist, k0, private$model_type())
+                         Model__fit(private$ptr, niter, max_iter, start_glm, tol, hist, k0, private$model_type())
                          self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
                                                 cov.pars = Model__get_theta(private$ptr, private$model_type()))
                          if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()

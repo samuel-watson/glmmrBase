@@ -2302,6 +2302,14 @@ SEXP Model_spde__re_var(SEXP xp){
 }
 
 // [[Rcpp::export]]
+SEXP Model_spde__re_var_at(SEXP xp, SEXP A_){
+  Eigen::SparseMatrix<double> A = as<Eigen::SparseMatrix<double>>(A_);
+  XPtr<glmm_spde> ptr(xp);
+  VectorXd var = ptr->matrix.re_variance_at(A);
+  return wrap(var);
+}
+
+// [[Rcpp::export]]
 SEXP Model_hsgp__re_var(SEXP xp){
   XPtr<glmm_hsgp> ptr(xp);
   VectorXd var = ptr->matrix.re_variance_obs();

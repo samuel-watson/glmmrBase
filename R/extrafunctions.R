@@ -173,6 +173,7 @@ mcnr_family <- function(family, cmdstan){
 #' x = runif(n, -1, 1),
 #' y = runif(n, -1, 1))
 #' mesh <- mesh_helper(df, c(0.15, 0.75), 0.075, c(0.1,0.3))
+#' @export
 mesh_helper <- function(locs, pred_locs = NULL, max_edge, cutoff, offset, ...){
   mesh  <- fmesher::fm_mesh_2d(loc = locs, max.edge = max_edge, cutoff = cutoff, offset = offset, ...)
   fem   <- fmesher::fm_fem(mesh)

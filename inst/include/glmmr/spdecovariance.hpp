@@ -85,6 +85,7 @@ public:
   double                 quad_form_dQ_log_lambda(const VectorXd& u);  // u^T ∂Q/∂log λ u
   double                 trace_Qinv_dQ_Qinv_dQ_lambda(int K = 30);
   double                 trace_Qinv_dQ_log_lambda_hutch(int K = 30);
+  ArrayXd                diag_Qinv_hutch(int K = 50);
   ArrayXd                diag_ZA_Qinv_ZAt_hutch();
   std::pair<double,double> traces_for_lambda(int K = 30);
   // Exact trace tr(Q^{-1} ∂Q/∂log λ) via selected inverse; σ² version is analytic (-n_v)
@@ -439,6 +440,22 @@ inline double glmmr::spdeCovariance::trace_Qinv_dQ_Qinv_dQ_lambda(int K){
     b = Ql * a;             // Qλ Q⁻¹ z
     c = chol_Q.solve(b);    // Q⁻¹ Qλ Q⁻¹ z
     acc += (Ql * c).dot(z); // z^T Qλ (...) 
+  }
+  return acc / static_cast<double>(K);
+}
+
+inline ArrayXd glmmr::spdeCovariance::diag_Qinv_hutch(int K)
+{
+  if (!chol_Q_current) refactor_Q();
+  if (!probes_current) refresh_probes();
+  if (K < 0) K = probe_K;
+  K = std::min(K, (int)probe_cache.size());
+  
+  ArrayXd acc = ArrayXd::Zero(nv);
+  for (int k = 0; k < K; ++k) {
+    const VectorXd& z = probe_cache[k];      // ±1 Rademacher, length nv
+    VectorXd Qinv_z   = chol_Q.solve(z);     // O(nnz) sparse solve
+    acc += (z.array() * Qinv_z.array());
   }
   return acc / static_cast<double>(K);
 }

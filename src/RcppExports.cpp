@@ -1776,6 +1776,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// Model_spde__re_var_at
+SEXP Model_spde__re_var_at(SEXP xp, SEXP A_);
+RcppExport SEXP _glmmrBase_Model_spde__re_var_at(SEXP xpSEXP, SEXP A_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type xp(xpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type A_(A_SEXP);
+    rcpp_result_gen = Rcpp::wrap(Model_spde__re_var_at(xp, A_));
+    return rcpp_result_gen;
+END_RCPP
+}
 // Model_hsgp__re_var
 SEXP Model_hsgp__re_var(SEXP xp);
 RcppExport SEXP _glmmrBase_Model_hsgp__re_var(SEXP xpSEXP) {
@@ -2034,6 +2046,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_glmmrBase_Model__predict", (DL_FUNC) &_glmmrBase_Model__predict, 5},
     {"_glmmrBase_Model_spde__predict", (DL_FUNC) &_glmmrBase_Model_spde__predict, 5},
     {"_glmmrBase_Model_spde__re_var", (DL_FUNC) &_glmmrBase_Model_spde__re_var, 1},
+    {"_glmmrBase_Model_spde__re_var_at", (DL_FUNC) &_glmmrBase_Model_spde__re_var_at, 2},
     {"_glmmrBase_Model_hsgp__re_var", (DL_FUNC) &_glmmrBase_Model_hsgp__re_var, 1},
     {"_glmmrBase_Model__predict_re", (DL_FUNC) &_glmmrBase_Model__predict_re, 5},
     {"_glmmrBase_hessian_from_formula", (DL_FUNC) &_glmmrBase_hessian_from_formula, 4},
