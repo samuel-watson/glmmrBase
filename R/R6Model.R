@@ -845,7 +845,7 @@ Model <- R6::R6Class("Model",
                        #'   trials = rep(10, nrow(df))
                        #' )$sim_data()
                        #' 
-                       #' we can fit the SPDE approximation using a mesh built by fmesher
+                       #' # we can fit the SPDE approximation using a mesh built by fmesher
                        #' df_pred <- expand.grid(x= seq(-1,1,by=0.05), y = seq(-1,1,by=0.05))
                        #' df_pred$z <- 0
                        #' mesh_data <- mesh_helper(unique(df[,1:2]), df_pred[,1:2], c(0.15, 0.75), 0.075, c(0.1,0.3))
