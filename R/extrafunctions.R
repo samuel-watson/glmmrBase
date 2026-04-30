@@ -156,6 +156,37 @@ mcnr_family <- function(family, cmdstan){
   }
 }
 
+#' Generates the required mesh data from fmesher for SPDE approximations
+#' 
+#' For SPDE Gaussian Process approximations we require a mesh passed to a Model object. This function
+#' takes the locations and arguments passed to `fm_mesh_2d` and returns the required data, including basis
+#' matrices. 
+#' @param locs A nx2 data frame of observation locations
+#' @param pred_locs An optional data frame of prediction locations.
+#' @param max_edge The largest allowed triangle edge length. One or two values.
+#' @param cutoff The minimum allowed distance between points. Point at most as far apart as this are replaced by a single vertex prior to the mesh refinement step.
+#' @param offset The automatic extension distance. One or two values, for an inner and an optional outer extension. If negative, interpreted as a factor relative to the approximate data diameter 
+#' @param ... Other arguments passed to `fm_mesh_2d`
+#' @return A list with A, C, and G sparse matrices to be passed to `Model$new()`
+#' @examples
+#' df <- data.frame(
+#' x = runif(n, -1, 1),
+#' y = runif(n, -1, 1))
+#' mesh <- mesh_helper(df, c(0.15, 0.75), 0.075, c(0.1,0.3))
+#' @export
+mesh_helper <- function(locs, pred_locs = NULL, max_edge, cutoff, offset, ...){
+  mesh  <- fmesher::fm_mesh_2d(loc = locs, max.edge = max_edge, cutoff = cutoff, offset = offset, ...)
+  fem   <- fmesher::fm_fem(mesh)
+  A_loc <- fmesher::fm_basis(mesh, loc = as.matrix(locs))
+  A_loc <- Matrix::drop0(A_loc)
+  C_diag <- Matrix::diag(fem$c0)
+  G <- as(as(fem$g1, "generalMatrix"), "CsparseMatrix")
+  G <- Matrix::drop0(G)
+  A_pred <- NULL
+  if(!is.null(pred_locs)) A_pred <- fmesher::fm_basis(mesh, loc = as.matrix(pred_locs)) 
+  return(list(data = list(A_loc = A_loc, C = C_diag, G = G), A_pred = A_pred))
+}
+
 #' Simulated data from a stepped-wedge cluster trial
 #'
 #' @name SimTrial

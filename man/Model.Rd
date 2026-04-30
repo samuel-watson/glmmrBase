@@ -56,46 +56,6 @@ The matrices X and Z both have n rows, where n is the number of observations in 
 Using \code{update_parameters()} is the preferred way of updating the parameters of the
 mean or covariance objects as opposed to direct assignment, e.g. \code{self$covariance$parameters <- c(...)}.
 The function calls check functions to automatically update linked matrices with the new parameters.
-
-This function provides a large range of options for fitting GLMMs using stochastic algorithms. The function provides
-fine control over all aspects of the algorithm, including method of sampling the random effects, convergence criteria,
-optimisation methods, and so forth. For a fast and reliable alternative use the \code{fit()} function in this class, which is
-recommended for most users.
-
-\strong{Monte Carlo maximum likelihood}
-
-Fits generalised linear mixed models using one of several algorithms: Markov Chain Newton
-Raphson (MCNR), Markov Chain Expectation Maximisation (MCEM), or stochastic approximation expectation
-maximisation (SAEM) with or without Polyak-Ruppert averaging. MCNR and MCEM are described by McCulloch (1997)
-\url{doi:10.1080/01621459.1997.10473613}. For each iteration
-of the algorithms the unobserved random effect terms (\eqn{\gamma}) are simulated
-using Markov Chain Monte Carlo (MCMC) methods,
-and then these values are conditioned on in the subsequent steps to estimate the covariance
-parameters and the mean function parameters (\eqn{\beta}). SAEM uses a Robbins-Munroe approach to approximating
-the likelihood and requires fewer MCMC samples and may have lower Monte Carlo error, see Jank (2006)\url{doi:10.1198/106186006X157469}.
-The option \code{alpha} determines the rate at which succesive iterations "forget" the past and must be between 0.5 and 1. Higher values
-will result in lower Monte Carlo error but slower convergence. The options \code{mcem.adapt} and \code{mcnr.adapt} will modify the number of MCMC samples during each step of model fitting
-using the suggested values in Caffo, Jank, and Jones (2006)\url{doi:10.1111/j.1467-9868.2005.00499.x}
-as the estimates converge. A Newton-Raphson step can be used for both fixed effect and covariance parameters with \code{mcnr2}.
-
-The accuracy of the algorithm depends on the user specified tolerance. For higher levels of
-tolerance, larger numbers of MCMC samples are likely need to sufficiently reduce Monte Carlo error. However,
-the SAEM approach does overcome reduce the required samples. As such a lower number (20-50)
-samples per iteration is normally sufficient to get convergence.
-
-The default method uses MCMC sampling to generate samples of the random effects. As an alternative, samples can be
-generated using a normal approximation with posterior mean and variance calculated directly by setting \code{mcmc.pkg = "analytic"}.
-
-There are several stopping rules for the algorithm. Either the algorithm will terminate when succesive parameter estimates are
-all within a specified tolerance of each other (\code{conv.criterion = 1}), or when there is a high probability that the estimated
-log-likelihood has not been improved. This latter criterion can be applied to either the overall log-likelihood (\code{conv.criterion = 2}),
-the likelihood just for the fixed effects (\code{conv.criterion = 3}), or both the likelihoods for the fixed effects and covariance parameters
-(\code{conv.criterion = 4}; default).
-
-The information printed to the console during model fitting can be controlled with the \code{self$set_trace()} function.
-
-To provide weights for the model fitting, store them in self$weights. To set the number of
-trials for binomial models, set self$trials.
 }
 \examples{
 
@@ -214,98 +174,11 @@ des <- Model$new(
 des$power() #power of 0.90 for the int parameter
 
 ## ------------------------------------------------
-## Method `Model$MCML`
-## ------------------------------------------------
-
-\dontrun{
-# Simulated trial data example
-data(SimTrial,package = "glmmrBase")
-model <- Model$new(
-  formula = y ~ int + factor(t) - 1 + (1|gr(cl)*ar1(t)),
-  data = SimTrial,
-  family = gaussian()
-)
-glm3 <- model$MCML()
-
-# Salamanders data example
-data(Salamanders,package="glmmrBase")
-model <- Model$new(
-  mating~fpop:mpop-1+(1|gr(mnum))+(1|gr(fnum)),
-  data = Salamanders,
-  family = binomial()
-)
-
-# use MCEM + REML with 500 sampling iterations
-glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
-
-# as an alternative, we will specify the variance parameters on the 
-# log scale and use a fast fitting algorithm
-# we will use two newton-raphson steps, and Normal approximation posteriors with 
-# conjugate gradient descent
-# the maximum number of iterations is increased as it takes 100-110 in this example
-# we can also chain together the functions
-glm3 <- Model$new(
-  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
-  data = Salamanders,
-  family = binomial()
-)$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
-
-# Example using simulated data
-#create example data with six clusters, five time periods, and five people per cluster-period
-df <- nelder(~(cl(6)*t(5)) > ind(5))
-# parallel trial design intervention indicator
-df$int <- 0
-df[df$cl > 3, 'int'] <- 1 
-# specify parameter values in the call for the data simulation below
-des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = c(0.05,0.7),
-  mean = c(rep(0,5),0.2),
-  data = df,
-  family = gaussian()
-)
-ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
-# use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
-fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
-
-# Non-linear model fitting example using the example provided by nlmer in lme4
-data(Orange, package = "lme4")
-
-# the lme4 example:
-startvec <- c(Asym = 200, xmid = 725, scal = 350)
-(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
-              Orange, start = startvec))
-
-Orange <- as.data.frame(Orange)
-Orange$Tree <- as.numeric(Orange$Tree)
-
-# Here we can specify the model as a function. 
-
-model <- Model$new(
-  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
-  data = Orange,
-  family = gaussian(),
-  mean = c(200,725,350),
-  covariance = c(500),
-  var_par = 50
-)
-
-# for this example, we will use MCEM with adaptive MCMC sample sizes
-
-nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
-
-summary(nfit)
-summary(nm1)
-
-
-}
-
-## ------------------------------------------------
 ## Method `Model$fit`
 ## ------------------------------------------------
 
 # Simulated trial data example using REML
+set.seed(123)
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
@@ -339,7 +212,71 @@ des <- Model$new(
 )
 ysim <- des$sim_data() # simulate some data from the model
 des$update_y(ysim)
+set.seed(123)
 fit2 <- des$fit() 
+
+# use of Gaussian process approximations
+# simulate some data - binomial observation on [-1,1] x [-1,1]
+set.seed(123)
+df <- data.frame(
+x = runif(n, -1, 1),
+y = runif(n, -1, 1))
+df$z <- rnorm(n)
+
+df$outcome <- Model$new(
+  ~ z + (1|matern1log(x, y)),
+  data = df,
+   family = binomial(),
+  mean = c(1, 0.1),
+  covariance = c(log(2), log(0.3)),
+  trials = rep(10, nrow(df))
+)$sim_data()
+
+# we can fit the SPDE approximation using a mesh built by fmesher
+df_pred <- expand.grid(x= seq(-1,1,by=0.05), y = seq(-1,1,by=0.05))
+df_pred$z <- 0
+mesh_data <- mesh_helper(unique(df[,1:2]), df_pred[,1:2], c(0.15, 0.75), 0.075, c(0.1,0.3))
+
+mod <- Model$new(
+  outcome ~ z + (1|spde_matern1log(x, y)),
+  data = df,
+  family = binomial(),
+  trials = rep(10, n),
+  mesh = mesh_data[["data"]],
+  covariance = log(c(0.5, 0.3))
+)
+set.seed(123)
+fit1 <- mod$fit(niter = 50)
+
+#generate predictions 
+pred1 <- mod$predict(newdata = df_pred,mesh_A = mesh_data[["A_pred"]])
+
+#' # Non-linear model fitting example using the example provided by nlmer in lme4
+data(Orange, package = "lme4")
+
+# the lme4 example:
+startvec <- c(Asym = 200, xmid = 725, scal = 350)
+(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
+              Orange, start = startvec))
+
+Orange <- as.data.frame(Orange)
+Orange$Tree <- as.numeric(Orange$Tree)
+
+# Here we can specify the model as a function. 
+
+model <- Model$new(
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  data = Orange,
+  family = gaussian(),
+  mean = c(200,725,350),
+  covariance = c(500),
+  var_par = 50
+)
+set.seed(123)
+nfit <- model$fit(niter = 100)
+
+summary(nfit)
+summary(nm1)
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
@@ -355,8 +292,6 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 }
 \seealso{
 \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
-
-\link[glmmrBase]{Model}, \link[glmmrBase]{Covariance}, \link[glmmrBase]{MeanFunction}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -374,21 +309,6 @@ Biometrics, 44(4), 1049.\url{doi:10.2307/2531734}
 \item{\code{formula}}{The formula for the model. May be empty if separate formulae are specified for the mean and covariance components.}
 
 \item{\code{var_par}}{Scale parameter required for some distributions (Gaussian, Gamma, Beta).}
-
-\item{\code{mcmc_options}}{There are three options for MCMC sampling that are specified in this list. Note that these
-will be moved to arguments to the relevant function, and so are obsolete.
-\itemize{
-\item \code{warmup} The number of warmup iterations. Note that if using the internal HMC
-sampler, this only applies to the first iteration of the MCML algorithm, as the
-values from the previous iteration are carried over.
-\item \code{samps} The number of MCMC samples drawn in the MCML algorithms. For
-smaller tolerance values larger numbers of samples are required. For the internal
-HMC sampler, larger numbers of samples are generally required than if using Stan since
-the samples generally exhibit higher autocorrealtion, especially for more complex
-covariance structures. For SAEM a small number is recommended as all samples are stored and used
-from every iteration.
-\code{chains} The number of MCMC chains for the Stan sampler.
-}}
 }
 \if{html}{\out{</div>}}
 }
@@ -413,14 +333,13 @@ from every iteration.
 \item \href{#method-Model-w_matrix}{\code{Model$w_matrix()}}
 \item \href{#method-Model-dh_deta}{\code{Model$dh_deta()}}
 \item \href{#method-Model-Sigma}{\code{Model$Sigma()}}
-\item \href{#method-Model-MCML}{\code{Model$MCML()}}
 \item \href{#method-Model-fit}{\code{Model$fit()}}
 \item \href{#method-Model-sparse}{\code{Model$sparse()}}
-\item \href{#method-Model-mcmc_sample}{\code{Model$mcmc_sample()}}
 \item \href{#method-Model-importance_weights}{\code{Model$importance_weights()}}
 \item \href{#method-Model-gradient}{\code{Model$gradient()}}
 \item \href{#method-Model-partial_sigma}{\code{Model$partial_sigma()}}
 \item \href{#method-Model-u}{\code{Model$u()}}
+\item \href{#method-Model-sample_u}{\code{Model$sample_u()}}
 \item \href{#method-Model-log_likelihood}{\code{Model$log_likelihood()}}
 \item \href{#method-Model-calculator_instructions}{\code{Model$calculator_instructions()}}
 \item \href{#method-Model-marginal}{\code{Model$marginal()}}
@@ -522,7 +441,7 @@ The function will return a list with the linear predictor, conditional
 distribution of the new random effects term conditional on the current estimates
 of the random effects, and some simulated values of the random effects if requested.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$predict(newdata, offset = rep(0, nrow(newdata)), m = 0)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$predict(newdata, offset = rep(0, nrow(newdata)), mesh_A = NULL, m = 0)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -558,7 +477,8 @@ generated from a previous model fit.
   offset = NULL,
   weights = NULL,
   trials = NULL,
-  model_fit = NULL
+  model_fit = NULL,
+  mesh = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -816,7 +736,12 @@ estimator for the variance-covariance matrix of the fixed effect parameters. For
 see \code{small_sample_correction()} and \code{box()}. For models with non-linear functions of fixed effect parameters,
 a correction to the Hessian matrix is required, which is automatically calculated or optionally returned or disabled.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(include.re = FALSE, theta = FALSE, oim = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Model$information_matrix(
+  include.re = FALSE,
+  theta = FALSE,
+  oim = FALSE,
+  average = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1003,234 +928,25 @@ A matrix.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-MCML"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-MCML}{}}}
-\subsection{Method \code{MCML()}}{
-Stochastic Maximum Likelihood model fitting
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$MCML(
-  y = NULL,
-  method = "saem",
-  tol = 0.01,
-  max.iter = 50,
-  se = "gls",
-  oim = FALSE,
-  reml = FALSE,
-  mcmc.pkg = "rstan",
-  se.theta = TRUE,
-  iter.warmup = NULL,
-  iter.sampling = NULL,
-  chains = NULL,
-  lower.bound = NULL,
-  upper.bound = NULL,
-  lower.bound.theta = NULL,
-  upper.bound.theta = NULL,
-  alpha = 0.8,
-  convergence.prob = 0.95,
-  pr.average = FALSE,
-  bf.tol = 10,
-  bf.hist = 10,
-  bf.k0 = 10,
-  importance = FALSE,
-  conv.criterion = 2,
-  skip.theta = FALSE,
-  constr.zero = 1
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{y}}{Optional. A numeric vector of outcome data. If this is not provided then either the outcome must have been specified when
-initialising the Model object, or the outcome data has been updated using member function \code{update_y()}}
-
-\item{\code{method}}{The MCML algorithm to use, either \code{mcem} or \code{mcnr}, \code{mcnr2}, or \code{saem} see Details. Default is \code{saem}. \code{mcem.adapt}, \code{mcnr2.adapt} and \code{mcnr.adapt} will use adaptive
-MCMC sample sizes starting small and increasing to the the maximum value specified in \code{mcmc_options$sampling}, which may result in faster convergence. \code{saem} uses a
-stochastic approximation expectation maximisation algorithm. MCMC samples are kept from all iterations and so a smaller number of samples are needed per iteration. The
-qualifier \code{.dual} can also be added (e.g. \code{saem.dual}), which combines the fixed and covariance parameter estimation steps.}
-
-\item{\code{tol}}{Numeric value, tolerance of the MCML algorithm, the maximum difference in parameter estimates
-between iterations at which to stop the algorithm. If two values are provided then different tolerances will be
-applied to the fixed effect and covariance parameters.}
-
-\item{\code{max.iter}}{Integer. The maximum number of iterations of the MCML algorithm.}
-
-\item{\code{se}}{String. Type of standard error and/or inferential statistics to return. Options are "gls" for GLS standard errors (the default),
-"robust" for robust standard errors, "kr" for original Kenward-Roger bias corrected standard errors,
-"kr2" for the improved Kenward-Roger correction, "sat" for Satterthwaite degrees of freedom correction (this is the same
-degrees of freedom correction as Kenward-Roger, but with GLS standard errors), "box" to use a modified Box correction (does not return confidence intervals),
-"bw" to use GLS standard errors with a between-within correction to the degrees of freedom, "bwrobust" to use robust
-standard errors with between-within correction to the degrees of freedom.}
-
-\item{\code{oim}}{Logical. If TRUE use the observed information matrix, otherwise use the expected information matrix for standard error and related calculations.}
-
-\item{\code{reml}}{Logical. Whether to use a restricted maximum likelihood correction for fitting the covariance parameters}
-
-\item{\code{mcmc.pkg}}{String. Either \code{rstan} to use rstan sampler, or
-\code{analytic} to use a Normal approximation to the posterior with direct estimates of the posterior mean and variance. cmdstanr will compile the MCMC programs to the library folder the first time they are run,
-so may not currently be an option for some users.}
-
-\item{\code{se.theta}}{Logical. Whether to calculate the standard errors for the covariance parameters. This step is a slow part
-of the calculation, so can be disabled if required in larger models. Has no effect for Kenward-Roger standard errors.}
-
-\item{\code{iter.warmup}}{Integer. The number of warmup iterations for each MCMC run on each iteration of the algorithm. If this value is left as NULL then the value stored in self$mcmc_options$warmup will be used.}
-
-\item{\code{iter.sampling}}{Integer. The number of sampling iterations for each MCMC run on each iteration of the algorithm. The default values have been selected to provide
-relatively good convergence for the default SAEM algorithm, but may need to be increased for MCEM and MCNR. If an adaptive algorithm is used, then this is the maximum
-number of iterations per MCMC run. If this value is left as NULL then the value stored in self$mcmc_options$samps will be used.}
-
-\item{\code{chains}}{Integer. The number of MCMC chains to run in parallel. The default is one, which generally provides good results. If this value is left as NULL then the value stored in self$mcmc_options$chains will be used.}
-
-\item{\code{lower.bound}}{Optional. Vector of lower bounds for the fixed effect parameters. To apply bounds use MCEM.}
-
-\item{\code{upper.bound}}{Optional. Vector of upper bounds for the fixed effect parameters. To apply bounds use MCEM.}
-
-\item{\code{lower.bound.theta}}{Optional. Vector of lower bounds for the covariance parameters (default is 0; negative values will cause an error)}
-
-\item{\code{upper.bound.theta}}{Optional. Vector of upper bounds for the covariance parameters.}
-
-\item{\code{alpha}}{If using SAEM then this parameter controls the step size. On each iteration i the step size is (1/alpha)^i, default is 0.8. Values around 0.5
-will result in lower bias but slower convergence, values closer to 1 will result in higher convergence but potentially higher error.}
-
-\item{\code{convergence.prob}}{Numeric value in (0,1) indicating the probability of convergence if using convergence criteria 2, 3, or 4.}
-
-\item{\code{pr.average}}{Logical indicating whether to use Polyak-Ruppert averaging if using the SAEM algorithm (default is FALSE)}
-
-\item{\code{bf.tol}}{Integer indicating the Bayes Factor convergence criterion}
-
-\item{\code{bf.hist}}{Integer, the number of iterations in the running mean for the Bayes Factor convergence criterion}
-
-\item{\code{bf.k0}}{Integer, the expected number of iterations to convergence of the Bayes Factor convergence criterion.}
-
-\item{\code{importance}}{Logical. If TRUE and using the analytic samples, the u samples are weighted using an importance sampling step. If FALSE, it is equivalent to the Laplace
-Approximation Gaussian distribution of the random effects.}
-
-\item{\code{conv.criterion}}{Integer. The convergence criterion for the algorithm. 1 = the maximum difference between parameter estimates between iterations as defined by \code{tol},
-2 = The probability of improvement in the overall log-likelihood is less than 1 - \code{convergence.prob}
-3 = The probability of improvement in the log-likelihood for the fixed effects is less than 1 - \code{convergence.prob}
-4 = The probabilities of improvement in the log-likelihood the fixed effects and covariance parameters are both less than 1 - \code{convergence.prob}}
-
-\item{\code{skip.theta}}{Logical. If TRUE then the covariance parameter estimation step is skipped. This option is mainly used for testing, but may be useful
-if covariance parameters are known.}
-
-\item{\code{constr.zero}}{Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
-may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A \code{mcml} object
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-# Simulated trial data example
-data(SimTrial,package = "glmmrBase")
-model <- Model$new(
-  formula = y ~ int + factor(t) - 1 + (1|gr(cl)*ar1(t)),
-  data = SimTrial,
-  family = gaussian()
-)
-glm3 <- model$MCML()
-
-# Salamanders data example
-data(Salamanders,package="glmmrBase")
-model <- Model$new(
-  mating~fpop:mpop-1+(1|gr(mnum))+(1|gr(fnum)),
-  data = Salamanders,
-  family = binomial()
-)
-
-# use MCEM + REML with 500 sampling iterations
-glm2 <- model$MCML(method = "mcem", iter.sampling = 500, reml = TRUE)
-
-# as an alternative, we will specify the variance parameters on the 
-# log scale and use a fast fitting algorithm
-# we will use two newton-raphson steps, and Normal approximation posteriors with 
-# conjugate gradient descent
-# the maximum number of iterations is increased as it takes 100-110 in this example
-# we can also chain together the functions
-glm3 <- Model$new(
-  mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
-  data = Salamanders,
-  family = binomial()
-)$MCML(method = "mcnr2", mcmc.pkg = "analytic", iter.sampling = 50, max.iter = 150)
-
-# Example using simulated data
-#create example data with six clusters, five time periods, and five people per cluster-period
-df <- nelder(~(cl(6)*t(5)) > ind(5))
-# parallel trial design intervention indicator
-df$int <- 0
-df[df$cl > 3, 'int'] <- 1 
-# specify parameter values in the call for the data simulation below
-des <- Model$new(
-  formula= ~ factor(t) + int - 1 +(1|gr(cl)*ar0(t)),
-  covariance = c(0.05,0.7),
-  mean = c(rep(0,5),0.2),
-  data = df,
-  family = gaussian()
-)
-ysim <- des$sim_data() # simulate some data from the model
-fit1 <- des$MCML(y = ysim) # Default model fitting with SAEM
-# use MCNR instead and stop when parameter values are within 1e-2 on successive iterations
-fit2 <- des$MCML(y = ysim, method="mcnr",tol=1e-2,conv.criterion = 1)
-
-# Non-linear model fitting example using the example provided by nlmer in lme4
-data(Orange, package = "lme4")
-
-# the lme4 example:
-startvec <- c(Asym = 200, xmid = 725, scal = 350)
-(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
-              Orange, start = startvec))
-
-Orange <- as.data.frame(Orange)
-Orange$Tree <- as.numeric(Orange$Tree)
-
-# Here we can specify the model as a function. 
-
-model <- Model$new(
-  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
-  data = Orange,
-  family = gaussian(),
-  mean = c(200,725,350),
-  covariance = c(500),
-  var_par = 50
-)
-
-# for this example, we will use MCEM with adaptive MCMC sample sizes
-
-nfit <- model$MCML(method = "mcem.adapt", iter.sampling = 1000)
-
-summary(nfit)
-summary(nm1)
-
-
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-fit"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-fit}{}}}
 \subsection{Method \code{fit()}}{
 MCML model fitting with the fastest options
 
-Uses double Newton-Raphson method (with or without REML for Gaussian models). For details on the algorithm see \code{MCML()}. This function
-uses the fastest set of options, including specialised model fitting for linear models. Note that no random effect
-samples are drawn for Gaussian models, but can be subsequently drawn using \code{mcmc_sample()}. It is recommended to use the log
+Uses double Newton-Raphson method (with or without REML for Gaussian models). Note that no random effect
+samples are drawn for Gaussian models. It is recommended to use the log
 version of the covariance functions with this method as the Newton-Raphson steps can lead to negative values otherwise.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$fit(
   niter = 100,
   max_iter = 30,
+  se = "average",
   tol = ifelse(self$family[[1]] == "gaussian" & self$family[[2]] == "identity", 1e-06,
     10),
   hist = 5,
   k0 = 10,
-  reml = TRUE
+  reml = FALSE,
+  start_glm = TRUE
 )}\if{html}{\out{</div>}}
 }
 
@@ -1241,6 +957,10 @@ version of the covariance functions with this method as the Newton-Raphson steps
 
 \item{\code{max_iter}}{Integer. Maximum number of iterations.}
 
+\item{\code{se}}{Either "average" or "point". "Average" (default) estimates the information matrix for beta averaging over MC samples, if \code{niter} is one (triggering a
+Laplace Approximation) then a final sample is drawn for this estimator. "Point" evaluates the information matrix for beta at the posterior mean of the
+random effects.}
+
 \item{\code{tol}}{Scalar. The tolerance for the convergence criterion. For GLMMs this is the tolerance for
 the Bayes Factor convergence criterion, for Gaussian linear models the tolerance is the difference
 in the log-likelihood between successive iterations.}
@@ -1250,6 +970,8 @@ in the log-likelihood between successive iterations.}
 \item{\code{k0}}{Integer. The expected number of iterations until convergence.}
 
 \item{\code{reml}}{Bool. For Gaussian models, whether to use REML or not.}
+
+\item{\code{start_glm}}{Bool. Start beta from the glm fitted values with random effects set to zero.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1259,6 +981,7 @@ A \code{mcml} model fit object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# Simulated trial data example using REML
+set.seed(123)
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
@@ -1292,7 +1015,71 @@ des <- Model$new(
 )
 ysim <- des$sim_data() # simulate some data from the model
 des$update_y(ysim)
+set.seed(123)
 fit2 <- des$fit() 
+
+# use of Gaussian process approximations
+# simulate some data - binomial observation on [-1,1] x [-1,1]
+set.seed(123)
+df <- data.frame(
+x = runif(n, -1, 1),
+y = runif(n, -1, 1))
+df$z <- rnorm(n)
+
+df$outcome <- Model$new(
+  ~ z + (1|matern1log(x, y)),
+  data = df,
+   family = binomial(),
+  mean = c(1, 0.1),
+  covariance = c(log(2), log(0.3)),
+  trials = rep(10, nrow(df))
+)$sim_data()
+
+# we can fit the SPDE approximation using a mesh built by fmesher
+df_pred <- expand.grid(x= seq(-1,1,by=0.05), y = seq(-1,1,by=0.05))
+df_pred$z <- 0
+mesh_data <- mesh_helper(unique(df[,1:2]), df_pred[,1:2], c(0.15, 0.75), 0.075, c(0.1,0.3))
+
+mod <- Model$new(
+  outcome ~ z + (1|spde_matern1log(x, y)),
+  data = df,
+  family = binomial(),
+  trials = rep(10, n),
+  mesh = mesh_data[["data"]],
+  covariance = log(c(0.5, 0.3))
+)
+set.seed(123)
+fit1 <- mod$fit(niter = 50)
+
+#generate predictions 
+pred1 <- mod$predict(newdata = df_pred,mesh_A = mesh_data[["A_pred"]])
+
+#' # Non-linear model fitting example using the example provided by nlmer in lme4
+data(Orange, package = "lme4")
+
+# the lme4 example:
+startvec <- c(Asym = 200, xmid = 725, scal = 350)
+(nm1 <- lme4::nlmer(circumference ~ SSlogis(age, Asym, xmid, scal) ~ Asym|Tree,
+              Orange, start = startvec))
+
+Orange <- as.data.frame(Orange)
+Orange$Tree <- as.numeric(Orange$Tree)
+
+# Here we can specify the model as a function. 
+
+model <- Model$new(
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  data = Orange,
+  family = gaussian(),
+  mean = c(200,725,350),
+  covariance = c(500),
+  var_par = 50
+)
+set.seed(123)
+nfit <- model$fit(niter = 100)
+
+summary(nfit)
+summary(nm1)
 }
 \if{html}{\out{</div>}}
 
@@ -1321,36 +1108,10 @@ None, called for effects
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Model-mcmc_sample"></a>}}
-\if{latex}{\out{\hypertarget{method-Model-mcmc_sample}{}}}
-\subsection{Method \code{mcmc_sample()}}{
-Generate an MCMC sample of the random effects
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Model$mcmc_sample(mcmc.pkg = "rstan", scaled = TRUE, constr.zero = 1)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{mcmc.pkg}}{String. Either \code{analytic} for importance sampling from Gaussian posterior proposal, \code{cmdstan} for cmdstan
-(requires the package \code{cmdstanr}), \code{rstan} to use rstan sampler (the default)}
-
-\item{\code{scaled}}{Logical. The random effects are sampled from an N(0,I) distribution. If TRUE this function returns the random effects rescaled to N(0,D), otherwise it returns the original samples.}
-
-\item{\code{constr.zero}}{Scalar. A Soft sum-to-zero constraint can be forced on the random effects so that their sum is N(0,constr.zero*Q). Small values, e.g. 0.001
-may be useful if there is possible identifiability issues for intercept terms, such as in more complex, or higher dimensional, random effects structures like spatial models.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A matrix of samples of the random effects
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-importance_weights"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-importance_weights}{}}}
 \subsection{Method \code{importance_weights()}}{
-Returns the importance weights for the random effect samples. If using MCMC then weights are all equal.
+Returns the importance weights for the random effect samples.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Model$importance_weights()}\if{html}{\out{</div>}}
 }
@@ -1429,6 +1190,30 @@ A matrix of random effect samples
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Model-sample_u"></a>}}
+\if{latex}{\out{\hypertarget{method-Model-sample_u}{}}}
+\subsection{Method \code{sample_u()}}{
+Generate importance weighted samples of the random effects. These are generated at the current values
+of the model parameters. Importance weights can be returned by the \code{self$importance_weights()} function.
+If not assigned, the samples can be accessed using \code{self$u()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Model$sample_u(niter, scaled = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{niter}}{Integer. Number of samples.}
+
+\item{\code{scaled}}{Logical. Whether to return the random effects on the data (TRUE) or whitened (FALSE) scale.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns a matrix of random effect samples
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Model-log_likelihood"></a>}}
 \if{latex}{\out{\hypertarget{method-Model-log_likelihood}{}}}
 \subsection{Method \code{log_likelihood()}}{
@@ -1484,8 +1269,7 @@ using all observed values of the variable in the relevant calculation.
 The random effects can similarly be set at their
 estimated value (\code{re="estimated"}), set to zero (\code{re="zero"}), set to a specific value
 (\code{re="at"}), or averaged over (\code{re="average"}). Estimates of the expected values over the random
-effects are generated using MCMC samples. MCMC samples are generated either through
-MCML model fitting or using \code{mcmc_sample}. In the absence of samples \code{average} and \code{estimated}
+effects are generated using MC samples. In the absence of samples \code{average} and \code{estimated}
 will produce the same result. The standard errors are calculated using the delta method with one
 of several options for the variance matrix of the fixed effect parameters.
 Several of the arguments require the names

@@ -92,6 +92,13 @@ public:
   MatrixXd                Sigma(bool inverse = false);
   template<IM imtype>
   MatrixXd                observed_information_matrix();
+  template<typename C = modeltype, 
+           typename = std::enable_if_t<std::is_same_v<C, bits_hsgp> || 
+             std::is_same_v<C, bits_spde>>>
+  VectorXd                re_variance_obs();
+  template<typename C = modeltype, 
+           typename = std::enable_if_t<std::is_same_v<C, bits_spde>>>
+  VectorXd                re_variance_at(const Eigen::SparseMatrix<double>& A_proj);
   MatrixXd                sandwich_matrix(); 
   std::vector<MatrixXd>   sigma_derivatives();
   template<IM imtype>
@@ -123,9 +130,6 @@ private:
 
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) { gen_sigma_blocks();};
-
-// template<>
-// inline glmmr::ModelMatrix<bits_hsgp>::ModelMatrix(modeltype& model_, glmmr::RandomEffects<modeltype>& re_): model(model_), W(model_), re(re_) {};
 
 template<typename modeltype>
 inline glmmr::ModelMatrix<modeltype>::ModelMatrix(const glmmr::ModelMatrix<modeltype>& matrix) : model(matrix.model), W(matrix.W), re(matrix.re) { gen_sigma_blocks();};
@@ -191,6 +195,51 @@ inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::information_matrix(){
   return XtWX - XtWA * solve_XtWA;
 }
 
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_spde>::information_matrix(){
+  auto& cov = model.covariance;
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE information_matrix: spde_data() not loaded.");
+  }
+  
+  W.update(re.centred_u_mean());
+  const int P_ = P();
+  
+  MatrixXd X = model.linear_predictor.X();           // n × P
+  const SparseMatrix<double>& ZA = cov.ZA_;          // n × n_v, sparse
+  
+  // Weights vector (n)
+  VectorXd W_diag;
+  bool nonlinear_w = model.family.family != Fam::gaussian || (model.data.weights != 1).any();
+  if(nonlinear_w){
+    W_diag = W.W_;
+  } else {
+    W_diag = VectorXd::Constant(model.n(), 1.0 / model.data.var_par);
+  }
+  
+  // Weighted X  (n × P), dense
+  MatrixXd WX = W_diag.asDiagonal() * X;
+  
+  // X^T W X  (P × P)
+  MatrixXd XtWX = X.transpose() * WX;
+  
+  // (ZA)^T W X  (n_v × P) — sparse × dense
+  MatrixXd ZAtWX = ZA.transpose() * WX;
+  
+  // Posterior precision P_post = (ZA)^T W (ZA) + Q, factorised via refactor_P
+  cov.refactor_P(W_diag);
+  
+  // solve for (P_post)^{-1} (ZA)^T W X    (n_v × P)
+  MatrixXd solve_ZAtWX = cov.chol_P.solve(ZAtWX);
+  if(cov.chol_P.info() != Success){
+    throw std::runtime_error("SPDE information_matrix: P solve failed.");
+  }
+  
+  // M_β = X^T W X - (X^T W ZA) * solve_ZAtWX
+  //     = XtWX - ZAtWX^T * solve_ZAtWX
+  return XtWX - ZAtWX.transpose() * solve_ZAtWX;
+}
+
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
   W.update(re.centred_u_mean());
@@ -199,6 +248,96 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
     M += information_matrix_by_block(i);
   }
   return M;
+}
+
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_spde>::ave_information_matrix(){
+  auto& cov = model.covariance;
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE ave_information_matrix: spde_data() not loaded.");
+  }
+  
+  W.update(re.centred_u_mean());
+  const int P_ = P();
+  const int n  = model.n();
+  const int K  = re.u_.cols();
+  MatrixXd u_samples = cov.ZLu(re.u_);
+  
+  if(K < 2) throw std::runtime_error(
+      "louis_information_beta requires at least 2 MC samples in re.u_; "
+      "for Laplace-fit models, draw a posterior sample first via "
+      "posterior_u_samples().");
+  
+  ArrayXd w = re.u_weight_;
+  double wsum = w.sum();
+  if(wsum <= 0 || !std::isfinite(wsum)){
+    w = ArrayXd::Constant(K, 1.0/K);
+  } else {
+    w /= wsum;
+  }
+  
+  const MatrixXd X = model.linear_predictor.X();
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  MatrixXd s_mat(n, K);
+  VectorXd s_bar = VectorXd::Zero(n);
+  VectorXd W_bar = VectorXd::Zero(n);
+  ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
+  
+  if(model.family.family == Fam::poisson){
+    ArrayXd sigma2_i = cov.diag_ZA_Qinv_ZAt_hutch();
+    xb -= 0.5 * sigma2_i;
+  }
+  
+  for(int k = 0; k < K; ++k){
+    eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      if(model.family.link == Link::logit){
+      mu_k = 1.0 / (1.0 + (-eta_k).exp());
+    } else {
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+    }
+    s_k = model.data.variance * mu_k;
+    W_k = model.data.variance * mu_k * (1.0 - mu_k);
+    break;
+    }
+    case Fam::poisson: {
+      mu_k = eta_k.exp();
+      s_k = mu_k;
+      W_k = mu_k;
+      break;
+    }
+    case Fam::gaussian: {
+      mu_k = eta_k;
+      s_k = mu_k;
+      W_k = (model.data.variance.inverse() * model.data.weights);
+      break;
+    }
+    case Fam::gamma: case Fam::beta: case Fam::exponential: {
+      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
+      s_k = mu_k;
+      W_k = W.W_.array();
+      break;
+    }
+    default:
+      throw std::runtime_error("ave_information_matrix (SPDE): unsupported family");
+    }
+    
+    s_mat.col(k) = s_k.matrix();
+    s_bar += w(k) * s_k.matrix();
+    W_bar += w(k) * W_k.matrix();
+  }
+  
+  MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
+  MatrixXd meat  = MatrixXd::Zero(P_, P_);
+  VectorXd g_k(P_);
+  for(int k = 0; k < K; ++k){
+    g_k = X.transpose() * (s_mat.col(k) - s_bar);
+    meat.noalias() += w(k) * g_k * g_k.transpose();
+  }
+  
+  return bread - meat;
 }
 
 template<typename modeltype>
@@ -304,6 +443,8 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
   
   return bread - meat;
 }
+
+
 
 template<typename modeltype>
 inline void glmmr::ModelMatrix<modeltype>::gen_sigma_blocks(){
@@ -470,34 +611,37 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
     
     // Z matrix: Phi for HSGP, Z for standard
     MatrixXd Z;
+    MatrixXd Dinv;
+    
     if constexpr (std::is_same_v<modeltype, bits_hsgp>){
-      Z = model.covariance.ZPhi();       // n x M
+      Z = model.covariance.ZPhi();
+      Dinv = model.covariance.LambdaSPD().inverse().matrix().asDiagonal();  // diag, cheap
+    } else if constexpr (std::is_same_v<modeltype, bits_spde>){
+      Z = MatrixXd(model.covariance.ZA_);
+      Dinv = MatrixXd(model.covariance.Q_mat);       // Q_mat *is* D⁻¹
     } else {
-      Z = model.covariance.Z();          // n x Q
+      Z = model.covariance.Z();
+      MatrixXd D = model.covariance.D(false, false);
+      if (model.covariance.all_group_re()){
+        Dinv = D;
+        for (int i = 0; i < D.rows(); ++i) Dinv(i, i) = 1.0 / D(i, i);
+      } else {
+        Dinv = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
+      }
     }
     
+    if (nonlinear_w) WX.applyOnTheLeft(W.W_.asDiagonal());
     MatrixXd WZ = Z;
     if (nonlinear_w) WZ.applyOnTheLeft(W.W_.asDiagonal());
-    
-    // D^{-1}: must pass (false, false) to get D not chol(D)
-    MatrixXd Dinv;
-    MatrixXd D = model.covariance.D(false, false);
-    if (model.covariance.all_group_re()) {
-      Dinv = D;
-      for (int i = 0; i < D.rows(); i++) Dinv(i, i) = 1.0 / D(i, i);
-    } else {
-      Dinv = D.llt().solve(MatrixXd::Identity(D.rows(), D.cols()));
-    }
-    
-    if (!nonlinear_w) {
+    if (!nonlinear_w){
       WX *= (1.0 / model.data.var_par);
       WZ *= (1.0 / model.data.var_par);
     }
     
-    int Qdim = Z.cols();
+    const int Qdim = Z.cols();
     MatrixXd infomat(P() + Qdim, P() + Qdim);
-    infomat.topLeftCorner(P(), P()) = X.transpose() * WX;
-    infomat.topRightCorner(P(), Qdim) = X.transpose() * WZ;
+    infomat.topLeftCorner(P(), P())     = X.transpose() * WX;
+    infomat.topRightCorner(P(), Qdim)   = X.transpose() * WZ;
     infomat.bottomLeftCorner(Qdim, P()) = infomat.topRightCorner(P(), Qdim).transpose();
     infomat.bottomRightCorner(Qdim, Qdim) = Z.transpose() * WZ + Dinv;
     return infomat;
@@ -511,35 +655,178 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::observed_information_matrix(){
 }
 
 template<typename modeltype>
-inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
-  // none of these produce great results! Not sure what the best strategy is here.
+template<typename C, typename>
+inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_at(
+    const Eigen::SparseMatrix<double>& A_proj)
+{
+  using Eigen::SparseMatrix; 
   
-  // MatrixXd XandZ(model.n(),P()+Q());
-  // XandZ.leftCols(P()) = model.linear_predictor.Xdata;
-  // XandZ.rightCols(Q()) = model.covariance.ZL();
-  // dblvec bu;
-  // for(const auto& b: model.linear_predictor.parameters) bu.push_back(b);
-  // VectorXd umean = re.u(false).rowwise().mean();
-  // for(int i = 0; i < umean.size(); i++) bu.push_back(umean(i));
-  // MatrixMatrix result = model.vcalc.jacobian_and_hessian(bu,XandZ,model.data.offset);
-  // MatrixXd JmatFull = result.mat2 * result.mat2.transpose();
-  // MatrixXd Jmat = JmatFull.block(0,0,P(),P());
-  // MatrixXd invHFull = -1.0*result.mat1;
-  // invHFull = invHFull.llt().solve(MatrixXd::Identity(invHFull.rows(),invHFull.cols()));
-  // MatrixXd invH = invHFull.block(0,0,P(),P());
-  // MatrixXd sandwich = invH * Jmat * invH;
-  // 
-  // 
-  // #if defined(R_BUILD) && defined(ENABLE_DEBUG)
-  //   if(result.mat1.rows() <= P())Rcpp::stop("mat1 <= p");
-  //   Rcpp::Rcout << "\nSANDWICH\n";
-  //   Rcpp::Rcout << "\nHessian: \n" << -1.0*result.mat1.block(0,0,P(),P());
-  //   Rcpp::Rcout << "\nInverse Hessian: \n" << invH;
-  //   Rcpp::Rcout << "\nGradient: \n" << Jmat;
-  //   Rcpp::Rcout << "\nSandwich: \n" << sandwich;
-  // #endif
-  // 
-  // return sandwich;
+  W.update(re.centred_u_mean());
+  MatrixXd X = model.linear_predictor.X();
+  const bool nonlinear_w = model.family.family != Fam::gaussian
+  || (model.data.weights != 1).any();
+  
+  const int n = model.n();
+  VectorXd W_(n);
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  ArrayXd eta = xb + (A_proj * re.u_mean_).array();
+  switch(model.family.family){
+  case Fam::binomial: case Fam::bernoulli: {
+    ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+    W_ = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+    break;
+  }
+  case Fam::poisson: {
+    W_ = eta.exp().matrix();
+    break;
+  }
+  case Fam::gaussian: {
+    W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+    break;
+  }
+  default:
+    throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial");
+  }
+  
+  MatrixXd WX = X;
+  if(nonlinear_w) WX.applyOnTheLeft(W_.asDiagonal());
+  else            WX *= (1.0 / model.data.var_par);
+  MatrixXd XtWX = X.transpose() * WX;
+  
+  auto& cov = model.covariance;
+  cov.refactor_P(W_);
+  
+  MatrixXd B     = cov.ZA_.transpose() * WX;        // n_v × P  (model-side B)
+  MatrixXd PinvB = cov.chol_P.solve(B);
+  MatrixXd Schur = XtWX - B.transpose() * PinvB;
+  Eigen::LLT<MatrixXd> llt_Schur(Schur);
+  
+  // ── Substitute A_proj for ZA in the diagonal extraction ──
+  MatrixXd Pinv_AT      = cov.chol_P.solve(MatrixXd(A_proj.transpose())); // n_v × n_pred
+  MatrixXd Bt_Pinv_AT   = B.transpose() * Pinv_AT;                       // P × n_pred
+  MatrixXd Schur_solve  = llt_Schur.solve(Bt_Pinv_AT);                   // P × n_pred
+  
+  // VectorXd term1 = (A_proj * Pinv_AT).diagonal();   // sparse × dense → fine
+  // // or, avoiding the off-diagonals:
+  VectorXd term1 = VectorXd::Zero(A_proj.rows());
+  for (int k = 0; k < A_proj.outerSize(); ++k)
+    for (SparseMatrix<double>::InnerIterator it(A_proj, k); it; ++it)
+      term1(it.row()) += it.value() * Pinv_AT(it.col(), it.row());
+  VectorXd term2 = (Bt_Pinv_AT.array() * Schur_solve.array()).colwise().sum();
+  return term1 + term2;
+}
+
+template<typename modeltype>
+template<typename C, typename>
+inline VectorXd glmmr::ModelMatrix<modeltype>::re_variance_obs()
+{
+  using Eigen::SparseMatrix;
+  
+  W.update(re.centred_u_mean());
+  const int nobs = model.n();
+  const int Pdim = P();
+  
+  MatrixXd X = model.linear_predictor.X();
+  const bool nonlinear_w = model.family.family != Fam::gaussian 
+  || (model.data.weights != 1).any();
+  
+  const int n = model.n();
+  VectorXd W_(n);
+  ArrayXd eta(n);
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  if constexpr (std::is_same_v<C, bits_hsgp>){
+    eta = xb + (model.covariance.ZPhi() * re.u_mean_).array();
+  }  else if constexpr (std::is_same_v<C, bits_spde>) {
+    eta = xb + (model.covariance.ZA_ * re.u_mean_).array();
+  }
+  
+  switch(model.family.family){
+  case Fam::binomial: case Fam::bernoulli: {
+    ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+    W_ = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+    break;
+  }
+  case Fam::poisson: {
+    W_ = eta.exp().matrix();
+    break;
+  }
+  case Fam::gaussian: {
+    W_ = (model.data.variance.inverse() * model.data.weights).matrix();
+    break;
+  }
+  default:
+    throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial");
+  }
+  
+  // --- Build WX (P × P pieces are branch-independent) ---
+  MatrixXd WX = X;
+  if(nonlinear_w){
+    WX.applyOnTheLeft(W_.asDiagonal());
+  } else {
+    WX *= (1.0 / model.data.var_par);
+  }
+  MatrixXd XtWX = X.transpose() * WX;   // P × P
+  Eigen::LLT<MatrixXd> llt_XtWX(XtWX);
+  
+  VectorXd var_obs(nobs);
+  
+  if constexpr (std::is_same_v<C, bits_hsgp>){
+    MatrixXd Z = model.covariance.ZPhi();            // n × M
+    const int Mdim = Z.cols();
+    Eigen::ArrayXd Lambda = model.covariance.LambdaSPD();
+    
+    MatrixXd WZ = Z;
+    if(nonlinear_w){
+      WZ.applyOnTheLeft(W_.asDiagonal());
+    } else {
+      WZ *= (1.0 / model.data.var_par);
+    }
+    
+    MatrixXd A_mat = Z.transpose() * WZ;
+    A_mat.diagonal().array() += 1.0 / Lambda;
+    Eigen::LLT<MatrixXd> llt_A(A_mat);
+    
+    MatrixXd B = Z.transpose() * WX;                 // M × P
+    MatrixXd AinvB = llt_A.solve(B);                 // M × P
+    MatrixXd Schur = XtWX - B.transpose() * AinvB;   // P × P
+    Eigen::LLT<MatrixXd> llt_Schur(Schur);
+    MatrixXd Ainv_Zt = llt_A.solve(Z.transpose());    // M × n
+    MatrixXd Bt_Ainv_Zt = B.transpose() * Ainv_Zt;    // P × n
+    MatrixXd Schur_solve = llt_Schur.solve(Bt_Ainv_Zt); // P × n
+    for(int i = 0; i < nobs; ++i){
+      double term1 = Z.row(i).dot(Ainv_Zt.col(i));
+      double term2 = Bt_Ainv_Zt.col(i).dot(Schur_solve.col(i));
+      var_obs(i) = term1 + term2;
+    }
+    
+  } else if constexpr (std::is_same_v<C, bits_spde>){
+    auto& cov = model.covariance;
+    const SparseMatrix<double>& ZA = cov.ZA_;         // n × n_v, sparse
+    cov.refactor_P(W_);
+    MatrixXd B = ZA.transpose() * WX;                 // n_v × P
+    MatrixXd PinvB = cov.chol_P.solve(B);             // n_v × P  (P sparse solves)
+    MatrixXd Schur = XtWX - B.transpose() * PinvB;    // P × P
+    Eigen::LLT<MatrixXd> llt_Schur(Schur);
+    MatrixXd Pinv_ZAt = cov.chol_P.solve(MatrixXd(ZA.transpose()));  // n_v × n
+    MatrixXd Bt_Pinv_ZAt = B.transpose() * Pinv_ZAt;                 // P × n
+    MatrixXd Schur_solve = llt_Schur.solve(Bt_Pinv_ZAt);             // P × n
+    VectorXd term1_vec = VectorXd::Zero(nobs);
+    {
+      for(int j = 0; j < ZA.outerSize(); ++j){
+        for(SparseMatrix<double>::InnerIterator it(ZA, j); it; ++it){
+          term1_vec(it.row()) += it.value() * Pinv_ZAt(j, it.row());
+        }
+      }
+    }
+    VectorXd term2_vec = (Bt_Pinv_ZAt.array() * Schur_solve.array()).colwise().sum();
+    var_obs = term1_vec + term2_vec;
+  }
+  
+  return var_obs;
+}
+
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   
   MatrixXd infomat = information_matrix();
   infomat = infomat.llt().solve(MatrixXd::Identity(P(),P()));
@@ -551,15 +838,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   VectorXd resid = model.linear_predictor.xb()+model.data.offset;
   resid = model.data.y - glmmr::maths::mod_inv_func(resid, model.family.link);
   MatrixXd resid_sum = resid * resid.transpose();
-  // int niter = zd.cols();
-  // for(int i = 0; i < niter; ++i){
-  //   zd.col(i) = glmmr::maths::mod_inv_func(zd.col(i), model.family.link);
-  //   if(model.family.family == Fam::binomial){
-  //     zd.col(i) = zd.col(i).cwiseProduct(model.data.variance.matrix());
-  //   }
-  //   zd.col(i) = (model.data.y - zd.col(i))/((double)niter);
-  // }
-  // MatrixXd resid_sum = zd * zd.transpose();//*= niterinv;
   
 #if defined(R_BUILD) && defined(ENABLE_DEBUG)
   Rcpp::Rcout << "\nSANDWICH\n";
@@ -569,14 +847,6 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::sandwich_matrix(){
   
   MatrixXd robust = infomat * SX.transpose() * resid_sum * SX * infomat;//(infomat.rows(),infomat.cols());
   
-  // if(type == SandwichType::CR2){
-  //   MatrixXd H = MatrixXd::Identity(X.rows(),X.rows()) - X*infomat * SX.transpose();
-  //   H = H.llt().solve(MatrixXd::Identity(X.rows(),X.rows()));
-  //   MatrixXd HL(H.llt().matrixL());
-  //   robust = infomat * SX.transpose()  * HL * resid_sum * HL * SX * infomat;
-  // } else {
-  //   robust = infomat * SX.transpose() * resid_sum * SX * infomat;
-  // }
   return robust;
 }
 
@@ -1486,8 +1756,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
     }
     llt_Pb.solveInPlace(Vb);
     re.u_var_diag_ = Vb.diagonal(); 
-    MatrixXd ZLVb = ZL * Vb;  // n × n_cols
-    re.zu_var_ = (ZLVb.array() * ZL.array()).rowwise().sum();
 
   }
 
@@ -1572,7 +1840,7 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   
   while(diff > 1e-6 && itero < 20){
     eta = xb + (A * b).array();
-    
+    VectorXd W_(n);
     switch(model.family.family){
     case Fam::binomial: case Fam::bernoulli: {
       ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
@@ -1614,8 +1882,6 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
   MatrixXd Vu = MatrixXd::Identity(M, M);
   llt_P.solveInPlace(Vu);
   re.u_var_diag_ = Vu.diagonal(); 
-  MatrixXd PhiV = A * Vu;
-  re.zu_var_ = (PhiV.array() * A.array()).rowwise().sum();
   
   if(re.u_.cols() != niter){
     re.u_.resize(M, niter);
@@ -1651,4 +1917,124 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
     re.u_ = (L_Vu * znorm).colwise() + re.u_mean_;
     re.update_zu(loglik);
   }
+}
+
+template<>
+inline void glmmr::ModelMatrix<bits_spde>::posterior_u_samples(
+    const int niter, const bool reml, const bool loglik, const bool append)
+{
+  auto& cov = model.covariance;
+  
+  if(niter == 1)throw std::runtime_error("SPDE requires MC > 1");
+  
+  if(!cov.spde_loaded){
+    throw std::runtime_error("SPDE posterior_u_samples: spde_data() has not been loaded.");
+  }
+  if(cov.Q() != re.u_.rows()){
+    re.u_.resize(cov.Q(), 1);
+    re.u_.setZero();
+  }
+  
+  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  const int M = cov.Q();               // n_v
+  const int n = model.n();
+  ArrayXd eta(n);
+  VectorXd W_(n);
+  
+  // Observation-to-vertex projector: n × n_v, cached in the covariance class
+  const SparseMatrix<double>& A  = cov.ZA_;        // n × M
+  SparseMatrix<double> At        = A.transpose(); // M × n
+  
+  // Ensure Q factorisation is current (the θ step upstream should have refreshed it)
+  if(!cov.chol_Q_current) cov.refactor_Q();
+  
+  // IRLS for posterior mode in u-space. We solve, at each step,
+  //   P (b_new - b) = A^T (y - μ(b)) - Q b
+  // equivalently   P b_new = A^T W A b + A^T (y - μ(b))
+  VectorXd b = re.u_mean_;
+  if(b.size() != M){ b.resize(M); b.setZero(); }
+  VectorXd bnew(M);
+  double diff = 1.0;
+  int itero = 0;
+  
+  SparseMatrix<double> AtWA(M, M);
+  SparseMatrix<double> P(M, M);
+  VectorXd rhs(M);
+  
+  while(diff > 1e-6 && itero < 20){
+    eta = xb + (A * b).array();
+    
+    switch(model.family.family){
+    case Fam::binomial: case Fam::bernoulli: {
+      ArrayXd logitp = 1.0 / (1.0 + (-eta).exp());
+      W_  = (model.data.variance * logitp * (1.0 - logitp)).matrix();
+      ArrayXd mu = model.data.variance * logitp;
+      rhs = At * (model.data.y - mu.matrix());
+      break;
+    }
+    case Fam::poisson: {
+      W_  = eta.exp().matrix();
+      rhs = At * (model.data.y - eta.exp().matrix());
+      break;
+    }
+    case Fam::gaussian: {
+      W_  = (model.data.variance.inverse() * model.data.weights).matrix();
+      rhs = At * (model.data.y - eta.matrix());
+      break;
+    }
+    default:
+      throw std::runtime_error("SPDE posterior only for Gaussian, Poisson, Binomial.");
+    }
+    
+    // Compute AtWA once — used both for rhs update and inside P (via refactor_P)
+    SparseMatrix<double> AtWA = At * W_.asDiagonal() * A;
+    rhs.noalias() += AtWA * b;
+    
+    // Covariance class assembles P = AtWA + Q_mat internally and factorises it
+    cov.refactor_P(W_);
+    
+    bnew = cov.chol_P.solve(rhs);
+    if(cov.chol_P.info() != Success){
+      throw std::runtime_error("SPDE posterior: P solve failed.");
+    }
+    diff = (b - bnew).array().abs().maxCoeff();
+    b.swap(bnew);
+    itero++;
+  }
+  
+  re.u_mean_ = b;
+  
+  // Allocate sample storage
+  if(re.u_.cols() != niter){
+    re.u_.resize(M, niter);
+    re.u_solve_.resize(M, niter);
+    re.scaled_u_.resize(M, niter);
+    re.zu_.resize(n, niter);
+    re.u_weight_.resize(niter);
+    if(loglik) re.u_loglik_.resize(niter);
+  }
+  
+  // Posterior draws: u_k = b + x_k, where x_k ~ N(0, P^{-1}).
+  // Since P = R_P R_P^T  (NaturalOrdering, no permutation),
+  //   z_k ~ N(0, I); solve R_P^T x_k = z_k  ⇒  x_k ~ N(0, P^{-1}).
+  MatrixXd znorm(M, niter);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::normal_distribution<double> d(0.0, 1.0);
+  for(int i = 0; i < znorm.size(); ++i) znorm.data()[i] = d(gen);
+  
+  if(loglik){
+    // log q(u_k) up to iteration-wise constant = -0.5 * z_k^T z_k
+    for(int i = 0; i < niter; ++i){
+      re.u_loglik_(i) = -0.5 * znorm.col(i).squaredNorm();
+    }
+  }
+  
+  // Solve R_P^T X = Z  (upper triangular solve with L^T = R_P^T).
+  // SimplicialLLT exposes matrixU() = L^T, and .solve() on it handles the triangular system.
+  MatrixXd X = cov.chol_P.matrixU().solve(znorm);
+  X = cov.chol_P.permutationP().transpose() * X;
+  re.u_ = X.colwise() + re.u_mean_;
+  re.update_zu(loglik);
+  
 }

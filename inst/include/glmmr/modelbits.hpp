@@ -4,6 +4,7 @@
 #include "hsgpcovariance.hpp"
 #include "nngpcovariance.hpp"
 #include "ar1covariance.hpp"
+#include "spdecovariance.hpp"
 #include "linearpredictor.hpp"
 #include "family.hpp"
 #include "modelextradata.hpp"
@@ -78,8 +79,10 @@ typedef glmmr::Covariance covariance;
 typedef glmmr::ar1Covariance ar1covariance;
 typedef glmmr::nngpCovariance nngp;
 typedef glmmr::hsgpCovariance hsgp;
+typedef glmmr::spdeCovariance spde;
 typedef glmmr::LinearPredictor xb;
 typedef glmmr::ModelBits<covariance, xb> bits;
 typedef glmmr::ModelBits<ar1covariance, xb> bits_ar1;
 typedef glmmr::ModelBits<nngp, xb> bits_nngp;
+typedef glmmr::ModelBits<spde, xb> bits_spde;
 typedef glmmr::ModelBits<hsgp, xb> bits_hsgp;

@@ -1,8 +1,8 @@
 Package: glmmrBase
 Type: Package
 Title: Generalised Linear Mixed Models in R
-Version: 1.3.2
-Date: 2026-04-15
+Version: 1.4.0
+Date: 2026-04-21
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 
@@ -13,16 +13,14 @@ License: GPL (>= 2)
 Imports: 
     methods,
     Rcpp (>= 1.0.11),
-    R6,
-    rstan (>= 2.32.1),
-    rstantools (>= 2.3.1.1)
+    R6
 LinkingTo: 
     Rcpp (>= 1.0.11),
     RcppEigen,
     BH,
-    RcppParallel (>= 5.0.1),
-    rstan (>= 2.32.1),
-    StanHeaders (>= 2.32.0)
+    RcppParallel (>= 5.0.1)
+Suggests:
+    fmesher
 RoxygenNote: 7.3.2
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]
