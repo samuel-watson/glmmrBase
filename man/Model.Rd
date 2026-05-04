@@ -193,7 +193,7 @@ model <- Model$new(
   data = Salamanders,
   family = binomial()
 )
-
+set.seed(125)
 fit2 <- model$fit()
 
 # Example using simulated data
@@ -219,9 +219,9 @@ fit2 <- des$fit()
 # simulate some data - binomial observation on [-1,1] x [-1,1]
 set.seed(123)
 df <- data.frame(
-x = runif(n, -1, 1),
-y = runif(n, -1, 1))
-df$z <- rnorm(n)
+x = runif(100, -1, 1),
+y = runif(100, -1, 1))
+df$z <- rnorm(100)
 
 df$outcome <- Model$new(
   ~ z + (1|matern1log(x, y)),
@@ -241,7 +241,7 @@ mod <- Model$new(
   outcome ~ z + (1|spde_matern1log(x, y)),
   data = df,
   family = binomial(),
-  trials = rep(10, n),
+  trials = rep(10, nrow(df)),
   mesh = mesh_data[["data"]],
   covariance = log(c(0.5, 0.3))
 )
@@ -252,7 +252,7 @@ fit1 <- mod$fit(niter = 50)
 pred1 <- mod$predict(newdata = df_pred,mesh_A = mesh_data[["A_pred"]])
 
 #' # Non-linear model fitting example using the example provided by nlmer in lme4
-data(Orange, package = "lme4")
+data(Orange, package = "datasets")
 
 # the lme4 example:
 startvec <- c(Asym = 200, xmid = 725, scal = 350)
@@ -265,18 +265,18 @@ Orange$Tree <- as.numeric(Orange$Tree)
 # Here we can specify the model as a function. 
 
 model <- Model$new(
-  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|grlog(Tree)),
   data = Orange,
   family = gaussian(),
   mean = c(200,725,350),
-  covariance = c(500),
+  covariance = log(c(500)),
   var_par = 50
 )
 set.seed(123)
 nfit <- model$fit(niter = 100)
 
 summary(nfit)
-summary(nm1)
+suppressWarnings(summary(nm1)) # lme4 reports Hessian warnings
 }
 \references{
 Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
@@ -451,6 +451,8 @@ of the random effects, and some simulated values of the random effects if reques
 
 \item{\code{offset}}{Optional vector of offset values for the new data}
 
+\item{\code{mesh_A}}{If the model is using the SPDE approximation, this is the A matrix for the predicted locations.}
+
 \item{\code{m}}{Number of samples of the random effects to draw}
 }
 \if{html}{\out{</div>}}
@@ -516,6 +518,8 @@ object, or as a member of the list of arguments to both \code{covariance} and \c
 default to 1 (a bernoulli model).}
 
 \item{\code{model_fit}}{(optional) A \code{mcml} model fit resulting from a call to \code{MCML} or \code{LA}}
+
+\item{\code{mesh}}{(optional) If using an SPDE approximation, then a mesh is required. This argument accepts a list of matrices A, C, and G (and A_pred). The function \link[glmmrBase]{mesh_helper} provides the appropriate list.}
 }
 \if{html}{\out{</div>}}
 }
@@ -754,6 +758,9 @@ or the mixed model information matrix for beta only (FALSE).}
 parameter information matrix is returned.}
 
 \item{\code{oim}}{Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.}
+
+\item{\code{average}}{Logical. If TRUE, and the model contains Monte Carlo samples of random effects, then the information matrix marginal variance is averaged over samples. Otherwise it
+is evaluated at the posterior mode.}
 }
 \if{html}{\out{</div>}}
 }
@@ -996,7 +1003,7 @@ model <- Model$new(
   data = Salamanders,
   family = binomial()
 )
-
+set.seed(125)
 fit2 <- model$fit()
 
 # Example using simulated data
@@ -1022,9 +1029,9 @@ fit2 <- des$fit()
 # simulate some data - binomial observation on [-1,1] x [-1,1]
 set.seed(123)
 df <- data.frame(
-x = runif(n, -1, 1),
-y = runif(n, -1, 1))
-df$z <- rnorm(n)
+x = runif(100, -1, 1),
+y = runif(100, -1, 1))
+df$z <- rnorm(100)
 
 df$outcome <- Model$new(
   ~ z + (1|matern1log(x, y)),
@@ -1044,7 +1051,7 @@ mod <- Model$new(
   outcome ~ z + (1|spde_matern1log(x, y)),
   data = df,
   family = binomial(),
-  trials = rep(10, n),
+  trials = rep(10, nrow(df)),
   mesh = mesh_data[["data"]],
   covariance = log(c(0.5, 0.3))
 )
@@ -1055,7 +1062,7 @@ fit1 <- mod$fit(niter = 50)
 pred1 <- mod$predict(newdata = df_pred,mesh_A = mesh_data[["A_pred"]])
 
 #' # Non-linear model fitting example using the example provided by nlmer in lme4
-data(Orange, package = "lme4")
+data(Orange, package = "datasets")
 
 # the lme4 example:
 startvec <- c(Asym = 200, xmid = 725, scal = 350)
@@ -1068,18 +1075,18 @@ Orange$Tree <- as.numeric(Orange$Tree)
 # Here we can specify the model as a function. 
 
 model <- Model$new(
-  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+  circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|grlog(Tree)),
   data = Orange,
   family = gaussian(),
   mean = c(200,725,350),
-  covariance = c(500),
+  covariance = log(c(500)),
   var_par = 50
 )
 set.seed(123)
 nfit <- model$fit(niter = 100)
 
 summary(nfit)
-summary(nm1)
+suppressWarnings(summary(nm1)) # lme4 reports Hessian warnings
 }
 \if{html}{\out{</div>}}
 

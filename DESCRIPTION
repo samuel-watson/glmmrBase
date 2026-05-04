@@ -20,7 +20,8 @@ LinkingTo:
     BH,
     RcppParallel (>= 5.0.1)
 Suggests:
-    fmesher
+    fmesher,
+    lme4
 RoxygenNote: 7.3.2
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]

@@ -170,11 +170,12 @@ mcnr_family <- function(family, cmdstan){
 #' @return A list with A, C, and G sparse matrices to be passed to `Model$new()`
 #' @examples
 #' df <- data.frame(
-#' x = runif(n, -1, 1),
-#' y = runif(n, -1, 1))
-#' mesh <- mesh_helper(df, c(0.15, 0.75), 0.075, c(0.1,0.3))
+#' x = runif(100, -1, 1),
+#' y = runif(100, -1, 1))
+#' mesh <- mesh_helper(df, max_edge = c(0.15, 0.75), cutoff = 0.075, offset = c(0.1,0.3))
 #' @export
 mesh_helper <- function(locs, pred_locs = NULL, max_edge, cutoff, offset, ...){
+  if(!requireNamespace("fmesher"))stop("fmesher required")
   mesh  <- fmesher::fm_mesh_2d(loc = locs, max.edge = max_edge, cutoff = cutoff, offset = offset, ...)
   fem   <- fmesher::fm_fem(mesh)
   A_loc <- fmesher::fm_basis(mesh, loc = as.matrix(locs))

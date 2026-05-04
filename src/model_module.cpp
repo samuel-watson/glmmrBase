@@ -261,6 +261,12 @@ void Covariance__Update_parameters(SEXP xp, SEXP parameters_, int type_ = 0){
     ptr->update_rho(rho);
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    ptr->update_parameters_extern(parameters);
+    break;
+  }
   }
 }
 
@@ -296,6 +302,13 @@ SEXP Covariance__D(SEXP xp, int type_ = 0){
     return wrap(D);
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    Eigen::MatrixXd D = ptr->D(false,false);
+    return wrap(D);
+    break;
+  }
   default:
   {
     Eigen::MatrixXd Z = Eigen::MatrixXd::Zero(1,1);
@@ -324,6 +337,13 @@ SEXP Covariance__D_chol(SEXP xp, int type_ = 0){
     break;
   }
   case Type::GLMM_HSGP:
+  {
+    XPtr<hsgp> ptr(xp);
+    Eigen::MatrixXd D = ptr->D(true,false);
+    return wrap(D);
+    break;
+  }
+  case Type::GLMM_SPDE:
   {
     XPtr<hsgp> ptr(xp);
     Eigen::MatrixXd D = ptr->D(true,false);
@@ -369,6 +389,12 @@ SEXP Covariance__B(SEXP xp, int type_ = 0){
     B = ptr->B();
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    B = ptr->B();
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -397,6 +423,12 @@ SEXP Covariance__Q(SEXP xp, int type_ = 0){
     break;
   }
   case Type::GLMM_HSGP:
+  {
+    XPtr<hsgp> ptr(xp);
+    Q = ptr->Q();
+    break;
+  }
+  case Type::GLMM_SPDE:
   {
     XPtr<hsgp> ptr(xp);
     Q = ptr->Q();
@@ -437,6 +469,12 @@ SEXP Covariance__log_likelihood(SEXP xp, SEXP u_, int type_ = 0){
     ll = ptr->log_likelihood(u);
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    ll = ptr->log_likelihood(u);
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -470,6 +508,12 @@ SEXP Covariance__log_determinant(SEXP xp, int type_ = 0){
     ll = ptr->log_determinant();
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    ll = ptr->log_determinant();
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -498,6 +542,12 @@ SEXP Covariance__n_cov_pars(SEXP xp, int type_ = 0){
     break;
   }
   case Type::GLMM_HSGP:
+  {
+    XPtr<hsgp> ptr(xp);
+    G = ptr->npar();
+    break;
+  }
+  case Type::GLMM_SPDE:
   {
     XPtr<hsgp> ptr(xp);
     G = ptr->npar();
@@ -539,6 +589,13 @@ SEXP Covariance__simulate_re(SEXP xp, int type_ = 0){
     return wrap(rr);
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    Eigen::VectorXd rr = ptr->sim_re();
+    return wrap(rr);
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -571,12 +628,8 @@ void Covariance__make_sparse(SEXP xp, int type_ = 0){
     ptr->set_sparse(true);
     break;
   }
-  case Type::GLMM_HSGP:
-  {
-    XPtr<hsgp> ptr(xp);
-    ptr->set_sparse(true);
-    break;
-  }
+  case Type::GLMM_HSGP: case Type::GLMM_SPDE:
+  {}
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -602,12 +655,8 @@ void Covariance__make_dense(SEXP xp, int type_ = 0){
     ptr->set_sparse(false);
     break;
   }
-  case Type::GLMM_HSGP:
-  {
-    XPtr<hsgp> ptr(xp);
-    ptr->set_sparse(false);
-    break;
-  }
+  case Type::GLMM_HSGP: case Type::GLMM_SPDE:
+  {}
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -635,17 +684,7 @@ SEXP Covariance__any_gr(SEXP xp, int type_ = 0){
     gr = ptr->any_group_re();
     break;
   }
-  case Type::GLMM_NNGP:
-  {
-    gr = false;
-    break;
-  }
-  case Type::GLMM_HSGP:
-  {
-    gr = false;
-    break;
-  }
-  case Type::GLMM_AR1:
+  case Type::GLMM_NNGP: case Type::GLMM_HSGP: case Type::GLMM_SPDE: case Type::GLMM_AR1:
   {
     gr = false;
     break;
@@ -672,6 +711,12 @@ SEXP Covariance__get_val(SEXP xp, int i, int j, int type_ = 0){
     break;
   }
   case Type::GLMM_HSGP:
+  {
+    XPtr<hsgp> ptr(xp);
+    gr = ptr->get_val(0,i,j);
+    break;
+  }
+  case Type::GLMM_SPDE:
   {
     XPtr<hsgp> ptr(xp);
     gr = ptr->get_val(0,i,j);
@@ -710,6 +755,12 @@ SEXP Covariance__parameter_fn_index(SEXP xp, int type_ = 0){
     gr = ptr->parameter_fn_index();
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    gr = ptr->parameter_fn_index();
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -743,6 +794,12 @@ SEXP Covariance__re_terms(SEXP xp, int type_ = 0){
     gr = ptr->form_.re_terms();
     break;
   }
+  case Type::GLMM_SPDE:
+  {
+    XPtr<hsgp> ptr(xp);
+    gr = ptr->form_.re_terms();
+    break;
+  }
   case Type::GLMM_AR1:
   {
     XPtr<ar1covariance> ptr(xp);
@@ -771,6 +828,12 @@ SEXP Covariance__re_count(SEXP xp, int type_ = 0){
     break;
   }
   case Type::GLMM_HSGP:
+  {
+    XPtr<hsgp> ptr(xp);
+    gr = ptr->re_count();
+    break;
+  }
+  case Type::GLMM_SPDE:
   {
     XPtr<hsgp> ptr(xp);
     gr = ptr->re_count();

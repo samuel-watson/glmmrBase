@@ -589,7 +589,11 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
     if(model.family.family==Fam::gaussian){
       if(optim.trace > 0)Rcpp::Rcout << "\n-------------- ITER: " << iter << " ------------" << std::endl;
       auto t1 = high_resolution_clock::now();
-      optim.nr_beta_gaussian();
+      if(model.linear_predictor.calc.any_nonlinear){
+        optim.template ml_beta<BOBYQA>();
+      } else {
+        optim.nr_beta_gaussian();
+      }
       auto t2 = high_resolution_clock::now();
       duration<double, std::milli> ms_double = t2 - t1;
       if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 1 (nr beta): " << ms_double.count() << "ms" << std::endl;
@@ -618,7 +622,11 @@ inline void glmmr::Model<modeltype>::fit(const int niter, const int max_iter, co
       auto t2 = high_resolution_clock::now();
       duration<double, std::milli> ms_double = t2 - t1;
       if(optim.trace > 0)Rcpp::Rcout << "TIMING STEP 1 (posterior u sample): " << ms_double.count() << "ms" << std::endl;
-      optim.nr_beta();
+      if(model.linear_predictor.calc.any_nonlinear){
+        optim.template ml_beta<BOBYQA>();
+      } else {
+        optim.nr_beta();
+      }
       check_for_errors("beta step");
       auto t3 = high_resolution_clock::now();
       ms_double = t3 - t2;
