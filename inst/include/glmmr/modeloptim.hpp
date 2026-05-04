@@ -422,6 +422,11 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood_beta(const dblvec& beta)
 {
   model.linear_predictor.update_parameters(beta);
+  if(model.family.family==Fam::gaussian){
+    matrix.posterior_u_samples(1, false, false, false);
+    re.zu_.resize(NoChange, 1);
+    re.zu_.col(0) = model.covariance.ZLu(re.u_mean_);
+  }
   double ll = log_likelihood();
   fn_counter.first += re.scaled_u_.cols();
   if(control.saem)ll = saem_average(0);
@@ -612,7 +617,7 @@ inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   }
   double out = 0;
   for(int j = 0; j< ll_current.rows(); j++) out += re.u_weight_(j) * ll_current(j,llcol);
-  return out; //ll_current.col(llcol).mean();
+  return out; 
 }
 
 template<typename modeltype>

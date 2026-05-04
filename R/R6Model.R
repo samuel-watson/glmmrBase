@@ -156,6 +156,7 @@ Model <- R6::R6Class("Model",
                        #' @param newdata A data frame specifying the new data at which to generate predictions
                        #' @param m Number of samples of the random effects to draw
                        #' @param offset Optional vector of offset values for the new data
+                       #' @param mesh_A If the model is using the SPDE approximation, this is the A matrix for the predicted locations.
                        #' @return A list with the linear predictor, parameters (mean and covariance matrices) for
                        #' the conditional distribution of the random effects, and any random effect samples.
                        predict = function(newdata,
@@ -197,6 +198,7 @@ Model <- R6::R6Class("Model",
                        #' default to 1 (a bernoulli model).
                        #' @param weights (Optional) A vector of weights. 
                        #' @param model_fit (optional) A `mcml` model fit resulting from a call to `MCML` or `LA`
+                       #' @param mesh (optional) If using an SPDE approximation, then a mesh is required. This argument accepts a list of matrices A, C, and G (and A_pred). The function \link[glmmrBase]{mesh_helper} provides the appropriate list.
                        #' @return A new Model class object
                        #' @seealso \link[glmmrBase]{nelder}, \link[glmmrBase]{MeanFunction}, \link[glmmrBase]{Covariance}
                        #' @examples
@@ -624,6 +626,8 @@ Model <- R6::R6Class("Model",
                        #' @param theta Logical. If TRUE the function will return the variance-coviariance matrix for the covariance parameters and ignore the first argument. Otherwise, the fixed effect
                        #' parameter information matrix is returned.
                        #' @param oim Logical. If TRUE, returns the observed information matrix for both beta and theta, disregarding other arguments to the function.
+                       #' @param average Logical. If TRUE, and the model contains Monte Carlo samples of random effects, then the information matrix marginal variance is averaged over samples. Otherwise it 
+                       #' is evaluated at the posterior mode.
                        #' @return A matrix
                        information_matrix = function(include.re = FALSE, theta = FALSE, oim = FALSE, average = TRUE){
                          if(oim & !private$y_has_been_updated) stop("No y data has been added")
@@ -806,7 +810,7 @@ Model <- R6::R6Class("Model",
                        #'   data = Salamanders,
                        #'   family = binomial()
                        #' )
-                       #' 
+                       #' set.seed(125)
                        #' fit2 <- model$fit()
                        #' 
                        #' # Example using simulated data
@@ -832,9 +836,9 @@ Model <- R6::R6Class("Model",
                        #' # simulate some data - binomial observation on [-1,1] x [-1,1]
                        #' set.seed(123)
                        #' df <- data.frame(
-                       #' x = runif(n, -1, 1),
-                       #' y = runif(n, -1, 1))
-                       #' df$z <- rnorm(n)
+                       #' x = runif(100, -1, 1),
+                       #' y = runif(100, -1, 1))
+                       #' df$z <- rnorm(100)
                        #' 
                        #' df$outcome <- Model$new(
                        #'   ~ z + (1|matern1log(x, y)),
@@ -854,7 +858,7 @@ Model <- R6::R6Class("Model",
                        #'   outcome ~ z + (1|spde_matern1log(x, y)),
                        #'   data = df,
                        #'   family = binomial(),
-                       #'   trials = rep(10, n),
+                       #'   trials = rep(10, nrow(df)),
                        #'   mesh = mesh_data[["data"]],
                        #'   covariance = log(c(0.5, 0.3))
                        #' )
@@ -865,7 +869,7 @@ Model <- R6::R6Class("Model",
                        #' pred1 <- mod$predict(newdata = df_pred,mesh_A = mesh_data[["A_pred"]])
                        #' 
                        #' #' # Non-linear model fitting example using the example provided by nlmer in lme4
-                       #' data(Orange, package = "lme4")
+                       #' data(Orange, package = "datasets")
                        #' 
                        #' # the lme4 example:
                        #' startvec <- c(Asym = 200, xmid = 725, scal = 350)
@@ -878,18 +882,18 @@ Model <- R6::R6Class("Model",
                        #' # Here we can specify the model as a function. 
                        #' 
                        #' model <- Model$new(
-                       #'   circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|gr(Tree)),
+                       #'   circumference ~ Asym/(1 + exp((xmid - (age))/scal)) - 1 + (Asym|grlog(Tree)),
                        #'   data = Orange,
                        #'   family = gaussian(),
                        #'   mean = c(200,725,350),
-                       #'   covariance = c(500),
+                       #'   covariance = log(c(500)),
                        #'   var_par = 50
                        #' )
                        #' set.seed(123)
                        #' nfit <- model$fit(niter = 100)
                        #' 
                        #' summary(nfit)
-                       #' summary(nm1)
+                       #' suppressWarnings(summary(nm1)) # lme4 reports Hessian warnings
                        #' @md
                        fit = function(niter = 100, max_iter = 30, se = "average",
                                       tol = ifelse(self$family[[1]]=="gaussian"&self$family[[2]]=="identity",1e-6,10), 
@@ -908,7 +912,7 @@ Model <- R6::R6Class("Model",
                          if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()
                          if(se == "average" & niter == 1) Model__posterior_u_sample(private$ptr, 200, FALSE, TRUE, FALSE, private$model_type()) 
                          u <- Model__u(private$ptr,TRUE,private$model_type())
-                         M <- self$information_matrix(average = (se == "average")) 
+                         M <- self$information_matrix(average = isTRUE(se == "average" & self$family[[1]] != "gaussian")) 
                          M <- solve(M)
                          ncovpars <- Model__n_cov_pars(private$ptr,private$model_type())
                          if(self$family[[1]]=="gaussian")ncovpars <- ncovpars + 1
@@ -1083,7 +1087,7 @@ Model <- R6::R6Class("Model",
                         #' @param scaled Logical. Whether to return the random effects on the data (TRUE) or whitened (FALSE) scale.
                         #' @return Invisibly returns a matrix of random effect samples
                        sample_u = function(niter, scaled = TRUE){
-                         Model__posterior_u_sample(private$ptr,scaled,niter,FALSE,TRUE,FALSE, private$model_type())
+                         Model__posterior_u_sample(private$ptr,niter,FALSE,TRUE,FALSE, private$model_type())
                          return(invisible(self$u(scaled)))
                        },
                        #' @description 
