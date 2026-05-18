@@ -178,12 +178,14 @@ des$power() #power of 0.90 for the int parameter
 ## ------------------------------------------------
 
 # Simulated trial data example using REML
+# we set starting values to prevent errors on example checking - these are not strictly necessary
 set.seed(123)
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
   data = SimTrial,
-  family = gaussian()
+  family = gaussian(),
+  covariance = log(c(0.05,0.7))
 )$fit(reml = TRUE)
 
 # Salamanders data example
@@ -191,7 +193,8 @@ data(Salamanders,package="glmmrBase")
 model <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = log(c(0.05,0.7))
 )
 set.seed(125)
 fit2 <- model$fit()
@@ -988,12 +991,14 @@ A \code{mcml} model fit object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# Simulated trial data example using REML
+# we set starting values to prevent errors on example checking - these are not strictly necessary
 set.seed(123)
 data(SimTrial,package = "glmmrBase")
 fit1 <- Model$new(
   formula = y ~ int + factor(t) - 1 + (1|grlog(cl)*ar0log(t)),
   data = SimTrial,
-  family = gaussian()
+  family = gaussian(),
+  covariance = log(c(0.05,0.7))
 )$fit(reml = TRUE)
 
 # Salamanders data example
@@ -1001,7 +1006,8 @@ data(Salamanders,package="glmmrBase")
 model <- Model$new(
   mating~fpop:mpop-1+(1|grlog(mnum))+(1|grlog(fnum)),
   data = Salamanders,
-  family = binomial()
+  family = binomial(),
+  covariance = log(c(0.05,0.7))
 )
 set.seed(125)
 fit2 <- model$fit()

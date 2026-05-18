@@ -1,8 +1,8 @@
 Package: glmmrBase
 Type: Package
 Title: Generalised Linear Mixed Models in R
-Version: 1.4.0
-Date: 2026-04-21
+Version: 1.4.1
+Date: 2026-05-18
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 
@@ -22,7 +22,7 @@ LinkingTo:
 Suggests:
     fmesher,
     lme4
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 NeedsCompilation: yes
 Author: Sam Watson [aut, cre]
 URL: https://github.com/samuel-watson/glmmrBase

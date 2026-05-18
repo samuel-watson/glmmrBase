@@ -1164,7 +1164,7 @@ SEXP Model__get_gradients(SEXP xp, int type = 0){
     [](auto ptr){return returnType(ptr->optim.gradients);}
   };
   auto S = std::visit(functor,model.ptr);
-  return wrap(std::get<Eigen::VectorXd>(S));
+  return wrap(std::get<Eigen::ArrayXd>(S));
 }
 
 // [[Rcpp::export]]
