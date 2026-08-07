@@ -1,14 +1,14 @@
 Package: glmmrBase
 Type: Package
-Title: Generalised Linear Mixed Models in R
+Title: Monte Carlo Maximum Likelihood and Analysis of Generalised Linear Mixed Models
 Version: 1.4.1
-Date: 2026-05-18
+Date: 2026-05-27
 Authors@R: c(person("Sam", "Watson", email = "S.I.Watson@bham.ac.uk",
                   role = c("aut", "cre")))
 Description: Specification, analysis, simulation, and fitting of generalised linear mixed models. 
-  Includes Markov Chain Monte Carlo Maximum likelihood model fitting for a range of models, 
-  non-linear fixed effect specifications, a wide range of flexible covariance functions that can be combined arbitrarily,
-  robust and bias-corrected standard error estimation, power calculation, data simulation, and more. 
+  Monte Carlo Maximum likelihood model fitting for a range of models, 
+  non-linear fixed effect specifications, a wide range of flexible covariance functions including 
+  Gaussian Process approximations. Methods described in Watson, Wang, and Giorgi (2026) <doi:10.48550/arXiv.2601.16022>.
 License: GPL (>= 2)
 Imports: 
     methods,
@@ -24,7 +24,6 @@ Suggests:
     lme4
 RoxygenNote: 7.3.3
 NeedsCompilation: yes
-Author: Sam Watson [aut, cre]
 URL: https://github.com/samuel-watson/glmmrBase
 BugReports: https://github.com/samuel-watson/glmmrBase/issues
 Biarch: true

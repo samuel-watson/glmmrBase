@@ -2,17 +2,16 @@
 % Please edit documentation in R/lme4_functions.R
 \name{mcml_glmer}
 \alias{mcml_glmer}
-\title{lme4 style generlized linear mixed model}
+\title{lme4 style generalized linear mixed model}
 \usage{
 mcml_glmer(
   formula,
   data,
   family,
   start = NULL,
+  start.cov = NULL,
   offset = NULL,
   verbose = 1L,
-  iter.warmup = 100,
-  iter.sampling = 50,
   weights = NULL,
   ...
 )
@@ -26,14 +25,12 @@ mcml_glmer(
 
 \item{start}{Optional. A vector of starting values for the fixed effects.}
 
+\item{start.cov}{Optional. A vector of starting values for the covariance parameters.}
+
 \item{offset}{Optional. A vector of offset values.}
 
 \item{verbose}{Integer, controls the level of detail printed to the console, either 0 (no output), 
 1 (main output), or 2 (detailed output)}
-
-\item{iter.warmup}{The number of warmup iterations for the MCMC sampling step of each iteration.}
-
-\item{iter.sampling}{The number of sampling iterations for the MCMC sampling step of each iteration.}
 
 \item{weights}{Optional. A vector of observation level weights to apply to the model fit.}
 
@@ -54,10 +51,8 @@ would be valid formulae.
 \examples{
 #create a data frame describing a cross-sectional parallel cluster
 data(Salamanders, package = "glmmrBase")
-\dontrun{
+\donttest{
 glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),
-  data=Salamanders,family=binomial(),reml=FALSE)
-glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), 
-  data =Salamanders, family=binomial(),reml=TRUE)
+  data=Salamanders,family=stats::binomial())
 }
 }

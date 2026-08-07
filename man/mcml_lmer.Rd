@@ -8,10 +8,9 @@ mcml_lmer(
   formula,
   data,
   start = NULL,
+  start.cov = NULL,
   offset = NULL,
   verbose = 1L,
-  iter.warmup = 100,
-  iter.sampling = 50,
   weights = NULL,
   ...
 )
@@ -23,14 +22,12 @@ mcml_lmer(
 
 \item{start}{Optional. A vector of starting values for the fixed effects.}
 
+\item{start.cov}{Optional. A vector of starting values for the covariance parameters.}
+
 \item{offset}{Optional. A vector of offset values.}
 
 \item{verbose}{Integer, controls the level of detail printed to the console, either 0 (no output), 
 1 (main output), or 2 (detailed output)}
-
-\item{iter.warmup}{The number of warmup iterations for the MCMC sampling step of each iteration.}
-
-\item{iter.sampling}{The number of sampling iterations for the MCMC sampling step of each iteration.}
 
 \item{weights}{Optional. A vector of observation level weights to apply to the model fit.}
 
@@ -60,7 +57,7 @@ df$y <- Model$new(
   data = df,
   family = stats::gaussian()
 )$sim_data()
-\dontrun{
-fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df)
+\donttest{
+fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, start.cov = c(0.05,0.01))
 }
 }
