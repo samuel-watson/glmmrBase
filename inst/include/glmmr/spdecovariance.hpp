@@ -13,6 +13,7 @@ public:
   // --- data ---
   int       dim;             // spatial dimension (must be 2 for this prototype)
   int       alpha = 2;       // SPDE order; α=2 ⇒ ν = α - d/2 = 1 for d=2
+  double    nu    = 1.0;     // Matérn smoothness, read from the formula tag
   int       nv = 0;          // number of mesh vertices
   bool      spde_loaded = false;
   
@@ -186,15 +187,35 @@ inline void glmmr::spdeCovariance::parse_spde_term(){
     throw std::runtime_error("spdeCovariance: no covariance function detected by parser.");
   }
   // For the prototype, accept any Matérn-family tag — ν is fixed by alpha=2.
+  // Read ν from the formula tag. Must agree with hsgpCovariance (l.229-243) and
+  // with the dense evaluation in interpreter.h, or the same formula means two
+  // different models depending on which backend consumes it.
   const auto& fn0 = this->fn_[0][0];
-  bool recognised = (fn0 == CovFunc::matern  || fn0 == CovFunc::matern1log ||
-                     fn0 == CovFunc::matern2log ||
-                     fn0 == CovFunc::fexp   || fn0 == CovFunc::fexp0    ||
-                     fn0 == CovFunc::fexplog);
-  if(!recognised){
-    throw std::runtime_error("spdeCovariance: formula must use a Matérn-family function "
-                               "(e.g. spde_matern1log(x, y)).");
+  if(fn0 == CovFunc::fexp || fn0 == CovFunc::fexp0 || fn0 == CovFunc::fexplog){
+    nu = 0.5;
+  } else if(fn0 == CovFunc::matern || fn0 == CovFunc::matern1log){
+      nu = 1;
+  } else if(fn0 == CovFunc::matern2log){
+      nu = 2;
+  } else {
+      throw std::runtime_error("spdeCovariance: formula must use a Matérn-family function "
+                                 "(e.g. spde_matern1log(x, y)).");
   }
+  
+  // α = ν + d/2. The FEM construction represents integer α only.
+  const double alpha_real = nu + 0.5 * static_cast<double>(dim);
+  const int    alpha_int  = static_cast<int>(std::lround(alpha_real));
+  if(std::abs(alpha_real - static_cast<double>(alpha_int)) > 1e-8){
+    throw std::runtime_error(
+        "spdeCovariance: the requested covariance function implies nu = " +
+        std::to_string(nu) + ", hence alpha = nu + d/2 = " + std::to_string(alpha_real) +
+        ", which is not an integer. The finite-element SPDE representation supports "
+        "integer alpha only; non-integer alpha requires the rational approximation of "
+        "Bolin & Kirchner (2020), which is not implemented. In d = 2 the available "
+        "smoothnesses are nu = 1 (alpha = 2) and nu = 2 (alpha = 3). Use spde_matern0log() "
+      "for nu = 1, or fit this covariance with the dense or HSGP backend instead.");
+    }
+  alpha = alpha_int;
 }
 
 // ============================================================================
@@ -207,8 +228,17 @@ inline void glmmr::spdeCovariance::spde_data(const SparseMatrix<double>& A_in,
                                              int                         alpha_in)
 {
   if(alpha_in != 2){
-    throw std::runtime_error("spdeCovariance prototype supports alpha = 2 only (ν = 1 in 2D).");
+    throw std::runtime_error("spdeCovariance currently assembles alpha = 2 only. "
+                             "For alpha = 3 use the Lindgren et al. (2011) recursion "
+                             "Q_a = K C^-1 Q_{a-2} C^-1 K; not yet implemented.");
   }
+  if(alpha != alpha_in){
+    throw std::runtime_error(
+        "spdeCovariance: formula implies alpha = " + std::to_string(alpha) +
+        " (nu = " + std::to_string(nu) + ") but spde_data() was called with alpha = " +
+        std::to_string(alpha_in) + ". Refusing to silently substitute a different "
+        "smoothness. Use a covariance tag whose nu matches, or pass the intended alpha.");
+    }
   if(G_in.rows() != G_in.cols() || G_in.rows() != C_diag_in.size()){
     throw std::runtime_error("spde_data: C and G dimensions inconsistent.");
   }
@@ -283,18 +313,18 @@ inline void glmmr::spdeCovariance::update_coefficients(){
   double sigma2 = logpars ? std::exp(parameters_[0]) : parameters_[0];
   double lambda = logpars ? std::exp(parameters_[1]) : parameters_[1];
   
-  // Q = τ² ( κ⁴ C + 2 κ² G + G C⁻¹ G )
-  //   = (1/(4π σ² κ²))  * ( κ⁴ C + 2 κ² G + M )
-  //   = (κ² / (4π σ²)) C + (1/(2π σ²)) G + (1/(4π σ² κ²)) M
+  // Lindgren et al. (2011): sigma^2 = Gamma(nu) / (Gamma(nu + d/2) (4pi)^{d/2} kappa^{2nu} tau^2)
+  // so with d = 2, alpha = 2 (=> nu = 1 unless extended):
+  //   tau^2 = Gamma(nu) / (Gamma(nu+1) * 4pi * kappa^{2nu} * sigma^2)
+  //         = 1 / (nu * 4pi * kappa^{2nu} * sigma^2)          [Gamma(nu+1) = nu Gamma(nu)]
   //
-  // With κ² = 8/λ²:
-  //   aC = (8/λ²) / (4π σ²)                = 2 / (π σ² λ²)
-  //   aG =  1    / (2π σ²)
-  //   aM = (λ²/8)/ (4π σ²)                 = λ² / (32 π σ²)
-  const double pi = M_PI;
-  aC = 2.0                  / (pi * sigma2 * lambda * lambda);
-  aG = 1.0                  / (2.0 * pi * sigma2);
-  aM = (lambda * lambda)    / (32.0 * pi * sigma2);
+  // Q = tau^2 ( kappa^4 C + 2 kappa^2 G + M ),  kappa^2 = 8 nu / lambda^2
+  const double pi     = M_PI;
+  const double kappa2 = 8.0 * nu / (lambda * lambda);
+  const double tau2   = 1.0 / (nu * 4.0 * pi * std::pow(kappa2, nu) * sigma2);
+  aC = tau2 * kappa2 * kappa2;
+  aG = tau2 * 2.0 * kappa2;
+  aM = tau2;
 }
 
 inline void glmmr::spdeCovariance::build_Q(){

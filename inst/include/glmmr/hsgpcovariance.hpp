@@ -414,6 +414,27 @@ inline double glmmr::hsgpCovariance::spd_nD(int i){
     result *= C_1d * B * C;
   }
   return result;
+  
+  // Matérn / exponential: ISOTROPIC D-dimensional spectral density.
+  //   S(w) = sigma2 * C_D * (2nu)^nu * (prod_d ell_d) * (2nu + sum_d ell_d^2 w_d^2)^-(nu+D/2)
+  // Equal ell_d reduces to manuscript eq (5). A product of 1-D densities does NOT,
+  // and is not isotropic even when the length scales are shared.
+  const double dimd     = static_cast<double>(dim);
+  const double alpha_nD = nu + 0.5 * dimd;
+  const double C_D      = pow(4.0 * M_PI, 0.5 * dimd) * tgamma(alpha_nD) / tgamma(nu);
+  const double two_nu   = 2.0 * nu;
+  double Q        = two_nu;   // accumulates 2nu + sum_d ell_d^2 w_d^2
+  double ell_prod = 1.0;
+  for(int d = 0; d < dim; d++){
+    double ell_d = anisotropic
+    ? (logpars ? exp(parameters_[1 + d]) : parameters_[1 + d])
+    : (logpars ? exp(parameters_[1])     : parameters_[1]);
+    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+    Q        += ell_d * ell_d * w * w;
+    ell_prod *= ell_d;
+    }
+  return sigma2 * C_D * pow(two_nu, nu) * ell_prod * pow(Q, -alpha_nD);
+  
 }
 
 inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i){
@@ -447,25 +468,27 @@ inline dblvec glmmr::hsgpCovariance::d_spd_nD(int i){
     return result;
   }
   
-  // Matérn separable: product rule
-  // d log(S) / d log(ell_d) = d log(S_d) / d log(ell_d)
-  //   = -2*nu + 2*nu * (nu+0.5) * 2 / (ell_d^2 * (2*nu/ell_d^2 + w_d^2)) ... 
-  // but cleaner: for the 1D factor with params (nu, ell_d):
-  //   dlog(S_1d)/dlog(ell_d) = -2*nu + 2*(nu+0.5)*2*nu / (2*nu + ell_d^2 * w_d^2)
-  for(int d = 0; d < dim; d++){
-    int par_idx = anisotropic ? 1 + d : 1;
-    double ell_d = logpars ? exp(parameters_[par_idx]) : parameters_[par_idx];
-    double w = (indices(i,d) * M_PI) / (2 * L_boundary(d));
-    double ell2 = ell_d * ell_d;
-    double two_nu = 2.0 * nu;
-    double alpha_1d = nu + 0.5;
-    double E = two_nu / ell2 + w * w;
-    double dlogS_d = -two_nu + two_nu * 2.0 * alpha_1d / (ell2 * E);
-    
-    if(anisotropic){
-      result[1 + d] = S * dlogS_d;
-    } else {
-      result[1] += S * dlogS_d;
+  // Matérn isotropic: single shared denominator Q, so build Q first, then differentiate.
+  {
+    const double dimd     = static_cast<double>(dim);
+    const double alpha_nD = nu + 0.5 * dimd;
+    const double two_nu   = 2.0 * nu;
+    double Q = two_nu;
+    std::vector<double> ell2w2(dim, 0.0);
+    for(int d = 0; d < dim; d++){
+      int par_idx  = anisotropic ? 1 + d : 1;
+      double ell_d = logpars ? exp(parameters_[par_idx]) : parameters_[par_idx];
+      double w     = (indices(i,d) * M_PI) / (2 * L_boundary(d));
+      ell2w2[d]    = ell_d * ell_d * w * w;
+      Q           += ell2w2[d];
+    }
+    for(int d = 0; d < dim; d++){
+      double dlogS_d = 1.0 - 2.0 * alpha_nD * ell2w2[d] / Q;
+      if(anisotropic){
+        result[1 + d] = S * dlogS_d;
+      } else {
+        result[1] += S * dlogS_d;   // chain rule: shared ell contributes from every dim
+      }
     }
   }
   return result;
