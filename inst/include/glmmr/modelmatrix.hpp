@@ -89,6 +89,7 @@ public:
   // functions
   MatrixXd                information_matrix();
   MatrixXd                ave_information_matrix();
+  MatrixXd                residualised_X(const VectorXd& W_hat);
   MatrixXd                Sigma(bool inverse = false);
   template<IM imtype>
   MatrixXd                observed_information_matrix();
@@ -250,198 +251,174 @@ inline MatrixXd glmmr::ModelMatrix<modeltype>::information_matrix(){
   return M;
 }
 
-template<>
-inline MatrixXd glmmr::ModelMatrix<bits_spde>::ave_information_matrix(){
-  auto& cov = model.covariance;
-  if(!cov.spde_loaded){
-    throw std::runtime_error("SPDE ave_information_matrix: spde_data() not loaded.");
-  }
-  
-  W.update(re.centred_u_mean());
-  const int P_ = P();
-  const int n  = model.n();
-  const int K  = re.u_.cols();
-  MatrixXd u_samples = cov.ZLu(re.u_);
-  
-  if(K < 2) throw std::runtime_error(
-      "louis_information_beta requires at least 2 MC samples in re.u_; "
-      "for Laplace-fit models, draw a posterior sample first via "
-      "posterior_u_samples().");
-  
-  ArrayXd w = re.u_weight_;
-  double wsum = w.sum();
-  if(wsum <= 0 || !std::isfinite(wsum)){
-    w = ArrayXd::Constant(K, 1.0/K);
-  } else {
-    w /= wsum;
-  }
-  
+// ---------------------------------------------------------------------------
+// Marginal information for beta via the *shifted* Louis identity.
+//
+// Write eta = X beta + Z u, u ~ N(0, D), and change variables v = u + A_s beta for a
+// fixed Q x P matrix A_s. Louis's identity in (y, v) gives, for ANY such A_s,
+//
+//   I_beta = E[ X_s' W(u) X_s ] + A_s' D^{-1} A_s - Var[ X_s'(y - mu(u)) + A_s' D^{-1} u ],
+//
+// with X_s = X - Z A_s and expectations over u | y. A_s = 0 is the usual form
+// (B - M), in which B and M are both O(n) and cancel to an O(1) number in any
+// direction the random effects can absorb (the intercept, spatially smooth
+// covariates); Monte Carlo error in M then makes I_beta indefinite. Taking
+//
+//   A_s = H^{-1} Z' W_hat X,   H = Z' W_hat Z + D^{-1},
+//
+// makes the part of the complete-data score that is linear in u vanish, so
+//
+//   I_beta = X'(W_hat^{-1} + Z D Z')^{-1} X                         (GLS/Laplace term)
+//          + X_s' diag(E[W(u)] - W_hat) X_s - X_s' Cov(r(u)) X_s       (2nd-order terms)
+//
+//   r(u) = s(eta(u)) - s_hat - W_hat (eta(u) - eta_hat),  s = E[y | eta] / phi.
+//
+// The first term is deterministic and positive definite; the Monte Carlo part only
+// involves the residualised covariates X_s = W_hat^{-1} Sigma^{-1} X and the
+// second-order remainder r, so its variance is small. The identity is exact for any
+// expansion point; we use the weighted posterior mean of eta. For canonical links
+// W(eta) = ds/deta exactly; for non-canonical links the Fisher weights are used, as before.
+// ---------------------------------------------------------------------------
+
+// X_s = X - Z H^{-1} Z' W X  (= W^{-1} Sigma^{-1} X), W given on the diagonal.
+template<typename modeltype>
+inline MatrixXd glmmr::ModelMatrix<modeltype>::residualised_X(const VectorXd& W_hat){
   const MatrixXd X = model.linear_predictor.X();
-  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
-  MatrixXd s_mat(n, K);
-  VectorXd s_bar = VectorXd::Zero(n);
-  VectorXd W_bar = VectorXd::Zero(n);
-  ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
-  
-  if(model.family.family == Fam::poisson){
-    ArrayXd sigma2_i = cov.diag_ZA_Qinv_ZAt_hutch();
-    xb -= 0.5 * sigma2_i;
+  if(!useBlock || sigma_blocks.size() == 0){
+    const MatrixXd ZL = model.covariance.ZL();                 // n x Q, u = L v, v ~ N(0, I)
+    MatrixXd WZL = W_hat.asDiagonal() * ZL;
+    MatrixXd H = ZL.transpose() * WZL;
+    H.diagonal().array() += 1.0;
+    Eigen::LLT<MatrixXd> llt(H);
+    return X - ZL * llt.solve(WZL.transpose() * X);
   }
-  
-  for(int k = 0; k < K; ++k){
-    eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();
-    
-    switch(model.family.family){
-    case Fam::binomial: case Fam::bernoulli: {
-      if(model.family.link == Link::logit){
-      mu_k = 1.0 / (1.0 + (-eta_k).exp());
-    } else {
-      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
-    }
-    s_k = model.data.variance * mu_k;
-    W_k = model.data.variance * mu_k * (1.0 - mu_k);
-    break;
-    }
-    case Fam::poisson: {
-      mu_k = eta_k.exp();
-      s_k = mu_k;
-      W_k = mu_k;
-      break;
-    }
-    case Fam::gaussian: {
-      mu_k = eta_k;
-      s_k = mu_k;
-      W_k = (model.data.variance.inverse() * model.data.weights);
-      break;
-    }
-    case Fam::gamma: case Fam::beta: case Fam::exponential: {
-      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
-      s_k = mu_k;
-      W_k = W.W_.array();
-      break;
-    }
-    default:
-      throw std::runtime_error("ave_information_matrix (SPDE): unsupported family");
-    }
-    
-    s_mat.col(k) = s_k.matrix();
-    s_bar += w(k) * s_k.matrix();
-    W_bar += w(k) * W_k.matrix();
+  W.W_ = W_hat;                                              // sigma_block() reads W
+  MatrixXd Xs(X.rows(), X.cols());
+  for(int b = 0; b < (int)sigma_blocks.size(); b++){
+    ArrayXi rows = Map<ArrayXi,Unaligned>(sigma_blocks[b].RowIndexes.data(), sigma_blocks[b].RowIndexes.size());
+    MatrixXd Xb = glmmr::Eigen_ext::submat(X, rows, ArrayXi::LinSpaced(P(),0,P()-1));
+    MatrixXd SX = sigma_block(b, true) * Xb;
+    for(int i = 0; i < rows.size(); i++) Xs.row(rows(i)) = SX.row(i) / W_hat(rows(i));
   }
-  
-  MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
-  MatrixXd meat  = MatrixXd::Zero(P_, P_);
-  VectorXd g_k(P_);
-  for(int k = 0; k < K; ++k){
-    g_k = X.transpose() * (s_mat.col(k) - s_bar);
-    meat.noalias() += w(k) * g_k * g_k.transpose();
-  }
-  
-  return bread - meat;
+  return Xs;
+}
+
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_hsgp>::residualised_X(const VectorXd& W_hat){
+  const MatrixXd X = model.linear_predictor.X();
+  const MatrixXd A = model.covariance.ZPhi();                 // n x M
+  ArrayXd inv_lambda = model.covariance.LambdaSPD().inverse();
+  MatrixXd WA = W_hat.asDiagonal() * A;
+  MatrixXd H = A.transpose() * WA;
+  H.diagonal() += inv_lambda.matrix();
+  Eigen::LLT<MatrixXd> llt(H);
+  return X - A * llt.solve(WA.transpose() * X);
+}
+
+template<>
+inline MatrixXd glmmr::ModelMatrix<bits_spde>::residualised_X(const VectorXd& W_hat){
+  auto& cov = model.covariance;
+  const MatrixXd X = model.linear_predictor.X();
+  MatrixXd ZAtWX = cov.ZA_.transpose() * (W_hat.asDiagonal() * X);   // n_v x P
+  cov.refactor_P(W_hat);                                             // ZA' W ZA + Q
+  MatrixXd sol = cov.chol_P.solve(ZAtWX);
+  if(cov.chol_P.info() != Success) throw std::runtime_error("residualised_X (SPDE): P solve failed.");
+  return X - cov.ZA_ * sol;
 }
 
 template<typename modeltype>
 inline MatrixXd glmmr::ModelMatrix<modeltype>::ave_information_matrix(){
-  
-  W.update(re.centred_u_mean());
+  if constexpr (std::is_same_v<modeltype, bits_spde>){
+    if(!model.covariance.spde_loaded) throw std::runtime_error("SPDE ave_information_matrix: spde_data() not loaded.");
+  }
   const int P_ = P();
   const int n  = model.n();
   const int K  = re.u_.cols();
-  MatrixXd u_samples = model.covariance.ZLu(re.u_);
-  
-  if(K < 2) throw std::runtime_error(
-      "louis_information_beta requires at least 2 MC samples in re.u_; "
-      "for Laplace-fit models, draw a posterior sample first via "
-      "posterior_u_samples().");
-  
-  // Importance weights, normalised
+  const bool canonical_gaussian = model.family.family == Fam::gaussian && model.family.link == Link::identity;
+  if(canonical_gaussian || K < 2){
+    // Gaussian-identity: r(u) = 0 and E[W] = W, so the identity reduces to GLS exactly.
+    // Laplace (K = 1): only the first-order term is available.
+    return information_matrix();
+  }
+
   ArrayXd w = re.u_weight_;
   double wsum = w.sum();
-  if(wsum <= 0 || !std::isfinite(wsum)){
-    w = ArrayXd::Constant(K, 1.0/K);
-  } else {
-    w /= wsum;
-  }
-  
+  if(wsum <= 0 || !std::isfinite(wsum)) w = ArrayXd::Constant(K, 1.0/K); else w /= wsum;
+
   const MatrixXd X = model.linear_predictor.X();
-  ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
-  // Per-sample s_k (n-vector) and weighted accumulators for s_bar and W_bar
-  MatrixXd s_mat(n, K);          // s(u^k) per sample
-  VectorXd s_bar = VectorXd::Zero(n);
-  VectorXd W_bar = VectorXd::Zero(n);
-  
-  // re.zu_ has columns Z*L*u^k (for HSGP, A * u^k); same as in linpred()
-  ArrayXd eta_k(n), mu_k(n), W_k(n), s_k(n);
-  
-  if(model.family.family == Fam::poisson){
-    MatrixXd D = model.covariance.D(false, false);
-    MatrixXd Z(model.n(), model.covariance.Q());
-    if constexpr (std::is_same_v<modeltype, bits_hsgp>){
-      Z = model.covariance.ZPhi();
-    } else {
-      Z = model.covariance.Z();
-    }
-    ArrayXd sigma2_i(model.n());
-    MatrixXd ZD = Z * D;  // n x Q
-    for(int i = 0; i < model.n(); i++){
-      sigma2_i(i) = ZD.row(i).dot(Z.row(i));
-    }
-    xb -= 0.5 * sigma2_i;
-  }
-  
-  for(int k = 0; k < K; ++k){
-    eta_k = xb + u_samples.col(k).array() - u_samples.col(k).mean();
-    
+  const ArrayXd xb = model.linear_predictor.xb().array() + model.data.offset.array();
+  const MatrixXd F = model.covariance.ZLu(re.u_);             // n x K draws of Z u (no centring)
+
+  // s(eta) = E[y | eta] / phi and W(eta) = ds/deta (canonical links)
+  auto s_and_W = [&](const ArrayXd& eta, ArrayXd& s, ArrayXd& Wv){
     switch(model.family.family){
     case Fam::binomial: case Fam::bernoulli: {
+      ArrayXd mu(eta.size());
       if(model.family.link == Link::logit){
-      mu_k = 1.0 / (1.0 + (-eta_k).exp());
-    } else {
-      // probit or other: route through generic helper
-      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
-    }
-    s_k = model.data.variance * mu_k;                 // m_i * mu_i
-    W_k = model.data.variance * mu_k * (1.0 - mu_k);  // m_i * mu_i (1-mu_i)
-    break;
-    }
-    case Fam::poisson: {
-      mu_k = eta_k.exp();
-      s_k = mu_k;
-      W_k = mu_k;
+        mu = 1.0 / (1.0 + (-eta).exp());
+      } else {
+        mu = glmmr::maths::mod_inv_func(eta.matrix(), model.family.link).array();
+      }
+      s  = model.data.variance * mu;
+      Wv = model.data.variance * mu * (1.0 - mu);
       break;
     }
-    case Fam::gaussian: {
-      mu_k = eta_k;                                     // identity link
-      s_k = mu_k;
-      W_k = (model.data.variance.inverse() * model.data.weights);
+    case Fam::poisson: {
+      s = eta.exp(); Wv = s;
       break;
     }
     case Fam::gamma: case Fam::beta: case Fam::exponential: {
-      mu_k = glmmr::maths::mod_inv_func(eta_k.matrix(), model.family.link).array();
-      s_k = mu_k;
-      W_k = W.W_.array();
+      // non-canonical: Fisher weights at eta (approximation to the observed Hessian)
+      s = glmmr::maths::mod_inv_func(eta.matrix(), model.family.link).array();
+      W.update(eta.matrix() - xb.matrix());
+      Wv = W.W_.array();
       break;
     }
     default:
-      throw std::runtime_error("louis_information_beta: unsupported family");
+      throw std::runtime_error("ave_information_matrix: unsupported family");
     }
-    
-    s_mat.col(k) = s_k.matrix();
-    s_bar += w(k) * s_k.matrix();
-    W_bar += w(k) * W_k.matrix();
-  }
-  // Bread: X' diag(W_bar) X
-  MatrixXd bread = X.transpose() * W_bar.asDiagonal() * X;
-  
-  // Meat: sum_k w_k g_k g_k', g_k = X' (s_k - s_bar)
-  MatrixXd meat = MatrixXd::Zero(P_, P_);
-  VectorXd g_k(P_);
+  };
+
+  // expansion point: weighted posterior mean of the linear predictor
+  const VectorXd Fbar = F * w.matrix();
+  const ArrayXd eta_hat = xb + Fbar.array();
+  ArrayXd s_hat(n), W_hat(n);
+  s_and_W(eta_hat, s_hat, W_hat);
+
+  const MatrixXd Xs = residualised_X(W_hat.matrix());          // n x P
+  MatrixXd I_gls = X.transpose() * (W_hat.matrix().asDiagonal() * Xs);
+  I_gls = 0.5 * (I_gls + I_gls.transpose());
+
+  // second-order terms
+  ArrayXd eta_k(n), s_k(n), W_k(n);
+  VectorXd dW = VectorXd::Zero(n);
+  MatrixXd G(P_, K);
   for(int k = 0; k < K; ++k){
-    g_k = X.transpose() * (s_mat.col(k) - s_bar);
-    meat.noalias() += w(k) * g_k * g_k.transpose();
+    eta_k = xb + F.col(k).array();
+    s_and_W(eta_k, s_k, W_k);
+    dW += w(k) * (W_k - W_hat).matrix();
+    ArrayXd r_k = s_k - s_hat - W_hat * (eta_k - eta_hat);
+    G.col(k) = Xs.transpose() * r_k.matrix();
   }
-  
-  return bread - meat;
+  const VectorXd Gbar = G * w.matrix();
+  MatrixXd covG = MatrixXd::Zero(P_, P_);
+  for(int k = 0; k < K; ++k){
+    VectorXd gk = G.col(k) - Gbar;
+    covG.noalias() += w(k) * gk * gk.transpose();
+  }
+  MatrixXd I = I_gls + Xs.transpose() * (dW.asDiagonal() * Xs) - covG;
+  I = 0.5 * (I + I.transpose());
+
+  // the exact information is PD at the MLE; if Monte Carlo error breaks this,
+  // fall back to the deterministic first-order (GLS) term
+  Eigen::LLT<MatrixXd> llt(I);
+  if(llt.info() != Eigen::Success){
+#ifdef R_BUILD
+    Rcpp::warning("Monte Carlo information correction not positive definite; returning first-order (GLS) information. Consider more MC samples.");
+#endif
+    return I_gls;
+  }
+  return I;
 }
 
 
