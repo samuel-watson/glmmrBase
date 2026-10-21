@@ -8,8 +8,7 @@
 #'
 #' where h is the link function, this class defines Z and D. The covariance is defined by a covariance function, data, and parameters.
 #' A new instance can be generated with $new(). The class will generate the
-#' relevant matrices Z and D automatically. See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
-#' detailed guide on model specification.
+#' relevant matrices Z and D automatically. 
 #' @export
 Covariance <- R6::R6Class("Covariance",
                       public = list(
@@ -36,35 +35,12 @@ Covariance <- R6::R6Class("Covariance",
                         #' @param parameters (Optional) Vector with parameter values for the functions in the model
                         #' formula. See Details.
                         #' @details
-                        #' **Intitialisation**
                         #' A covariance function is specified as an additive formula made up of
                         #' components with structure \code{(1|f(j))}. The left side of the vertical bar
                         #' specifies the covariates in the model that have a random effects structure.
                         #' The right side of the vertical bar specify the covariance function `f` for
                         #' that term using variable named in the data `j`.
-                        #' Covariance functions on the right side of the vertical bar are multiplied
-                        #' together, i.e. \code{(1|f(j)*g(t))}.
-                        #'
-                        #' There are several common functions included for a named variable in data \code{x}.
-                        #' A non-exhaustive list (see \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a full list):
-                        #' * \code{gr(x)}: Indicator function (1 parameter)
-                        #' * \code{fexp(x)}: Exponential function (2 parameters)
-                        #' * \code{ar(x)}: AR function (2 parameters)
-                        #' * \code{sqexp(x)}: Squared exponential (1 parameter)
-                        #' * \code{matern(x)}: Matern function (2 parameters)
-                        #' * \code{bessel(x)}: Modified Bessel function of the 2nd kind (1 parameter)
-                        #' For many 2 parameter functions, such as `ar` and `fexp`, alternative one parameter 
-                        #' versions are also available as `ar0` and `fexp0`. These function omit the variance 
-                        #' parameter and so can be used in combination with `gr` functions such as `gr(j)*ar0(t)`.
-                        #'
-                        #' Parameters are provided to the covariance function as a vector.
-                        #' The parameters in the vector for each function should be provided
-                        #' in the order the covariance functions are written are written.
-                        #' For example,
-                        #' * Formula: `~(1|gr(j))+(1|gr(j*t))`; parameters: `c(0.05,0.01)`
-                        #' * Formula: `~(1|gr(j)*fexp0(t))`; parameters: `c(0.05,0.5)`
-                        #'
-                        #' Updating of parameters is automatic if using the `update_parameters()` member function.
+                        #' This class is not generally used as a standalone class, but as a constituent of the Model class.
                         #' @return A Covariance object
                         #' @examples
                         #' \dontshow{

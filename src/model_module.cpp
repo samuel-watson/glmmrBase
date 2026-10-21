@@ -1097,7 +1097,15 @@ void Model__update_theta(SEXP xp, SEXP theta_, int type = 0){
       ptr->model.covariance.update_rho(rho);
     },
     [](auto ptr, std::vector<double>& theta) {
-      ptr->update_theta(theta);
+      if constexpr (std::is_same_v<decltype(ptr), XPtr<glmm_hsgp> >) {
+        // Model__get_theta returns external (original-coordinate) parameters for HSGP,
+        // so the setter must apply the inverse transformation.
+        ptr->model.covariance.update_parameters_extern(theta);
+        bool weighted = ptr->re.u_weight_.maxCoeff() - ptr->re.u_weight_.minCoeff() > 1e-10;
+        ptr->re.update_zu(weighted);
+      } else {
+        ptr->update_theta(theta);
+      }
     }
   };
   std::visit([&](auto&& arg) { functor(arg, theta); }, model.ptr);

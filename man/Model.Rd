@@ -39,8 +39,7 @@ to, for individual \emph{i} \eqn{\left( \frac{(\partial h^{-1}(\eta_i))}{\partia
 (see Table 2.1 in McCullagh and Nelder (1989)). The modification proposed by Zegers et al to the linear predictor to
 improve the accuracy of approximations based on the marginal quasilikelihood is also available, see \code{use_attenuation()}.
 
-See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
-detailed guide on model specification. A detailed vingette for this package is also available online\url{doi:10.48550/arXiv.2303.12657}.
+A detailed vingette for this package is also available online \url{doi:10.48550/arXiv.2303.12657}.
 
 \strong{Attenuation}
 For calculations such as the information matrix, the first-order approximation to the covariance matrix

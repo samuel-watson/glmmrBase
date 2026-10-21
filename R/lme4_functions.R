@@ -20,16 +20,16 @@ lme4_to_glmmr <- function(formula,cnames){
   int1 <- unlist(lapply(regmatches(re1, gregexpr("\\|.*?\\)", re1)), function(x)gsub("[\\|\\)]","",x)))
   for(i in 1:length(int1)){
     if(int1[[i]]%in%cnames){
-      re1[[i]] <- gsub(int1[[i]],paste0("gr(",int1[[i]],")"),re1[[i]])
+      re1[[i]] <- gsub(int1[[i]],paste0("grlog(",int1[[i]],")"),re1[[i]])
     } else {
       int2 <- unlist(strsplit(int1[[i]],"/"))
       if(all(int2%in%cnames)){
-        re1[[i]] <- gsub(int1[[i]],paste0("gr(",int2[1],")"),re1[[i]])
-        re1[[i]] <- paste0(re1[[i]],"+(1|gr(",int2[1],",",int2[2],"))")
+        re1[[i]] <- gsub(int1[[i]],paste0("grlog(",int2[1],")"),re1[[i]])
+        re1[[i]] <- paste0(re1[[i]],"+(1|grlog(",int2[1],",",int2[2],"))")
       } else {
         int3 <- unlist(strsplit(int1[[i]],":"))
         if(all(int3%in%cnames)){
-          re1[[i]] <- gsub(int1[[i]],paste0("gr(",int2[1],",",int2[2],")"),re1[[i]])
+          re1[[i]] <- gsub(int1[[i]],paste0("grlog(",int2[1],",",int2[2],")"),re1[[i]])
         } 
       }
     }
@@ -63,10 +63,9 @@ lme4_to_glmmr <- function(formula,cnames){
 #' @param formula A two-sided linear formula object including both the fixed and random effects specifications, see Details.
 #' @param data A data frame containing the variables named in `formula`.
 #' @param start Optional. A vector of starting values for the fixed effects.
+#' @param start.cov Optional. A vector of starting values for the covariance parameters.
 #' @param offset Optional. A vector of offset values.
 #' @param weights Optional. A vector of observation level weights to apply to the model fit.
-#' @param iter.warmup The number of warmup iterations for the MCMC sampling step of each iteration.
-#' @param iter.sampling The number of sampling iterations for the MCMC sampling step of each iteration.
 #' @param verbose Integer, controls the level of detail printed to the console, either 0 (no output), 
 #' 1 (main output), or 2 (detailed output)
 #' @param ... additional arguments passed to `Model$MCML()`
@@ -83,27 +82,31 @@ lme4_to_glmmr <- function(formula,cnames){
 #'   data = df,
 #'   family = stats::gaussian()
 #' )$sim_data()
-#' \dontrun{
-#' fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df)
+#' \donttest{
+#' fit <- mcml_lmer(y ~ factor(t) + int - 1 + (1|cl/t), data = df, start.cov = c(0.05,0.01))
 #' }
 #' @export
-mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
-                      iter.warmup = 100, iter.sampling = 50, weights = NULL,...){
+mcml_lmer <- function(formula, data, start = NULL, start.cov = NULL, offset = NULL, verbose = 1L,
+                      weights = NULL,...){
   # parse the formula from lme4's syntax to glmmrBase
   model <- Model$new(formula = lme4_to_glmmr(formula,colnames(data)),
                    data = data,
                    family = gaussian(),
                    offset = offset,
                    weights = weights)
-  model$mcmc_options$warmup <- iter.warmup
-  model$mcmc_options$samps <- iter.sampling
   model$set_trace(verbose)
   if(!is.null(start))model$update_parameters(mean.pars = start)
-  fit <- model$MCML(...)
+  if(!is.null(start.cov)){
+    model$update_parameters(cov.pars = log(start.cov))
+  } else {
+    model$update_parameters(cov.pars = log(runif(length(model$covariance$parameters),0,0.5)))
+  }
+  
+  fit <- model$fit(...)
   return(fit)
 }
 
-#' lme4 style generlized linear mixed model 
+#' lme4 style generalized linear mixed model 
 #' 
 #' A wrapper for Model stochastic maximum likelihood model fitting replicating lme4's syntax
 #' 
@@ -116,10 +119,9 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
 #' @param data A data frame containing the variables named in `formula`.
 #' @param family A family object expressing the distribution and link function of the model, see \link[stats]{family}.
 #' @param start Optional. A vector of starting values for the fixed effects.
+#' @param start.cov Optional. A vector of starting values for the covariance parameters.
 #' @param offset Optional. A vector of offset values.
 #' @param weights Optional. A vector of observation level weights to apply to the model fit.
-#' @param iter.warmup The number of warmup iterations for the MCMC sampling step of each iteration.
-#' @param iter.sampling The number of sampling iterations for the MCMC sampling step of each iteration.
 #' @param verbose Integer, controls the level of detail printed to the console, either 0 (no output), 
 #' 1 (main output), or 2 (detailed output)
 #' @param ... additional arguments passed to `Model$MCML()`
@@ -127,26 +129,27 @@ mcml_lmer <- function(formula, data, start = NULL, offset = NULL, verbose = 1L,
 #' @examples 
 #' #create a data frame describing a cross-sectional parallel cluster
 #' data(Salamanders, package = "glmmrBase")
-#' \dontrun{
+#' \donttest{
 #' glm0 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum),
-#'   data=Salamanders,family=binomial(),reml=FALSE)
-#' glm1 <- mcml_glmer(mating~fpop:mpop-1+(1|mnum)+(1|fnum), 
-#'   data =Salamanders, family=binomial(),reml=TRUE)
+#'   data=Salamanders,family=stats::binomial())
 #' }
 #' @export
-mcml_glmer <- function(formula, data, family, start = NULL, offset = NULL, verbose = 1L,
-                       iter.warmup = 100, iter.sampling = 50, weights = NULL,...){
+mcml_glmer <- function(formula, data, family, start = NULL, start.cov = NULL, offset = NULL, verbose = 1L,
+                       weights = NULL,...){
   
   model <- Model$new(formula = lme4_to_glmmr(formula,colnames(data)),
                      data = data,
                      family = family,
                      offset = offset,
                      weights = weights)
-  model$mcmc_options$warmup <- iter.warmup
-  model$mcmc_options$samps <- iter.sampling
   model$set_trace(verbose)
-  if(!is.null(start))model$update_parameters(mean.pars = start, cov.pars = runif(length(model$covariance$parameters),0,0.1))
-  fit <- model$MCML(...)
+  if(!is.null(start))model$update_parameters(mean.pars = start)
+  if(!is.null(start.cov)){
+    model$update_parameters(cov.pars = log(start.cov))
+  } else {
+    model$update_parameters(cov.pars = log(runif(length(model$covariance$parameters),0,0.5)))
+  }
+  fit <- model$fit(...)
   
   return(fit)
 }

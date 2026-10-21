@@ -30,8 +30,7 @@
 #' (see Table 2.1 in McCullagh and Nelder (1989)). The modification proposed by Zegers et al to the linear predictor to
 #' improve the accuracy of approximations based on the marginal quasilikelihood is also available, see `use_attenuation()`.
 #'
-#' See \href{https://github.com/samuel-watson/glmmrBase/blob/master/README.md}{glmmrBase} for a
-#' detailed guide on model specification. A detailed vingette for this package is also available online<doi:10.48550/arXiv.2303.12657>.
+#' A detailed vingette for this package is also available online <doi:10.48550/arXiv.2303.12657>.
 #' @references
 #' Breslow, N. E., Clayton, D. G. (1993). Approximate Inference in Generalized Linear Mixed Models.
 #' Journal of the American Statistical Association<, 88(421), 9–25. <doi:10.1080/01621459.1993.10594284>
@@ -913,7 +912,7 @@ Model <- R6::R6Class("Model",
                          self$update_parameters(mean.pars = Model__get_beta(private$ptr, private$model_type()),
                                                 cov.pars = Model__get_theta(private$ptr, private$model_type()))
                          if(private$model_type() == 2) self$covariance$.__enclos_env__$private$genZ()
-                         if(se == "average" & niter == 1) Model__posterior_u_sample(private$ptr, 200, FALSE, TRUE, FALSE, private$model_type()) 
+                         if(se == "average") Model__posterior_u_sample(private$ptr, max(niter, 200), FALSE, TRUE, FALSE, private$model_type()) 
                          u <- Model__u(private$ptr,TRUE,private$model_type())
                          M <- self$information_matrix(average = isTRUE(se == "average" & self$family[[1]] != "gaussian")) 
                          M <- solve(M)
