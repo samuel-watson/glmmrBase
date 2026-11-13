@@ -1748,7 +1748,6 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
 
   LLT<MatrixXd> llt(Vb);
   MatrixXd LVb = llt.matrixL();
-  VectorXd v(re.u_.rows());
   if(append && loglik) throw std::runtime_error("SAEM and importance sampling not currently compatible");
   unew = LVb * unew;
   bool action_append = append;
@@ -1767,14 +1766,14 @@ inline void glmmr::ModelMatrix<modeltype>::posterior_u_samples(const int niter,
       re.u_solve_.resize(NoChange, niter);
       re.scaled_u_.resize(NoChange, niter);
       re.zu_.resize(NoChange, niter);
-      re.u_weight_.resize(niter);
-      if(loglik) re.u_loglik_.resize(niter);
     }
+    if(re.u_weight_.size() != niter) re.u_weight_.resize(niter);
+    if(loglik && re.u_loglik_.size() != niter) re.u_loglik_.resize(niter);
     re.u_.noalias() = unew;
     if(loglik){
 #pragma omp parallel for
       for(int i = 0; i < re.u_.cols(); i++){
-        v = llt.solve(re.u_.col(i));
+        VectorXd v = llt.solve(re.u_.col(i));
         re.u_loglik_(i) = -0.5 * v.dot(re.u_.col(i));
       }
     }
@@ -1865,9 +1864,9 @@ inline void glmmr::ModelMatrix<bits_hsgp>::posterior_u_samples(
     re.u_solve_.resize(M, niter);
     re.scaled_u_.resize(M, niter);
     re.zu_.resize(n, niter);
-    re.u_weight_.resize(niter);
-    if(loglik) re.u_loglik_.resize(niter);
   }
+  if(re.u_weight_.size() != niter) re.u_weight_.resize(niter);
+  if(loglik && re.u_loglik_.size() != niter) re.u_loglik_.resize(niter);
   
   if(niter == 1){
     // Laplace: posterior mode only
@@ -1987,9 +1986,9 @@ inline void glmmr::ModelMatrix<bits_spde>::posterior_u_samples(
     re.u_solve_.resize(M, niter);
     re.scaled_u_.resize(M, niter);
     re.zu_.resize(n, niter);
-    re.u_weight_.resize(niter);
-    if(loglik) re.u_loglik_.resize(niter);
   }
+  if(re.u_weight_.size() != niter) re.u_weight_.resize(niter);
+  if(loglik && re.u_loglik_.size() != niter) re.u_loglik_.resize(niter);
   
   // Posterior draws: u_k = b + x_k, where x_k ~ N(0, P^{-1}).
   // Since P = R_P R_P^T  (NaturalOrdering, no permutation),

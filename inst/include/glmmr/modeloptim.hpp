@@ -588,8 +588,11 @@ template<typename modeltype>
 inline double glmmr::ModelOptim<modeltype>::log_likelihood(bool beta) {
   ArrayXd xb(model.xb());
   int llcol = beta ? 0 : 1;
+  // the number of u samples can change outside ModelOptim (e.g. posterior_u_samples),
+  // so make sure there is one row per sample before writing
+  if(ll_current.rows() != re.zu_.cols()) ll_current.conservativeResizeLike(ArrayXXd::Zero(re.zu_.cols(), 2));
   ll_current.col(llcol).setZero();
-  
+
   if(model.weighted){
     if(model.family.family==Fam::gaussian){
 #pragma omp parallel for 
